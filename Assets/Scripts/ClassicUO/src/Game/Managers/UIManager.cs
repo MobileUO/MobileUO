@@ -1,41 +1,42 @@
 #region license
-// Copyright (C) 2020 ClassicUO Development Community on Github
+
+// Copyright (c) 2021, andreakarasho
+// All rights reserved.
 // 
-// This project is an alternative client for the game Ultima Online.
-// The goal of this is to develop a lightweight client considering
-// new technologies.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+// 3. All advertising materials mentioning features or use of this software
+//    must display the following acknowledgement:
+//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
+// 4. Neither the name of the copyright holder nor the
+//    names of its contributors may be used to endorse or promote products
+//    derived from this software without specific prior written permission.
 // 
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-// 
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-// 
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
+// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 #endregion
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
 using ClassicUO.Configuration;
-using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.UI.Controls;
 using ClassicUO.Game.UI.Gumps;
 using ClassicUO.Input;
-using ClassicUO.IO.Resources;
-using ClassicUO.Network;
 using ClassicUO.Renderer;
-using ClassicUO.Utility;
-using ClassicUO.Utility.Collections;
-using ClassicUO.Utility.Logging;
-
 using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.Managers
@@ -43,28 +44,36 @@ namespace ClassicUO.Game.Managers
     internal static class UIManager
     {
         private static readonly Dictionary<uint, Point> _gumpPositionCache = new Dictionary<uint, Point>();
-        private static readonly Control[] _mouseDownControls = new Control[5];
+        private static readonly Control[] _mouseDownControls = new Control[(int) MouseButtonType.Size];
 
 
         //private static readonly Dictionary<uint, TargetLineGump> _targetLineGumps = new Dictionary<uint, TargetLineGump>();
-        private static int _dragOriginX, _dragOriginY;
+        private static Point _dragOrigin;
         private static bool _isDraggingControl;
-        private static Control _keyboardFocusControl, _validForDClick, _lastFocus;
+        private static Control _keyboardFocusControl, _lastFocus;
         private static bool _needSort;
-
 
 
         public static float ContainerScale { get; set; } = 1f;
 
         public static AnchorManager AnchorManager { get; } = new AnchorManager();
 
-        public static LinkedList<Control> Gumps { get; } = new LinkedList<Control>();
+        public static LinkedList<Gump> Gumps { get; } = new LinkedList<Gump>();
 
         public static Control MouseOverControl { get; private set; }
 
-        public static bool IsMouseOverAControl => MouseOverControl != null;
+        public static bool IsModalOpen { get; private set; }
 
-        public static bool IsMouseOverWorld => MouseOverControl is WorldViewport;
+        public static bool IsMouseOverWorld
+        {
+            get
+            {
+                Point mouse = Mouse.Position;
+                Profile profile = ProfileManager.CurrentProfile;
+
+                return profile != null && GameCursor.AllowDrawSDLCursor && DraggingControl == null && MouseOverControl == null && !IsModalOpen && mouse.X >= profile.GameWindowPosition.X + 5 && mouse.X < profile.GameWindowPosition.X + 5 + profile.GameWindowSize.X && mouse.Y >= profile.GameWindowPosition.Y + 5 && mouse.Y < profile.GameWindowPosition.Y + 5 + profile.GameWindowSize.Y;
+            }
+        }
 
         public static Control DraggingControl { get; private set; }
 
@@ -74,23 +83,9 @@ namespace ClassicUO.Game.Managers
 
         public static PopupMenuGump PopupMenu { get; private set; }
 
-        public static void ShowGamePopup(PopupMenuGump popup)
-        {
-            PopupMenu?.Dispose();
-            PopupMenu = popup;
-
-            if (popup == null || popup.IsDisposed)
-                return;
-
-            Add(PopupMenu);
-        }
-
         public static Control KeyboardFocusControl
         {
-            get
-            {
-                return _keyboardFocusControl;
-            }
+            get => _keyboardFocusControl;
             set
             {
                 if (_keyboardFocusControl != value)
@@ -101,53 +96,68 @@ namespace ClassicUO.Game.Managers
                     if (value != null && value.AcceptKeyboardInput)
                     {
                         if (!value.IsFocused)
+                        {
                             value.OnFocusEnter();
+                        }
                     }
                 }
             }
         }
 
+        public static bool IsDragging => _isDraggingControl && DraggingControl != null;
+
+        public static ContextMenuShowMenu ContextMenu { get; private set; }
+
+        public static void ShowGamePopup(PopupMenuGump popup)
+        {
+            PopupMenu?.Dispose();
+            PopupMenu = popup;
+
+            if (popup == null || popup.IsDisposed)
+            {
+                return;
+            }
+
+            Add(PopupMenu);
+        }
+
 
         public static bool IsModalControlOpen()
         {
-            foreach (Control control in Gumps)
+            foreach (Gump control in Gumps)
             {
-                if (control.ControlInfo.IsModal)
+                if (control.IsModal)
+                {
                     return true;
+                }
             }
 
             return false;
         }
-
-        public static bool IsDragging => _isDraggingControl && DraggingControl != null;
-
-        public static bool ValidForDClick() => !(_validForDClick is WorldViewport);
-
 
 
         public static void OnMouseDragging()
         {
             HandleMouseInput();
 
-            //if (_mouseDownControls[0] == MouseOverControl && MouseOverControl != null)
-            if (_mouseDownControls[0] != null)
+            if (_mouseDownControls[(int) MouseButtonType.Left] != null)
             {
-                if (ProfileManager.Current == null || !ProfileManager.Current.HoldAltToMoveGumps || Keyboard.Alt)
+                if (ProfileManager.CurrentProfile == null || !ProfileManager.CurrentProfile.HoldAltToMoveGumps || Keyboard.Alt)
                 {
-                    AttemptDragControl(_mouseDownControls[0], Mouse.Position, true);
+                    AttemptDragControl(_mouseDownControls[(int) MouseButtonType.Left], true);
                 }
             }
 
             if (_isDraggingControl)
             {
-                DoDragControl(Mouse.Position);
+                DoDragControl();
             }
         }
 
-        public static void OnLeftMouseButtonDown()
+        public static void OnMouseButtonDown(MouseButtonType button)
         {
             HandleMouseInput();
-            _validForDClick = null;
+
             if (MouseOverControl != null)
             {
                 if (MouseOverControl.IsEnabled && MouseOverControl.IsVisible)
@@ -161,18 +171,20 @@ namespace ClassicUO.Game.Managers
                 }
 
                 MakeTopMostGump(MouseOverControl);
-                MouseOverControl.InvokeMouseDown(Mouse.Position, MouseButtonType.Left);
+                MouseOverControl.InvokeMouseDown(Mouse.Position, button);
 
                 if (MouseOverControl.AcceptKeyboardInput)
+                {
                     _keyboardFocusControl = MouseOverControl;
-                
-                _mouseDownControls[(int) MouseButtonType.Left] = MouseOverControl;
+                }
+
+                _mouseDownControls[(int) button] = MouseOverControl;
             }
             else
             {
-                foreach (Control s in Gumps)
+                foreach (Gump s in Gumps)
                 {
-                    if (s.ControlInfo.IsModal && s.ControlInfo.ModalClickOutsideAreaClosesThisControl)
+                    if (s.IsModal && s.ModalClickOutsideAreaClosesThisControl)
                     {
                         s.Dispose();
                         Mouse.CancelDoubleClick = true;
@@ -181,39 +193,53 @@ namespace ClassicUO.Game.Managers
             }
 
             if (PopupMenu != null && !PopupMenu.Bounds.Contains(Mouse.Position.X, Mouse.Position.Y))
+            {
                 ShowGamePopup(null);
+            }
         }
 
-        public static void OnLeftMouseButtonUp()
+        public static void OnMouseButtonUp(MouseButtonType button)
         {
+            EndDragControl(Mouse.Position);
             HandleMouseInput();
 
-            const int btn = (int) MouseButtonType.Left;
-            EndDragControl(Mouse.Position);
+            int index = (int) button;
 
             if (MouseOverControl != null)
             {
-                if ((_mouseDownControls[btn] != null && MouseOverControl == _mouseDownControls[btn]) || ItemHold.Enabled)
-                    MouseOverControl.InvokeMouseUp(Mouse.Position, MouseButtonType.Left);
-                else if (_mouseDownControls[btn] != null && MouseOverControl != _mouseDownControls[btn])
-                    _mouseDownControls[btn].InvokeMouseUp(Mouse.Position, MouseButtonType.Left);
+                if (_mouseDownControls[index] != null && MouseOverControl == _mouseDownControls[index] || ItemHold.Enabled)
+                {
+                    MouseOverControl.InvokeMouseUp(Mouse.Position, button);
+                }
+                else if (_mouseDownControls[index] != null && MouseOverControl != _mouseDownControls[index])
+                {
+                    _mouseDownControls[index].InvokeMouseUp(Mouse.Position, button);
+                }
             }
             else
-                _mouseDownControls[btn]?.InvokeMouseUp(Mouse.Position, MouseButtonType.Left);
+            {
+                _mouseDownControls[index]?.InvokeMouseUp(Mouse.Position, button);
+            }
 
-            _mouseDownControls[btn] = null;
-            _validForDClick = MouseOverControl;
+            if (button == MouseButtonType.Right)
+            {
+                _mouseDownControls[index]?.InvokeMouseCloseGumpWithRClick();
+            }
+
+            _mouseDownControls[index] = null;
         }
 
-        public static bool OnLeftMouseDoubleClick()
+        public static bool OnMouseDoubleClick(MouseButtonType button)
         {
             HandleMouseInput();
 
-            if (MouseOverControl != null && IsMouseOverAControl)
+            if (MouseOverControl != null)
             {
-                if (MouseOverControl.InvokeMouseDoubleClick(Mouse.Position, MouseButtonType.Left))
+                if (MouseOverControl.InvokeMouseDoubleClick(Mouse.Position, button))
                 {
-                    DelayedObjectClickManager.Clear();
+                    if (button == MouseButtonType.Left)
+                        DelayedObjectClickManager.Clear();
+
                     return true;
                 }
             }
@@ -221,207 +247,12 @@ namespace ClassicUO.Game.Managers
             return false;
         }
 
-        public static void OnRightMouseButtonDown()
-        {
-            HandleMouseInput();
-
-            if (MouseOverControl != null)
-            {
-                MakeTopMostGump(MouseOverControl);
-                MouseOverControl.InvokeMouseDown(Mouse.Position, MouseButtonType.Right);
-
-                if (MouseOverControl.AcceptKeyboardInput)
-                    _keyboardFocusControl = MouseOverControl;
-                _mouseDownControls[(int) MouseButtonType.Right] = MouseOverControl;
-            }
-            else
-            {
-                foreach (Control s in Gumps)
-                {
-                    if (s.ControlInfo.IsModal && s.ControlInfo.ModalClickOutsideAreaClosesThisControl)
-                    {
-                        s.Dispose();
-                        Mouse.CancelDoubleClick = true;
-                    }
-                }
-            }
-
-            ShowGamePopup(null);
-        }
-
-        public static void OnRightMouseButtonUp()
-        {
-            HandleMouseInput();
-
-            const int btn = (int) MouseButtonType.Right;
-            EndDragControl(Mouse.Position);
-
-            if (MouseOverControl != null)
-            {
-                if (_mouseDownControls[btn] != null && MouseOverControl == _mouseDownControls[btn])
-                {
-                    MouseOverControl.InvokeMouseCloseGumpWithRClick();
-                }
-
-                MouseOverControl.InvokeMouseUp(Mouse.Position, MouseButtonType.Right);
-
-                if (_mouseDownControls[btn] != null && MouseOverControl != _mouseDownControls[btn])
-                {
-                    _mouseDownControls[btn].InvokeMouseUp(Mouse.Position, MouseButtonType.Right);
-                    _mouseDownControls[btn].InvokeMouseCloseGumpWithRClick();
-                }
-            }
-            else if (_mouseDownControls[btn] != null)
-            {
-                _mouseDownControls[btn].InvokeMouseUp(Mouse.Position, MouseButtonType.Right);
-                _mouseDownControls[btn].InvokeMouseCloseGumpWithRClick();
-            }
-
-            _mouseDownControls[btn] = null;
-        }
-
-        public static bool OnRightMouseDoubleClick()
-        {
-            if (MouseOverControl != null && IsMouseOverAControl)
-                return MouseOverControl.InvokeMouseDoubleClick(Mouse.Position, MouseButtonType.Right);
-
-            return false;
-        }
-
-        public static void OnMiddleMouseButtonDown()
-        {
-            HandleMouseInput();
-
-            const int btn = (int) MouseButtonType.Middle;
-
-            if (MouseOverControl != null)
-            {
-                MakeTopMostGump(MouseOverControl);
-                MouseOverControl.InvokeMouseDown(Mouse.Position, MouseButtonType.Middle);
-
-                if (MouseOverControl.IsEnabled && MouseOverControl.IsVisible)
-                {
-                    if (_lastFocus != MouseOverControl)
-                    {
-                        _lastFocus?.OnFocusLost();
-                        MouseOverControl.OnFocusEnter();
-                        _lastFocus = MouseOverControl;
-                    }
-                }
-
-                _mouseDownControls[btn] = MouseOverControl;
-            }
-            else
-            {
-                foreach (Control s in Gumps)
-                {
-                    if (s.ControlInfo.IsModal && s.ControlInfo.ModalClickOutsideAreaClosesThisControl)
-                    {
-                        s.Dispose();
-                        Mouse.CancelDoubleClick = true;
-                    }
-                }
-            }
-
-            ShowGamePopup(null);
-        }
-
-        public static void OnMiddleMouseButtonUp()
-        {
-            HandleMouseInput();
-
-            const int btn = (int) MouseButtonType.Middle;
-            EndDragControl(Mouse.Position);
-
-            if (MouseOverControl != null)
-            {
-                if (_mouseDownControls[btn] != null && MouseOverControl == _mouseDownControls[btn])
-                    MouseOverControl.InvokeMouseUp(Mouse.Position, MouseButtonType.Middle);
-
-                if (_mouseDownControls[btn] != null && MouseOverControl != _mouseDownControls[btn])
-                    _mouseDownControls[btn].InvokeMouseUp(Mouse.Position, MouseButtonType.Middle);
-            }
-            else
-                _mouseDownControls[btn]?.InvokeMouseUp(Mouse.Position, MouseButtonType.Middle);
-
-            _mouseDownControls[btn] = null;
-            _validForDClick = MouseOverControl;
-        }
-
-        public static bool OnMiddleMouseDoubleClick()
-        {
-            if (MouseOverControl != null && IsMouseOverAControl)
-                return MouseOverControl.InvokeMouseDoubleClick(Mouse.Position, MouseButtonType.Middle);
-
-            return false;
-        }
-
-        public static void OnExtraMouseButtonDown(int btn)
-        {
-            HandleMouseInput();
-            if (MouseOverControl != null)
-            {
-                MakeTopMostGump(MouseOverControl);
-                MouseOverControl.InvokeMouseDown(Mouse.Position, (MouseButtonType)btn);
-
-                if (MouseOverControl.IsEnabled && MouseOverControl.IsVisible)
-                {
-                    if (_lastFocus != MouseOverControl)
-                    {
-                        _lastFocus?.OnFocusLost();
-                        MouseOverControl.OnFocusEnter();
-                        _lastFocus = MouseOverControl;
-                    }
-                }
-
-                _mouseDownControls[btn] = MouseOverControl;
-            }
-            else
-            {
-                foreach (Control s in Gumps)
-                {
-                    if (s.ControlInfo.IsModal && s.ControlInfo.ModalClickOutsideAreaClosesThisControl)
-                    {
-                        s.Dispose();
-                        Mouse.CancelDoubleClick = true;
-                    }
-                }
-            }
-
-            ShowGamePopup(null);
-        }
-
-        public static void OnExtraMouseButtonUp(int btn)
-        {
-            HandleMouseInput();
-            EndDragControl(Mouse.Position);
-
-            if (MouseOverControl != null)
-            {
-                if (_mouseDownControls[btn] != null && MouseOverControl == _mouseDownControls[btn])
-                    MouseOverControl.InvokeMouseUp(Mouse.Position, (MouseButtonType)btn);
-
-                if (_mouseDownControls[btn] != null && MouseOverControl != _mouseDownControls[btn])
-                    _mouseDownControls[btn].InvokeMouseUp(Mouse.Position, (MouseButtonType)btn);
-            }
-            else
-                _mouseDownControls[btn]?.InvokeMouseUp(Mouse.Position, (MouseButtonType)btn);
-
-            _mouseDownControls[btn] = null;
-            _validForDClick = MouseOverControl;
-        }
-
         public static void OnMouseWheel(bool isup)
         {
             if (MouseOverControl != null && MouseOverControl.AcceptMouseInput)
+            {
                 MouseOverControl.InvokeMouseWheel(isup ? MouseEventType.WheelScrollUp : MouseEventType.WheelScrollDown);
-        }
-
-
-        public static bool HadMouseDownOnGump(MouseButtonType button)
-        {
-            var c = LastControlMouseDown(button);
-            return c != null && !c.IsDisposed && !(c is WorldViewport) && !ItemHold.Enabled;
+            }
         }
 
         public static Control LastControlMouseDown(MouseButtonType button)
@@ -434,7 +265,7 @@ namespace ClassicUO.Game.Managers
         {
             GameCursor = new GameCursor();
         }
-        
+
         public static void SavePosition(uint serverSerial, Point point)
         {
             _gumpPositionCache[serverSerial] = point;
@@ -450,8 +281,6 @@ namespace ClassicUO.Game.Managers
             return _gumpPositionCache.TryGetValue(id, out pos);
         }
 
-        public static ContextMenuShowMenu ContextMenu { get; private set; }
-
         public static void ShowContextMenu(ContextMenuShowMenu menu)
         {
             ContextMenu?.Dispose();
@@ -459,7 +288,9 @@ namespace ClassicUO.Game.Managers
             ContextMenu = menu;
 
             if (ContextMenu == null || menu.IsDisposed)
+            {
                 return;
+            }
 
             Add(ContextMenu);
         }
@@ -468,35 +299,42 @@ namespace ClassicUO.Game.Managers
         {
             if (serial.HasValue)
             {
-                for (var last = Gumps.Last; last != null; last = last.Previous)
+                for (LinkedListNode<Gump> last = Gumps.Last; last != null; last = last.Previous)
                 {
-                    var c = last.Value;
+                    Control c = last.Value;
 
                     if (!c.IsDisposed && c.LocalSerial == serial.Value && c is T t)
+                    {
                         return t;
+                    }
                 }
             }
             else
             {
-                for (var first = Gumps.First; first != null; first = first.Next)
+                for (LinkedListNode<Gump> first = Gumps.First; first != null; first = first.Next)
                 {
-                    var c = first.Value;
+                    Control c = first.Value;
 
                     if (!c.IsDisposed && c is T t)
+                    {
                         return t;
+                    }
                 }
             }
+
             return null;
         }
 
         public static Gump GetGump(uint serial)
         {
-            for (var last = Gumps.Last; last != null; last = last.Previous)
+            for (LinkedListNode<Gump> last = Gumps.Last; last != null; last = last.Previous)
             {
-                var c = last.Value;
+                Control c = last.Value;
 
                 if (!c.IsDisposed && c.LocalSerial == serial)
+                {
                     return c as Gump;
+                }
             }
 
             return null;
@@ -504,7 +342,7 @@ namespace ClassicUO.Game.Managers
 
         public static TradingGump GetTradingGump(uint serial)
         {
-            for (var g = Gumps.Last; g != null; g = g.Previous)
+            for (LinkedListNode<Gump> g = Gumps.Last; g != null; g = g.Previous)
             {
                 if (g.Value != null && !g.Value.IsDisposed && g.Value is TradingGump trading && (trading.ID1 == serial || trading.ID2 == serial || trading.LocalSerial == serial))
                 {
@@ -515,27 +353,29 @@ namespace ClassicUO.Game.Managers
             return null;
         }
 
-        public static void Update(double totalMS, double frameMS)
+        public static void Update(double totalTime, double frameTime)
         {
             SortControlsByInfo();
 
-            var first = Gumps.First;
+            LinkedListNode<Gump> first = Gumps.First;
 
             while (first != null)
             {
-                var next = first.Next;
+                LinkedListNode<Gump> next = first.Next;
 
                 Control g = first.Value;
 
-                g.Update(totalMS, frameMS);
+                g.Update(totalTime, frameTime);
 
                 if (g.IsDisposed)
+                {
                     Gumps.Remove(first);
+                }
 
                 first = next;
             }
 
-            GameCursor?.Update(totalMS, frameMS);
+            GameCursor?.Update(totalTime, frameTime);
             HandleKeyboardInput();
             HandleMouseInput();
         }
@@ -544,13 +384,11 @@ namespace ClassicUO.Game.Managers
         {
             SortControlsByInfo();
 
-            batcher.GraphicsDevice.Clear(Color.Black);
-
             batcher.Begin();
 
-            for (var last = Gumps.Last; last != null; last = last.Previous)
+            for (LinkedListNode<Gump> last = Gumps.Last; last != null; last = last.Previous)
             {
-                var g = last.Value;
+                Control g = last.Value;
                 g.Draw(batcher, g.X, g.Y);
             }
 
@@ -559,7 +397,7 @@ namespace ClassicUO.Game.Managers
             batcher.End();
         }
 
-        public static void Add(Control gump)
+        public static void Add(Gump gump)
         {
             if (!gump.IsDisposed)
             {
@@ -570,11 +408,12 @@ namespace ClassicUO.Game.Managers
 
         public static void Clear()
         {
-            foreach (Control s in Gumps)
+            foreach (Gump s in Gumps)
             {
                 s.Dispose();
             }
             
+            // MobileUO: clear logic
             Gumps.Clear();
             
             for (int i = 0; i < _mouseDownControls.Length; i++)
@@ -583,13 +422,13 @@ namespace ClassicUO.Game.Managers
             }
         }
 
+        // MobileUO: added Dispose method
         public static void Dispose()
         {
             GameCursor?.Dispose();
             GameCursor = null;
 
             _keyboardFocusControl = null;
-            _validForDClick = null;
             _lastFocus = null;
 
             MouseOverControl = null;
@@ -603,7 +442,9 @@ namespace ClassicUO.Game.Managers
         private static void HandleKeyboardInput()
         {
             if (_keyboardFocusControl != null && _keyboardFocusControl.IsDisposed)
+            {
                 _keyboardFocusControl = null;
+            }
 
             if (_keyboardFocusControl == null)
             {
@@ -614,9 +455,9 @@ namespace ClassicUO.Game.Managers
                 }
                 else
                 {
-                    for (var first = Gumps.First; first != null; first = first.Next)
+                    for (LinkedListNode<Gump> first = Gumps.First; first != null; first = first.Next)
                     {
-                        var c = first.Value;
+                        Control c = first.Value;
 
                         if (!c.IsDisposed && c.IsVisible && c.IsEnabled)
                         {
@@ -625,6 +466,7 @@ namespace ClassicUO.Game.Managers
                             if (_keyboardFocusControl != null)
                             {
                                 _keyboardFocusControl.OnFocusEnter();
+
                                 break;
                             }
                         }
@@ -644,7 +486,9 @@ namespace ClassicUO.Game.Managers
                 if (MouseOverControl.RootParent != null)
                 {
                     if (gump == null || gump.RootParent != MouseOverControl.RootParent)
+                    {
                         MouseOverControl.RootParent.InvokeMouseExit(Mouse.Position);
+                    }
                 }
             }
 
@@ -657,7 +501,9 @@ namespace ClassicUO.Game.Managers
                     if (gump.RootParent != null)
                     {
                         if (MouseOverControl == null || gump.RootParent != MouseOverControl.RootParent)
+                        {
                             gump.RootParent.InvokeMouseEnter(Mouse.Position);
+                        }
                     }
                 }
 
@@ -666,27 +512,32 @@ namespace ClassicUO.Game.Managers
 
             MouseOverControl = gump;
 
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < (int) MouseButtonType.Size; i++)
             {
                 if (_mouseDownControls[i] != null && _mouseDownControls[i] != gump)
+                {
                     _mouseDownControls[i].InvokeMouseOver(Mouse.Position);
+                }
             }
         }
 
+        // MobileUO: made method public
         public static Control GetMouseOverControl(Point position)
         {
             if (_isDraggingControl)
+            {
                 return DraggingControl;
+            }
 
             Control control = null;
 
-            bool ismodal = IsModalControlOpen();
+            IsModalOpen = IsModalControlOpen();
 
-            for (var first = Gumps.First; first != null; first = first.Next)
+            for (LinkedListNode<Gump> first = Gumps.First; first != null; first = first.Next)
             {
-                var c = first.Value;
+                Control c = first.Value;
 
-                if ((ismodal && !c.ControlInfo.IsModal) || !c.IsVisible || !c.IsEnabled)
+                if (IsModalOpen && !c.IsModal || !c.IsVisible || !c.IsEnabled)
                 {
                     continue;
                 }
@@ -707,9 +558,11 @@ namespace ClassicUO.Game.Managers
             Control c = control;
 
             while (c.Parent != null)
+            {
                 c = c.Parent;
+            }
 
-            var first = Gumps.First?.Next; // skip game window
+            LinkedListNode<Gump> first = Gumps.First?.Next; // skip game window
 
             for (; first != null; first = first.Next)
             {
@@ -726,16 +579,18 @@ namespace ClassicUO.Game.Managers
         {
             if (_needSort)
             {
-                for (var el = Gumps.First; el != null; el = el.Next)
+                for (LinkedListNode<Gump> el = Gumps.First; el != null; el = el.Next)
                 {
-                    var c = el.Value;
+                    Gump c = el.Value;
 
-                    if (c.ControlInfo.Layer == UILayer.Default)
-                        continue;
-
-                    if (c.ControlInfo.Layer == UILayer.Under)
+                    if (c.LayerOrder == UILayer.Default)
                     {
-                        for (var first = Gumps.First; first != null; first = first.Next)
+                        continue;
+                    }
+
+                    if (c.LayerOrder == UILayer.Under)
+                    {
+                        for (LinkedListNode<Gump> first = Gumps.First; first != null; first = first.Next)
                         {
                             if (first.Value == c)
                             {
@@ -747,9 +602,9 @@ namespace ClassicUO.Game.Managers
                             }
                         }
                     }
-                    else if (c.ControlInfo.Layer == UILayer.Over)
+                    else if (c.LayerOrder == UILayer.Over)
                     {
-                        for (var first = Gumps.First; first != null; first = first.Next)
+                        for (LinkedListNode<Gump> first = Gumps.First; first != null; first = first.Next)
                         {
                             if (first.Value == c)
                             {
@@ -764,63 +619,71 @@ namespace ClassicUO.Game.Managers
             }
         }
 
-        public static void AttemptDragControl(Control control, Point mousePosition, bool attemptAlwaysSuccessful = false)
+        public static void AttemptDragControl(Control control, bool attemptAlwaysSuccessful = false)
         {
-            if (_isDraggingControl || (ItemHold.Enabled && !ItemHold.IsFixedPosition))
+            if (_isDraggingControl || ItemHold.Enabled && !ItemHold.IsFixedPosition)
+            {
                 return;
+            }
 
             Control dragTarget = control;
 
             if (!dragTarget.CanMove)
+            {
                 return;
+            }
 
             while (dragTarget.Parent != null)
+            {
                 dragTarget = dragTarget.Parent;
+            }
 
             if (dragTarget.CanMove)
             {
                 if (attemptAlwaysSuccessful || !_isDraggingControl)
                 {
                     DraggingControl = dragTarget;
-                    _dragOriginX = Mouse.LDropPosition.X;
-                    _dragOriginY = Mouse.LDropPosition.Y;
+                    // MobileUO: don't change this or dragging gumps goes wrong
+                    _dragOrigin = Mouse.Position;
 
-                    for (int i = 0; i < 5; i++)
+                    for (int i = 0; i < (int) MouseButtonType.Size; i++)
+                    {
                         _mouseDownControls[i] = null;
+                    }
                 }
 
-                int deltaX = mousePosition.X - _dragOriginX;
-                int deltaY = mousePosition.Y - _dragOriginY;
+                Point delta = Mouse.Position - _dragOrigin;
 
-                int delta = Math.Abs(deltaX) + Math.Abs(deltaY);
-
-                if (attemptAlwaysSuccessful || delta > Constants.MIN_GUMP_DRAG_DISTANCE)
+                if (attemptAlwaysSuccessful || delta != Point.Zero)
                 {
                     _isDraggingControl = true;
-                    dragTarget.InvokeDragBegin(new Point(deltaX, deltaY));
+                    dragTarget.InvokeDragBegin(delta);
                 }
             }
         }
 
-        private static void DoDragControl(Point mousePosition)
+        private static void DoDragControl()
         {
             if (DraggingControl == null)
+            {
                 return;
+            }
 
-            int deltaX = mousePosition.X - _dragOriginX;
-            int deltaY = mousePosition.Y - _dragOriginY;
+            Point delta = Mouse.Position - _dragOrigin;
 
-            DraggingControl.X = DraggingControl.X + deltaX;
-            DraggingControl.Y = DraggingControl.Y + deltaY;
-            DraggingControl.InvokeMove(deltaX, deltaY);
-            _dragOriginX = mousePosition.X;
-            _dragOriginY = mousePosition.Y;
+            DraggingControl.X += delta.X;
+            DraggingControl.Y += delta.Y;
+            DraggingControl.InvokeMove(delta.X, delta.Y);
+            _dragOrigin = Mouse.Position;
         }
 
         private static void EndDragControl(Point mousePosition)
         {
             if (_isDraggingControl)
-                DoDragControl(mousePosition);
+            {
+                DoDragControl();
+            }
+
             DraggingControl?.InvokeDragEnd(mousePosition);
             DraggingControl = null;
             _isDraggingControl = false;

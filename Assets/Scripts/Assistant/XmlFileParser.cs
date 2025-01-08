@@ -228,7 +228,7 @@ namespace Assistant
                     }
 
                     FileInfo profileinfo = new FileInfo(Path.Combine(Profile.ProfilePath, profile));
-                    if (profileinfo.Exists && SerialHelper.IsMobile(serial) && World.Player.Serial == serial && ProfileManager.Current.Username == account)
+                    if (profileinfo.Exists && SerialHelper.IsMobile(serial) && World.Player.Serial == serial && ProfileManager.CurrentProfile.Username == account)
                     {
                         gump.LastProfile = profileinfo.Name;
                         break;

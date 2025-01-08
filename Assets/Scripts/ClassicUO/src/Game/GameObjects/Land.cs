@@ -1,47 +1,69 @@
 ﻿#region license
-// Copyright (C) 2020 ClassicUO Development Community on Github
+
+// Copyright (c) 2021, andreakarasho
+// All rights reserved.
 // 
-// This project is an alternative client for the game Ultima Online.
-// The goal of this is to develop a lightweight client considering
-// new technologies.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+// 3. All advertising materials mentioning features or use of this software
+//    must display the following acknowledgement:
+//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
+// 4. Neither the name of the copyright holder nor the
+//    names of its contributors may be used to endorse or promote products
+//    derived from this software without specific prior written permission.
 // 
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-// 
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-// 
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
+// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using ClassicUO.Game.Managers;
 using ClassicUO.IO.Resources;
 using ClassicUO.Utility;
-using ClassicUO.Utility.Logging;
-
 using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.GameObjects
 {
     internal sealed partial class Land : GameObject
     {
-        private static Vector3[,,] _vectCache = new Vector3[3, 3, 4];
-        private static readonly QueuedPool<Land> _pool = new QueuedPool<Land>(Constants.PREDICTABLE_TILE_COUNT, l =>
-        {
-            l.IsDestroyed = false;
-            l.AlphaHue = 255;
-            l.Normal0 = l.Normal1 = l.Normal2 = l.Normal3 = Vector3.Zero;
-            l.Rectangle = Rectangle.Empty;
-            l.MinZ = l.AverageZ = 0;
-        });
+        private static readonly QueuedPool<Land> _pool = new QueuedPool<Land>
+        (
+            Constants.PREDICTABLE_TILE_COUNT,
+            l =>
+            {
+                l.IsDestroyed = false;
+                l.AlphaHue = 255;
+                l.Normal0 = l.Normal1 = l.Normal2 = l.Normal3 = Vector3.Zero;
+                l.Rectangle = Rectangle.Empty;
+                l.MinZ = l.AverageZ = 0;
+            }
+        );
+
+        public ref LandTiles TileData => ref TileDataLoader.Instance.LandData[Graphic];
+        public sbyte AverageZ;
+        public bool IsStretched;
+
+        public sbyte MinZ;
+
+
+        public Vector3 Normal0, Normal1, Normal2, Normal3;
+        public ushort OriginalGraphic;
+        public Rectangle Rectangle;
 
 
         public static Land Create(ushort graphic)
@@ -51,26 +73,17 @@ namespace ClassicUO.Game.GameObjects
             land.OriginalGraphic = graphic;
             land.IsStretched = land.TileData.TexID == 0 && land.TileData.IsWet;
             land.AllowedToDraw = graphic > 2;
+            land.UpdateGraphicBySeason();
 
             return land;
         }
 
-
-
-        public Vector3 Normal0, Normal1, Normal2, Normal3;
-        public Rectangle Rectangle;
-        public ushort OriginalGraphic;
-
-        public ref LandTiles TileData => ref TileDataLoader.Instance.LandData[Graphic];
-
-        public sbyte MinZ;
-        public sbyte AverageZ;
-        public bool IsStretched;
-
         public override void Destroy()
         {
             if (IsDestroyed)
+            {
                 return;
+            }
 
             base.Destroy();
             _pool.ReturnOne(this);
@@ -87,7 +100,7 @@ namespace ClassicUO.Game.GameObjects
             if (IsStretched)
             {
                 int x = (currentZ << 2) + 1;
-                int y = (zTop << 2);
+                int y = zTop << 2;
                 int w = (zRight << 2) - x;
                 int h = (zBottom << 2) + 1 - y;
 
@@ -97,20 +110,30 @@ namespace ClassicUO.Game.GameObjects
                 Rectangle.Height = h;
 
                 if (Math.Abs(currentZ - zRight) <= Math.Abs(zBottom - zTop))
+                {
                     AverageZ = (sbyte) ((currentZ + zRight) >> 1);
+                }
                 else
+                {
                     AverageZ = (sbyte) ((zBottom + zTop) >> 1);
+                }
 
                 MinZ = currentZ;
 
                 if (zTop < MinZ)
+                {
                     MinZ = (sbyte) zTop;
+                }
 
                 if (zRight < MinZ)
+                {
                     MinZ = (sbyte) zRight;
+                }
 
                 if (zBottom < MinZ)
+                {
                     MinZ = (sbyte) zBottom;
+                }
             }
         }
 
@@ -119,12 +142,14 @@ namespace ClassicUO.Game.GameObjects
             int result = GetDirectionZ(((byte) (direction >> 1) + 1) & 3);
 
             if ((direction & 1) != 0)
+            {
                 return result;
+            }
 
             return (result + GetDirectionZ(direction >> 1)) >> 1;
         }
 
-        [MethodImpl(256)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int GetDirectionZ(int direction)
         {
             switch (direction)
@@ -137,10 +162,8 @@ namespace ClassicUO.Game.GameObjects
         }
 
 
-        public void ApplyStrech(int x, int y, sbyte z)
+        public unsafe void ApplyStretch(Map.Map map, int x, int y, sbyte z)
         {
-            Map.Map map = World.Map;
-
             if (IsStretched || TexmapsLoader.Instance.GetTexture(TileData.TexID) == null || !TestStretched(x, y, z, true))
             {
                 IsStretched = false;
@@ -149,23 +172,21 @@ namespace ClassicUO.Game.GameObjects
             else
             {
                 IsStretched = true;
-                UpdateZ(
-                    map.GetTileZ(x, y + 1),
-                    map.GetTileZ(x + 1, y + 1),
-                    map.GetTileZ(x + 1, y),
-                    z);
 
-                //Vector3[,,] vec = new Vector3[3, 3, 4];
+                UpdateZ(map.GetTileZ(x, y + 1), map.GetTileZ(x + 1, y + 1), map.GetTileZ(x + 1, y), z);
 
                 int i;
                 int j;
 
-                for (i = -1; i < 2; i++)
+                const int SIZE = 3 * 3 * 4;
+                Vector3* vectBuffer = stackalloc Vector3[SIZE];
+
+                for (i = -1; i < 2; ++i)
                 {
                     int curX = x + i;
                     int curI = i + 1;
 
-                    for (j = -1; j < 2; j++)
+                    for (j = -1; j < 2; ++j)
                     {
                         int curY = y + j;
                         int curJ = j + 1;
@@ -176,9 +197,9 @@ namespace ClassicUO.Game.GameObjects
 
                         if (currentZ == leftZ && currentZ == rightZ && currentZ == bottomZ)
                         {
-                            for (int k = 0; k < 4; k++)
+                            for (int k = 0; k < 4; ++k)
                             {
-                                ref var v = ref _vectCache[curI, curJ, k];
+                                ref Vector3 v = ref vectBuffer[k + curJ * 3 + curI * 3 * 4];
                                 v.X = 0;
                                 v.Y = 0;
                                 v.Z = 1;
@@ -191,26 +212,25 @@ namespace ClassicUO.Game.GameObjects
                             int half_2 = (rightZ - bottomZ) << 2;
                             int half_3 = (bottomZ - leftZ) << 2;
 
-                            ref var v0 = ref _vectCache[curI, curJ, 0];
+                            ref Vector3 v0 = ref vectBuffer[0 + curJ * 3 + curI * 3 * 4];
                             v0.X = -22;
                             v0.Y = 22;
                             v0.Z = half_0;
                             MergeAndNormalize(ref v0, -22.0f, -22.0f, half_1);
 
-
-                            ref var v1 = ref _vectCache[curI, curJ, 1];
+                            ref Vector3 v1 = ref vectBuffer[1 + curJ * 3 + curI * 3 * 4];
                             v1.X = 22;
                             v1.Y = 22;
                             v1.Z = half_2;
                             MergeAndNormalize(ref v1, -22.0f, 22.0f, half_0);
 
-                            ref var v2 = ref _vectCache[curI, curJ, 2];
+                            ref Vector3 v2 = ref vectBuffer[2 + curJ * 3 + curI * 3 * 4];
                             v2.X = 22;
                             v2.Y = -22;
                             v2.Z = half_3;
                             MergeAndNormalize(ref v2, 22.0f, 22.0f, half_2);
 
-                            ref var v3 = ref _vectCache[curI, curJ, 3];
+                            ref Vector3 v3 = ref vectBuffer[3 + curJ * 3 + curI * 3 * 4];
                             v3.X = -22;
                             v3.Y = -22;
                             v3.Z = half_1;
@@ -219,73 +239,73 @@ namespace ClassicUO.Game.GameObjects
                     }
                 }
 
-                i = 1;
-                j = 1;
+                SumAndNormalize
+                (
+                    ref vectBuffer[2 + 0 * 3 + 0 * 3 * 4], 
+                    ref vectBuffer[1 + 1 * 3 + 0 * 3 * 4], 
+                    ref vectBuffer[3 + 0 * 3 + 1 * 3 * 4], 
+                    ref vectBuffer[0 + 1 * 3 + 1 * 3 * 4], 
+                    out Normal0
+                );
 
-                // 0
-                SumAndNormalize(
-                     ref _vectCache,
-                     i - 1, j - 1, 2,
-                     i - 1, j, 1,
-                     i, j - 1, 3,
-                     i, j, 0,
-                     out Normal0);
+                SumAndNormalize
+                (
+                    ref vectBuffer[2 + 0 * 3 + 1 * 3 * 4],
+                    ref vectBuffer[1 + 1 * 3 + 1 * 3 * 4],
+                    ref vectBuffer[3 + 0 * 3 + 2 * 3 * 4],
+                    ref vectBuffer[0 + 1 * 3 + 2 * 3 * 4],
+                    out Normal1
+                );
 
-                // 1
-                SumAndNormalize(
-                    ref _vectCache,
-                    i, j - 1, 2,
-                    i, j, 1,
-                    i + 1, j - 1, 3,
-                    i + 1, j, 0,
-                    out Normal1);
+                SumAndNormalize
+                (
+                    ref vectBuffer[2 + 1 * 3 + 1 * 3 * 4],
+                    ref vectBuffer[1 + 2 * 3 + 1 * 3 * 4],
+                    ref vectBuffer[3 + 1 * 3 + 2 * 3 * 4],
+                    ref vectBuffer[0 + 2 * 3 + 2 * 3 * 4],
+                    out Normal2
+                );
 
-                // 2
-                SumAndNormalize(
-                    ref _vectCache,
-                    i, j, 2,
-                    i, j + 1, 1,
-                    i + 1, j, 3,
-                    i + 1, j + 1, 0,
-                    out Normal2);
-
-                // 3
-                SumAndNormalize(
-                    ref _vectCache,
-                    i - 1, j, 2,
-                    i - 1, j + 1, 1,
-                    i, j, 3,
-                    i, j + 1, 0,
-                    out Normal3);
+                SumAndNormalize
+                (
+                    ref vectBuffer[2 + 1 * 3 + 0 * 3 * 4],
+                    ref vectBuffer[1 + 2 * 3 + 0 * 3 * 4],
+                    ref vectBuffer[3 + 1 * 3 + 1 * 3 * 4],
+                    ref vectBuffer[0 + 2 * 3 + 1 * 3 * 4],
+                    out Normal3
+                );
             }
         }
 
 
-        [MethodImpl(256)]
-        private static void SumAndNormalize(
-            ref Vector3[,,] vec,
-            int index0_x, int index0_y, int index0_z,
-            int index1_x, int index1_y, int index1_z,
-            int index2_x, int index2_y, int index2_z,
-            int index3_x, int index3_y, int index3_z,
-            out Vector3 result)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void SumAndNormalize
+        (
+            ref Vector3 v0,
+            ref Vector3 v1,
+            ref Vector3 v2,
+            ref Vector3 v3,
+            out Vector3 result
+        )
         {
-            Vector3.Add(ref vec[index0_x, index0_y, index0_z], ref vec[index1_x, index1_y, index1_z], out var v0Result);
-            Vector3.Add(ref vec[index2_x, index2_y, index2_z], ref vec[index3_x, index3_y, index3_z], out var v1Result);
-            Vector3.Add(ref v0Result, ref v1Result, out result);
+            Vector3.Add(ref v0, ref v1, out v0);
+            Vector3.Add(ref v2, ref v3, out v1);
+            Vector3.Add(ref v0, ref v1, out result);
             Vector3.Normalize(ref result, out result);
         }
 
-        private static bool TestStretched(int x, int y, sbyte z, bool recurse)
+       private static bool TestStretched(int x, int y, sbyte z, bool recurse)
         {
             bool result = false;
 
-            for (int i = -1; i < 2 && !result; i++)
+            for (int i = -1; i < 2 && !result; ++i)
             {
-                for (int j = -1; j < 2 && !result; j++)
+                for (int j = -1; j < 2 && !result; ++j)
                 {
                     if (recurse)
+                    {
                         result = TestStretched(x + i, y + j, z, false);
+                    }
                     else
                     {
                         sbyte testZ = World.Map.GetTileZ(x + i, y + j);
@@ -297,7 +317,7 @@ namespace ClassicUO.Game.GameObjects
             return result;
         }
 
-        [MethodImpl(256)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void MergeAndNormalize(ref Vector3 v, float x, float y, float z)
         {
             float newX = v.Y * z - v.Z * y;
@@ -310,6 +330,7 @@ namespace ClassicUO.Game.GameObjects
             Vector3.Normalize(ref v, out v);
         }
 
+        // MobileUO: added Dispose
         public static void Dispose()
         {
             foreach (var land in _pool._pool)

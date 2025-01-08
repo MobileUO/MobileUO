@@ -1,22 +1,33 @@
 #region license
-// Copyright (C) 2020 ClassicUO Development Community on Github
+
+// Copyright (c) 2021, andreakarasho
+// All rights reserved.
 // 
-// This project is an alternative client for the game Ultima Online.
-// The goal of this is to develop a lightweight client considering
-// new technologies.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+// 3. All advertising materials mentioning features or use of this software
+//    must display the following acknowledgement:
+//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
+// 4. Neither the name of the copyright holder nor the
+//    names of its contributors may be used to endorse or promote products
+//    derived from this software without specific prior written permission.
 // 
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-// 
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-// 
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
+// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 #endregion
 
 using System;
@@ -24,53 +35,34 @@ using System.Collections.Generic;
 using System.Linq;
 using ClassicUO.Game.Managers;
 using ClassicUO.Input;
-using ClassicUO.Interfaces;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
-
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
-
 using SDL2;
-
-using IUpdateable = ClassicUO.Interfaces.IUpdateable;
 using Keyboard = ClassicUO.Input.Keyboard;
 using Mouse = ClassicUO.Input.Mouse;
 
 namespace ClassicUO.Game.UI.Controls
 {
-    enum ClickPriority
-    {
-        High,
-        Default,
-        Low
-    }
-
     internal abstract class Control
     {
         internal static int _StepsDone = 1;
         internal static int _StepChanger = 1;
+
+        protected static Vector3 HueVector = Vector3.Zero;
         private bool _acceptKeyboardInput, _acceptMouseInput, _mouseIsDown;
         private int _activePage;
         private bool _attempToDrag;
         private Rectangle _bounds;
-        private GumpControlInfo _controlInfo;
         private bool _handlesKeyboardFocus;
+        private Point _offset;
         private Control _parent;
 
-        protected static Vector3 _hueVector = Vector3.Zero;
-
+        // MobileUO: added variables
         protected const int MOBILE_CLOSE_BUTTON_ID = -9999;
 
         public Control ControlToForwardMouseEventsTo;
-
-        protected static void ResetHueVector()
-        {
-            _hueVector.X = 0;
-            _hueVector.Y = 0;
-            _hueVector.Z = 0;
-        }
-
         protected Control(Control parent = null)
         {
             Parent = parent;
@@ -105,7 +97,9 @@ namespace ClassicUO.Game.UI.Controls
         }
 
         public ref Rectangle Bounds => ref _bounds;
-        
+
+        public Point Offset => _offset;
+
         public bool IsDisposed { get; private set; }
 
         public bool IsVisible { get; set; } = true;
@@ -148,27 +142,13 @@ namespace ClassicUO.Game.UI.Controls
             set => _acceptMouseInput = value;
         }
 
-        public int Width
-        {
-            get => _bounds.Width;
-            set
-            {
-                if (_bounds.Width != value) _bounds.Width = value;
-            }
-        }
-
-        public int Height
-        {
-            get => _bounds.Height;
-            set
-            {
-                if (_bounds.Height != value) _bounds.Height = value;
-            }
-        }
-
         public ref int X => ref _bounds.X;
 
         public ref int Y => ref _bounds.Y;
+
+        public ref int Width => ref _bounds.Width;
+
+        public ref int Height => ref _bounds.Height;
 
         public int ParentX => Parent != null ? Parent.X + Parent.ParentX : 0;
 
@@ -186,12 +166,15 @@ namespace ClassicUO.Game.UI.Controls
             internal set
             {
                 if (value == null)
+                {
                     _parent?.Children.Remove(this);
+                }
                 else
                 {
                     _parent?.Children.Remove(this);
                     value.Children.Add(this);
                 }
+
                 _parent = value;
             }
         }
@@ -201,36 +184,51 @@ namespace ClassicUO.Game.UI.Controls
             get
             {
                 if (Parent == null)
+                {
                     return null;
+                }
 
                 Control p = Parent;
 
                 while (p.Parent != null)
+                {
                     p = p.Parent;
+                }
 
                 return p;
             }
         }
 
-        public GumpControlInfo ControlInfo => _controlInfo ?? (_controlInfo = new GumpControlInfo(this));
+        public UILayer LayerOrder { get; set; } = UILayer.Default;
+        public bool IsModal { get; set; }
+        public bool ModalClickOutsideAreaClosesThisControl { get; set; }
+
 
         public virtual bool HandlesKeyboardFocus
         {
             get
             {
                 if (!IsEnabled || IsDisposed || !IsVisible)
+                {
                     return false;
+                }
 
                 if (_handlesKeyboardFocus)
+                {
                     return true;
+                }
 
                 if (Children == null)
+                {
                     return false;
+                }
 
                 foreach (Control c in Children)
                 {
                     if (c.HandlesKeyboardFocus)
+                    {
                         return true;
+                    }
                 }
 
                 return false;
@@ -255,10 +253,33 @@ namespace ClassicUO.Game.UI.Controls
 
         public int TooltipMaxLength { get; private set; }
 
+        public void UpdateOffset(int x, int y)
+        {
+            if (_offset.X != x || _offset.Y != y)
+            {
+                _offset.X = x;
+                _offset.Y = y;
+
+                foreach (Control c in Children)
+                {
+                    c.UpdateOffset(x, y);
+                }
+            }
+        }
+
+        protected static void ResetHueVector()
+        {
+            HueVector.X = 0;
+            HueVector.Y = 0;
+            HueVector.Z = 0;
+        }
+
         public virtual bool Draw(UltimaBatcher2D batcher, int x, int y)
         {
-            if (IsDisposed) 
+            if (IsDisposed)
+            {
                 return false;
+            }
 
             foreach (Control c in Children)
             {
@@ -276,9 +297,12 @@ namespace ClassicUO.Game.UI.Controls
             return true;
         }
 
-        public virtual void Update(double totalMS, double frameMS)
+        public virtual void Update(double totalTime, double frameTime)
         {
-            if (IsDisposed) return;
+            if (IsDisposed)
+            {
+                return;
+            }
 
             if (Children.Count != 0)
             {
@@ -297,17 +321,21 @@ namespace ClassicUO.Game.UI.Controls
                         continue;
                     }
 
-                    c.Update(totalMS, frameMS);
+                    c.Update(totalTime, frameTime);
 
                     if (WantUpdateSize)
                     {
                         if ((c.Page == 0 || c.Page == ActivePage) && c.IsVisible)
                         {
                             if (w < c.Bounds.Right)
+                            {
                                 w = c.Bounds.Right;
+                            }
 
                             if (h < c.Bounds.Bottom)
+                            {
                                 h = c.Bounds.Bottom;
+                            }
                         }
                     }
                 }
@@ -315,10 +343,15 @@ namespace ClassicUO.Game.UI.Controls
                 if (WantUpdateSize && IsVisible)
                 {
                     if (w != Width)
+                    {
                         Width = w;
+                    }
 
                     if (h != Height)
+                    {
                         Height = h;
+                    }
+
                     WantUpdateSize = false;
                 }
             }
@@ -328,7 +361,9 @@ namespace ClassicUO.Game.UI.Controls
         {
             //Update size as pages may vary in size.
             if (ServerSerial != 0)
+            {
                 WantUpdateSize = true;
+            }
         }
 
         private void DrawDebug(UltimaBatcher2D batcher, int x, int y)
@@ -336,7 +371,16 @@ namespace ClassicUO.Game.UI.Controls
             if (IsVisible && CUOEnviroment.Debug)
             {
                 ResetHueVector();
-                batcher.DrawRectangle(Texture2DCache.GetTexture(Color.Green), x, y, Width, Height, ref _hueVector);
+
+                batcher.DrawRectangle
+                (
+                    SolidColorTextureCache.GetTexture(Color.Green),
+                    x,
+                    y,
+                    Width,
+                    Height,
+                    ref HueVector
+                );
             }
         }
 
@@ -388,27 +432,31 @@ namespace ClassicUO.Game.UI.Controls
 
         public void HitTest(int x, int y, ref Control res)
         {
-            if (!IsVisible || !IsEnabled)
+            if (!IsVisible || !IsEnabled || IsDisposed)
+            {
                 return;
+            }
 
             int parentX = ParentX;
             int parentY = ParentY;
 
-            if (Bounds.Contains(x - parentX, y - parentY))
+            if (Bounds.Contains(x - parentX - _offset.X, y - parentY - _offset.Y))
             {
                 if (Contains(x - X - parentX, y - Y - parentY))
                 {
                     if (AcceptMouseInput)
                     {
-                        if (res == null || res.Priority >= this.Priority)
+                        if (res == null || res.Priority >= Priority)
                         {
                             res = this;
                             OnHitTestSuccess(x, y, ref res);
                         }
                     }
 
-                    foreach (Control c in Children)
+                    for (int i = 0; i < Children.Count; ++i)
                     {
+                        Control c = Children[i];
+
                         if (c.Page == 0 || c.Page == ActivePage)
                         {
                             c.HitTest(x, y, ref res);
@@ -426,21 +474,27 @@ namespace ClassicUO.Game.UI.Controls
         public virtual void OnHitTestSuccess(int x, int y, ref Control res)
         {
         }
-       
+
         public Control GetFirstControlAcceptKeyboardInput()
         {
             if (_acceptKeyboardInput)
+            {
                 return this;
+            }
 
             if (Children == null || Children.Count == 0)
+            {
                 return null;
+            }
 
             foreach (Control c in Children)
             {
                 Control a = c.GetFirstControlAcceptKeyboardInput();
 
                 if (a != null)
+                {
                     return a;
+                }
             }
 
             return null;
@@ -462,14 +516,16 @@ namespace ClassicUO.Game.UI.Controls
             c._parent = this;
 
             Children.Insert(index, c);
-            
+
             OnChildAdded();
         }
 
         public virtual void Remove(Control c)
         {
             if (c == null)
+            {
                 return;
+            }
 
             c.Parent = null;
             Children.Remove(c);
@@ -480,7 +536,7 @@ namespace ClassicUO.Game.UI.Controls
         {
             foreach (Control c in Children)
             {
-                //NOTE: Prevent mobile close buttons from being disposed
+                // MobileUO: NOTE: Prevent mobile close buttons from being disposed
                 if (IsMobileCloseButton())
                 {
                     continue;
@@ -506,6 +562,7 @@ namespace ClassicUO.Game.UI.Controls
             int y = position.Y - Y - ParentY;
             OnMouseDown(x, y, button);
             MouseDown.Raise(new MouseEventArgs(x, y, button, ButtonState.Pressed), this);
+            // MobileUO: added invoke
             ControlToForwardMouseEventsTo?.InvokeMouseDown(position, button);
         }
 
@@ -515,14 +572,18 @@ namespace ClassicUO.Game.UI.Controls
             int y = position.Y - Y - ParentY;
             OnMouseUp(x, y, button);
             MouseUp.Raise(new MouseEventArgs(x, y, button), this);
+            // MobileUO: added invoke
             ControlToForwardMouseEventsTo?.InvokeMouseUp(position, button);
         }
 
         public void InvokeMouseCloseGumpWithRClick()
         {
             if (CanCloseWithRightClick)
+            {
                 CloseWithRightClick();
-
+            }
+            
+            // MobileUO: added invoke
             ControlToForwardMouseEventsTo?.InvokeMouseCloseGumpWithRClick();
         }
 
@@ -532,6 +593,7 @@ namespace ClassicUO.Game.UI.Controls
             int y = position.Y - Y - ParentY;
             OnMouseOver(x, y);
             MouseOver.Raise(new MouseEventArgs(x, y), this);
+            // MobileUO: added invoke
             ControlToForwardMouseEventsTo?.InvokeMouseOver(position);
         }
 
@@ -541,6 +603,7 @@ namespace ClassicUO.Game.UI.Controls
             int y = position.Y - Y - ParentY;
             OnMouseEnter(x, y);
             MouseEnter.Raise(new MouseEventArgs(x, y), this);
+            // MobileUO: added invoke
             ControlToForwardMouseEventsTo?.InvokeMouseEnter(position);
         }
 
@@ -550,6 +613,7 @@ namespace ClassicUO.Game.UI.Controls
             int y = position.Y - Y - ParentY;
             OnMouseExit(x, y);
             MouseExit.Raise(new MouseEventArgs(x, y), this);
+            // MobileUO: added invoke
             ControlToForwardMouseEventsTo?.InvokeMouseExit(position);
         }
 
@@ -559,10 +623,10 @@ namespace ClassicUO.Game.UI.Controls
             int y = position.Y - Y - ParentY;
             bool result = OnMouseDoubleClick(x, y, button);
 
-            var arg = new MouseDoubleClickEventArgs(x, y, button);
+            MouseDoubleClickEventArgs arg = new MouseDoubleClickEventArgs(x, y, button);
             MouseDoubleClick.Raise(arg, this);
             result |= arg.Result;
-            
+            // MobileUO: added invoke
             ControlToForwardMouseEventsTo?.InvokeMouseDoubleClick(position, button);
 
             return result;
@@ -591,6 +655,7 @@ namespace ClassicUO.Game.UI.Controls
         {
             OnMouseWheel(delta);
             MouseWheel.Raise(new MouseWheelEventArgs(delta), this);
+            // MobileUO: added invoke
             ControlToForwardMouseEventsTo?.InvokeMouseWheel(delta);
         }
 
@@ -650,18 +715,19 @@ namespace ClassicUO.Game.UI.Controls
         {
             if (_mouseIsDown && !_attempToDrag)
             {
-                Point offset = Mouse.LButtonPressed ? Mouse.LDroppedOffset : Mouse.MButtonPressed ? Mouse.MDroppedOffset : Point.Zero;
+                Point offset = Mouse.LButtonPressed ? Mouse.LDragOffset : Mouse.MButtonPressed ? Mouse.MDragOffset : Point.Zero;
 
-                if (Math.Abs(offset.X) > Constants.MIN_GUMP_DRAG_DISTANCE
-                    || Math.Abs(offset.Y) > Constants.MIN_GUMP_DRAG_DISTANCE)
+                if (Math.Abs(offset.X) > Constants.MIN_GUMP_DRAG_DISTANCE || Math.Abs(offset.Y) > Constants.MIN_GUMP_DRAG_DISTANCE)
 
                 {
                     InvokeDragBegin(new Point(x, y));
                     _attempToDrag = true;
                 }
             }
-            else 
+            else
+            {
                 Parent?.OnMouseOver(X + x, Y + y);
+            }
         }
 
         protected virtual void OnMouseEnter(int x, int y)
@@ -709,7 +775,7 @@ namespace ClassicUO.Game.UI.Controls
         protected virtual void OnMove(int x, int y)
         {
         }
-        
+
         internal virtual void OnFocusEnter()
         {
             if (!IsFocused)
@@ -741,22 +807,30 @@ namespace ClassicUO.Game.UI.Controls
         protected virtual void CloseWithRightClick()
         {
             if (!CanCloseWithRightClick)
+            {
                 return;
+            }
 
             Control parent = Parent;
 
             while (parent != null)
             {
                 if (!parent.CanCloseWithRightClick)
+                {
                     return;
+                }
 
                 parent = parent.Parent;
             }
 
             if (Parent == null)
+            {
                 Dispose();
+            }
             else
+            {
                 Parent.CloseWithRightClick();
+            }
         }
 
         public void KeyboardTabToNextFocus(Control c)
@@ -786,7 +860,7 @@ namespace ClassicUO.Game.UI.Controls
 
         public virtual void OnButtonClick(int buttonID)
         {
-            //NOTE: Mobile close button functionality
+            // MobileUO: NOTE: Mobile close button functionality
             if (buttonID == MOBILE_CLOSE_BUTTON_ID)
             {
                 Parent?.CloseWithRightClick();
@@ -807,7 +881,9 @@ namespace ClassicUO.Game.UI.Controls
         public virtual void Dispose()
         {
             if (IsDisposed)
+            {
                 return;
+            }
 
             foreach (Control c in Children)
             {
@@ -819,6 +895,7 @@ namespace ClassicUO.Game.UI.Controls
             IsDisposed = true;
         }
 
+        // MobileUO: added function
         public bool IsMobileCloseButton()
         {
             return this is Button button && button.ButtonID == MOBILE_CLOSE_BUTTON_ID;

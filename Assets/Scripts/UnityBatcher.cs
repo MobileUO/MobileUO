@@ -22,12 +22,17 @@ namespace ClassicUO.Renderer
 {
     internal sealed class UltimaBatcher2D : IDisposable
     {
-        private readonly RasterizerState _rasterizerState;
         private BlendState _blendState;
+        private SamplerState _sampler;
+        private RasterizerState _rasterizerState;
         private bool _started;
         private DepthStencilState _stencil;
         private bool _useScissor;
         private int _numSprites;
+        private Matrix _transformMatrix;
+        private Matrix _projectionMatrix = new Matrix(0f,                         //(float)( 2.0 / (double)viewport.Width ) is the actual value we will use
+                                                      0.0f, 0.0f, 0.0f, 0.0f, 0f, //(float)( -2.0 / (double)viewport.Height ) is the actual value we will use
+                                                      0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, -1.0f, 1.0f, 0.0f, 1.0f);
 
         private Material hueMaterial;
         private Material xbrMaterial;
@@ -54,6 +59,7 @@ namespace ClassicUO.Renderer
             GraphicsDevice = device;
             _blendState = BlendState.AlphaBlend;
             _rasterizerState = RasterizerState.CullNone;
+            _sampler = SamplerState.PointClamp;
 
             _rasterizerState = new RasterizerState
             {
@@ -175,10 +181,17 @@ namespace ClassicUO.Renderer
                                 ) * axisDirY;
 
 
-                Draw2D(textureValue,
-                    Mathf.RoundToInt((x + (int) offsetX)), Mathf.RoundToInt((y + (int) offsetY)),
-                    cGlyph.X, cGlyph.Y, cGlyph.Width, cGlyph.Height,
-                    ref color);
+                Draw2D
+                (
+                    textureValue,
+                    x + (int) Math.Round(offsetX),
+                    y + (int) Math.Round(offsetY),
+                    cGlyph.X,
+                    cGlyph.Y,
+                    cGlyph.Width,
+                    cGlyph.Height,
+                    ref color
+                );
 
                 curOffset.X += cKern.Y + cKern.Z;
             }
@@ -302,26 +315,26 @@ namespace ClassicUO.Renderer
         }
 
         [MethodImpl(256)]
-        public void DrawSpriteRotated(Texture2D texture, int x, int y, int destX, int destY, ref XnaVector3 hue, float angle)
+        public void DrawSpriteRotated(Texture2D texture, int x, int y, float width, float height, int destX, int destY, ref XnaVector3 hue, float angle)
         {
             if (texture.UnityTexture == null)
             {
                 return;
             }
-            
-            float ww = texture.Width * 0.5f;
-            float hh = texture.Height * 0.5f;
 
-            float startX = x - (destX - 44 + ww);
-            float startY = y - (destY + hh);
+            //float ww = texture.Width * 0.5f;
+            //float hh = texture.Height * 0.5f;
+
+            float startX = x - (destX + width);
+            float startY = y - (destY + height);
 
             float sin = (float) Math.Sin(angle);
             float cos = (float) Math.Cos(angle);
 
-            float sinx = sin * ww;
-            float cosx = cos * ww;
-            float siny = sin * hh;
-            float cosy = cos * hh;
+            float sinx = sin * width;
+            float cosx = cos * width;
+            float siny = sin * height;
+            float cosy = cos * height;
 
             var vertex = new PositionTextureColor4();
 
@@ -497,7 +510,7 @@ namespace ClassicUO.Renderer
             vertex.Hue0.y =
                 vertex.Hue1.y =
                     vertex.Hue2.y =
-                        vertex.Hue3.y = ShaderHuesTraslator.SHADER_SHADOW;
+                        vertex.Hue3.y = ShaderHueTranslator.SHADER_SHADOW;
 
             RenderVertex(vertex, texture, vertex.Hue0);
         }
@@ -903,15 +916,15 @@ namespace ClassicUO.Renderer
         }
 
         [MethodImpl(256)]
-        public bool Draw2D(Texture2D texture, float dx, float dy, float dwidth, float dheight, int sx, int sy, float swidth, float sheight, ref XnaVector3 hue, float angle = 0.0f)
+        public bool Draw2D(Texture2D texture, float dx, float dy, float dwidth, float dheight, float sx, float sy, float swidth, float sheight, ref XnaVector3 hue, float angle = 0.0f)
         {
             if (texture.UnityTexture == null)
             {
                 return false;
             }
             
-            float minX = sx / (float) texture.Width, maxX = (sx + swidth) / texture.Width;
-            float minY = sy / (float) texture.Height, maxY = (sy + sheight) / texture.Height;
+            float minX = sx / texture.Width, maxX = (sx + swidth) / texture.Width;
+            float minY = sy / texture.Height, maxY = (sy + sheight) / texture.Height;
 
             var vertex = new PositionTextureColor4();
 
@@ -1035,7 +1048,7 @@ namespace ClassicUO.Renderer
         }
 
         [MethodImpl(256)]
-        public bool Draw2D(Texture2D texture, int x, int y, float width, float height, ref XnaVector3 hue)
+        public bool Draw2D(Texture2D texture, float x, float y, float width, float height, ref XnaVector3 hue)
         {
             if (texture.UnityTexture == null)
             {
@@ -1235,17 +1248,34 @@ namespace ClassicUO.Renderer
         {
             hueMaterial.SetTexture(HueTex1, GraphicsDevice.Textures[1].UnityTexture);
             hueMaterial.SetTexture(HueTex2, GraphicsDevice.Textures[2].UnityTexture);
+            Begin(null, Matrix.Identity);
         }
 
         public void Begin(Effect effect)
         {
             CustomEffect = effect;
+            Begin(effect, Matrix.Identity);
         }
 
         [MethodImpl(256)]
         public void End()
         {
             CustomEffect = null;
+        }
+
+        public void Begin(Effect customEffect, Matrix transform_matrix)
+        {
+            //EnsureNotStarted();
+            //_started = true;
+            //_drawingArea.Min.X = 0;
+            //_drawingArea.Min.Y = 0;
+            //_drawingArea.Min.Z = -150;
+            //_drawingArea.Max.X = GraphicsDevice.Viewport.Width;
+            //_drawingArea.Max.Y = GraphicsDevice.Viewport.Height;
+            //_drawingArea.Max.Z = 150;
+
+            CustomEffect = customEffect;
+            _transformMatrix = transform_matrix;
         }
 
         //Because XNA's Blend enum starts with 1, we duplicate BlendMode.Zero for 0th index
@@ -1292,6 +1322,7 @@ namespace ClassicUO.Renderer
             GraphicsDevice.DepthStencilState = _stencil;
 
             // GraphicsDevice.RasterizerState = _useScissor ? _rasterizerState : RasterizerState.CullNone;
+            // GraphicsDevice.SamplerStates[0] = _sampler;
             hueMaterial.SetFloat(Scissor, _useScissor ? 1 : 0);
             if (_useScissor)
             {
@@ -1303,10 +1334,21 @@ namespace ClassicUO.Renderer
                 hueMaterial.SetVector(ScissorRect, scissorVector4);
             }
 
-            DefaultEffect.ApplyStates();
+            SetMatrixForEffect(DefaultEffect);
         }
 
-        [MethodImpl(256)]
+        private void SetMatrixForEffect(MatrixEffect effect)
+        {
+            _projectionMatrix.M11 = (float) (2.0 / GraphicsDevice.Viewport.Width);
+            _projectionMatrix.M22 = (float) (-2.0 / GraphicsDevice.Viewport.Height);
+
+            Matrix.Multiply(ref _transformMatrix,
+                            ref _projectionMatrix,
+                            out Matrix matrix);
+
+            effect.ApplyStates(matrix);
+        }
+
         public void EnableScissorTest(bool enable)
         {
             if (enable == _useScissor)
@@ -1319,18 +1361,23 @@ namespace ClassicUO.Renderer
             ApplyStates();
         }
 
-        [MethodImpl(256)]
         public void SetBlendState(BlendState blend)
         {
             _blendState = blend ?? BlendState.AlphaBlend;
             ApplyStates();
         }
 
-        [MethodImpl(256)]
         public void SetStencil(DepthStencilState stencil)
         {
             _stencil = stencil ?? Stencil;
             ApplyStates();
+        }
+
+        public void SetSampler(SamplerState sampler)
+        {
+            //Flush(); // TODO: add it?
+
+            _sampler = sampler ?? SamplerState.PointClamp;
         }
 
         public void Dispose()
@@ -1354,9 +1401,9 @@ namespace ClassicUO.Renderer
                 CurrentTechnique = Techniques["HueTechnique"];
             }
 
-            protected IsometricEffect(Effect cloneSource) : base(cloneSource)
-            {
-            }
+            //protected IsometricEffect(Effect cloneSource) : base(cloneSource)
+            //{
+            //}
 
 
             public EffectParameter WorldMatrix { get; }
@@ -1364,15 +1411,15 @@ namespace ClassicUO.Renderer
             public EffectParameter Brighlight { get; }
 
 
-            public override void ApplyStates()
+            public override void ApplyStates(Matrix matrix)
             {
-                WorldMatrix.SetValue(_matrix);
+                 WorldMatrix.SetValue(_matrix);
 
                 _viewPort.x = GraphicsDevice.Viewport.Width;
                 _viewPort.y = GraphicsDevice.Viewport.Height;
                 Viewport.SetValue(_viewPort);
 
-                base.ApplyStates();
+                base.ApplyStates(matrix);
             }
         }
 

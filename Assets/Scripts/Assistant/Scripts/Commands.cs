@@ -1953,26 +1953,34 @@ namespace Assistant.Scripts
                 {
                     if (args.Length > 3 && args[3].AsString() == "right")
                     {
-                        UIManager.OnRightMouseDoubleClick();
-                        UIManager.OnRightMouseButtonUp();
+                        //UIManager.OnRightMouseDoubleClick();
+                        //UIManager.OnRightMouseButtonUp();
+                        UIManager.OnMouseDoubleClick(MouseButtonType.Right);
+                        UIManager.OnMouseButtonUp(MouseButtonType.Right);
                     }
                     else
                     {
-                        UIManager.OnLeftMouseDoubleClick();
-                        UIManager.OnLeftMouseButtonUp();
+                        //UIManager.OnLeftMouseDoubleClick();
+                        //UIManager.OnLeftMouseButtonUp();
+                        UIManager.OnMouseDoubleClick(MouseButtonType.Left);
+                        UIManager.OnMouseButtonUp(MouseButtonType.Left);
                     }
                 }
                 else
                 {
                     if (args.Length > 3 && args[3].AsString() == "right")
                     {
-                        UIManager.OnRightMouseButtonDown();
-                        UIManager.OnRightMouseButtonUp();
+                        //UIManager.OnRightMouseButtonDown();
+                        //UIManager.OnRightMouseButtonUp();
+                        UIManager.OnMouseButtonDown(MouseButtonType.Right);
+                        UIManager.OnMouseButtonUp(MouseButtonType.Right);
                     }
                     else
                     {
-                        UIManager.OnLeftMouseButtonDown();
-                        UIManager.OnLeftMouseButtonUp();
+                        //UIManager.OnLeftMouseButtonDown();
+                        //UIManager.OnLeftMouseButtonUp();
+                        UIManager.OnMouseButtonDown(MouseButtonType.Left);
+                        UIManager.OnMouseButtonUp(MouseButtonType.Left);
                     }
                 }
             }

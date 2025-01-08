@@ -1,39 +1,51 @@
 ﻿#region license
-// Copyright (C) 2020 ClassicUO Development Community on Github
+
+// Copyright (c) 2021, andreakarasho
+// All rights reserved.
 // 
-// This project is an alternative client for the game Ultima Online.
-// The goal of this is to develop a lightweight client considering
-// new technologies.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+// 3. All advertising materials mentioning features or use of this software
+//    must display the following acknowledgement:
+//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
+// 4. Neither the name of the copyright holder nor the
+//    names of its contributors may be used to endorse or promote products
+//    derived from this software without specific prior written permission.
 // 
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-// 
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-// 
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
+// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 #endregion
 
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-
 using ClassicUO.Utility.Platforms;
 
 namespace ClassicUO.Utility
 {
     public static unsafe class UnsafeMemoryManager
     {
+        // MobileUO: commented out
         // static UnsafeMemoryManager()
         // {
         //     Console.WriteLine("Platform: {0}", PlatformHelper.IsMonoRuntime ? "Mono" : ".NET");
         // }
 
+        // MobileUO: commented out
         // [MethodImpl(256)]
         // public static void* AsPointer<T>(ref T v)
         // {
@@ -44,35 +56,37 @@ namespace ClassicUO.Utility
 
         public static T ToStruct<T>(IntPtr ptr)
         {
-            //NOTE: __makeref and TypedReference usage breaks IL2CPP compiler, use Marshal class instead
+            // MobileUO: NOTE: __makeref and TypedReference usage breaks IL2CPP compiler, use Marshal class instead
             return Marshal.PtrToStructure<T>(ptr);
             // return ToStruct<T>(ptr, SizeOf<T>());
         }
 
-        // [MethodImpl(256)]
-        // public static T ToStruct<T>(IntPtr ptr, int size)
-        // {
-        //     byte* str = (byte*) ptr;
-        //
-        //     T result = default;
-        //     byte* resultPtr = (byte*) AsPointer(ref result);
-        //     Buffer.MemoryCopy(str, resultPtr, size, size);
-        //
-        //     return result;
-        // }
+        // MobileUO: commented out
+        //[MethodImpl(256)]
+        //public static T ToStruct<T>(IntPtr ptr, int size)
+        //{
+        //    byte* str = (byte*) ptr;
 
-        // [MethodImpl(256)]
-        // public static T As<T>(object v)
-        // {
-        //     int size = SizeOf<T>();
-        //
-        //     return Reinterpret<object, T>(v, size);
-        // }
+        //    T result = default;
+        //    byte* resultPtr = (byte*) AsPointer(ref result);
+        //    Buffer.MemoryCopy(str, resultPtr, size, size);
 
-        [MethodImpl(256)]
+        //    return result;
+        //}
+
+        // MobileUO: commented out
+        //[MethodImpl(256)]
+        //public static T As<T>(object v)
+        //{
+        //    int size = SizeOf<T>();
+
+        //    return Reinterpret<object, T>(v, size);
+        //}
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static int SizeOf<T>()
         {
-            //NOTE: __makeref and TypedReference usage breaks IL2CPP compiler, use Marshal class instead
+            // MobileUO: NOTE: __makeref and TypedReference usage breaks IL2CPP compiler, use Marshal class instead
             return Marshal.SizeOf<T>();
             // DoubleStruct<T> doubleStruct = DoubleStruct<T>.Value;
             // TypedReference tRef0 = __makeref(doubleStruct.First);
@@ -93,39 +107,40 @@ namespace ClassicUO.Utility
             // return (int) ((byte*) ptrToT1 - (byte*) ptrToT0);
         }
 
+        // MobileUO: commented out
+        //[MethodImpl(256)]
+        //public static TOut Reinterpret<TIn, TOut>(TIn curValue, int sizeBytes) //where TIn : struct where TOut : struct
+        //{
+        //    TOut result = default;
 
-        // [MethodImpl(256)]
-        // public static TOut Reinterpret<TIn, TOut>(TIn curValue, int sizeBytes) //where TIn : struct where TOut : struct
-        // {
-        //     TOut result = default;
-        //
-        //     //SingleStruct<TIn> inS = SingleStruct<TIn>.Value;
-        //     //SingleStruct<TOut> outS = SingleStruct<TOut>.Value;
-        //
-        //     TypedReference resultRef = __makeref(result);
-        //     TypedReference curValueRef = __makeref(curValue);
-        //
-        //
-        //     int offset = PlatformHelper.IsMonoRuntime ? 1 : 0;
-        //
-        //     byte* resultPtr = (byte*) *((IntPtr*) &resultRef + offset);
-        //     byte* curValuePtr = (byte*) *((IntPtr*) &curValueRef + offset);
-        //
-        //     //for (int i = 0; i < sizeBytes; ++i)
-        //     //    resultPtr[i] = curValuePtr[i];
-        //
-        //     Buffer.MemoryCopy(curValuePtr, resultPtr, sizeBytes, sizeBytes);
-        //
-        //     return result;
-        // }
+        //    //SingleStruct<TIn> inS = SingleStruct<TIn>.Value;
+        //    //SingleStruct<TOut> outS = SingleStruct<TOut>.Value;
 
-        // [StructLayout(LayoutKind.Sequential, Pack = 1)]
-        // private struct DoubleStruct<T>
-        // {
-        //     public T First;
-        //     public T Second;
-        //     public static readonly DoubleStruct<T> Value;
-        // }
+        //    TypedReference resultRef = __makeref(result);
+        //    TypedReference curValueRef = __makeref(curValue);
+
+
+        //    int offset = PlatformHelper.IsMonoRuntime ? 1 : 0;
+
+        //    byte* resultPtr = (byte*) *((IntPtr*) &resultRef + offset);
+        //    byte* curValuePtr = (byte*) *((IntPtr*) &curValueRef + offset);
+
+        //    //for (int i = 0; i < sizeBytes; ++i)
+        //    //    resultPtr[i] = curValuePtr[i];
+
+        //    Buffer.MemoryCopy(curValuePtr, resultPtr, sizeBytes, sizeBytes);
+
+        //    return result;
+        //}
+
+        // MobileUO: commented out
+        //[StructLayout(LayoutKind.Sequential, Pack = 1)]
+        //private struct DoubleStruct<T>
+        //{
+        //    public T First;
+        //    public T Second;
+        //    public static readonly DoubleStruct<T> Value;
+        //}
 
         //[StructLayout(LayoutKind.Sequential, Pack = 1)]
         //private struct DoubleStruct<T> //where T : struct
