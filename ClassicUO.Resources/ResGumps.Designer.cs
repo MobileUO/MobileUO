@@ -1,0 +1,1 @@
+../external/ClassicUO/src/Resources/ResGumps.Designer.cs

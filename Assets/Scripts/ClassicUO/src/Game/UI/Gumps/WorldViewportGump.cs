@@ -1,22 +1,33 @@
 ﻿#region license
-// Copyright (C) 2020 ClassicUO Development Community on Github
+
+// Copyright (c) 2021, andreakarasho
+// All rights reserved.
 // 
-// This project is an alternative client for the game Ultima Online.
-// The goal of this is to develop a lightweight client considering
-// new technologies.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+// 3. All advertising materials mentioning features or use of this software
+//    must display the following acknowledgement:
+//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
+// 4. Neither the name of the copyright holder nor the
+//    names of its contributors may be used to endorse or promote products
+//    derived from this software without specific prior written permission.
 // 
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-// 
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-// 
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
+// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 #endregion
 
 using ClassicUO.Configuration;
@@ -28,7 +39,7 @@ using ClassicUO.Input;
 using ClassicUO.IO.Resources;
 using ClassicUO.Network;
 using ClassicUO.Renderer;
-
+using ClassicUO.Resources;
 using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Gumps
@@ -36,36 +47,32 @@ namespace ClassicUO.Game.UI.Gumps
     internal class WorldViewportGump : Gump
     {
         private const int BORDER_WIDTH = 5;
-        private const int BORDER_HEIGHT = 5;
-        private BorderControl _borderControl;
-        private Button _button;
-        private WorldViewport _viewport;
+        private readonly BorderControl _borderControl;
+        private readonly Button _button;
         private bool _clicked;
         private Point _lastSize, _savedSize;
-        private SystemChatControl _systemChatControl;
+        private readonly GameScene _scene;
+        private readonly SystemChatControl _systemChatControl;
         private int _worldHeight;
         private int _worldWidth;
-        private GameScene _scene;
-
-        public WorldViewport Viewport => _viewport;
 
         public WorldViewportGump(GameScene scene) : base(0, 0)
         {
             _scene = scene;
             AcceptMouseInput = false;
-            CanMove = !ProfileManager.Current.GameWindowLock;
+            CanMove = !ProfileManager.CurrentProfile.GameWindowLock;
             CanCloseWithEsc = false;
             CanCloseWithRightClick = false;
-            ControlInfo.Layer = UILayer.Under;
-            X = ProfileManager.Current.GameWindowPosition.X;
-            Y = ProfileManager.Current.GameWindowPosition.Y;
-            _worldWidth = ProfileManager.Current.GameWindowSize.X;
-            _worldHeight = ProfileManager.Current.GameWindowSize.Y;
-            _savedSize = _lastSize = ProfileManager.Current.GameWindowSize;
+            LayerOrder = UILayer.Under;
+            X = ProfileManager.CurrentProfile.GameWindowPosition.X;
+            Y = ProfileManager.CurrentProfile.GameWindowPosition.Y;
+            _worldWidth = ProfileManager.CurrentProfile.GameWindowSize.X;
+            _worldHeight = ProfileManager.CurrentProfile.GameWindowSize.Y;
+            _savedSize = _lastSize = ProfileManager.CurrentProfile.GameWindowSize;
 
             _button = new Button(0, 0x837, 0x838, 0x838);
             
-            //Upscale resize button on mobile
+            // MobileUO: Upscale resize button on mobile
             if (UnityEngine.Application.isMobilePlatform)
             {
                 _button.Width *= 2;
@@ -75,63 +82,75 @@ namespace ClassicUO.Game.UI.Gumps
 
             _button.MouseDown += (sender, e) =>
             {
-                if (!ProfileManager.Current.GameWindowLock)
+                if (!ProfileManager.CurrentProfile.GameWindowLock)
+                {
                     _clicked = true;
+                }
             };
 
             _button.MouseUp += (sender, e) =>
             {
-                if (!ProfileManager.Current.GameWindowLock)
+                if (!ProfileManager.CurrentProfile.GameWindowLock)
                 {
                     Point n = ResizeGameWindow(_lastSize);
 
                     UIManager.GetGump<OptionsGump>()?.UpdateVideo();
 
                     if (Client.Version >= ClientVersion.CV_200)
-                        NetClient.Socket.Send(new PGameWindowSize((uint) n.X, (uint) n.Y));
+                    {
+                        NetClient.Socket.Send_GameWindowSize((uint)n.X, (uint)n.Y);
+                    }
 
                     _clicked = false;
                 }
             };
 
-            _button.SetTooltip("Resize game window");
+            _button.SetTooltip(ResGumps.ResizeGameWindow);
             Width = _worldWidth + BORDER_WIDTH * 2;
-            Height = _worldHeight + BORDER_HEIGHT * 2;
-            _borderControl = new BorderControl(0, 0, Width, Height, 4);
-            _borderControl.DragEnd += (sender, e) =>
-            {
-                UIManager.GetGump<OptionsGump>()?.UpdateVideo();
-            };
-            _viewport = new WorldViewport(_scene, BORDER_WIDTH, BORDER_HEIGHT, _worldWidth, _worldHeight);
+            Height = _worldHeight + BORDER_WIDTH * 2;
 
-            UIManager.SystemChat = _systemChatControl = new SystemChatControl(BORDER_WIDTH, BORDER_HEIGHT, _worldWidth, _worldHeight);
+            _borderControl = new BorderControl
+            (
+                0,
+                0,
+                Width,
+                Height,
+                4
+            );
+
+            _borderControl.DragEnd += (sender, e) => { UIManager.GetGump<OptionsGump>()?.UpdateVideo(); };
+
+            UIManager.SystemChat = _systemChatControl = new SystemChatControl(BORDER_WIDTH, BORDER_WIDTH, _worldWidth, _worldHeight);
 
             Add(_borderControl);
             Add(_button);
-            Add(_viewport);
             Add(_systemChatControl);
             Resize();
         }
 
 
-        public override void Update(double totalMS, double frameMS)
+        public override void Update(double totalTime, double frameTime)
         {
-            base.Update(totalMS, frameMS);
+            base.Update(totalTime, frameTime);
 
             if (IsDisposed)
+            {
                 return;
+            }
 
             if (Mouse.IsDragging)
             {
-                Point offset = Mouse.LDroppedOffset;
+                // MobileUO: fix issue with resizing the world viewport window
+                Point offset = Mouse.Position - _scene.Camera.Bounds.Location;
 
                 _lastSize = _savedSize;
 
-                if (_clicked && offset != Point.Zero)
-                {
-                    int w = _lastSize.X + offset.X;
-                    int h = _lastSize.Y + offset.Y;
+			    if (_clicked && offset != _lastSize)
+			    {
+				    int w = offset.X;
+				    int h = offset.Y;
 
+                    // MobileUO: use MinimumViewportWidth and MinimumViewportHeight variables
                     if (w < GameScene.MinimumViewportWidth)
                         w = GameScene.MinimumViewportWidth;
 
@@ -139,10 +158,14 @@ namespace ClassicUO.Game.UI.Gumps
                         h = GameScene.MinimumViewportHeight;
 
                     if (w > Client.Game.Window.ClientBounds.Width - BORDER_WIDTH)
+                    {
                         w = Client.Game.Window.ClientBounds.Width - BORDER_WIDTH;
+                    }
 
-                    if (h > Client.Game.Window.ClientBounds.Height - BORDER_HEIGHT)
-                        h = Client.Game.Window.ClientBounds.Height - BORDER_HEIGHT;
+                    if (h > Client.Game.Window.ClientBounds.Height - BORDER_WIDTH)
+                    {
+                        h = Client.Game.Window.ClientBounds.Height - BORDER_WIDTH;
+                    }
 
                     _lastSize.X = w;
                     _lastSize.Y = h;
@@ -153,8 +176,8 @@ namespace ClassicUO.Game.UI.Gumps
                     _worldWidth = _lastSize.X;
                     _worldHeight = _lastSize.Y;
                     Width = _worldWidth + BORDER_WIDTH * 2;
-                    Height = _worldHeight + BORDER_HEIGHT * 2;
-                    ProfileManager.Current.GameWindowSize = _lastSize;
+                    Height = _worldHeight + BORDER_WIDTH * 2;
+                    ProfileManager.CurrentProfile.GameWindowSize = _lastSize;
                     Resize();
                 }
             }
@@ -167,20 +190,29 @@ namespace ClassicUO.Game.UI.Gumps
             Point position = Location;
 
             if (position.X + Width - BORDER_WIDTH > Client.Game.Window.ClientBounds.Width)
+            {
                 position.X = Client.Game.Window.ClientBounds.Width - (Width - BORDER_WIDTH);
+            }
 
             if (position.X < -BORDER_WIDTH)
+            {
                 position.X = -BORDER_WIDTH;
+            }
 
-            if (position.Y + Height - BORDER_HEIGHT > Client.Game.Window.ClientBounds.Height)
-                position.Y = Client.Game.Window.ClientBounds.Height - (Height - BORDER_HEIGHT);
+            if (position.Y + Height - BORDER_WIDTH > Client.Game.Window.ClientBounds.Height)
+            {
+                position.Y = Client.Game.Window.ClientBounds.Height - (Height - BORDER_WIDTH);
+            }
 
-            if (position.Y < -BORDER_HEIGHT)
-                position.Y = -BORDER_HEIGHT;
+            if (position.Y < -BORDER_WIDTH)
+            {
+                position.Y = -BORDER_WIDTH;
+            }
 
             Location = position;
 
-            ProfileManager.Current.GameWindowPosition = position;
+            ProfileManager.CurrentProfile.GameWindowPosition = position;
+
             UIManager.GetGump<OptionsGump>()?.UpdateVideo();
 
             UpdateGameWindowPos();
@@ -190,7 +222,7 @@ namespace ClassicUO.Game.UI.Gumps
         {
             base.OnMove(x, y);
 
-            ProfileManager.Current.GameWindowPosition = new Point(ScreenCoordinateX, ScreenCoordinateY);
+            ProfileManager.CurrentProfile.GameWindowPosition = new Point(ScreenCoordinateX, ScreenCoordinateY);
 
             UpdateGameWindowPos();
         }
@@ -212,8 +244,6 @@ namespace ClassicUO.Game.UI.Gumps
             _button.Y = Height - (_button.Height >> 1);
             _worldWidth = Width - BORDER_WIDTH * 2;
             _worldHeight = Height - BORDER_WIDTH * 2;
-            _viewport.Width = _worldWidth;
-            _viewport.Height = _worldHeight;
             _systemChatControl.Width = _worldWidth;
             _systemChatControl.Height = _worldHeight;
             _systemChatControl.Resize();
@@ -224,6 +254,7 @@ namespace ClassicUO.Game.UI.Gumps
 
         public Point ResizeGameWindow(Point newSize)
         {
+            // MobileUO: use MinimumViewportWidth and MinimumViewportHeight variables
             if (newSize.X < GameScene.MinimumViewportWidth)
                 newSize.X = GameScene.MinimumViewportWidth;
 
@@ -231,31 +262,35 @@ namespace ClassicUO.Game.UI.Gumps
                 newSize.Y = GameScene.MinimumViewportHeight;
 
             //Resize();
-            _lastSize = _savedSize = ProfileManager.Current.GameWindowSize = newSize;
+            _lastSize = _savedSize = ProfileManager.CurrentProfile.GameWindowSize = newSize;
+
             if (_worldWidth != _lastSize.X || _worldHeight != _lastSize.Y)
             {
                 _worldWidth = _lastSize.X;
                 _worldHeight = _lastSize.Y;
                 Width = _worldWidth + BORDER_WIDTH * 2;
-                Height = _worldHeight + BORDER_HEIGHT * 2;
-                ProfileManager.Current.GameWindowSize = _lastSize;
+                Height = _worldHeight + BORDER_WIDTH * 2;
+                ProfileManager.CurrentProfile.GameWindowSize = _lastSize;
                 Resize();
             }
+
             return newSize;
         }
 
-        public void ReloadChatControl(SystemChatControl chat)
+        public override bool Contains(int x, int y)
         {
-            _systemChatControl.Dispose();
-            UIManager.SystemChat = _systemChatControl = chat;
-            Add(_systemChatControl);
-            Resize();
+            if (x >= BORDER_WIDTH && x < Width - BORDER_WIDTH * 2 && y >= BORDER_WIDTH && y < Height - BORDER_WIDTH * 2 - (_systemChatControl?.TextBoxControl != null && _systemChatControl.IsActive ? _systemChatControl.TextBoxControl.Height : 0))
+            {
+                return false;
+            }
+
+            return base.Contains(x, y);
         }
     }
 
     internal class BorderControl : Control
     {
-        private readonly UOTexture32[] _borders = new UOTexture32[2];
+        private readonly UOTexture[] _borders = new UOTexture[2];
         private readonly int _borderSize;
 
         public BorderControl(int x, int y, int w, int h, int borderSize)
@@ -273,12 +308,14 @@ namespace ClassicUO.Game.UI.Gumps
 
         public ushort Hue { get; set; }
 
-        public override void Update(double totalMS, double frameMS)
+        public override void Update(double totalTime, double frameTime)
         {
-            base.Update(totalMS, frameMS);
+            base.Update(totalTime, frameTime);
 
-            foreach (UOTexture32 t in _borders)
-                t.Ticks = (long) totalMS;
+            foreach (UOTexture t in _borders)
+            {
+                t.Ticks = (long) totalTime;
+            }
         }
 
         public override bool Draw(UltimaBatcher2D batcher, int x, int y)
@@ -287,18 +324,53 @@ namespace ClassicUO.Game.UI.Gumps
 
             if (Hue != 0)
             {
-                _hueVector.X = Hue;
-                _hueVector.Y = 1;
+                HueVector.X = Hue;
+                HueVector.Y = 1;
             }
 
             // sopra
-            batcher.Draw2DTiled(_borders[0], x, y, Width, _borderSize, ref _hueVector);
+            batcher.Draw2DTiled
+            (
+                _borders[0],
+                x,
+                y,
+                Width,
+                _borderSize,
+                ref HueVector
+            );
+
             // sotto
-            batcher.Draw2DTiled(_borders[0], x, y + Height - _borderSize, Width, _borderSize, ref _hueVector);
+            batcher.Draw2DTiled
+            (
+                _borders[0],
+                x,
+                y + Height - _borderSize,
+                Width,
+                _borderSize,
+                ref HueVector
+            );
+
             //sx
-            batcher.Draw2DTiled(_borders[1], x, y, _borderSize, Height, ref _hueVector);
+            batcher.Draw2DTiled
+            (
+                _borders[1],
+                x,
+                y,
+                _borderSize,
+                Height,
+                ref HueVector
+            );
+
             //dx
-            batcher.Draw2DTiled(_borders[1], x + Width - _borderSize, y + (_borders[1].Width >> 1), _borderSize, Height - _borderSize, ref _hueVector);
+            batcher.Draw2DTiled
+            (
+                _borders[1],
+                x + Width - _borderSize,
+                y + (_borders[1].Width >> 1),
+                _borderSize,
+                Height - _borderSize,
+                ref HueVector
+            );
 
             return base.Draw(batcher, x, y);
         }

@@ -1,61 +1,78 @@
 #region license
-// Copyright (C) 2020 ClassicUO Development Community on Github
+
+// Copyright (c) 2021, andreakarasho
+// All rights reserved.
 // 
-// This project is an alternative client for the game Ultima Online.
-// The goal of this is to develop a lightweight client considering
-// new technologies.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+// 3. All advertising materials mentioning features or use of this software
+//    must display the following acknowledgement:
+//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
+// 4. Neither the name of the copyright holder nor the
+//    names of its contributors may be used to endorse or promote products
+//    derived from this software without specific prior written permission.
 // 
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-// 
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-// 
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
+// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 #endregion
 
-using System.Collections.Generic;
-
-using ClassicUO.IO.Resources;
-using ClassicUO.Utility.Collections;
-using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace ClassicUO.Renderer
 {
-    internal class UOTexture32 : Texture2D
+    internal class UOTexture : Texture2D
     {
-        private uint[] _data;
-
-        public UOTexture32(int width, int height) : base(Client.Game.GraphicsDevice, width, height, false, SurfaceFormat.Color)
+        public UOTexture(int width, int height) : base
+        (
+            Client.Game.GraphicsDevice,
+            width,
+            height,
+            false,
+            SurfaceFormat.Color
+        )
         {
             Ticks = Time.Ticks + 3000;
         }
 
         public long Ticks { get; set; }
-        public uint[] Data => _data;
+        // MobileUO: TODO: here and below was removed in 0.1.9.0. Verify if we need to use it elsewhere!
+        public uint[] Data { get; private set; }
 
+        // MobileUO: added keepData optional parameter
         public void PushData(uint[] data, bool keepData = false)
         {
             if (keepData)
             {
-                _data = data;
+                Data = data;
             }
 
             SetData(data);
         }
 
+        // MobileUO: logic changes for Unity
         public bool Contains(int x, int y, bool pixelCheck = true)
         {
+            // MobileUO: don't keep Data != null or else clicks won't work
             if (x >= 0 && y >= 0 && x < Width && y < Height)
             {
                 if (!pixelCheck)
+                {
                     return true;
+                }
 
                 if (UnityTexture == null)
                     return false;
@@ -66,8 +83,8 @@ namespace ClassicUO.Renderer
 
             return false;
         }
-        
-        //Used for Contains checks in texture using Unity's own texture data, instead of keeping a copy of the data in _data field
+
+        // MobileUO: Used for Contains checks in texture using Unity's own texture data, instead of keeping a copy of the data in _data field
         private uint GetDataAtPos(int pos)
         {
             //The index calculation here is the same as in Texture2D.SetData
@@ -87,44 +104,5 @@ namespace ClassicUO.Renderer
 
             return 0;
         }
-    }
-
-    internal class FontTexture : UOTexture32
-    {
-        public FontTexture(int width, int height, int linescount, RawList<WebLinkRect> links) : base(width, height)
-        {
-            LinesCount = linescount;
-            Links = links;
-        }
-
-        public int LinesCount { get; set; }
-
-        public RawList<WebLinkRect> Links { get; }
-    }
-
-    internal class AnimationFrameTexture : UOTexture32
-    {
-        public AnimationFrameTexture(int width, int height) : base(width, height)
-        {
-        }
-
-        public short CenterX { get; set; }
-
-        public short CenterY { get; set; }
-    }
-
-    internal class ArtTexture : UOTexture32
-    {
-        public ArtTexture(int offsetX, int offsetY, int offsetW, int offsetH, int width, int height) : base(width, height)
-        {
-            ImageRectangle = new Rectangle(offsetX, offsetY, offsetW, offsetH);
-        }
-
-        public ArtTexture(Rectangle rect, int width, int height) : base(width, height)
-        {
-            ImageRectangle = rect;
-        }
-
-        public Rectangle ImageRectangle;
     }
 }

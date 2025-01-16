@@ -1,48 +1,70 @@
 ﻿#region license
-// Copyright (C) 2020 ClassicUO Development Community on Github
+
+// Copyright (c) 2021, andreakarasho
+// All rights reserved.
 // 
-// This project is an alternative client for the game Ultima Online.
-// The goal of this is to develop a lightweight client considering
-// new technologies.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+// 3. All advertising materials mentioning features or use of this software
+//    must display the following acknowledgement:
+//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
+// 4. Neither the name of the copyright holder nor the
+//    names of its contributors may be used to endorse or promote products
+//    derived from this software without specific prior written permission.
 // 
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-// 
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-// 
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
+// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using ClassicUO.Game.Managers;
 using ClassicUO.IO.Resources;
+using ClassicUO.Renderer;
 using ClassicUO.Utility;
-using ClassicUO.Utility.Logging;
-
 using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.GameObjects
 {
     internal sealed partial class Land : GameObject
     {
-        private static Vector3[,,] _vectCache = new Vector3[3, 3, 4];
-        private static readonly QueuedPool<Land> _pool = new QueuedPool<Land>(Constants.PREDICTABLE_TILE_COUNT, l =>
-        {
-            l.IsDestroyed = false;
-            l.AlphaHue = 255;
-            l.Normal0 = l.Normal1 = l.Normal2 = l.Normal3 = Vector3.Zero;
-            l.Rectangle = Rectangle.Empty;
-            l.MinZ = l.AverageZ = 0;
-        });
+        private static readonly QueuedPool<Land> _pool = new QueuedPool<Land>
+        (
+            Constants.PREDICTABLE_TILE_COUNT,
+            l =>
+            {
+                l.IsDestroyed = false;
+                l.AlphaHue = 255;
+                l.NormalTop = l.NormalRight = l.NormalLeft = l.NormalBottom = Vector3.Zero;
+                l.YOffsets.Top = l.YOffsets.Right = l.YOffsets.Left = l.YOffsets.Bottom = 0;
+                l.MinZ = l.AverageZ = 0;
+            }
+        );
 
+        public ref LandTiles TileData => ref TileDataLoader.Instance.LandData[Graphic];
+        public sbyte AverageZ;
+        public bool IsStretched;
+
+        public sbyte MinZ;
+
+
+        public Vector3 NormalTop, NormalRight, NormalLeft, NormalBottom;
+        public ushort OriginalGraphic;
+        public UltimaBatcher2D.YOffsets YOffsets;
 
         public static Land Create(ushort graphic)
         {
@@ -51,26 +73,17 @@ namespace ClassicUO.Game.GameObjects
             land.OriginalGraphic = graphic;
             land.IsStretched = land.TileData.TexID == 0 && land.TileData.IsWet;
             land.AllowedToDraw = graphic > 2;
+            land.UpdateGraphicBySeason();
 
             return land;
         }
 
-
-
-        public Vector3 Normal0, Normal1, Normal2, Normal3;
-        public Rectangle Rectangle;
-        public ushort OriginalGraphic;
-
-        public ref LandTiles TileData => ref TileDataLoader.Instance.LandData[Graphic];
-
-        public sbyte MinZ;
-        public sbyte AverageZ;
-        public bool IsStretched;
-
         public override void Destroy()
         {
             if (IsDestroyed)
+            {
                 return;
+            }
 
             base.Destroy();
             _pool.ReturnOne(this);
@@ -82,234 +95,180 @@ namespace ClassicUO.Game.GameObjects
             AllowedToDraw = Graphic > 2;
         }
 
-        public void UpdateZ(int zTop, int zRight, int zBottom, sbyte currentZ)
-        {
-            if (IsStretched)
-            {
-                int x = (currentZ << 2) + 1;
-                int y = (zTop << 2);
-                int w = (zRight << 2) - x;
-                int h = (zBottom << 2) + 1 - y;
-
-                Rectangle.X = x;
-                Rectangle.Y = y;
-                Rectangle.Width = w;
-                Rectangle.Height = h;
-
-                if (Math.Abs(currentZ - zRight) <= Math.Abs(zBottom - zTop))
-                    AverageZ = (sbyte) ((currentZ + zRight) >> 1);
-                else
-                    AverageZ = (sbyte) ((zBottom + zTop) >> 1);
-
-                MinZ = currentZ;
-
-                if (zTop < MinZ)
-                    MinZ = (sbyte) zTop;
-
-                if (zRight < MinZ)
-                    MinZ = (sbyte) zRight;
-
-                if (zBottom < MinZ)
-                    MinZ = (sbyte) zBottom;
-            }
-        }
-
         public int CalculateCurrentAverageZ(int direction)
         {
             int result = GetDirectionZ(((byte) (direction >> 1) + 1) & 3);
 
             if ((direction & 1) != 0)
+            {
                 return result;
+            }
 
             return (result + GetDirectionZ(direction >> 1)) >> 1;
         }
 
-        [MethodImpl(256)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int GetDirectionZ(int direction)
         {
             switch (direction)
             {
-                case 1: return Rectangle.Bottom >> 2;
-                case 2: return Rectangle.Right >> 2;
-                case 3: return Rectangle.Top >> 2;
+                case 1: return YOffsets.Right >> 2;
+                case 2: return YOffsets.Bottom >> 2;
+                case 3: return YOffsets.Left >> 2;
                 default: return Z;
             }
         }
 
-
-        public void ApplyStrech(int x, int y, sbyte z)
+        public void ApplyStretch(Map.Map map, int x, int y, sbyte z)
         {
-            Map.Map map = World.Map;
-
-            if (IsStretched || TexmapsLoader.Instance.GetTexture(TileData.TexID) == null || !TestStretched(x, y, z, true))
+            if (IsStretched || TexmapsLoader.Instance.GetValidRefEntry(TileData.TexID).Length <= 0)
             {
                 IsStretched = false;
+                AverageZ = z;
                 MinZ = z;
+
+                return;
+            }
+
+            /*  _____ _____
+             * | top | rig |
+             * |_____|_____|
+             * | lef | bot |
+             * |_____|_____|         
+             */
+            sbyte zTop = z;
+            sbyte zRight = map.GetTileZ(x + 1, y);
+            sbyte zLeft = map.GetTileZ(x, y + 1);
+            sbyte zBottom = map.GetTileZ(x + 1, y + 1);
+
+            YOffsets.Top = zTop * 4;
+            YOffsets.Right = zRight * 4;
+            YOffsets.Left = zLeft * 4;
+            YOffsets.Bottom = zBottom * 4;
+
+            if (Math.Abs(zTop - zBottom) <= Math.Abs(zLeft - zRight))
+            {
+                AverageZ = (sbyte) ((zTop + zBottom) >> 1);
             }
             else
             {
-                IsStretched = true;
-                UpdateZ(
-                    map.GetTileZ(x, y + 1),
-                    map.GetTileZ(x + 1, y + 1),
-                    map.GetTileZ(x + 1, y),
-                    z);
-
-                //Vector3[,,] vec = new Vector3[3, 3, 4];
-
-                int i;
-                int j;
-
-                for (i = -1; i < 2; i++)
-                {
-                    int curX = x + i;
-                    int curI = i + 1;
-
-                    for (j = -1; j < 2; j++)
-                    {
-                        int curY = y + j;
-                        int curJ = j + 1;
-                        sbyte currentZ = map.GetTileZ(curX, curY);
-                        sbyte leftZ = map.GetTileZ(curX, curY + 1);
-                        sbyte rightZ = map.GetTileZ(curX + 1, curY);
-                        sbyte bottomZ = map.GetTileZ(curX + 1, curY + 1);
-
-                        if (currentZ == leftZ && currentZ == rightZ && currentZ == bottomZ)
-                        {
-                            for (int k = 0; k < 4; k++)
-                            {
-                                ref var v = ref _vectCache[curI, curJ, k];
-                                v.X = 0;
-                                v.Y = 0;
-                                v.Z = 1;
-                            }
-                        }
-                        else
-                        {
-                            int half_0 = (currentZ - rightZ) << 2;
-                            int half_1 = (leftZ - currentZ) << 2;
-                            int half_2 = (rightZ - bottomZ) << 2;
-                            int half_3 = (bottomZ - leftZ) << 2;
-
-                            ref var v0 = ref _vectCache[curI, curJ, 0];
-                            v0.X = -22;
-                            v0.Y = 22;
-                            v0.Z = half_0;
-                            MergeAndNormalize(ref v0, -22.0f, -22.0f, half_1);
-
-
-                            ref var v1 = ref _vectCache[curI, curJ, 1];
-                            v1.X = 22;
-                            v1.Y = 22;
-                            v1.Z = half_2;
-                            MergeAndNormalize(ref v1, -22.0f, 22.0f, half_0);
-
-                            ref var v2 = ref _vectCache[curI, curJ, 2];
-                            v2.X = 22;
-                            v2.Y = -22;
-                            v2.Z = half_3;
-                            MergeAndNormalize(ref v2, 22.0f, 22.0f, half_2);
-
-                            ref var v3 = ref _vectCache[curI, curJ, 3];
-                            v3.X = -22;
-                            v3.Y = -22;
-                            v3.Z = half_1;
-                            MergeAndNormalize(ref v3, 22.0f, -22.0f, half_3);
-                        }
-                    }
-                }
-
-                i = 1;
-                j = 1;
-
-                // 0
-                SumAndNormalize(
-                     ref _vectCache,
-                     i - 1, j - 1, 2,
-                     i - 1, j, 1,
-                     i, j - 1, 3,
-                     i, j, 0,
-                     out Normal0);
-
-                // 1
-                SumAndNormalize(
-                    ref _vectCache,
-                    i, j - 1, 2,
-                    i, j, 1,
-                    i + 1, j - 1, 3,
-                    i + 1, j, 0,
-                    out Normal1);
-
-                // 2
-                SumAndNormalize(
-                    ref _vectCache,
-                    i, j, 2,
-                    i, j + 1, 1,
-                    i + 1, j, 3,
-                    i + 1, j + 1, 0,
-                    out Normal2);
-
-                // 3
-                SumAndNormalize(
-                    ref _vectCache,
-                    i - 1, j, 2,
-                    i - 1, j + 1, 1,
-                    i, j, 3,
-                    i, j + 1, 0,
-                    out Normal3);
+                AverageZ = (sbyte) ((zLeft + zRight) >> 1);
             }
+
+            MinZ = Math.Min(zTop, Math.Min(zRight, Math.Min(zLeft, zBottom)));
+
+
+            /*  _____ _____ _____ _____
+             * |     | t10 | t20 |     |
+             * |_____|_____|_____|_____|
+             * | t01 |  z  | t21 | t31 |
+             * |_____|_____|_____|_____|
+             * | t02 | t12 | t22 | t32 |
+             * |_____|_____|_____|_____|
+             * |     | t13 | t23 |     |
+             * |_____|_____|_____|_____|
+             */
+            sbyte t10 = map.GetTileZ(x, y - 1);
+            sbyte t20 = map.GetTileZ(x + 1, y - 1);
+            sbyte t01 = map.GetTileZ(x - 1, y);
+            sbyte t21 = zRight;
+            sbyte t31 = map.GetTileZ(x + 2, y);
+            sbyte t02 = map.GetTileZ(x - 1, y + 1);
+            sbyte t12 = zLeft;
+            sbyte t22 = zBottom;
+            sbyte t32 = map.GetTileZ(x + 2, y + 1);
+            sbyte t13 = map.GetTileZ(x, y + 2);
+            sbyte t23 = map.GetTileZ(x + 1, y + 2);
+
+
+            IsStretched |= CalculateNormal(z, t10, t21, t12, t01, out NormalTop);
+            IsStretched |= CalculateNormal(t21, t20, t31, t22, z, out NormalRight);
+            IsStretched |= CalculateNormal(t22, t21, t32, t23, t12, out NormalBottom);
+            IsStretched |= CalculateNormal(t12, z, t22, t13, t02, out NormalLeft);
         }
 
-
-        [MethodImpl(256)]
-        private static void SumAndNormalize(
-            ref Vector3[,,] vec,
-            int index0_x, int index0_y, int index0_z,
-            int index1_x, int index1_y, int index1_z,
-            int index2_x, int index2_y, int index2_z,
-            int index3_x, int index3_y, int index3_z,
-            out Vector3 result)
+        private static bool CalculateNormal(sbyte tile, sbyte top, sbyte right, sbyte bottom, sbyte left, out Vector3 normal)
         {
-            Vector3.Add(ref vec[index0_x, index0_y, index0_z], ref vec[index1_x, index1_y, index1_z], out var v0Result);
-            Vector3.Add(ref vec[index2_x, index2_y, index2_z], ref vec[index3_x, index3_y, index3_z], out var v1Result);
-            Vector3.Add(ref v0Result, ref v1Result, out result);
-            Vector3.Normalize(ref result, out result);
-        }
-
-        private static bool TestStretched(int x, int y, sbyte z, bool recurse)
-        {
-            bool result = false;
-
-            for (int i = -1; i < 2 && !result; i++)
+            if (tile == top && tile == right && tile == bottom && tile == left)
             {
-                for (int j = -1; j < 2 && !result; j++)
-                {
-                    if (recurse)
-                        result = TestStretched(x + i, y + j, z, false);
-                    else
-                    {
-                        sbyte testZ = World.Map.GetTileZ(x + i, y + j);
-                        result = testZ != z && testZ != -125;
-                    }
-                }
+                normal.X = 0;
+                normal.Y = 0;
+                normal.Z = 1f;
+
+                return false;
             }
 
-            return result;
+            Vector3 u = new Vector3();
+            Vector3 v = new Vector3();
+            Vector3 ret = new Vector3();
+
+
+            // ========================== 
+            u.X = -22;
+            u.Y = -22;
+            u.Z = (left - tile) * 4;
+
+            v.X = -22;
+            v.Y = 22;
+            v.Z = (bottom - tile) * 4;
+
+            Vector3.Cross(ref v, ref u, out ret);
+
+            //Vector3.Cross(ref v, ref u, out normal);
+            //Vector3.Normalize(ref normal, out ret);
+            // ========================== 
+
+
+            // ========================== 
+            u.X = -22;
+            u.Y = 22;
+            u.Z = (bottom - tile) * 4;
+
+            v.X = 22;
+            v.Y = 22;
+            v.Z = (right - tile) * 4;
+
+            Vector3.Cross(ref v, ref u, out normal);
+            //Vector3.Normalize(ref normal, out normal);
+            Vector3.Add(ref ret, ref normal, out ret);
+            // ========================== 
+
+
+            // ========================== 
+            u.X = 22;
+            u.Y = 22;
+            u.Z = (right - tile) * 4;
+
+            v.X = 22;
+            v.Y = -22;
+            v.Z = (top - tile) * 4;
+
+            Vector3.Cross(ref v, ref u, out normal);
+            //Vector3.Normalize(ref normal, out normal);
+            Vector3.Add(ref ret, ref normal, out ret);
+            // ========================== 
+
+
+            // ========================== 
+            u.X = 22;
+            u.Y = -22;
+            u.Z = (top - tile) * 4;
+
+            v.X = -22;
+            v.Y = -22;
+            v.Z = (left - tile) * 4;
+
+            Vector3.Cross(ref v, ref u, out normal);
+            //Vector3.Normalize(ref normal, out normal);
+            Vector3.Add(ref ret, ref normal, out ret);
+            // ========================== 
+
+            Vector3.Normalize(ref ret, out normal);
+
+            return true;
         }
 
-        [MethodImpl(256)]
-        private static void MergeAndNormalize(ref Vector3 v, float x, float y, float z)
-        {
-            float newX = v.Y * z - v.Z * y;
-            float newY = v.Z * x - v.X * z;
-            float newZ = v.X * y - v.Y * x;
-            v.X = newX;
-            v.Y = newY;
-            v.Z = newZ;
-
-            Vector3.Normalize(ref v, out v);
-        }
-
+        // MobileUO: added Dispose
         public static void Dispose()
         {
             foreach (var land in _pool._pool)

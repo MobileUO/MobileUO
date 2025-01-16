@@ -22,12 +22,20 @@ namespace ClassicUO.Renderer
 {
     internal sealed class UltimaBatcher2D : IDisposable
     {
-        private readonly RasterizerState _rasterizerState;
+        private static readonly float[] _cornerOffsetX = new float[] { 0.0f, 1.0f, 0.0f, 1.0f };
+        private static readonly float[] _cornerOffsetY = new float[] { 0.0f, 0.0f, 1.0f, 1.0f };
+
         private BlendState _blendState;
+        private SamplerState _sampler;
+        private RasterizerState _rasterizerState;
         private bool _started;
         private DepthStencilState _stencil;
         private bool _useScissor;
         private int _numSprites;
+        private Matrix _transformMatrix;
+        private Matrix _projectionMatrix = new Matrix(0f,                         //(float)( 2.0 / (double)viewport.Width ) is the actual value we will use
+                                                      0.0f, 0.0f, 0.0f, 0.0f, 0f, //(float)( -2.0 / (double)viewport.Height ) is the actual value we will use
+                                                      0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, -1.0f, 1.0f, 0.0f, 1.0f);
 
         private Material hueMaterial;
         private Material xbrMaterial;
@@ -44,6 +52,8 @@ namespace ClassicUO.Renderer
         private static readonly int Hue = Shader.PropertyToID("_Hue");
         private static readonly int HueTex1 = Shader.PropertyToID("_HueTex1");
         private static readonly int HueTex2 = Shader.PropertyToID("_HueTex2");
+        private static readonly int HueTex3 = Shader.PropertyToID("_HueTex3");
+        private static readonly int Brightlight = Shader.PropertyToID("_Brightlight");
         private static readonly int UvMirrorX = Shader.PropertyToID("_uvMirrorX");
         private static readonly int Scissor = Shader.PropertyToID("_Scissor");
         private static readonly int ScissorRect = Shader.PropertyToID("_ScissorRect");
@@ -54,6 +64,7 @@ namespace ClassicUO.Renderer
             GraphicsDevice = device;
             _blendState = BlendState.AlphaBlend;
             _rasterizerState = RasterizerState.CullNone;
+            _sampler = SamplerState.PointClamp;
 
             _rasterizerState = new RasterizerState
             {
@@ -71,6 +82,8 @@ namespace ClassicUO.Renderer
             hueMaterial = new Material(UnityEngine.Resources.Load<Shader>("HueShader"));
             xbrMaterial = new Material(UnityEngine.Resources.Load<Shader>("XbrShader"));
         }
+
+        public Matrix TransformMatrix => _transformMatrix;
 
         private MatrixEffect DefaultEffect { get; }
 
@@ -92,6 +105,8 @@ namespace ClassicUO.Renderer
 
         public void SetBrightlight(float f)
         {
+            // MobileUO: pass Brightlight value to shader
+            hueMaterial.SetFloat(Brightlight, f);
             ((IsometricEffect)DefaultEffect).Brighlight.SetValue(f);
         }
 
@@ -175,10 +190,17 @@ namespace ClassicUO.Renderer
                                 ) * axisDirY;
 
 
-                Draw2D(textureValue,
-                    Mathf.RoundToInt((x + (int) offsetX)), Mathf.RoundToInt((y + (int) offsetY)),
-                    cGlyph.X, cGlyph.Y, cGlyph.Width, cGlyph.Height,
-                    ref color);
+                Draw2D
+                (
+                    textureValue,
+                    x + (int) Math.Round(offsetX),
+                    y + (int) Math.Round(offsetY),
+                    cGlyph.X,
+                    cGlyph.Y,
+                    cGlyph.Width,
+                    cGlyph.Height,
+                    ref color
+                );
 
                 curOffset.X += cKern.Y + cKern.Z;
             }
@@ -302,59 +324,60 @@ namespace ClassicUO.Renderer
         }
 
         [MethodImpl(256)]
-        public void DrawSpriteRotated(Texture2D texture, int x, int y, int destX, int destY, ref XnaVector3 hue, float angle)
+        public void DrawSpriteRotated(Texture2D texture, int x, int y, float width, float height, ref XnaVector3 hue, float angle)
         {
             if (texture.UnityTexture == null)
             {
                 return;
             }
-            
-            float ww = texture.Width * 0.5f;
-            float hh = texture.Height * 0.5f;
-
-            float startX = x - (destX - 44 + ww);
-            float startY = y - (destY + hh);
-
-            float sin = (float) Math.Sin(angle);
-            float cos = (float) Math.Cos(angle);
-
-            float sinx = sin * ww;
-            float cosx = cos * ww;
-            float siny = sin * hh;
-            float cosy = cos * hh;
 
             var vertex = new PositionTextureColor4();
 
-            vertex.Position0.x = startX;
-            vertex.Position0.y = startY;
-            vertex.Position0.x += cosx - -siny;
-            vertex.Position0.y -= sinx + -cosy;
-            vertex.TextureCoordinate0.x = 0;
-            vertex.TextureCoordinate0.y = 0;
+            float sin = (float)Math.Sin(angle);
+            float cos = (float)Math.Cos(angle);
+
+             // Rotation Calculations
+            float rotationMatrix1X = cos;
+            float rotationMatrix1Y = sin;
+            float rotationMatrix2X = -sin;
+            float rotationMatrix2Y = cos;
+
+            var cornerX = (_cornerOffsetX[0] - 0) * width;
+            var cornerY = (_cornerOffsetY[0] - 0) * height;
+            vertex.Position0.x = x + rotationMatrix2X * cornerY + rotationMatrix1X * cornerX;
+            vertex.Position0.y = y + rotationMatrix2Y * cornerY + rotationMatrix1Y * cornerX;
+            vertex.Normal0.x = 0;
+            vertex.Normal0.y = 0;
+            vertex.Normal0.z = 1;
+            vertex.TextureCoordinate0.x = _cornerOffsetX[0];
+            vertex.TextureCoordinate0.y = _cornerOffsetY[0];
             vertex.TextureCoordinate0.z = 0;
 
-            vertex.Position1.x = startX;
-            vertex.Position1.y = startY;
-            vertex.Position1.x += cosx - siny;
-            vertex.Position1.y += -sinx + -cosy;
-            vertex.TextureCoordinate1.x = 0;
-            vertex.TextureCoordinate1.y = 1;
+            cornerX = (_cornerOffsetX[1] - 0) * width;
+            cornerY = (_cornerOffsetY[1] - 0) * height;
+            vertex.Position1.x = x + rotationMatrix2X * cornerY + rotationMatrix1X * cornerX;
+            vertex.Position1.y = y + rotationMatrix2Y * cornerY + rotationMatrix1Y * cornerX;
+            vertex.Normal1.x = 0;
+            vertex.Normal1.y = 0;
+            vertex.Normal1.z = 1;
+            vertex.TextureCoordinate1.x = _cornerOffsetX[1];
+            vertex.TextureCoordinate1.y = _cornerOffsetY[1];
             vertex.TextureCoordinate1.z = 0;
 
-            vertex.Position2.x = startX;
-            vertex.Position2.y = startY;
-            vertex.Position2.x += -cosx - -siny;
-            vertex.Position2.y += sinx + cosy;
-            vertex.TextureCoordinate2.x = 1;
-            vertex.TextureCoordinate2.y = 0;
+            cornerX = (_cornerOffsetX[2] - 0) * width;
+            cornerY = (_cornerOffsetY[2] - 0) * height;
+            vertex.Position2.x = x + rotationMatrix2X * cornerY + rotationMatrix1X * cornerX;
+            vertex.Position2.y = y + rotationMatrix2Y * cornerY + rotationMatrix1Y * cornerX;
+            vertex.TextureCoordinate2.x = _cornerOffsetX[2];
+            vertex.TextureCoordinate2.y = _cornerOffsetY[2];
             vertex.TextureCoordinate2.z = 0;
 
-            vertex.Position3.x = startX;
-            vertex.Position3.y = startY;
-            vertex.Position3.x += -cosx - siny;
-            vertex.Position3.y += sinx + -cosy;
-            vertex.TextureCoordinate3.x = 1;
-            vertex.TextureCoordinate3.y = 1;
+            cornerX = (_cornerOffsetX[3] - 0) * width;
+            cornerY = (_cornerOffsetY[3] - 0) * height;
+            vertex.Position3.x = x + rotationMatrix2X * cornerY + rotationMatrix1X * cornerX;
+            vertex.Position3.y = y + rotationMatrix2Y * cornerY + rotationMatrix1Y * cornerX;
+            vertex.TextureCoordinate3.x = _cornerOffsetX[3];
+            vertex.TextureCoordinate3.y = _cornerOffsetY[3];
             vertex.TextureCoordinate3.z = 0;
 
             vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
@@ -362,8 +385,16 @@ namespace ClassicUO.Renderer
             RenderVertex(vertex, texture, hue);
         }
 
+        public struct YOffsets
+        {
+            public int Top;
+            public int Right;
+            public int Left;
+            public int Bottom;
+        }
+
         [MethodImpl(256)]
-        public bool DrawSpriteLand(Texture2D texture, int x, int y, ref Rectangle rect, ref XnaVector3 normal0, ref XnaVector3 normal1, ref XnaVector3 normal2, ref XnaVector3 normal3, ref XnaVector3 hue)
+        public bool DrawSpriteLand(Texture2D texture, int x, int y, ref YOffsets yOffsets, ref XnaVector3 normalTop, ref XnaVector3 normalRight, ref XnaVector3 normalLeft, ref XnaVector3 normalBottom, ref XnaVector3 hue)
         {
             if (texture.UnityTexture == null)
             {
@@ -385,28 +416,32 @@ namespace ClassicUO.Renderer
             vertex.TextureCoordinate3.x = vertex.TextureCoordinate3.y = 1;
             vertex.TextureCoordinate3.z = 0;
 
+            // Top
             vertex.Position0.x = x + 22;
-            vertex.Position0.y = y - rect.Left;
+            vertex.Position0.y = y - yOffsets.Top;
             vertex.Position0.z = 0;
 
+            // Right
             vertex.Position1.x = x + 44;
-            vertex.Position1.y = y + (22 - rect.Bottom);
+            vertex.Position1.y = y + (22 - yOffsets.Right);
             vertex.Position1.z = 0;
 
+            // Left
             vertex.Position2.x = x;
-            vertex.Position2.y = y + (22 - rect.Top);
+            vertex.Position2.y = y + (22 - yOffsets.Left);
             vertex.Position2.z = 0;
 
+            // Bottom
             vertex.Position3.x = x + 22;
-            vertex.Position3.y = y + (44 - rect.Right);
+            vertex.Position3.y = y + (44 - yOffsets.Bottom);
             vertex.Position3.z = 0;
 
             vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
 
-            vertex.Normal0 = normal0;
-            vertex.Normal1 = normal1;
-            vertex.Normal3 = normal2; // right order!
-            vertex.Normal2 = normal3;
+            vertex.Normal0 = normalTop;
+            vertex.Normal1 = normalRight;
+            vertex.Normal2 = normalLeft;
+            vertex.Normal3 = normalBottom;
 
             RenderVertex(vertex, texture, hue);
 
@@ -435,24 +470,36 @@ namespace ClassicUO.Renderer
                 vertex.Position0.x = x + width;
                 vertex.Position0.y = translatedY + height;
                 vertex.Position0.z = 0;
+                vertex.Normal0.x = 0;
+                vertex.Normal0.y = 0;
+                vertex.Normal0.z = 1;
                 vertex.TextureCoordinate0.x = 0;
                 vertex.TextureCoordinate0.y = 1;
                 vertex.TextureCoordinate0.z = 0;
 
                 vertex.Position1.x = x;
                 vertex.Position1.y = translatedY + height;
+                vertex.Normal1.x = 0;
+                vertex.Normal1.y = 0;
+                vertex.Normal1.z = 1;
                 vertex.TextureCoordinate1.x = 1;
                 vertex.TextureCoordinate1.y = 1;
                 vertex.TextureCoordinate1.z = 0;
 
                 vertex.Position2.x = x + width * (ratio + 1f);
                 vertex.Position2.y = translatedY;
+                vertex.Normal2.x = 0;
+                vertex.Normal2.y = 0;
+                vertex.Normal2.z = 1;
                 vertex.TextureCoordinate2.x = 0;
                 vertex.TextureCoordinate2.y = 0;
                 vertex.TextureCoordinate2.z = 0;
 
                 vertex.Position3.x = x + width * ratio;
                 vertex.Position3.y = translatedY;
+                vertex.Normal3.x = 0;
+                vertex.Normal3.y = 0;
+                vertex.Normal3.z = 1;
                 vertex.TextureCoordinate3.x = 1;
                 vertex.TextureCoordinate3.y = 0;
                 vertex.TextureCoordinate3.z = 0;
@@ -462,42 +509,44 @@ namespace ClassicUO.Renderer
                 vertex.Position0.x = x;
                 vertex.Position0.y = translatedY + height;
                 vertex.Position0.z = 0;
+                vertex.Normal0.x = 0;
+                vertex.Normal0.y = 0;
+                vertex.Normal0.z = 1;
                 vertex.TextureCoordinate0.x = 0;
                 vertex.TextureCoordinate0.y = 1;
                 vertex.TextureCoordinate0.z = 0;
 
                 vertex.Position1.x = x + width;
                 vertex.Position1.y = translatedY + height;
+                vertex.Normal1.x = 0;
+                vertex.Normal1.y = 0;
+                vertex.Normal1.z = 1;
                 vertex.TextureCoordinate1.x = 1;
                 vertex.TextureCoordinate1.y = 1;
                 vertex.TextureCoordinate1.z = 0;
 
                 vertex.Position2.x = x + width * ratio;
                 vertex.Position2.y = translatedY;
+                vertex.Normal2.x = 0;
+                vertex.Normal2.y = 0;
+                vertex.Normal2.z = 1;
                 vertex.TextureCoordinate2.x = 0;
                 vertex.TextureCoordinate2.y = 0;
                 vertex.TextureCoordinate2.z = 0;
 
                 vertex.Position3.x = x + width * (ratio + 1f);
                 vertex.Position3.y = translatedY;
+                vertex.Normal3.x = 0;
+                vertex.Normal3.y = 0;
+                vertex.Normal3.z = 1;
                 vertex.TextureCoordinate3.x = 1;
                 vertex.TextureCoordinate3.y = 0;
                 vertex.TextureCoordinate3.z = 0;
             }
 
-            vertex.Hue0.z =
-                vertex.Hue1.z =
-                    vertex.Hue2.z =
-                        vertex.Hue3.z =
-                            vertex.Hue0.x =
-                                vertex.Hue1.x =
-                                    vertex.Hue2.x =
-                                        vertex.Hue3.x = 0;
+            vertex.Hue0.z = vertex.Hue1.z = vertex.Hue2.z = vertex.Hue3.z = vertex.Hue0.x = vertex.Hue1.x = vertex.Hue2.x = vertex.Hue3.x = 0;
 
-            vertex.Hue0.y =
-                vertex.Hue1.y =
-                    vertex.Hue2.y =
-                        vertex.Hue3.y = ShaderHuesTraslator.SHADER_SHADOW;
+            vertex.Hue0.y = vertex.Hue1.y = vertex.Hue2.y = vertex.Hue3.y = ShaderHueTranslator.SHADER_SHADOW;
 
             RenderVertex(vertex, texture, vertex.Hue0);
         }
@@ -903,15 +952,15 @@ namespace ClassicUO.Renderer
         }
 
         [MethodImpl(256)]
-        public bool Draw2D(Texture2D texture, float dx, float dy, float dwidth, float dheight, int sx, int sy, float swidth, float sheight, ref XnaVector3 hue, float angle = 0.0f)
+        public bool Draw2D(Texture2D texture, float dx, float dy, float dwidth, float dheight, float sx, float sy, float swidth, float sheight, ref XnaVector3 hue, float angle = 0.0f)
         {
             if (texture.UnityTexture == null)
             {
                 return false;
             }
             
-            float minX = sx / (float) texture.Width, maxX = (sx + swidth) / texture.Width;
-            float minY = sy / (float) texture.Height, maxY = (sy + sheight) / texture.Height;
+            float minX = sx / texture.Width, maxX = (sx + swidth) / texture.Width;
+            float minY = sy / texture.Height, maxY = (sy + sheight) / texture.Height;
 
             var vertex = new PositionTextureColor4();
 
@@ -1035,7 +1084,7 @@ namespace ClassicUO.Renderer
         }
 
         [MethodImpl(256)]
-        public bool Draw2D(Texture2D texture, int x, int y, float width, float height, ref XnaVector3 hue)
+        public bool Draw2D(Texture2D texture, float x, float y, float width, float height, ref XnaVector3 hue)
         {
             if (texture.UnityTexture == null)
             {
@@ -1235,17 +1284,35 @@ namespace ClassicUO.Renderer
         {
             hueMaterial.SetTexture(HueTex1, GraphicsDevice.Textures[1].UnityTexture);
             hueMaterial.SetTexture(HueTex2, GraphicsDevice.Textures[2].UnityTexture);
+            hueMaterial.SetTexture(HueTex3, GraphicsDevice.Textures[3].UnityTexture);
+            Begin(null, Matrix.Identity);
         }
 
         public void Begin(Effect effect)
         {
             CustomEffect = effect;
+            Begin(effect, Matrix.Identity);
         }
 
         [MethodImpl(256)]
         public void End()
         {
             CustomEffect = null;
+        }
+
+        public void Begin(Effect customEffect, Matrix transform_matrix)
+        {
+            //EnsureNotStarted();
+            //_started = true;
+            //_drawingArea.Min.X = 0;
+            //_drawingArea.Min.Y = 0;
+            //_drawingArea.Min.Z = -150;
+            //_drawingArea.Max.X = GraphicsDevice.Viewport.Width;
+            //_drawingArea.Max.Y = GraphicsDevice.Viewport.Height;
+            //_drawingArea.Max.Z = 150;
+
+            CustomEffect = customEffect;
+            _transformMatrix = transform_matrix;
         }
 
         //Because XNA's Blend enum starts with 1, we duplicate BlendMode.Zero for 0th index
@@ -1292,6 +1359,9 @@ namespace ClassicUO.Renderer
             GraphicsDevice.DepthStencilState = _stencil;
 
             // GraphicsDevice.RasterizerState = _useScissor ? _rasterizerState : RasterizerState.CullNone;
+            // GraphicsDevice.SamplerStates[0] = _sampler;
+
+            // MobileUO: keep old scissor logic or else gumps like world map won't be clipped!
             hueMaterial.SetFloat(Scissor, _useScissor ? 1 : 0);
             if (_useScissor)
             {
@@ -1303,10 +1373,71 @@ namespace ClassicUO.Renderer
                 hueMaterial.SetVector(ScissorRect, scissorVector4);
             }
 
-            DefaultEffect.ApplyStates();
+            GraphicsDevice.RasterizerState = _rasterizerState;
+            GraphicsDevice.SamplerStates[0] = _sampler;
+            GraphicsDevice.SamplerStates[1] = SamplerState.PointClamp;
+            GraphicsDevice.SamplerStates[2] = SamplerState.PointClamp;
+            GraphicsDevice.SamplerStates[3] = SamplerState.PointClamp;
+
+            SetMatrixForEffect(DefaultEffect);
         }
 
-        [MethodImpl(256)]
+        private void Flush()
+        {
+            ApplyStates();
+        }
+
+        private void SetMatrixForEffect(MatrixEffect effect)
+        {
+            _projectionMatrix.M11 = (float) (2.0 / GraphicsDevice.Viewport.Width);
+            _projectionMatrix.M22 = (float) (-2.0 / GraphicsDevice.Viewport.Height);
+
+            Matrix.Multiply(ref _transformMatrix,
+                            ref _projectionMatrix,
+                            out Matrix matrix);
+
+            effect.ApplyStates(matrix);
+        }
+
+        public bool ClipBegin(int x, int y, int width, int height)
+        {
+            if (width <= 0 || height <= 0)
+            {
+                return false;
+            }
+
+            Rectangle scissor = ScissorStack.CalculateScissors
+            (
+                TransformMatrix,
+                x,
+                y,
+                width,
+                height
+            );
+
+            // MobileUO: TODO: add it?
+            Flush();
+
+            if (ScissorStack.PushScissors(GraphicsDevice, scissor))
+            {
+                EnableScissorTest(true);
+
+                return true;
+            }
+
+            return false;
+        }
+
+        public void ClipEnd()
+        {
+            EnableScissorTest(false);
+            ScissorStack.PopScissors(GraphicsDevice);
+
+            // MobileUO: TODO: add it?
+            Flush();
+        }
+
+        // MobileUO: keep old Scissor test logic
         public void EnableScissorTest(bool enable)
         {
             if (enable == _useScissor)
@@ -1319,18 +1450,24 @@ namespace ClassicUO.Renderer
             ApplyStates();
         }
 
-        [MethodImpl(256)]
         public void SetBlendState(BlendState blend)
         {
             _blendState = blend ?? BlendState.AlphaBlend;
             ApplyStates();
         }
 
-        [MethodImpl(256)]
         public void SetStencil(DepthStencilState stencil)
         {
             _stencil = stencil ?? Stencil;
             ApplyStates();
+        }
+
+        public void SetSampler(SamplerState sampler)
+        {
+            // MobileUO: TODO: add it?
+            //Flush();
+
+            _sampler = sampler ?? SamplerState.PointClamp;
         }
 
         public void Dispose()
@@ -1354,9 +1491,9 @@ namespace ClassicUO.Renderer
                 CurrentTechnique = Techniques["HueTechnique"];
             }
 
-            protected IsometricEffect(Effect cloneSource) : base(cloneSource)
-            {
-            }
+            //protected IsometricEffect(Effect cloneSource) : base(cloneSource)
+            //{
+            //}
 
 
             public EffectParameter WorldMatrix { get; }
@@ -1364,15 +1501,15 @@ namespace ClassicUO.Renderer
             public EffectParameter Brighlight { get; }
 
 
-            public override void ApplyStates()
+            public override void ApplyStates(Matrix matrix)
             {
-                WorldMatrix.SetValue(_matrix);
+                 WorldMatrix.SetValue(_matrix);
 
                 _viewPort.x = GraphicsDevice.Viewport.Width;
                 _viewPort.y = GraphicsDevice.Viewport.Height;
                 Viewport.SetValue(_viewPort);
 
-                base.ApplyStates();
+                base.ApplyStates(matrix);
             }
         }
 
