@@ -137,7 +137,7 @@ namespace ClassicUO.Game.UI.Controls
 
         internal static NiceButtonStbText GetSelected(Control p, int group)
         {
-            IEnumerable<NiceButtonStbText> list = p is ScrollArea ? p.FindControls<ScrollAreaItem>().SelectMany(s => s.Children.OfType<NiceButtonStbText>()) : p.FindControls<NiceButtonStbText>();
+            IEnumerable<NiceButtonStbText> list = p is AssistScrollArea ? p.FindControls<ScrollAreaItem>().SelectMany(s => s.Children.OfType<NiceButtonStbText>()) : p.FindControls<NiceButtonStbText>();
 
             foreach (var b in list)
                 if (b._groupnumber == group && b.IsSelected)
@@ -175,11 +175,11 @@ namespace ClassicUO.Game.UI.Controls
             if (IsSelected)
             {
                 ResetHueVector();
-                ShaderHuesTraslator.GetHueVector(ref _hueVector, 0, false, Alpha);
+                ShaderHueTranslator.GetHueVector(ref HueVector, 0, false, Alpha);
                 if (_SelectedArea > 0)
-                    batcher.Draw2D(_texture, x + TextBoxes[_SelectedArea - 1].X, y, 0, 0, TextBoxes[_SelectedArea - 1].Width, Height, ref _hueVector);
+                    batcher.Draw2D(_texture, x + TextBoxes[_SelectedArea - 1].X, y, 0, 0, TextBoxes[_SelectedArea - 1].Width, Height, ref HueVector);
                 else
-                    batcher.Draw2D(_texture, x + TextLabel.X, y, 0, 0, TextLabel.Width, Height, ref _hueVector);
+                    batcher.Draw2D(_texture, x + TextLabel.X, y, 0, 0, TextLabel.Width, Height, ref HueVector);
             }
 
             return base.Draw(batcher, x, y);

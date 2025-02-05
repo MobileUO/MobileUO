@@ -738,7 +738,7 @@ namespace Assistant
 
         internal void Say(string msg)
         {
-            Say(ProfileManager.Current.SpeechHue, msg);
+            Say(ProfileManager.CurrentProfile.SpeechHue, msg);
         }
 
         internal class GumpData

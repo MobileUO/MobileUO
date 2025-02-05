@@ -1,0 +1,1 @@
+../../../../../../../external/ClassicUO/src/Game/GameObjects/Views/GameEffectView.cs

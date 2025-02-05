@@ -1,58 +1,72 @@
 ﻿#region license
-// Copyright (C) 2020 ClassicUO Development Community on Github
+
+// Copyright (c) 2021, andreakarasho
+// All rights reserved.
 // 
-// This project is an alternative client for the game Ultima Online.
-// The goal of this is to develop a lightweight client considering
-// new technologies.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+// 3. All advertising materials mentioning features or use of this software
+//    must display the following acknowledgement:
+//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
+// 4. Neither the name of the copyright holder nor the
+//    names of its contributors may be used to endorse or promote products
+//    derived from this software without specific prior written permission.
 // 
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-// 
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-// 
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
+// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 #endregion
 
 using System;
-
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
-
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace ClassicUO.Game
 {
-    static class CircleOfTransparency
+    internal static class CircleOfTransparency
     {
-        private static readonly Lazy<DepthStencilState> _stencil = new Lazy<DepthStencilState>(() =>
-        {
-            DepthStencilState state = new DepthStencilState
+        private static readonly Lazy<DepthStencilState> _stencil = new Lazy<DepthStencilState>
+        (
+            () =>
             {
-                StencilEnable = true,
-                StencilFunction = CompareFunction.Always,
-                StencilPass = StencilOperation.Replace,
-                ReferenceStencil = 1,
-                //DepthBufferEnable = true,
-                //DepthBufferWriteEnable = true,
-            };
+                DepthStencilState state = new DepthStencilState
+                {
+                    StencilEnable = true,
+                    StencilFunction = CompareFunction.Always,
+                    StencilPass = StencilOperation.Replace,
+                    ReferenceStencil = 1
+                    //DepthBufferEnable = true,
+                    //DepthBufferWriteEnable = true,
+                };
 
 
-            return state;
-        });
+                return state;
+            }
+        );
 
 
         private static Texture2D _texture;
         private static short _width, _height;
         private static int _radius;
 
-        
+        private static Vector3 _hueVector;
+
+
         public static uint[] CreateCircleTexture(int radius, ref short width, ref short height)
         {
             int fixRadius = radius + 1;
@@ -83,32 +97,45 @@ namespace ClassicUO.Game
             return pixels;
         }
 
-        private static Vector3 _hueVector;
-
-        public static void Draw(UltimaBatcher2D batcher, int x, int y)
+        public static void Draw(UltimaBatcher2D batcher, int x, int y, ushort hue = 0)
         {
             if (_texture != null)
             {
-                x -= (_width >> 1);
-                y -= (_height >> 1);
+                x -= _width >> 1;
+                y -= _height >> 1;
 
-                //batcher.Begin();
+                if (hue == 0)
+                {
+                    _hueVector.X = 0;
+                    _hueVector.Y = 0f;
+                }
+                else
+                {
+                    _hueVector.X = hue;
+                    _hueVector.Y = 1f;
+                }
+               
                 batcher.SetStencil(_stencil.Value);
                 batcher.Draw2D(_texture, x, y, ref _hueVector);
                 batcher.SetStencil(null);
-                //batcher.End();
             }
         }
 
         public static void Create(int radius)
         {
             if (radius < Constants.MIN_CIRCLE_OF_TRANSPARENCY_RADIUS)
+            {
                 radius = Constants.MIN_CIRCLE_OF_TRANSPARENCY_RADIUS;
+            }
             else if (radius > Constants.MAX_CIRCLE_OF_TRANSPARENCY_RADIUS)
+            {
                 radius = Constants.MAX_CIRCLE_OF_TRANSPARENCY_RADIUS;
+            }
 
             if (_radius == radius && _texture != null && !_texture.IsDisposed)
+            {
                 return;
+            }
 
             _radius = radius;
             _texture?.Dispose();
@@ -136,6 +163,7 @@ namespace ClassicUO.Game
             _texture.SetData(pixels);
         }
 
+        // MobileUO: added Dispose
         public static void Dispose()
         {
             _texture?.Dispose();

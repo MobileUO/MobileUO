@@ -34,7 +34,7 @@ namespace ClassicUO.Game.UI.Controls
         private const int INACTIVE = 0;
         private const int ACTIVE = 1;
         private readonly RenderedText _text;
-        private readonly UOTexture32[] _textures = new UOTexture32[2];
+        private readonly UOTexture[] _textures = new UOTexture[2];
         private bool _isChecked;
 
         public AssistCheckbox(ushort inactive, ushort active, string text = "", byte font = 0, ushort color = 0, bool isunicode = true, int maxWidth = 0)
@@ -49,7 +49,7 @@ namespace ClassicUO.Game.UI.Controls
                 return;
             }
 
-            UOTexture32 t = _textures[INACTIVE];
+            UOTexture t = _textures[INACTIVE];
             Width = t.Width;
 
             _text = RenderedText.Create(text, color, font, isunicode, maxWidth: maxWidth);
@@ -105,7 +105,7 @@ namespace ClassicUO.Game.UI.Controls
         {
             for (int i = 0; i < _textures.Length; i++)
             {
-                UOTexture32 t = _textures[i];
+                UOTexture t = _textures[i];
 
                 if (t != null)
                     t.Ticks = (long) totalMS;
@@ -122,7 +122,7 @@ namespace ClassicUO.Game.UI.Controls
             ResetHueVector();
 
             bool ok = base.Draw(batcher, x, y);
-            batcher.Draw2D(IsChecked ? _textures[ACTIVE] : _textures[INACTIVE], x, y, ref _hueVector);
+            batcher.Draw2D(IsChecked ? _textures[ACTIVE] : _textures[INACTIVE], x, y, ref HueVector);
             _text.Draw(batcher, x + _textures[ACTIVE].Width + 2, y);
 
             return ok;

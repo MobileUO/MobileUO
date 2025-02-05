@@ -1,0 +1,1 @@
+../../../../../../../external/ClassicUO/src/Game/UI/Gumps/CreditsGump.cs

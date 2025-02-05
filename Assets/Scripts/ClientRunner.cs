@@ -19,6 +19,7 @@ using Microsoft.Xna.Framework;
 using SDL2;
 using GameObject = UnityEngine.GameObject;
 using Texture2D = Microsoft.Xna.Framework.Graphics.Texture2D;
+using ClassicUO.Network.Encryption;
 
 public class ClientRunner : MonoBehaviour
 {
@@ -153,9 +154,9 @@ public class ClientRunner : MonoBehaviour
 
 	private void OnForceUseXbrChanged(int currentValue)
 	{
-		if (ProfileManager.Current != null)
+		if (ProfileManager.CurrentProfile != null)
 		{
-			ProfileManager.Current.UseXBR = currentValue == (int) PreferenceEnums.ForceUseXbr.On;
+			ProfileManager.CurrentProfile.UseXBR = currentValue == (int) PreferenceEnums.ForceUseXbr.On;
 		}
 	}
 
@@ -195,6 +196,7 @@ public class ClientRunner : MonoBehaviour
 			}
 			Client.Game.GraphicsDevice.Textures[1].UnityTexture.filterMode = FilterMode.Point;
 			Client.Game.GraphicsDevice.Textures[2].UnityTexture.filterMode = FilterMode.Point;
+			Client.Game.GraphicsDevice.Textures[3].UnityTexture.filterMode = FilterMode.Point;
 		}
 	}
 	
@@ -283,8 +285,9 @@ public class ClientRunner : MonoBehaviour
 		    return;
 
 	    GL.LoadPixelMatrix( 0, Screen.width, Screen.height, 0 );
-	    
-        Client.Game.Batcher.UseGraphicsDrawTexture = useGraphicsDrawTexture;
+
+		// MobileUO: turning off graphics draw texture flag - this fixes some rendering issues where tiles are flipped
+		Client.Game.Batcher.UseGraphicsDrawTexture = false;//useGraphicsDrawTexture;
         Client.Game.DrawUnity(UnityEngine.Time.deltaTime);
 
         forceEnterWorld = false;
@@ -389,11 +392,11 @@ public class ClientRunner : MonoBehaviour
     private void OnProfileLoaded()
     {
 	    //Disable auto move on mobile platform
-	    ProfileManager.Current.DisableAutoMove = Application.isMobilePlatform;
+	    ProfileManager.CurrentProfile.DisableAutoMove = Application.isMobilePlatform;
 	    //Prevent stack split gump from appearing on mobile
 	    //ProfileManager.Current.HoldShiftToSplitStack = Application.isMobilePlatform;
 	    //Scale items inside containers by default on mobile (won't have any effect if container scale isn't changed)
-	    ProfileManager.Current.ScaleItemsInsideContainers = Application.isMobilePlatform;
+	    ProfileManager.CurrentProfile.ScaleItemsInsideContainers = Application.isMobilePlatform;
 	    OnForceUseXbrChanged(UserPreferences.ForceUseXbr.CurrentValue);
     }
 
