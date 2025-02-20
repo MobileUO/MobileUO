@@ -1,0 +1,1 @@
+../../../../../external/ClassicUO/src/Game/ScanModeObject.cs

@@ -17,7 +17,7 @@ namespace Microsoft.Xna.Framework.Graphics
     }
     public class VertexBuffer : GraphicsResource
     {
-        internal UltimaBatcher2D.PositionTextureColor4[] Data;
+        internal UltimaBatcher2D.PositionNormalTextureColor4[] Data;
 
         public VertexBuffer()
         {
@@ -28,7 +28,7 @@ namespace Microsoft.Xna.Framework.Graphics
         {   
             
         }
-        internal void SetData(UltimaBatcher2D.PositionTextureColor4[] vertexInfo)
+        internal void SetData(UltimaBatcher2D.PositionNormalTextureColor4[] vertexInfo)
         {
             Data = vertexInfo;
         }

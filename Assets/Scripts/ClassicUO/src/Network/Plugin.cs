@@ -1,64 +1,74 @@
 ﻿#region license
-// Copyright (C) 2020 ClassicUO Development Community on Github
+
+// Copyright (c) 2021, andreakarasho
+// All rights reserved.
 // 
-// This project is an alternative client for the game Ultima Online.
-// The goal of this is to develop a lightweight client considering
-// new technologies.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+// 3. All advertising materials mentioning features or use of this software
+//    must display the following acknowledgement:
+//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
+// 4. Neither the name of the copyright holder nor the
+//    names of its contributors may be used to endorse or promote products
+//    derived from this software without specific prior written permission.
 // 
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-// 
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-// 
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
+// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 #endregion
 
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
-
 using ClassicUO.Configuration;
 using ClassicUO.Game;
 using ClassicUO.Game.Data;
 using ClassicUO.Game.Managers;
+using ClassicUO.IO;
 using ClassicUO.IO.Resources;
 using ClassicUO.Renderer;
-using ClassicUO.Utility;
+using ClassicUO.Renderer.Batching;
 using ClassicUO.Utility.Logging;
 using ClassicUO.Utility.Platforms;
-
 using CUO_API;
-
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-
 using SDL2;
+// MobileUO: added import
+using System.Linq;
 
 namespace ClassicUO.Network
 {
     internal unsafe class Plugin
     {
-        private static readonly List<Plugin> _plugins = new List<Plugin>();
-        public static List<Plugin> Plugins => _plugins;
-        private readonly string _path;
-        public string PluginPath => _path;
-
+        // MobileUO: added variable
         private const string hardcodedInternalAssistantPath = "internal_assistant";
-
+        // MobileUO: removed MarshalAs from variables
         private OnCastSpell _castSpell;
+        private OnDrawCmdList _draw_cmd_list;
+        private OnGetCliloc _get_cliloc;
+        private OnGetStaticData _get_static_data;
+        private OnGetTileData _get_tile_data;
         private OnGetPacketLength _getPacketLength;
         private OnGetPlayerPosition _getPlayerPosition;
         private OnGetStaticImage _getStaticImage;
         private OnGetUOFilePath _getUoFilePath;
+        private OnWndProc _on_wnd_proc;
         private OnClientClose _onClientClose;
         private OnConnected _onConnected;
         private OnDisconnected _onDisconnected;
@@ -68,109 +78,30 @@ namespace ClassicUO.Network
         private OnHotkey _onHotkeyPressed;
         private OnInitialize _onInitialize;
         private OnMouse _onMouse;
+        private OnPacketSendRecv_new _onRecv_new, _onSend_new;
         private OnUpdatePlayerPosition _onUpdatePlayerPosition;
         private OnPacketSendRecv _recv, _send, _onRecv, _onSend;
+        private OnPacketSendRecv_new_intptr _recv_new, _send_new;
         private RequestMove _requestMove;
+        private readonly Dictionary<IntPtr, GraphicsResource> _resources = new Dictionary<IntPtr, GraphicsResource>();
         private OnSetTitle _setTitle;
         private OnTick _tick;
-        private OnPacketSendRecv_new  _onRecv_new, _onSend_new;
-        private OnPacketSendRecv_new_intptr _recv_new, _send_new;
-        private OnDrawCmdList _draw_cmd_list;
-        private OnWndProc _on_wnd_proc;
-        private OnGetStaticData _get_static_data;
-        private OnGetTileData _get_tile_data;
-        private OnGetCliloc _get_cliloc;
 
+        private Plugin(string path)
+        {
+            PluginPath = path;
+        }
 
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] 
-        private delegate void OnInstall(void* header);
+        public static List<Plugin> Plugins { get; } = new List<Plugin>();
 
-        [return: MarshalAs(UnmanagedType.I1)] 
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate bool OnPacketSendRecv_new(byte[] data, ref int length);
+        public string PluginPath { get; }
 
-        [return: MarshalAs(UnmanagedType.I1)] 
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] 
-        private delegate bool OnPacketSendRecv_new_intptr(IntPtr data, ref int length);
-
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] 
-        private delegate int OnDrawCmdList([Out] out IntPtr cmdlist, ref int size);
-
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] 
-        private delegate int OnWndProc(SDL.SDL_Event* ev);
-
-        [return: MarshalAs(UnmanagedType.I1)]
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate bool OnGetStaticData(int index, ref ulong flags,
-                                              ref byte weight,
-                                              ref byte layer,
-                                              ref int count,
-                                              ref ushort animid,
-                                              ref ushort lightidx,
-                                              ref byte height,
-                                              ref string name);
-
-        [return: MarshalAs(UnmanagedType.I1)]
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        private delegate bool OnGetTileData(int index, ref ulong flags,
-                                            ref ushort textid,
-                                            ref string name);
-
-        [return: MarshalAs(UnmanagedType.I1)] 
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] 
-        private delegate bool OnGetCliloc(int cliloc, [MarshalAs(UnmanagedType.LPStr)] string args, bool capitalize, [Out] [MarshalAs(UnmanagedType.LPStr)] out string buffer);
+        public bool IsValid { get; private set; }
 
 
         [DllImport("kernel32", CharSet = CharSet.Unicode, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool DeleteFile(string name);
-
-
-
-        struct PluginHeader
-        {
-            public int ClientVersion;
-            public IntPtr HWND;
-            public IntPtr OnRecv;
-            public IntPtr OnSend;
-            public IntPtr OnHotkeyPressed;
-            public IntPtr OnMouse;
-            public IntPtr OnPlayerPositionChanged;
-            public IntPtr OnClientClosing;
-            public IntPtr OnInitialize;
-            public IntPtr OnConnected;
-            public IntPtr OnDisconnected;
-            public IntPtr OnFocusGained;
-            public IntPtr OnFocusLost;
-            public IntPtr GetUOFilePath;
-            public IntPtr Recv;
-            public IntPtr Send;
-            public IntPtr GetPacketLength;
-            public IntPtr GetPlayerPosition;
-            public IntPtr CastSpell;
-            public IntPtr GetStaticImage;
-            public IntPtr Tick;
-            public IntPtr RequestMove;
-            public IntPtr SetTitle;
-
-            public IntPtr OnRecv_new, OnSend_new, Recv_new, Send_new;
-
-            public IntPtr OnDrawCmdList;
-            public IntPtr SDL_Window;
-            public IntPtr OnWndProc;
-            public IntPtr GetStaticData;
-            public IntPtr GetTileData;
-            public IntPtr GetCliloc;
-        }
-
-        private readonly Dictionary<IntPtr, GraphicsResource> _resources = new Dictionary<IntPtr, GraphicsResource>();
-
-        private Plugin(string path)
-        {
-            _path = path;
-        }
-
-        public bool IsValid { get; private set; }
 
 
         public static Plugin Create(string path)
@@ -197,15 +128,16 @@ namespace ClassicUO.Network
             }
 
             Log.Trace($"Plugin: {path} loaded.");
-            _plugins.Add(p);
+            Plugins.Add(p);
 
             return p;
         }
 
+        // MobileUO: added method
         public static bool LoadInternalAssistant()
         {
             //If the plugin has already been created, don't create it again
-            if (_plugins.Any(x => x._path == hardcodedInternalAssistantPath))
+            if (Plugins.Any(x => x.PluginPath == hardcodedInternalAssistantPath))
             {
                 return false;
             }
@@ -229,15 +161,14 @@ namespace ClassicUO.Network
             
             if (plugin.IsValid == false)
             {
-                Log.Warn($"Invalid plugin: {plugin._path}");
+                Log.Warn($"Invalid plugin: {plugin.PluginPath}");
                 return false;
             }
             
-            Log.Trace($"Plugin: {plugin._path} loaded.");
-            _plugins.Add(plugin);
+            Log.Trace($"Plugin: {plugin.PluginPath} loaded.");
+            Plugins.Add(plugin);
             return true;
         }
-
 
         public void Load()
         {
@@ -256,6 +187,7 @@ namespace ClassicUO.Network
             _get_tile_data = GetTileData;
             _get_cliloc = GetCliloc;
 
+            // MobileUO: commented out
             /*
             SDL.SDL_SysWMinfo info = new SDL.SDL_SysWMinfo();
             SDL.SDL_VERSION(out info.version);
@@ -264,11 +196,13 @@ namespace ClassicUO.Network
             IntPtr hwnd = IntPtr.Zero;
 
             if (info.subsystem == SDL.SDL_SYSWM_TYPE.SDL_SYSWM_WINDOWS)
+            {
                 hwnd = info.info.win.window;
+            }
 
             PluginHeader header = new PluginHeader
             {
-                ClientVersion = (int) Client.Version,
+                ClientVersion = (int)Client.Version,
                 Recv = Marshal.GetFunctionPointerForDelegate(_recv),
                 Send = Marshal.GetFunctionPointerForDelegate(_send),
                 GetPacketLength = Marshal.GetFunctionPointerForDelegate(_getPacketLength),
@@ -285,22 +219,26 @@ namespace ClassicUO.Network
                 SDL_Window = Client.Game.Window.Handle,
                 GetStaticData = Marshal.GetFunctionPointerForDelegate(_get_static_data),
                 GetTileData = Marshal.GetFunctionPointerForDelegate(_get_tile_data),
-                GetCliloc = Marshal.GetFunctionPointerForDelegate(_get_cliloc),
+                GetCliloc = Marshal.GetFunctionPointerForDelegate(_get_cliloc)
             };
 
             void* func = &header;
-            
-            if(Environment.OSVersion.Platform != PlatformID.Unix && Environment.OSVersion.Platform != PlatformID.MacOSX)
-                UnblockPath(Path.GetDirectoryName(_path));
+
+            if (Environment.OSVersion.Platform != PlatformID.Unix && Environment.OSVersion.Platform != PlatformID.MacOSX)
+            {
+                UnblockPath(Path.GetDirectoryName(PluginPath));
+            }
 
             try
             {
-                IntPtr assptr = Native.LoadLibrary(_path);
+                IntPtr assptr = Native.LoadLibrary(PluginPath);
 
                 Log.Trace($"assembly: {assptr}");
 
                 if (assptr == IntPtr.Zero)
+                {
                     throw new Exception("Invalid Assembly, Attempting managed load.");
+                }
 
                 Log.Trace($"Searching for 'Install' entry point  -  {assptr}");
 
@@ -309,7 +247,9 @@ namespace ClassicUO.Network
                 Log.Trace($"Entry point: {installPtr}");
 
                 if (installPtr == IntPtr.Zero)
+                {
                     throw new Exception("Invalid Entry Point, Attempting managed load.");
+                }
 
                 Marshal.GetDelegateForFunctionPointer<OnInstall>(installPtr)(func);
 
@@ -319,18 +259,17 @@ namespace ClassicUO.Network
             {
                 try
                 {
-                    var asm = Assembly.LoadFile(_path);
-                    var type = asm.GetType("Assistant.Engine");
+                    Assembly asm = Assembly.LoadFile(PluginPath);
+                    Type type = asm.GetType("Assistant.Engine");
 
                     if (type == null)
                     {
-                        Log.Error(
-                                    "Unable to find Plugin Type, API requires the public class Engine in namespace Assistant.");
+                        Log.Error("Unable to find Plugin Type, API requires the public class Engine in namespace Assistant.");
 
                         return;
                     }
 
-                    var meth = type.GetMethod("Install", BindingFlags.Public | BindingFlags.Static);
+                    MethodInfo meth = type.GetMethod("Install", BindingFlags.Public | BindingFlags.Static);
 
                     if (meth == null)
                     {
@@ -339,12 +278,11 @@ namespace ClassicUO.Network
                         return;
                     }
 
-                    meth.Invoke(null, new object[] { (IntPtr) func });
+                    meth.Invoke(null, new object[] { (IntPtr)func });
                 }
                 catch (Exception err)
                 {
-                    Log.Error(
-                                $"Plugin threw an error during Initialization. {err.Message} {err.StackTrace} {err.InnerException?.Message} {err.InnerException?.StackTrace}");
+                    Log.Error($"Plugin threw an error during Initialization. {err.Message} {err.StackTrace} {err.InnerException?.Message} {err.InnerException?.StackTrace}");
 
                     return;
                 }
@@ -352,55 +290,89 @@ namespace ClassicUO.Network
 
 
             if (header.OnRecv != IntPtr.Zero)
+            {
                 _onRecv = Marshal.GetDelegateForFunctionPointer<OnPacketSendRecv>(header.OnRecv);
+            }
 
             if (header.OnSend != IntPtr.Zero)
+            {
                 _onSend = Marshal.GetDelegateForFunctionPointer<OnPacketSendRecv>(header.OnSend);
+            }
 
             if (header.OnHotkeyPressed != IntPtr.Zero)
+            {
                 _onHotkeyPressed = Marshal.GetDelegateForFunctionPointer<OnHotkey>(header.OnHotkeyPressed);
+            }
 
             if (header.OnMouse != IntPtr.Zero)
+            {
                 _onMouse = Marshal.GetDelegateForFunctionPointer<OnMouse>(header.OnMouse);
+            }
 
             if (header.OnPlayerPositionChanged != IntPtr.Zero)
+            {
                 _onUpdatePlayerPosition = Marshal.GetDelegateForFunctionPointer<OnUpdatePlayerPosition>(header.OnPlayerPositionChanged);
+            }
 
             if (header.OnClientClosing != IntPtr.Zero)
+            {
                 _onClientClose = Marshal.GetDelegateForFunctionPointer<OnClientClose>(header.OnClientClosing);
+            }
 
             if (header.OnInitialize != IntPtr.Zero)
+            {
                 _onInitialize = Marshal.GetDelegateForFunctionPointer<OnInitialize>(header.OnInitialize);
+            }
 
             if (header.OnConnected != IntPtr.Zero)
+            {
                 _onConnected = Marshal.GetDelegateForFunctionPointer<OnConnected>(header.OnConnected);
+            }
 
             if (header.OnDisconnected != IntPtr.Zero)
+            {
                 _onDisconnected = Marshal.GetDelegateForFunctionPointer<OnDisconnected>(header.OnDisconnected);
+            }
 
             if (header.OnFocusGained != IntPtr.Zero)
+            {
                 _onFocusGained = Marshal.GetDelegateForFunctionPointer<OnFocusGained>(header.OnFocusGained);
+            }
 
             if (header.OnFocusLost != IntPtr.Zero)
+            {
                 _onFocusLost = Marshal.GetDelegateForFunctionPointer<OnFocusLost>(header.OnFocusLost);
+            }
 
             if (header.Tick != IntPtr.Zero)
+            {
                 _tick = Marshal.GetDelegateForFunctionPointer<OnTick>(header.Tick);
+            }
 
 
             if (header.OnRecv_new != IntPtr.Zero)
+            {
                 _onRecv_new = Marshal.GetDelegateForFunctionPointer<OnPacketSendRecv_new>(header.OnRecv_new);
+            }
+
             if (header.OnSend_new != IntPtr.Zero)
+            {
                 _onSend_new = Marshal.GetDelegateForFunctionPointer<OnPacketSendRecv_new>(header.OnSend_new);
+            }
 
             if (header.OnDrawCmdList != IntPtr.Zero)
+            {
                 _draw_cmd_list = Marshal.GetDelegateForFunctionPointer<OnDrawCmdList>(header.OnDrawCmdList);
+            }
+
             if (header.OnWndProc != IntPtr.Zero)
+            {
                 _on_wnd_proc = Marshal.GetDelegateForFunctionPointer<OnWndProc>(header.OnWndProc);
+            }
             */
-            
-#if ENABLE_INTERNAL_ASSISTANT
-            if (_path == hardcodedInternalAssistantPath)
+
+            #if ENABLE_INTERNAL_ASSISTANT
+            if (PluginPath == hardcodedInternalAssistantPath)
             {
                 try
                 {
@@ -441,7 +413,10 @@ namespace ClassicUO.Network
 
             IsValid = true;
 
-            _onInitialize?.Invoke();
+            if (_onInitialize != null)
+            {
+                _onInitialize();
+            }
         }
 
         private static string GetUOFilePath()
@@ -451,28 +426,27 @@ namespace ClassicUO.Network
 
         private static void SetWindowTitle(string str)
         {
-#if DEV_BUILD
-            Client.Game.Window.Title = $"{str} - ClassicUO [dev] - {CUOEnviroment.Version}";
-#else
-            Client.Game.Window.Title = $"{str} - ClassicUO - { CUOEnviroment.Version}";
-#endif
+            Client.Game.SetWindowTitle(str);
         }
 
-        private static bool GetStaticData(int index,
-                                                 ref ulong flags, 
-                                                 ref byte weight, 
-                                                 ref byte layer, 
-                                                 ref int count,
-                                                 ref ushort animid,
-                                                 ref ushort lightidx, 
-                                                 ref byte height,
-                                                 ref string name)
+        private static bool GetStaticData
+        (
+            int index,
+            ref ulong flags,
+            ref byte weight,
+            ref byte layer,
+            ref int count,
+            ref ushort animid,
+            ref ushort lightidx,
+            ref byte height,
+            ref string name
+        )
         {
             if (index >= 0 && index < Constants.MAX_STATIC_DATA_INDEX_COUNT)
             {
-                ref var st = ref TileDataLoader.Instance.StaticData[index];
+                ref StaticTiles st = ref TileDataLoader.Instance.StaticData[index];
 
-                flags = (ulong) st.Flags;
+                flags = (ulong)st.Flags;
                 weight = st.Weight;
                 layer = st.Layer;
                 count = st.Count;
@@ -480,23 +454,20 @@ namespace ClassicUO.Network
                 lightidx = st.LightIndex;
                 height = st.Height;
                 name = st.Name;
-               
+
                 return true;
             }
 
             return false;
         }
 
-        private static bool GetTileData(int index, 
-                                        ref ulong flags,
-                                        ref ushort textid,
-                                        ref string name)
+        private static bool GetTileData(int index, ref ulong flags, ref ushort textid, ref string name)
         {
             if (index >= 0 && index < Constants.MAX_STATIC_DATA_INDEX_COUNT)
             {
-                ref var st = ref TileDataLoader.Instance.LandData[index];
+                ref LandTiles st = ref TileDataLoader.Instance.LandData[index];
 
-                flags = (ulong) st.Flags;
+                flags = (ulong)st.Flags;
                 textid = st.TexID;
                 name = st.Name;
 
@@ -515,15 +486,15 @@ namespace ClassicUO.Network
 
         private static void GetStaticImage(ushort g, ref ArtInfo info)
         {
-            ArtLoader.Instance.TryGetEntryInfo(g, out long address, out long size, out long compressedsize);
-            info.Address = address;
-            info.Size = size;
-            info.CompressedSize = compressedsize;
+            //ArtLoader.Instance.TryGetEntryInfo(g, out long address, out long size, out long compressedsize);
+            //info.Address = address;
+            //info.Size = size;
+            //info.CompressedSize = compressedsize;
         }
 
         private static bool RequestMove(int dir, bool run)
         {
-            return World.Player.Walk((Direction) dir, run);
+            return World.Player.Walk((Direction)dir, run);
         }
 
         private static bool GetPlayerPosition(out int x, out int y, out int z)
@@ -544,16 +515,21 @@ namespace ClassicUO.Network
 
         internal static void Tick()
         {
-            foreach (Plugin t in _plugins)
-                t._tick?.Invoke();
+            foreach (Plugin t in Plugins)
+            {
+                if (t._tick != null)
+                {
+                    t._tick();
+                }
+            }
         }
 
 
-        internal static bool ProcessRecvPacket(ref byte[] data, ref int length)
+        internal static bool ProcessRecvPacket(byte[] data, ref int length)
         {
             bool result = true;
 
-            foreach (Plugin plugin in _plugins)
+            foreach (Plugin plugin in Plugins)
             {
                 if (plugin._onRecv_new != null)
                 {
@@ -562,18 +538,28 @@ namespace ClassicUO.Network
                         result = false;
                     }
                 }
-                else if (plugin._onRecv != null && !plugin._onRecv(ref data, ref length))
-                    result = false;
+                else if (plugin._onRecv != null)
+                {
+                    byte[] tmp = new byte[length];
+                    Array.Copy(data, tmp, length);
+
+                    if (!plugin._onRecv(ref tmp, ref length))
+                    {
+                        result = false;
+                    }
+
+                    Array.Copy(tmp, data, length);
+                }
             }
 
             return result;
         }
 
-        internal static bool ProcessSendPacket(ref byte[] data, ref int length)
+        internal static bool ProcessSendPacket(byte[] data, ref int length)
         {
             bool result = true;
 
-            foreach (Plugin plugin in _plugins)
+            foreach (Plugin plugin in Plugins)
             {
                 if (plugin._onSend_new != null)
                 {
@@ -582,8 +568,18 @@ namespace ClassicUO.Network
                         result = false;
                     }
                 }
-                else if (plugin._onSend != null && !plugin._onSend(ref data, ref length))
-                    result = false;
+                else if (plugin._onSend != null)
+                {
+                    byte[] tmp = new byte[length];
+                    Array.Copy(data, tmp, length);
+
+                    if (!plugin._onSend(ref tmp, ref length))
+                    {
+                        result = false;
+                    }
+
+                    Array.Copy(tmp, data, length);
+                }
             }
 
             return result;
@@ -591,57 +587,77 @@ namespace ClassicUO.Network
 
         internal static void OnClosing()
         {
-            for (int i = 0; i < _plugins.Count; i++)
+            for (int i = 0; i < Plugins.Count; i++)
             {
-                _plugins[i]._onClientClose?.Invoke();
-
-                _plugins.RemoveAt(i--);
+                if (Plugins[i]._onClientClose != null)
+                {
+                    Plugins[i]._onClientClose();
+                }
             }
+
+            Plugins.Clear();
         }
 
         internal static void OnFocusGained()
         {
-            foreach (Plugin t in _plugins)
-                t._onFocusGained?.Invoke();
+            foreach (Plugin t in Plugins)
+            {
+                if (t._onFocusGained != null)
+                {
+                    t._onFocusGained();
+                }
+            }
         }
 
         internal static void OnFocusLost()
         {
-            foreach (Plugin t in _plugins)
-                t._onFocusLost?.Invoke();
+            foreach (Plugin t in Plugins)
+            {
+                if (t._onFocusLost != null)
+                {
+                    t._onFocusLost();
+                }
+            }
         }
 
 
         internal static void OnConnected()
         {
-            foreach (Plugin t in _plugins)
-                t._onConnected?.Invoke();
+            foreach (Plugin t in Plugins)
+            {
+                if (t._onConnected != null)
+                {
+                    t._onConnected();
+                }
+            }
         }
 
         internal static void OnDisconnected()
         {
-            foreach (Plugin t in _plugins)
-                t._onDisconnected?.Invoke();
+            foreach (Plugin t in Plugins)
+            {
+                if (t._onDisconnected != null)
+                {
+                    t._onDisconnected();
+                }
+            }
         }
 
         internal static bool ProcessHotkeys(int key, int mod, bool ispressed)
         {
-            bool result = true;
-
-
-            if (!World.InGame ||
-                (ProfileManager.Current != null &&
-                ProfileManager.Current.ActivateChatAfterEnter &&
-                UIManager.SystemChat?.IsActive == true) ||
-                UIManager.KeyboardFocusControl != UIManager.SystemChat.TextBoxControl)
+            if (!World.InGame || UIManager.SystemChat != null && (ProfileManager.CurrentProfile != null && ProfileManager.CurrentProfile.ActivateChatAfterEnter && UIManager.SystemChat.IsActive || UIManager.KeyboardFocusControl != UIManager.SystemChat.TextBoxControl))
             {
-                return result;
+                return true;
             }
 
-            foreach (Plugin plugin in _plugins)
+            bool result = true;
+
+            foreach (Plugin plugin in Plugins)
             {
                 if (plugin._onHotkeyPressed != null && !plugin._onHotkeyPressed(key, mod, ispressed))
+                {
                     result = false;
+                }
             }
 
             return result;
@@ -649,8 +665,10 @@ namespace ClassicUO.Network
 
         internal static void ProcessMouse(int button, int wheel)
         {
-            foreach (Plugin plugin in _plugins)
+            foreach (Plugin plugin in Plugins)
+            {
                 plugin._onMouse?.Invoke(button, wheel);
+            }
         }
 
         internal static void ProcessDrawCmdList(GraphicsDevice device)
@@ -673,9 +691,13 @@ namespace ClassicUO.Network
         internal static int ProcessWndProc(SDL.SDL_Event* e)
         {
             int result = 0;
+
             foreach (Plugin plugin in Plugins)
             {
-                result |= plugin._on_wnd_proc?.Invoke(e) ?? 0;
+                if (plugin._on_wnd_proc != null)
+                {
+                    result |= plugin._on_wnd_proc(e);
+                }
             }
 
             return result;
@@ -683,14 +705,17 @@ namespace ClassicUO.Network
 
         internal static void UpdatePlayerPosition(int x, int y, int z)
         {
-            foreach (Plugin plugin in _plugins)
+            foreach (Plugin plugin in Plugins)
             {
                 try
                 {
                     // TODO: need fixed on razor side
                     // if you quick entry (0.5-1 sec after start, without razor window loaded) - breaks CUO.
                     // With this fix - the razor does not work, but client does not crashed.
-                    plugin._onUpdatePlayerPosition?.Invoke(x, y, z);
+                    if (plugin._onUpdatePlayerPosition != null)
+                    {
+                        plugin._onUpdatePlayerPosition(x, y, z);
+                    }
                 }
                 catch
                 {
@@ -708,53 +733,65 @@ namespace ClassicUO.Network
 
         private static bool OnPluginSend(ref byte[] data, ref int length)
         {
-            //if (data != null && data.Length != 0)
-            //{
-            //    // horrible workaround to avoid ghosting item when a plugin sends drag request item
-            //    switch (data[0])
-            //    {
-            //        case 0x07:
-            //            ItemHold.Clear();
-            //            break;
-            //    }
-            //}
-
-
             if (NetClient.LoginSocket.IsDisposed && NetClient.Socket.IsConnected)
+            {
                 NetClient.Socket.Send(data, length, true);
+            }
             else if (NetClient.Socket.IsDisposed && NetClient.LoginSocket.IsConnected)
+            {
                 NetClient.LoginSocket.Send(data, length, true);
+            }
 
             return true;
         }
 
         private static bool OnPluginRecv_new(IntPtr buffer, ref int length)
-        {
-            byte[] data = new byte[length];
-            Marshal.Copy(buffer, data, 0, length);
-            
-            return OnPluginRecv(ref data, ref length);
+        {        
+            if (buffer != IntPtr.Zero && length > 0)
+            {
+                byte[] data = new byte[length];
+                Marshal.Copy(buffer, data, 0, length);
+
+                NetClient.EnqueuePacketFromPlugin(data, length);
+            }
+
+            return true;
         }
 
         private static bool OnPluginSend_new(IntPtr buffer, ref int length)
         {
-            byte[] data = new byte[length];
-            Marshal.Copy(buffer, data, 0, length);
+            if (buffer != IntPtr.Zero && length > 0)
+            {
+                StackDataWriter writer = new StackDataWriter(new Span<byte>((void*)buffer, length));
 
-            return OnPluginSend(ref data, ref length);
+                if (NetClient.LoginSocket.IsDisposed && NetClient.Socket.IsConnected)
+                {
+                    NetClient.Socket.Send(writer.AllocatedBuffer, writer.BytesWritten, true);
+                }
+                else if (NetClient.Socket.IsDisposed && NetClient.LoginSocket.IsConnected)
+                {
+                    NetClient.LoginSocket.Send(writer.AllocatedBuffer, writer.BytesWritten, true);
+                }
+
+                writer.Dispose();
+            }
+
+            return true;
         }
 
-        
+
         //Code from https://stackoverflow.com/questions/6374673/unblock-file-from-within-net-4-c-sharp
         private static void UnblockPath(string path)
         {
-            string[] files = System.IO.Directory.GetFiles(path);
-            string[] dirs = System.IO.Directory.GetDirectories(path);
+            string[] files = Directory.GetFiles(path);
+            string[] dirs = Directory.GetDirectories(path);
 
             foreach (string file in files)
             {
-                if(file.EndsWith("dll") || file.EndsWith("exe"))
+                if (file.EndsWith("dll") || file.EndsWith("exe"))
+                {
                     UnblockFile(file);
+                }
             }
 
             foreach (string dir in dirs)
@@ -768,10 +805,12 @@ namespace ClassicUO.Network
             return DeleteFile(fileName + ":Zone.Identifier");
         }
 
-        private void HandleCmdList(GraphicsDevice device, IntPtr ptr, int length, Dictionary<IntPtr, GraphicsResource> resources)
+        private void HandleCmdList(GraphicsDevice device, IntPtr ptr, int length, IDictionary<IntPtr, GraphicsResource> resources)
         {
             if (ptr == IntPtr.Zero || length <= 0)
+            {
                 return;
+            }
 
             const int CMD_VIEWPORT = 0;
             const int CMD_SCISSOR = 1;
@@ -801,14 +840,14 @@ namespace ClassicUO.Network
             Effect current_effect = null;
 
 
-            var lastViewport = device.Viewport;
-            var lastScissorBox = device.ScissorRectangle;
+            Viewport lastViewport = device.Viewport;
+            Rectangle lastScissorBox = device.ScissorRectangle;
 
-            var lastBlendFactor = device.BlendFactor;
-            var lastBlendState = device.BlendState;
-            var lastRasterizeState = device.RasterizerState;
-            var lastDepthStencilState = device.DepthStencilState;
-            var lastsampler = device.SamplerStates[0];
+            Color lastBlendFactor = device.BlendFactor;
+            BlendState lastBlendState = device.BlendState;
+            RasterizerState lastRasterizeState = device.RasterizerState;
+            DepthStencilState lastDepthStencilState = device.DepthStencilState;
+            SamplerState lastsampler = device.SamplerStates[0];
 
 
             //var blend_snap_AlphaBlendFunction = device.BlendState.AlphaBlendFunction;
@@ -849,218 +888,191 @@ namespace ClassicUO.Network
             //var stencil_snap_ReferenceStencil = device.DepthStencilState.ReferenceStencil;
 
 
-
             for (int i = 0; i < length; i++)
             {
-                batch_cmd cmd = ((batch_cmd*) (ptr))[i];
+                BatchCommand command = ((BatchCommand*)ptr)[i];
 
-                switch (cmd.type)
+                switch (command.type)
                 {
                     case CMD_VIEWPORT:
-                        ref var viewport = ref cmd.viewport;
+                        ref ViewportCommand viewportCommand = ref command.ViewportCommand;
 
-                        device.Viewport = new Viewport(
-                                                       viewport.x,
-                                                       viewport.y,
-                                                       viewport.w,
-                                                       viewport.h);
+                        device.Viewport = new Viewport(viewportCommand.X, viewportCommand.y, viewportCommand.w, viewportCommand.h);
 
                         break;
 
                     case CMD_SCISSOR:
-                        ref var scissor = ref cmd.scissor;
+                        ref ScissorCommand scissorCommand = ref command.ScissorCommand;
 
-                        device.ScissorRectangle = new Rectangle(
-                                                                scissor.x,
-                                                                scissor.y,
-                                                                scissor.w,
-                                                                scissor.h);
+                        device.ScissorRectangle = new Rectangle(scissorCommand.x, scissorCommand.y, scissorCommand.w, scissorCommand.h);
 
                         break;
 
                     case CMD_BLEND_FACTOR:
 
-                        ref var blend_factor = ref cmd.new_blend_factor;
+                        ref BlendFactorCommand blendFactorCommand = ref command.NewBlendFactorCommand;
 
-                        device.BlendFactor = blend_factor.color;
+                        device.BlendFactor = blendFactorCommand.color;
 
                         break;
 
                     case CMD_NEW_BLEND_STATE:
-                        ref var blend = ref cmd.new_blend_state;
+                        ref CreateBlendStateCommand createBlend = ref command.NewCreateBlendStateCommand;
 
-                        resources[blend.id] = new BlendState()
+                        resources[createBlend.id] = new BlendState
                         {
-                            AlphaBlendFunction = blend.alpha_blend_func,
-                            AlphaDestinationBlend = blend.alpha_dest_blend,
-                            AlphaSourceBlend = blend.alpha_src_blend,
-                            ColorBlendFunction = blend.color_blend_func,
-                            ColorDestinationBlend = blend.color_dest_blend,
-                            ColorSourceBlend = blend.color_src_blend,
-                            ColorWriteChannels = blend.color_write_channels_0,
-                            ColorWriteChannels1 = blend.color_write_channels_1,
-                            ColorWriteChannels2 = blend.color_write_channels_2,
-                            ColorWriteChannels3 = blend.color_write_channels_3,
-                            BlendFactor = blend.blend_factor,
-                            MultiSampleMask = blend.multiple_sample_mask
+                            AlphaBlendFunction = createBlend.AlphaBlendFunc,
+                            AlphaDestinationBlend = createBlend.AlphaDestBlend,
+                            AlphaSourceBlend = createBlend.AlphaSrcBlend,
+                            ColorBlendFunction = createBlend.ColorBlendFunc,
+                            ColorDestinationBlend = createBlend.ColorDestBlend,
+                            ColorSourceBlend = createBlend.ColorSrcBlend,
+                            ColorWriteChannels = createBlend.ColorWriteChannels0,
+                            ColorWriteChannels1 = createBlend.ColorWriteChannels1,
+                            ColorWriteChannels2 = createBlend.ColorWriteChannels2,
+                            ColorWriteChannels3 = createBlend.ColorWriteChannels3,
+                            BlendFactor = createBlend.BlendFactor,
+                            MultiSampleMask = createBlend.MultipleSampleMask
                         };
 
                         break;
 
                     case CMD_NEW_RASTERIZE_STATE:
 
-                        ref var rasterize = ref cmd.new_rasterize_state;
+                        ref CreateRasterizerStateCommand rasterize = ref command.NewRasterizeStateCommand;
 
-                        resources[rasterize.id] = new RasterizerState()
+                        resources[rasterize.id] = new RasterizerState
                         {
-                            CullMode = rasterize.cull_mode,
-                            DepthBias = rasterize.depth_bias,
-                            FillMode = rasterize.fill_mode,
-                            MultiSampleAntiAlias = rasterize.multi_sample_aa,
-                            ScissorTestEnable = rasterize.scissor_test_enabled,
-                            SlopeScaleDepthBias = rasterize.slope_scale_depth_bias
+                            CullMode = rasterize.CullMode,
+                            DepthBias = rasterize.DepthBias,
+                            FillMode = rasterize.FillMode,
+                            MultiSampleAntiAlias = rasterize.MultiSample,
+                            ScissorTestEnable = rasterize.ScissorTestEnabled,
+                            SlopeScaleDepthBias = rasterize.SlopeScaleDepthBias
                         };
 
                         break;
 
                     case CMD_NEW_STENCIL_STATE:
 
-                        ref var stencil = ref cmd.new_stencil_state;
+                        ref CreateStencilStateCommand createStencil = ref command.NewCreateStencilStateCommand;
 
-                        resources[stencil.id] = new DepthStencilState()
+                        resources[createStencil.id] = new DepthStencilState
                         {
-                            DepthBufferEnable = stencil.depth_buffer_enabled,
-                            DepthBufferWriteEnable = stencil.depth_buffer_write_enabled,
-                            DepthBufferFunction = stencil.depth_buffer_func,
-                            StencilEnable = stencil.stencil_enabled,
-                            StencilFunction = stencil.stencil_func,
-                            StencilPass = stencil.stencil_pass,
-                            StencilFail = stencil.stencil_fail,
-                            StencilDepthBufferFail = stencil.stencil_depth_buffer_fail,
-                            TwoSidedStencilMode = stencil.two_sided_stencil_mode,
-                            CounterClockwiseStencilFunction = stencil.counter_clockwise_stencil_func,
-                            CounterClockwiseStencilFail = stencil.counter_clockwise_stencil_fail,
-                            CounterClockwiseStencilPass = stencil.counter_clockwise_stencil_pass,
-                            CounterClockwiseStencilDepthBufferFail = stencil.counter_clockwise_stencil_depth_buffer_fail,
-                            StencilMask = stencil.stencil_mask,
-                            StencilWriteMask = stencil.stencil_write_mask,
-                            ReferenceStencil = stencil.reference_stencil
+                            DepthBufferEnable = createStencil.DepthBufferEnabled,
+                            DepthBufferWriteEnable = createStencil.DepthBufferWriteEnabled,
+                            DepthBufferFunction = createStencil.DepthBufferFunc,
+                            StencilEnable = createStencil.StencilEnabled,
+                            StencilFunction = createStencil.StencilFunc,
+                            StencilPass = createStencil.StencilPass,
+                            StencilFail = createStencil.StencilFail,
+                            StencilDepthBufferFail = createStencil.StencilDepthBufferFail,
+                            TwoSidedStencilMode = createStencil.TwoSidedStencilMode,
+                            CounterClockwiseStencilFunction = createStencil.CounterClockwiseStencilFunc,
+                            CounterClockwiseStencilFail = createStencil.CounterClockwiseStencilFail,
+                            CounterClockwiseStencilPass = createStencil.CounterClockwiseStencilPass,
+                            CounterClockwiseStencilDepthBufferFail = createStencil.CounterClockwiseStencilDepthBufferFail,
+                            StencilMask = createStencil.StencilMask,
+                            StencilWriteMask = createStencil.StencilWriteMask,
+                            ReferenceStencil = createStencil.ReferenceStencil
                         };
 
-                        
+
                         break;
 
                     case CMD_NEW_SAMPLER_STATE:
 
-                        ref var sampler = ref cmd.new_sampler_state;
+                        ref CreateSamplerStateCommand createSampler = ref command.NewCreateSamplerStateCommand;
 
-                        resources[sampler.id] = new SamplerState()
+                        resources[createSampler.id] = new SamplerState
                         {
-                            AddressU = sampler.address_u,
-                            AddressV = sampler.address_v,
-                            AddressW = sampler.address_w,
-                            Filter = sampler.filter,
-                            MaxAnisotropy = sampler.max_anisotropy,
-                            MaxMipLevel = sampler.max_mip_level,
-                            MipMapLevelOfDetailBias = sampler.mip_map_level_of_detail_bias
+                            AddressU = createSampler.AddressU,
+                            AddressV = createSampler.AddressV,
+                            AddressW = createSampler.AddressW,
+                            Filter = createSampler.TextureFilter,
+                            MaxAnisotropy = createSampler.MaxAnisotropy,
+                            MaxMipLevel = createSampler.MaxMipLevel,
+                            MipMapLevelOfDetailBias = createSampler.MipMapLevelOfDetailBias
                         };
 
                         break;
 
                     case CMD_BLEND_STATE:
 
-                        device.BlendState = resources[cmd.set_blend_state.id] as BlendState;
+                        device.BlendState = resources[command.SetBlendStateCommand.id] as BlendState;
 
                         break;
 
                     case CMD_RASTERIZE_STATE:
 
-                        device.RasterizerState = resources[cmd.set_rasterize_state.id] as RasterizerState;
-                        
+                        device.RasterizerState = resources[command.SetRasterizerStateCommand.id] as RasterizerState;
+
                         break;
 
                     case CMD_STENCIL_STATE:
 
-                        device.DepthStencilState = resources[cmd.set_stencil_state.id] as DepthStencilState;
+                        device.DepthStencilState = resources[command.SetStencilStateCommand.id] as DepthStencilState;
 
                         break;
 
                     case CMD_SAMPLER_STATE:
 
-                        device.SamplerStates[cmd.set_sampler_state.index] = resources[cmd.set_sampler_state.id] as SamplerState;
+                        device.SamplerStates[command.SetSamplerStateCommand.index] = resources[command.SetSamplerStateCommand.id] as SamplerState;
 
                         break;
 
                     case CMD_SET_VERTEX_DATA:
 
-                        ref var set_vertex_data = ref cmd.set_vertex_data;
+                        ref SetVertexDataCommand setVertexDataCommand = ref command.SetVertexDataCommand;
 
-                        var vertex_buffer = resources[set_vertex_data.id] as VertexBuffer;
+                        VertexBuffer vertex_buffer = resources[setVertexDataCommand.id] as VertexBuffer;
 
-                        vertex_buffer?.SetDataPointerEXT(0,
-                                                         set_vertex_data.vertex_buffer_ptr,
-                                                         set_vertex_data.vertex_buffer_length,
-                                                         SetDataOptions.None);
+                        vertex_buffer?.SetDataPointerEXT(0, setVertexDataCommand.vertex_buffer_ptr, setVertexDataCommand.vertex_buffer_length, SetDataOptions.None);
 
                         break;
 
                     case CMD_SET_INDEX_DATA:
 
-                        ref var set_index_data = ref cmd.set_index_data;
+                        ref SetIndexDataCommand setIndexDataCommand = ref command.SetIndexDataCommand;
 
-                        var index_buffer = resources[set_index_data.id] as IndexBuffer;
+                        IndexBuffer index_buffer = resources[setIndexDataCommand.id] as IndexBuffer;
 
-                        index_buffer?.SetDataPointerEXT(0,
-                                                        set_index_data.indices_buffer_ptr,
-                                                        set_index_data.indices_buffer_length,
-                                                        SetDataOptions.None);
+                        index_buffer?.SetDataPointerEXT(0, setIndexDataCommand.indices_buffer_ptr, setIndexDataCommand.indices_buffer_length, SetDataOptions.None);
 
                         break;
 
                     case CMD_CREATE_VERTEX_BUFFER:
 
-                        ref var create_vertex_buffer = ref cmd.create_vertex_buffer;
+                        ref CreateVertexBufferCommand createVertexBufferCommand = ref command.CreateVertexBufferCommand;
 
-                        VertexElement[] elements = new VertexElement[create_vertex_buffer.decl_count];
+                        VertexElement[] elements = new VertexElement[createVertexBufferCommand.DeclarationCount];
 
                         for (int j = 0; j < elements.Length; j++)
                         {
-                            elements[j] = ((VertexElement*) (create_vertex_buffer.declarations))[j];
+                            elements[j] = ((VertexElement*)createVertexBufferCommand.Declarations)[j];
                         }
 
-                        VertexBuffer vb = create_vertex_buffer.is_dynamic ?
-                                              new DynamicVertexBuffer(device,
-                                                                new VertexDeclaration(create_vertex_buffer.size, elements),
-                                                                create_vertex_buffer.vertex_elements_count,
-                                                                create_vertex_buffer.buffer_usage)
-                                              :
-                                              new VertexBuffer(device,
-                                                                 new VertexDeclaration(create_vertex_buffer.size, elements),
-                                                                 create_vertex_buffer.vertex_elements_count,
-                                                                 create_vertex_buffer.buffer_usage);
+                        VertexBuffer vb = createVertexBufferCommand.IsDynamic ? new DynamicVertexBuffer(device, new VertexDeclaration(createVertexBufferCommand.Size, elements), createVertexBufferCommand.VertexElementsCount, createVertexBufferCommand.BufferUsage) : new VertexBuffer(device, new VertexDeclaration(createVertexBufferCommand.Size, elements), createVertexBufferCommand.VertexElementsCount, createVertexBufferCommand.BufferUsage);
 
-                        resources[create_vertex_buffer.id] = vb;
+                        resources[createVertexBufferCommand.id] = vb;
 
                         break;
 
                     case CMD_CREATE_INDEX_BUFFER:
 
-                        ref var create_index_buffer = ref cmd.create_index_buffer;
+                        ref CreateIndexBufferCommand createIndexBufferCommand = ref command.CreateIndexBufferCommand;
 
-                        IndexBuffer ib = create_index_buffer.is_dynamic ?
-                                             new DynamicIndexBuffer(device, create_index_buffer.index_element_size, create_index_buffer.index_count, create_index_buffer.buffer_usage)
-                                             :
-                                             new IndexBuffer(device, create_index_buffer.index_element_size, create_index_buffer.index_count, create_index_buffer.buffer_usage);
+                        IndexBuffer ib = createIndexBufferCommand.IsDynamic ? new DynamicIndexBuffer(device, createIndexBufferCommand.IndexElementSize, createIndexBufferCommand.IndexCount, createIndexBufferCommand.BufferUsage) : new IndexBuffer(device, createIndexBufferCommand.IndexElementSize, createIndexBufferCommand.IndexCount, createIndexBufferCommand.BufferUsage);
 
-                        resources[create_index_buffer.id] = ib;
+                        resources[createIndexBufferCommand.id] = ib;
 
                         break;
 
                     case CMD_SET_VERTEX_BUFFER:
 
-                        ref var set_vertex_buffer = ref cmd.set_vertex_buffer;
+                        ref SetVertexBufferCommand setVertexBufferCommand = ref command.SetVertexBufferCommand;
 
-                        vb = resources[set_vertex_buffer.id] as VertexBuffer;
+                        vb = resources[setVertexBufferCommand.id] as VertexBuffer;
 
                         device.SetVertexBuffer(vb);
 
@@ -1068,9 +1080,9 @@ namespace ClassicUO.Network
 
                     case CMD_SET_INDEX_BUFFER:
 
-                        ref var set_index_buffer = ref cmd.set_index_buffer;
+                        ref SetIndexBufferCommand setIndexBufferCommand = ref command.SetIndexBufferCommand;
 
-                        ib = resources[set_index_buffer.id] as IndexBuffer;
+                        ib = resources[setIndexBufferCommand.id] as IndexBuffer;
 
                         device.Indices = ib;
 
@@ -1078,28 +1090,28 @@ namespace ClassicUO.Network
 
                     case CMD_CREATE_EFFECT:
 
-                        ref var create_effect = ref cmd.create_effect;
+                        ref CreateEffectCommand createEffectCommand = ref command.CreateEffectCommand;
 
                         break;
 
                     case CMD_CREATE_BASIC_EFFECT:
 
-                        ref var create_basic_effect = ref cmd.create_basic_effect;
+                        ref CreateBasicEffectCommand createBasicEffectCommand = ref command.CreateBasicEffectCommand;
 
-                        if (!resources.TryGetValue(create_basic_effect.id, out GraphicsResource res))
+                        if (!resources.TryGetValue(createBasicEffectCommand.id, out GraphicsResource res))
                         {
                             res = new BasicEffect(device);
-                            resources[create_basic_effect.id] = res;
+                            resources[createBasicEffectCommand.id] = res;
                         }
                         else
                         {
                             BasicEffect be = res as BasicEffect;
-                            be.World = create_basic_effect.world;
-                            be.View = create_basic_effect.view;
-                            be.Projection = create_basic_effect.projection;
-                            be.TextureEnabled = create_basic_effect.texture_enabled;
-                            be.Texture = resources[create_basic_effect.texture_id] as Texture2D;
-                            be.VertexColorEnabled = create_basic_effect.vertex_color_enabled;
+                            be.World = createBasicEffectCommand.world;
+                            be.View = createBasicEffectCommand.view;
+                            be.Projection = createBasicEffectCommand.projection;
+                            be.TextureEnabled = createBasicEffectCommand.texture_enabled;
+                            be.Texture = resources[createBasicEffectCommand.texture_id] as Texture2D;
+                            be.VertexColorEnabled = createBasicEffectCommand.vertex_color_enabled;
 
                             current_effect = be;
                         }
@@ -1108,89 +1120,94 @@ namespace ClassicUO.Network
 
                     case CMD_CREATE_TEXTURE_2D:
 
-                        ref var create_texture_2d = ref cmd.create_texture_2d;
+                        ref CreateTexture2DCommand createTexture2DCommand = ref command.CreateTexture2DCommand;
 
                         Texture2D texture;
-                        if (create_texture_2d.is_render_target)
+
+                        if (createTexture2DCommand.IsRenderTarget)
                         {
-                            texture = new RenderTarget2D(device,
-                                                         create_texture_2d.width,
-                                                         create_texture_2d.height,
-                                                         false,
-                                                         create_texture_2d.format,
-                                                         DepthFormat.Depth24Stencil8);
+                            texture = new RenderTarget2D
+                            (
+                                device,
+                                createTexture2DCommand.Width,
+                                createTexture2DCommand.Height,
+                                false,
+                                createTexture2DCommand.Format,
+                                DepthFormat.Depth24Stencil8
+                            );
                         }
                         else
                         {
-                            texture = new Texture2D(device,
-                                                    create_texture_2d.width,
-                                                    create_texture_2d.height,
-                                                    false,
-                                                    create_texture_2d.format);
+                            texture = new Texture2D
+                            (
+                                device,
+                                createTexture2DCommand.Width,
+                                createTexture2DCommand.Height,
+                                false,
+                                createTexture2DCommand.Format
+                            );
                         }
 
 
-                        resources[create_texture_2d.id] = texture;
+                        resources[createTexture2DCommand.id] = texture;
 
                         break;
 
                     case CMD_SET_TEXTURE_DATA_2D:
 
-                        ref var set_texture_data_2d = ref cmd.set_texture_data_2d;
+                        ref SetTexture2DDataCommand setTexture2DDataCommand = ref command.SetTexture2DDataCommand;
 
-                        texture = resources[set_texture_data_2d.id] as Texture2D;
+                        texture = resources[setTexture2DDataCommand.id] as Texture2D;
 
-                        texture?.SetDataPointerEXT(set_texture_data_2d.level,
-                                                   new Rectangle(set_texture_data_2d.x,
-                                                                     set_texture_data_2d.y,
-                                                                     set_texture_data_2d.width,
-                                                                     set_texture_data_2d.height
-                                                                     ),
-                                                  set_texture_data_2d.data,
-                                                  set_texture_data_2d.data_length);
+                        texture?.SetDataPointerEXT(setTexture2DDataCommand.level, new Rectangle(setTexture2DDataCommand.x, setTexture2DDataCommand.y, setTexture2DDataCommand.width, setTexture2DDataCommand.height), setTexture2DDataCommand.data, setTexture2DDataCommand.data_length);
 
                         break;
 
                     case CMD_INDEXED_PRIMITIVE_DATA:
 
-                        ref var indexed_primitive_data = ref cmd.indexed_primitive_data;
+                        ref IndexedPrimitiveDataCommand indexedPrimitiveDataCommand = ref command.IndexedPrimitiveDataCommand;
 
-                        //device.Textures[0] = resources[indexed_primitive_data.texture_id] as Texture;
+                        //device.Textures[0] = resources[indexedPrimitiveDataCommand.texture_id] as Texture;
 
                         if (current_effect != null)
                         {
-                            foreach (var pass in current_effect.CurrentTechnique.Passes)
+                            foreach (EffectPass pass in current_effect.CurrentTechnique.Passes)
                             {
                                 pass.Apply();
 
-                                device.DrawIndexedPrimitives(
-                                                             indexed_primitive_data.primitive_type,
-                                                             indexed_primitive_data.base_vertex,
-                                                             indexed_primitive_data.min_vertex_index,
-                                                             indexed_primitive_data.num_vertices,
-                                                             indexed_primitive_data.start_index,
-                                                             indexed_primitive_data.primitive_count);
+                                device.DrawIndexedPrimitives
+                                (
+                                    indexedPrimitiveDataCommand.PrimitiveType,
+                                    indexedPrimitiveDataCommand.BaseVertex,
+                                    indexedPrimitiveDataCommand.MinVertexIndex,
+                                    indexedPrimitiveDataCommand.NumVertices,
+                                    indexedPrimitiveDataCommand.StartIndex,
+                                    indexedPrimitiveDataCommand.PrimitiveCount
+                                );
                             }
                         }
                         else
                         {
-                            device.DrawIndexedPrimitives(
-                                                         indexed_primitive_data.primitive_type,
-                                                         indexed_primitive_data.base_vertex,
-                                                         indexed_primitive_data.min_vertex_index,
-                                                         indexed_primitive_data.num_vertices,
-                                                         indexed_primitive_data.start_index,
-                                                         indexed_primitive_data.primitive_count);
+                            device.DrawIndexedPrimitives
+                            (
+                                indexedPrimitiveDataCommand.PrimitiveType,
+                                indexedPrimitiveDataCommand.BaseVertex,
+                                indexedPrimitiveDataCommand.MinVertexIndex,
+                                indexedPrimitiveDataCommand.NumVertices,
+                                indexedPrimitiveDataCommand.StartIndex,
+                                indexedPrimitiveDataCommand.PrimitiveCount
+                            );
                         }
 
                         break;
 
                     case CMD_DESTROY_RESOURCE:
 
-                        ref var destroy_resource = ref cmd.destroy_resource;
+                        ref DestroyResourceCommand destroyResourceCommand = ref command.DestroyResourceCommand;
 
-                        resources[destroy_resource.id]?.Dispose();
-                        resources.Remove(destroy_resource.id);
+                        resources[destroyResourceCommand.id]?.Dispose();
+
+                        resources.Remove(destroyResourceCommand.id);
 
                         break;
                 }
@@ -1206,5 +1223,82 @@ namespace ClassicUO.Network
             device.SamplerStates[0] = lastsampler;
         }
 
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate void OnInstall(void* header);
+
+        [return: MarshalAs(UnmanagedType.I1)]
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate bool OnPacketSendRecv_new(byte[] data, ref int length);
+
+        [return: MarshalAs(UnmanagedType.I1)]
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate bool OnPacketSendRecv_new_intptr(IntPtr data, ref int length);
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int OnDrawCmdList([Out] out IntPtr cmdlist, ref int size);
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate int OnWndProc(SDL.SDL_Event* ev);
+
+        [return: MarshalAs(UnmanagedType.I1)]
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate bool OnGetStaticData
+        (
+            int index,
+            ref ulong flags,
+            ref byte weight,
+            ref byte layer,
+            ref int count,
+            ref ushort animid,
+            ref ushort lightidx,
+            ref byte height,
+            ref string name
+        );
+
+        [return: MarshalAs(UnmanagedType.I1)]
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate bool OnGetTileData(int index, ref ulong flags, ref ushort textid, ref string name);
+
+        [return: MarshalAs(UnmanagedType.I1)]
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        private delegate bool OnGetCliloc(int cliloc, [MarshalAs(UnmanagedType.LPStr)] string args, bool capitalize, [Out][MarshalAs(UnmanagedType.LPStr)] out string buffer);
+
+
+        private struct PluginHeader
+        {
+            public int ClientVersion;
+            public IntPtr HWND;
+            public IntPtr OnRecv;
+            public IntPtr OnSend;
+            public IntPtr OnHotkeyPressed;
+            public IntPtr OnMouse;
+            public IntPtr OnPlayerPositionChanged;
+            public IntPtr OnClientClosing;
+            public IntPtr OnInitialize;
+            public IntPtr OnConnected;
+            public IntPtr OnDisconnected;
+            public IntPtr OnFocusGained;
+            public IntPtr OnFocusLost;
+            public IntPtr GetUOFilePath;
+            public IntPtr Recv;
+            public IntPtr Send;
+            public IntPtr GetPacketLength;
+            public IntPtr GetPlayerPosition;
+            public IntPtr CastSpell;
+            public IntPtr GetStaticImage;
+            public IntPtr Tick;
+            public IntPtr RequestMove;
+            public IntPtr SetTitle;
+
+            public IntPtr OnRecv_new, OnSend_new, Recv_new, Send_new;
+
+            public IntPtr OnDrawCmdList;
+            public IntPtr SDL_Window;
+            public IntPtr OnWndProc;
+            public IntPtr GetStaticData;
+            public IntPtr GetTileData;
+            public IntPtr GetCliloc;
+        }
     }
 }

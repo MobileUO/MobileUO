@@ -1,35 +1,47 @@
 #region license
-// Copyright (C) 2020 ClassicUO Development Community on Github
+
+// Copyright (c) 2021, andreakarasho
+// All rights reserved.
 // 
-// This project is an alternative client for the game Ultima Online.
-// The goal of this is to develop a lightweight client considering
-// new technologies.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+// 3. All advertising materials mentioning features or use of this software
+//    must display the following acknowledgement:
+//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
+// 4. Neither the name of the copyright holder nor the
+//    names of its contributors may be used to endorse or promote products
+//    derived from this software without specific prior written permission.
 // 
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-// 
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-// 
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
+// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 #endregion
 
 using System.Collections.Generic;
-
 using ClassicUO.Game.Scenes;
 using ClassicUO.Input;
 using ClassicUO.IO.Resources;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace ClassicUO.Game.UI.Controls
 {
-    enum ButtonAction
+    internal enum ButtonAction
     {
         Default = 0,
         SwitchPage = 0,
@@ -38,20 +50,16 @@ namespace ClassicUO.Game.UI.Controls
 
     internal class Button : Control
     {
-        private const int NORMAL = 0;
-        private const int PRESSED = 1;
-        private const int OVER = 2;
         private readonly string _caption;
-        private readonly RenderedText[] _fontTexture;
-        private readonly ushort[] _gumpGraphics = new ushort[3];
-        private readonly UOTexture32[] _textures = new UOTexture32[3];
-
         private bool _entered;
+        private readonly RenderedText[] _fontTexture;
+        private ushort _normal, _pressed, _over;
 
-        //NOTE: Added for enlarging small buttons in MobileUO
+        // MobileUO: NOTE: Added for enlarging small buttons in MobileUO
         private bool enlarged;
         private const int smallButtonThreshold = 12;
 
+        // MobileUO: added method
         public void ToggleSize(bool enlarge)
         {
             if (enlarged == false && Width > smallButtonThreshold && Height > smallButtonThreshold)
@@ -77,26 +85,33 @@ namespace ClassicUO.Game.UI.Controls
             }
         }
 
-        public Button(int buttonID, ushort normal, ushort pressed, ushort over = 0, string caption = "", byte font = 0, bool isunicode = true, ushort normalHue = ushort.MaxValue, ushort hoverHue = ushort.MaxValue)
+        public Button
+        (
+            int buttonID,
+            ushort normal,
+            ushort pressed,
+            ushort over = 0,
+            string caption = "",
+            byte font = 0,
+            bool isunicode = true,
+            ushort normalHue = ushort.MaxValue,
+            ushort hoverHue = ushort.MaxValue
+        )
         {
             ButtonID = buttonID;
-            _gumpGraphics[NORMAL] = normal;
-            _gumpGraphics[PRESSED] = pressed;
-            _gumpGraphics[OVER] = over;
-            _textures[NORMAL] = GumpsLoader.Instance.GetTexture(normal);
-            _textures[PRESSED] = GumpsLoader.Instance.GetTexture(pressed);
-            if (over > 0) _textures[OVER] = GumpsLoader.Instance.GetTexture(over);
-            UOTexture32 t = _textures[NORMAL];
+            _normal = normal;
+            _pressed = pressed;
+            _over = over;
 
-            if (t == null)
+            if (GumpsLoader.Instance.GetGumpTexture(normal, out var bounds) == null)
             {
                 Dispose();
 
                 return;
             }
-
-            Width = t.Width;
-            Height = t.Height;
+          
+            Width = bounds.Width;
+            Height = bounds.Height;
             FontHue = normalHue == ushort.MaxValue ? (ushort) 0 : normalHue;
             HueHover = hoverHue == ushort.MaxValue ? normalHue : hoverHue;
 
@@ -106,7 +121,7 @@ namespace ClassicUO.Game.UI.Controls
 
                 _caption = caption;
 
-                _fontTexture[0] = RenderedText.Create(caption,FontHue, font, isunicode);
+                _fontTexture[0] = RenderedText.Create(caption, FontHue, font, isunicode);
 
                 if (hoverHue != ushort.MaxValue)
                 {
@@ -150,43 +165,56 @@ namespace ClassicUO.Game.UI.Controls
 
         public ushort ButtonGraphicNormal
         {
-            get => _gumpGraphics[NORMAL];
+            get => _normal;
             set
             {
-                _textures[NORMAL] = GumpsLoader.Instance.GetTexture(value);
-                _gumpGraphics[NORMAL] = value;
-                if (_textures[NORMAL] == null) return;
-                Width = _textures[NORMAL].Width;
-                Height = _textures[NORMAL].Height;
+                _normal = value;
+
+                _ = GumpsLoader.Instance.GetGumpTexture(value, out var bounds);
+                // MobileUO: added if
+                // MobileUO: TODO: do we need to re-add this? it's the above GetGumpTexture
+                //if (_textures[NORMAL] == null) return;
+
+                Width = bounds.Width;
+                Height = bounds.Height;
             }
         }
 
         public ushort ButtonGraphicPressed
         {
-            get => _gumpGraphics[PRESSED];
+            get => _pressed;
             set
             {
-                _textures[PRESSED] = GumpsLoader.Instance.GetTexture(value);
-                _gumpGraphics[PRESSED] = value;
-                if (_textures[PRESSED] == null) return;
-                Width = _textures[PRESSED].Width;
-                Height = _textures[PRESSED].Height;
+                _pressed = value;
+
+                _ = GumpsLoader.Instance.GetGumpTexture(value, out var bounds);
+                // MobileUO: added if
+                // MobileUO: TODO: do we need to re-add this? it's the above GetGumpTexture
+                //if (_textures[PRESSED] == null) return;
+
+                Width = bounds.Width;
+                Height = bounds.Height;
             }
         }
 
         public ushort ButtonGraphicOver
         {
-            get => _gumpGraphics[OVER];
+            get => _over;
             set
             {
-                _textures[OVER] = GumpsLoader.Instance.GetTexture(value);
-                _gumpGraphics[OVER] = value;
-                if (_textures[OVER] == null) return;
-                Width = _textures[OVER].Width;
-                Height = _textures[OVER].Height;
+                _over = value;
+
+                _ = GumpsLoader.Instance.GetGumpTexture(value, out var bounds);
+                // MobileUO: added if
+                // MobileUO: TODO: do we need to re-add this? it's the above GetGumpTexture
+                //if (_textures[OVER] == null) return;
+
+                Width = bounds.Width;
+                Height = bounds.Height;
             }
         }
 
+        public int Hue { get; set; }
         public ushort FontHue { get; }
 
         public ushort HueHover { get; }
@@ -195,22 +223,17 @@ namespace ClassicUO.Game.UI.Controls
 
         public bool ContainsByBounds { get; set; }
 
-        public override void Update(double totalMS, double frameMS)
+        // MobileUO: keep this override so we can enlarge buttons for MobileUO
+        public override void Update()
         {
-            base.Update(totalMS, frameMS);
+             base.Update();
 
             if (IsDisposed)
-                return;
-
-            for (int i = 0; i < _textures.Length; i++)
             {
-                UOTexture32 t = _textures[i];
-
-                if (t != null)
-                    t.Ticks = Time.Ticks;
+                return;
             }
             
-            //NOTE: Added for enlarging small buttons in MobileUO
+            // MobileUO: NOTE: Added for enlarging small buttons in MobileUO
             ToggleSize(UserPreferences.EnlargeSmallButtons.CurrentValue == (int) PreferenceEnums.EnlargeSmallButtons.On);
         }
 
@@ -226,13 +249,47 @@ namespace ClassicUO.Game.UI.Controls
 
         public override bool Draw(UltimaBatcher2D batcher, int x, int y)
         {
-            UOTexture32 texture = GetTextureByState();
+            Texture2D texture = null;
+            Rectangle bounds = Rectangle.Empty;
 
-            ResetHueVector();
+            if (_entered || IsClicked)
+            {
+                if (IsClicked && _pressed > 0)
+                {
+                    texture = GumpsLoader.Instance.GetGumpTexture(_pressed, out bounds);
+                }
 
-            _hueVector.Z = Alpha;
+                if (texture == null && _over > 0)
+                {
+                    texture = GumpsLoader.Instance.GetGumpTexture(_over, out bounds);
+                }
+            }
 
-            batcher.Draw2D(texture, x, y, Width, Height, ref _hueVector);
+            if (texture == null)
+            {
+                texture = GumpsLoader.Instance.GetGumpTexture(_normal, out bounds);
+            }
+
+            if (texture == null)
+            {
+                return false;
+            }
+
+             Vector3 hue = ShaderHueTranslator.GetHueVector
+                            (
+                                Hue,
+                                false,
+                                Alpha,
+                                true
+                            );
+
+            batcher.Draw
+            (
+                texture,
+                new Rectangle(x, y, Width, Height),
+                bounds,
+                hue
+            );
 
             if (!string.IsNullOrEmpty(_caption))
             {
@@ -241,10 +298,13 @@ namespace ClassicUO.Game.UI.Controls
                 if (FontCenter)
                 {
                     int yoffset = IsClicked ? 1 : 0;
+
                     textTexture.Draw(batcher, x + ((Width - textTexture.Width) >> 1), y + yoffset + ((Height - textTexture.Height) >> 1));
                 }
                 else
+                {
                     textTexture.Draw(batcher, x, y);
+                }
             }
 
             return base.Draw(batcher, x, y);
@@ -253,7 +313,9 @@ namespace ClassicUO.Game.UI.Controls
         protected override void OnMouseDown(int x, int y, MouseButtonType button)
         {
             if (button == MouseButtonType.Left)
+            {
                 IsClicked = true;
+            }
         }
 
         protected override void OnMouseUp(int x, int y, MouseButtonType button)
@@ -263,7 +325,9 @@ namespace ClassicUO.Game.UI.Controls
                 IsClicked = false;
 
                 if (!MouseIsOver)
+                {
                     return;
+                }
 
                 if (_entered || Client.Game.Scene is GameScene)
                 {
@@ -286,49 +350,26 @@ namespace ClassicUO.Game.UI.Controls
             }
         }
 
-        private UOTexture32 GetTextureByState()
-        {
-            if (_entered || IsClicked)
-            {
-                if (IsClicked && _textures[PRESSED] != null)
-                    return _textures[PRESSED];
-
-                if (_textures[OVER] != null)
-                    return _textures[OVER];
-            }
-
-            return _textures[NORMAL];
-        }
-
-        private ushort GetGraphicByState()
-        {
-            if (_entered)
-            {
-                if (IsClicked && _textures[PRESSED] != null)
-                    return _gumpGraphics[PRESSED];
-
-                if (_textures[OVER] != null)
-                    return _gumpGraphics[OVER];
-            }
-
-            return _gumpGraphics[NORMAL];
-        }
-
-
-      
+   
         public override bool Contains(int x, int y)
         {
             if (IsDisposed)
+            {
                 return false;
+            }
 
-            return ContainsByBounds ? base.Contains(x, y) : _textures[NORMAL].Contains(x, y);
+            return ContainsByBounds ? base.Contains(x, y) : GumpsLoader.Instance.PixelCheck(_normal, x - Offset.X, y - Offset.Y);
         }
 
         public sealed override void Dispose()
         {
             if (_fontTexture != null)
+            {
                 foreach (RenderedText t in _fontTexture)
+                {
                     t?.Destroy();
+                }
+            }
 
             base.Dispose();
         }

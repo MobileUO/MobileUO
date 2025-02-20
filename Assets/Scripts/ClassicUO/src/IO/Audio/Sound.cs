@@ -1,48 +1,49 @@
 ﻿#region license
-// Copyright (C) 2020 ClassicUO Development Community on Github
+
+// Copyright (c) 2021, andreakarasho
+// All rights reserved.
 // 
-// This project is an alternative client for the game Ultima Online.
-// The goal of this is to develop a lightweight client considering
-// new technologies.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+// 3. All advertising materials mentioning features or use of this software
+//    must display the following acknowledgement:
+//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
+// 4. Neither the name of the copyright holder nor the
+//    names of its contributors may be used to endorse or promote products
+//    derived from this software without specific prior written permission.
 // 
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-// 
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-// 
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
+// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 #endregion
 
 using System;
-using System.Collections.Generic;
-
-using ClassicUO.Utility;
-
 using Microsoft.Xna.Framework.Audio;
-
 using static System.String;
 
 namespace ClassicUO.IO.Audio
 {
     internal abstract class Sound : IComparable<Sound>, IDisposable
-    {       
-        protected AudioChannels Channels = AudioChannels.Mono;
-
-        protected virtual uint DistortionFix => 0;
-        protected int Frequency = 22050;
+    {
+        private uint _lastPlayedTime;
         private string m_Name;
         private float m_volume = 1.0f;
-        private float m_volumeFactor = 0.0f;
-        protected DynamicSoundEffectInstance _sound_instance;
-        private uint _lastPlayedTime;
-        protected uint Delay = 250;
-
+        private float m_volumeFactor;
+        // MobileUO: added variable
+        protected virtual uint DistortionFix => 0;
 
 
         protected Sound(string name, int index)
@@ -57,9 +58,13 @@ namespace ClassicUO.IO.Audio
             private set
             {
                 if (!IsNullOrEmpty(value))
+                {
                     m_Name = value.Replace(".mp3", "");
+                }
                 else
+                {
                     m_Name = Empty;
+                }
             }
         }
 
@@ -72,16 +77,22 @@ namespace ClassicUO.IO.Audio
             set
             {
                 if (value < 0.0f)
+                {
                     value = 0f;
+                }
                 else if (value > 1f)
+                {
                     value = 1f;
+                }
 
                 m_volume = value;
 
                 float instanceVolume = Math.Max(value - VolumeFactor, 0.0f);
 
-                if (_sound_instance != null && !_sound_instance.IsDisposed)
-                    _sound_instance.Volume = instanceVolume;
+                if (SoundInstance != null && !SoundInstance.IsDisposed)
+                {
+                    SoundInstance.Volume = instanceVolume;
+                }
             }
         }
 
@@ -95,7 +106,7 @@ namespace ClassicUO.IO.Audio
             }
         }
 
-        public bool IsPlaying => _sound_instance != null && (_sound_instance.State == SoundState.Playing && DurationTime > Time.Ticks);
+        public bool IsPlaying => SoundInstance != null && SoundInstance.State == SoundState.Playing && DurationTime > Time.Ticks;
 
         public int CompareTo(Sound other)
         {
@@ -104,19 +115,25 @@ namespace ClassicUO.IO.Audio
 
         public void Dispose()
         {
-            if (_sound_instance != null)
+            if (SoundInstance != null)
             {
-                _sound_instance.BufferNeeded -= OnBufferNeeded;
+                SoundInstance.BufferNeeded -= OnBufferNeeded;
 
-                if (!_sound_instance.IsDisposed)
+                if (!SoundInstance.IsDisposed)
                 {
-                    _sound_instance.Stop();
-                    _sound_instance.Dispose();
+                    SoundInstance.Stop();
+                    SoundInstance.Dispose();
                 }
 
-                _sound_instance = null;
+                SoundInstance = null;
             }
         }
+
+        protected DynamicSoundEffectInstance SoundInstance;
+        protected AudioChannels Channels = AudioChannels.Mono;
+        protected uint Delay = 250;
+
+        protected int Frequency = 22050;
 
         protected abstract byte[] GetBuffer();
         protected abstract void OnBufferNeeded(object sender, EventArgs e);
@@ -136,32 +153,41 @@ namespace ClassicUO.IO.Audio
         public bool Play(float volume = 1.0f, float volumeFactor = 0.0f, bool spamCheck = false)
         {
             if (_lastPlayedTime > Time.Ticks)
+            {
                 return false;
+            }
 
             BeforePlay();
 
-            if (_sound_instance != null && !_sound_instance.IsDisposed)
+            if (SoundInstance != null && !SoundInstance.IsDisposed)
             {
-                _sound_instance.Stop();
-            }    
+                SoundInstance.Stop();
+            }
             else
             {
-                _sound_instance = new DynamicSoundEffectInstance(Frequency, Channels);
+                SoundInstance = new DynamicSoundEffectInstance(Frequency, Channels);
             }
-     
+
 
             byte[] buffer = GetBuffer();
 
             if (buffer != null && buffer.Length > 0)
             {
+                // MobileUO: added distortion fix
                 _lastPlayedTime = Time.Ticks + Delay - DistortionFix;
 
-                _sound_instance.BufferNeeded += OnBufferNeeded;
-                _sound_instance.SubmitBuffer(buffer, this is UOMusic, buffer.Length);
+                SoundInstance.BufferNeeded += OnBufferNeeded;
+                // MobileUO: keep this version of SubmitBuffer
+                // MobileUO: TODO: can we get new way to work?
+                SoundInstance.SubmitBuffer(buffer, this is UOMusic, buffer.Length);
                 VolumeFactor = volumeFactor;
                 Volume = volume;
-                DurationTime = Time.Ticks + (_sound_instance.GetSampleDuration(buffer.Length).TotalMilliseconds - DistortionFix);
-                _sound_instance.Play(Name);
+
+                DurationTime = Time.Ticks + SoundInstance.GetSampleDuration(buffer.Length).TotalMilliseconds;
+
+                // MobileUO: keep this version of Play
+                // MobileUO: TODO: can we get new way to work?
+                SoundInstance.Play(Name);
 
                 return true;
             }
@@ -170,12 +196,13 @@ namespace ClassicUO.IO.Audio
         }
 
         public void Stop()
-        {            
-            if (_sound_instance != null)
+        {
+            if (SoundInstance != null)
             {
-                _sound_instance.Volume = 0.0f;
-                _sound_instance.BufferNeeded -= OnBufferNeeded;
-                _sound_instance.Stop();
+                // MobileUO: set volume
+                //SoundInstance.Volume = 0.0f; // MobileUO: TODO: CUO 0.1.9.0 throws exception:  UnityException: set_volume can only be called from the main thread.
+                SoundInstance.BufferNeeded -= OnBufferNeeded;
+                SoundInstance.Stop();
             }
 
             AfterStop();

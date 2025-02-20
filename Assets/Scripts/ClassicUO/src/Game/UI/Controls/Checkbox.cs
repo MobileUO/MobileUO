@@ -1,43 +1,52 @@
 ﻿#region license
-// Copyright (C) 2020 ClassicUO Development Community on Github
+
+// Copyright (c) 2021, andreakarasho
+// All rights reserved.
 // 
-// This project is an alternative client for the game Ultima Online.
-// The goal of this is to develop a lightweight client considering
-// new technologies.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+// 3. All advertising materials mentioning features or use of this software
+//    must display the following acknowledgement:
+//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
+// 4. Neither the name of the copyright holder nor the
+//    names of its contributors may be used to endorse or promote products
+//    derived from this software without specific prior written permission.
 // 
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-// 
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-// 
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
+// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 #endregion
 
 using System;
 using System.Collections.Generic;
-
 using ClassicUO.Input;
 using ClassicUO.IO.Resources;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
+using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Controls
 {
     internal class Checkbox : Control
     {
-        private const int INACTIVE = 0;
-        private const int ACTIVE = 1;
-        private readonly RenderedText _text;
-        private readonly UOTexture32[] _textures = new UOTexture32[2];
         private bool _isChecked;
-        
-        //NOTE: Added for Assistant
+        private readonly RenderedText _text;
+        private ushort _inactive, _active;
+
+        // MobileUO: NOTE: Added for Assistant
         public ushort Hue
         {
             get => _text.Hue;
@@ -51,25 +60,44 @@ namespace ClassicUO.Game.UI.Controls
             }
         }
 
-        public Checkbox(ushort inactive, ushort active, string text = "", byte font = 0, ushort color = 0, bool isunicode = true, int maxWidth = 0)
+        public Checkbox
+        (
+            ushort inactive,
+            ushort active,
+            string text = "",
+            byte font = 0,
+            ushort color = 0,
+            bool isunicode = true,
+            int maxWidth = 0
+        )
         {
-            _textures[INACTIVE] = GumpsLoader.Instance.GetTexture(inactive);
-            _textures[ACTIVE] = GumpsLoader.Instance.GetTexture(active);
+            _inactive = inactive;
+            _active = active;
 
-            if (_textures[0] == null || _textures[1] == null)
+            var textureInactive = GumpsLoader.Instance.GetGumpTexture(inactive, out var boundsInactive);
+            var textureActive = GumpsLoader.Instance.GetGumpTexture(active, out var boundsActive);
+
+            if (textureInactive == null || textureActive == null)
             {
                 Dispose();
 
                 return;
             }
 
-            UOTexture32 t = _textures[INACTIVE];
-            Width = t.Width;
+            Width = boundsInactive.Width;
 
-            _text = RenderedText.Create(text, color, font, isunicode, maxWidth: maxWidth);
+            _text = RenderedText.Create
+            (
+                text,
+                color,
+                font,
+                isunicode,
+                maxWidth: maxWidth
+            );
+
             Width += _text.Width;
 
-            Height = Math.Max(t.Width, _text.Height);
+            Height = Math.Max(boundsInactive.Width, _text.Height);
             CanMove = false;
             AcceptMouseInput = true;
         }
@@ -96,33 +124,33 @@ namespace ClassicUO.Game.UI.Controls
             }
         }
 
+        public override ClickPriority Priority => ClickPriority.High;
+
         public string Text => _text.Text;
 
         public event EventHandler ValueChanged;
 
-        public override void Update(double totalMS, double frameMS)
-        {
-            for (int i = 0; i < _textures.Length; i++)
-            {
-                UOTexture32 t = _textures[i];
-
-                if (t != null)
-                    t.Ticks = (long) totalMS;
-            }
-
-            base.Update(totalMS, frameMS);
-        }
 
         public override bool Draw(UltimaBatcher2D batcher, int x, int y)
         {
             if (IsDisposed)
+            {
                 return false;
-
-            ResetHueVector();
+            }
 
             bool ok = base.Draw(batcher, x, y);
-            batcher.Draw2D(IsChecked ? _textures[ACTIVE] : _textures[INACTIVE], x, y, ref _hueVector);
-            _text.Draw(batcher, x + _textures[ACTIVE].Width + 2, y);
+
+            var texture = GumpsLoader.Instance.GetGumpTexture(IsChecked ? _active : _inactive, out var bounds);
+
+            batcher.Draw
+            (
+                texture,
+                new Vector2(x, y),
+                bounds,
+                ShaderHueTranslator.GetHueVector(0)
+            );
+
+            _text.Draw(batcher, x + bounds.Width + 2, y);
 
             return ok;
         }
@@ -135,7 +163,9 @@ namespace ClassicUO.Game.UI.Controls
         protected override void OnMouseUp(int x, int y, MouseButtonType button)
         {
             if (button == MouseButtonType.Left && MouseIsOver)
+            {
                 IsChecked = !IsChecked;
+            }
         }
 
         public override void Dispose()

@@ -1,153 +1,82 @@
 ﻿#region license
-// Copyright (C) 2020 ClassicUO Development Community on Github
+
+// Copyright (c) 2021, andreakarasho
+// All rights reserved.
 // 
-// This project is an alternative client for the game Ultima Online.
-// The goal of this is to develop a lightweight client considering
-// new technologies.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+// 3. All advertising materials mentioning features or use of this software
+//    must display the following acknowledgement:
+//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
+// 4. Neither the name of the copyright holder nor the
+//    names of its contributors may be used to endorse or promote products
+//    derived from this software without specific prior written permission.
 // 
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-// 
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-// 
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
+// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 #endregion
 
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-
 using ClassicUO.Game;
 using ClassicUO.Renderer;
-using ClassicUO.Utility.Logging;
 
 namespace ClassicUO.IO
 {
     internal abstract class UOFileLoader : IDisposable
     {
-        public UOFileIndex[] Entries;
-
         public bool IsDisposed { get; private set; }
 
-        public abstract Task Load();
-
-        public virtual void ClearResources()
-        {
-
-        }
-
-        public ref UOFileIndex GetValidRefEntry(int index)
-        {
-            if (index < 0 || Entries == null || index >= Entries.Length)
-                return ref UOFileIndex.Invalid;
-
-            ref UOFileIndex entry = ref Entries[index];
-
-            if (entry.Offset < 0 || entry.Length <= 0)
-                return ref UOFileIndex.Invalid;
-
-            return ref entry;
-        }
-
-        public void Dispose()
+        public virtual void Dispose()
         {
             if (IsDisposed)
+            {
                 return;
+            }
 
             IsDisposed = true;
 
             ClearResources();
         }
-    }
 
-    internal abstract class UOFileLoader<T> : UOFileLoader where T : UOTexture32
-    {
-        protected readonly LinkedList<uint> _usedTextures = new LinkedList<uint>();
+        public UOFileIndex[] Entries;
 
-        protected UOFileLoader(int max)
+        public abstract Task Load();
+
+        public virtual void ClearResources()
         {
-            Resources = new T[max];
         }
 
-        protected readonly T[] Resources;
-        public abstract T GetTexture(uint id, bool keepData = false);
-
-        protected void SaveID(uint id)
-            => _usedTextures.AddLast(id);
-
-        public virtual void CleaUnusedResources(int count)
+        public ref UOFileIndex GetValidRefEntry(int index)
         {
-            ClearUnusedResources(Resources, count);
-        }
-
-        public override void ClearResources()
-        {
-            var first = _usedTextures.First;
-
-            while (first != null)
+            if (index < 0 || Entries == null || index >= Entries.Length)
             {
-                var next = first.Next;
-
-                uint idx = first.Value;
-
-                if (idx < Resources.Length)
-                {
-                    ref var texture = ref Resources[idx];
-                    texture?.Dispose();
-                    texture = null;
-                }
-
-                _usedTextures.Remove(first);
-
-                first = next;
+                return ref UOFileIndex.Invalid;
             }
-        }
 
-        public void ClearUnusedResources<T1>(T1[] resource_cache, int maxCount) where T1 : UOTexture32
-        {
-            if (Time.Ticks <= Constants.CLEAR_TEXTURES_DELAY)
-                return;
+            ref UOFileIndex entry = ref Entries[index];
 
-            long ticks = Time.Ticks - Constants.CLEAR_TEXTURES_DELAY;
-            int count = 0;
-
-            var first = _usedTextures.First;
-
-            while (first != null)
+            if (entry.Offset < 0 || entry.Length <= 0 || entry.Offset == 0x0000_0000_FFFF_FFFF)
             {
-                var next = first.Next;
-
-                uint idx = first.Value;
-
-                if (idx < resource_cache.Length && resource_cache[idx] != null)
-                {
-                    if (resource_cache[idx].Ticks < ticks)
-                    {
-                        if (count++ >= maxCount)
-                            break;
-
-                        resource_cache[idx].Dispose();
-                        resource_cache[idx] = null;
-                        _usedTextures.Remove(first);
-                    }
-                }
-
-                first = next;
+                return ref UOFileIndex.Invalid;
             }
-        }
 
-
-        public virtual bool TryGetEntryInfo(int entry, out long address, out long size, out long compressedsize)
-        {
-            address = size = compressedsize = 0;
-
-            return false;
+            return ref entry;
         }
     }
 }

@@ -1,70 +1,51 @@
 #region license
-// Copyright (C) 2020 ClassicUO Development Community on Github
+
+// Copyright (c) 2021, andreakarasho
+// All rights reserved.
 // 
-// This project is an alternative client for the game Ultima Online.
-// The goal of this is to develop a lightweight client considering
-// new technologies.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+// 3. All advertising materials mentioning features or use of this software
+//    must display the following acknowledgement:
+//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
+// 4. Neither the name of the copyright holder nor the
+//    names of its contributors may be used to endorse or promote products
+//    derived from this software without specific prior written permission.
 // 
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-// 
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-// 
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
+// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 #endregion
 
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Xml;
-
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.UI.Controls;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
-
 using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    enum GUMP_TYPE
-    {
-        NONE,
-
-        GT_BUFF,
-        GT_CONTAINER,
-        GT_COUNTERBAR,
-        GT_HEALTHBAR,
-        GT_INFOBAR,
-        GT_JOURNAL,
-        GT_MACROBUTTON,
-        GT_MINIMAP,
-        GT_PAPERDOLL,
-        GT_SKILLMENU,
-        GT_SPELLBOOK,
-        GT_STATUSGUMP,
-        GT_TIPNOTICE,
-        GT_ABILITYBUTTON,
-        GT_SPELLBUTTON,
-        GT_SKILLBUTTON,
-        GT_RACIALBUTTON,
-        GT_WORLDMAP,
-
-        GT_DEBUG,
-        GT_NETSTATS,
-        GT_ASSISTANTMACROBUTTON,
-        GT_ASSISTANTHOTKEYBUTTON
-    }
-
     internal class Gump : Control
     {
+        // MobileUO: added variables
         private Button closeButton;
         public static bool CloseButtonsEnabled;
         
@@ -76,12 +57,14 @@ namespace ClassicUO.Game.UI.Gumps
             AcceptKeyboardInput = false;
         }
 
-        //NOTE: Make sure close button is always on top
+        // MobileUO: NOTE: Make sure close button is always on top
+        // MobileUO: added function
         protected override void OnChildAdded()
         {
             UpdateCloseButton();
         }
 
+        // MobileUO: added function
         private void InitCloseButton()
         {
             if ((closeButton == null || closeButton.IsDisposed) && CloseButtonsEnabled && (CanCloseWithRightClick || CanCloseWithEsc))
@@ -94,6 +77,7 @@ namespace ClassicUO.Game.UI.Gumps
             }
         }
 
+        // MobileUO: added function
         public void UpdateCloseButton()
         {
             InitCloseButton();
@@ -109,22 +93,16 @@ namespace ClassicUO.Game.UI.Gumps
             }
         }
 
-        public bool BlockMovement { get; set; }
+        public bool CanBeSaved => GumpType != Gumps.GumpType.None;
 
-        public bool CanBeSaved => GumpType != GUMP_TYPE.NONE;
-
-        public virtual GUMP_TYPE GumpType { get; }
+        public virtual GumpType GumpType { get; }
 
         public bool InvalidateContents { get; set; }
 
+        public uint MasterGumpSerial { get; set; }
 
-        public override bool CanMove
-        {
-            get => !BlockMovement && base.CanMove;
-            set => base.CanMove = value;
-        }
 
-        public override void Update(double totalMS, double frameMS)
+        public override void Update()
         {
             if (InvalidateContents)
             {
@@ -133,9 +111,11 @@ namespace ClassicUO.Game.UI.Gumps
             }
 
             if (ActivePage == 0)
+            {
                 ActivePage = 1;
+            }
 
-            base.Update(totalMS, frameMS);
+            base.Update();
         }
 
         public override void Dispose()
@@ -143,10 +123,13 @@ namespace ClassicUO.Game.UI.Gumps
             Item it = World.Items.Get(LocalSerial);
 
             if (it != null && it.Opened)
+            {
                 it.Opened = false;
+            }
 
             base.Dispose();
 
+            // MobileUO: added dispose
             if (closeButton != null && closeButton.IsDisposed == false)
             {
                 closeButton.Dispose();
@@ -154,20 +137,10 @@ namespace ClassicUO.Game.UI.Gumps
             }
         }
 
-        public virtual void Save(BinaryWriter writer)
-        {
-            // the header         
-            Type type = GetType();
-            ushort typeLen = (ushort) type.FullName.Length;
-            writer.Write(typeLen);
-            writer.WriteUTF8String(type.FullName);
-            writer.Write(X);
-            writer.Write(Y);
-        }
 
         public virtual void Save(XmlTextWriter writer)
         {
-            writer.WriteAttributeString("type", ((int)GumpType).ToString());
+            writer.WriteAttributeString("type", ((int) GumpType).ToString());
             writer.WriteAttributeString("x", X.ToString());
             writer.WriteAttributeString("y", Y.ToString());
             writer.WriteAttributeString("serial", LocalSerial.ToString());
@@ -175,8 +148,12 @@ namespace ClassicUO.Game.UI.Gumps
 
         public void SetInScreen()
         {
-            if (Bounds.Width >= 0 && Bounds.X <= Client.Game.Window.ClientBounds.Width &&
-                Bounds.Height >= 0 && Bounds.Y <= Client.Game.Window.ClientBounds.Height)
+            Rectangle windowBounds = Client.Game.Window.ClientBounds;
+            Rectangle bounds = Bounds;
+            bounds.X += windowBounds.X;
+            bounds.Y += windowBounds.Y;
+
+            if (windowBounds.Intersects(bounds))
             {
                 return;
             }
@@ -185,21 +162,17 @@ namespace ClassicUO.Game.UI.Gumps
             Y = 0;
         }
 
-        public virtual void Restore(BinaryReader reader)
-        {
-        }
-
         public virtual void Restore(XmlElement xml)
         {
-
         }
 
         public void RequestUpdateContents()
-            => InvalidateContents = true;
+        {
+            InvalidateContents = true;
+        }
 
         protected virtual void UpdateContents()
         {
-
         }
 
         protected override void OnDragEnd(int x, int y)
@@ -209,16 +182,25 @@ namespace ClassicUO.Game.UI.Gumps
             int halfHeight = Height - (Height >> 2);
 
             if (X < -halfWidth)
+            {
                 position.X = -halfWidth;
+            }
 
             if (Y < -halfHeight)
+            {
                 position.Y = -halfHeight;
+            }
 
             if (X > Client.Game.Window.ClientBounds.Width - (Width - halfWidth))
+            {
                 position.X = Client.Game.Window.ClientBounds.Width - (Width - halfWidth);
+            }
 
             if (Y > Client.Game.Window.ClientBounds.Height - (Height - halfHeight))
+            {
                 position.Y = Client.Game.Window.ClientBounds.Height - (Height - halfHeight);
+            }
+
             Location = position;
         }
 
@@ -229,7 +211,7 @@ namespace ClassicUO.Game.UI.Gumps
 
         public override void OnButtonClick(int buttonID)
         {
-            if (!IsDisposed && LocalSerial != 0 && !SerialHelper.IsValidLocalGumpSerial(LocalSerial))
+            if (!IsDisposed && LocalSerial != 0)
             {
                 List<uint> switches = new List<uint>();
                 List<Tuple<ushort, string>> entries = new List<Tuple<ushort, string>>();
@@ -250,12 +232,24 @@ namespace ClassicUO.Game.UI.Gumps
                     }
                 }
 
-                GameActions.ReplyGump(LocalSerial, ServerSerial, buttonID, switches.ToArray(), entries.ToArray());
+                GameActions.ReplyGump
+                (
+                    LocalSerial,
+                    // Seems like MasterGump serial does not work as expected.
+                    /*MasterGumpSerial != 0 ? MasterGumpSerial :*/ ServerSerial,
+                    buttonID,
+                    switches.ToArray(),
+                    entries.ToArray()
+                );
 
                 if (CanMove)
+                {
                     UIManager.SavePosition(ServerSerial, Location);
+                }
                 else
+                {
                     UIManager.RemovePosition(ServerSerial);
+                }
 
                 Dispose();
             }
@@ -264,10 +258,14 @@ namespace ClassicUO.Game.UI.Gumps
         protected override void CloseWithRightClick()
         {
             if (!CanCloseWithRightClick)
+            {
                 return;
+            }
 
             if (ServerSerial != 0)
+            {
                 OnButtonClick(0);
+            }
 
             base.CloseWithRightClick();
         }

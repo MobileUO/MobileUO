@@ -52,7 +52,8 @@ public static class UoTextureExplorerHelper
     public static void TriggerFirstTexture()
     {
         ArtLoader.Instance.ClearResources();
-        ArtLoader.Instance.GetLandTexture(0);
+        // MobileUO: TODO: update later
+        //ArtLoader.Instance.GetLandTexture(0);
     }
 
     public static void CreateLandTileTextureAtlas()
@@ -108,13 +109,15 @@ public static class UoTextureExplorerHelper
 
     public static Texture2D GetLandTexture(uint g)
     {
-        var uoTexture = ArtLoader.Instance.GetLandTexture(g);
+        // MobileUO: TODO: update later
+        //var uoTexture = ArtLoader.Instance.GetLandTexture(g);
+        var uoTexture = new Texture2D(Client.Game.GraphicsDevice, 0, 0);
         return uoTexture != null && uoTexture.UnityTexture != null ? uoTexture : null;
     }
 
     public static Texture2D GetGumpTexture(ushort g)
     {
-        var uoTexture = GumpsLoader.Instance.GetTexture(g);
+        var uoTexture = GumpsLoader.Instance.GetGumpTexture(g, out _);
         return uoTexture != null && uoTexture.UnityTexture != null ? uoTexture : null;
     }
 

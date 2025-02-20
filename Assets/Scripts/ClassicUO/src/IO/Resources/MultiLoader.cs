@@ -1,108 +1,103 @@
 ﻿#region license
-// Copyright (C) 2020 ClassicUO Development Community on Github
+
+// Copyright (c) 2021, andreakarasho
+// All rights reserved.
 // 
-// This project is an alternative client for the game Ultima Online.
-// The goal of this is to develop a lightweight client considering
-// new technologies.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+// 3. All advertising materials mentioning features or use of this software
+//    must display the following acknowledgement:
+//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
+// 4. Neither the name of the copyright holder nor the
+//    names of its contributors may be used to endorse or promote products
+//    derived from this software without specific prior written permission.
 // 
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-// 
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-// 
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
+// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 #endregion
 
-using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using ClassicUO.Data;
 using ClassicUO.Game;
-using ClassicUO.Utility;
-using ClassicUO.Utility.Logging;
 
 namespace ClassicUO.IO.Resources
 {
     internal class MultiLoader : UOFileLoader
     {
-        private UOFile _file;
-        private int _itemOffset;
-        private DataReader _reader;
+        private static MultiLoader _instance;
 
         private MultiLoader()
         {
-
         }
 
-        private static MultiLoader _instance;
-        public static MultiLoader Instance
-        {
-            get
-            {
-                if (_instance == null)
-                {
-                    _instance = new MultiLoader();
-                }
-
-                return _instance;
-            }
-        }
-
-
+        public static MultiLoader Instance => _instance ?? (_instance = new MultiLoader());
 
         public int Count { get; private set; }
-        public UOFile File => _file;
+        public UOFile File { get; private set; }
+
         public bool IsUOP { get; private set; }
-        public int Offset => _itemOffset;
+        public int Offset { get; private set; }
 
 
         public override unsafe Task Load()
         {
-            return Task.Run(() =>
-            {
-                string uopPath = UOFileManager.GetUOFilePath("MultiCollection.uop");
-
-                if (Client.IsUOPInstallation && System.IO.File.Exists(uopPath))
+            return Task.Run
+            (
+                () =>
                 {
-                    Count = Constants.MAX_MULTI_DATA_INDEX_COUNT;
-                    _file = new UOFileUop(uopPath, "build/multicollection/{0:D6}.bin");
-                    Entries = new UOFileIndex[Count];
-                    _reader = new DataReader();
-                    IsUOP = true;
-                }
-                else
-                {
-                    string path = UOFileManager.GetUOFilePath("multi.mul");
-                    string pathidx = UOFileManager.GetUOFilePath("multi.idx");
+                    string uopPath = UOFileManager.GetUOFilePath("MultiCollection.uop");
 
-                    if (System.IO.File.Exists(path) && System.IO.File.Exists(pathidx))
+                    if (Client.IsUOPInstallation && System.IO.File.Exists(uopPath))
                     {
-                        _file = new UOFileMul(path, pathidx, Constants.MAX_MULTI_DATA_INDEX_COUNT, 14);
-                        Count = _itemOffset = Client.Version >= ClientVersion.CV_7090 ? sizeof(MultiBlockNew) + 2 : sizeof(MultiBlock);
+                        Count = Constants.MAX_MULTI_DATA_INDEX_COUNT;
+                        File = new UOFileUop(uopPath, "build/multicollection/{0:D6}.bin");
+                        Entries = new UOFileIndex[Count];
+                        IsUOP = true;
                     }
+                    else
+                    {
+                        string path = UOFileManager.GetUOFilePath("multi.mul");
+                        string pathidx = UOFileManager.GetUOFilePath("multi.idx");
+
+                        if (System.IO.File.Exists(path) && System.IO.File.Exists(pathidx))
+                        {
+                            File = new UOFileMul(path, pathidx, Constants.MAX_MULTI_DATA_INDEX_COUNT, 14);
+
+                            Count = Offset = Client.Version >= ClientVersion.CV_7090 ? sizeof(MultiBlockNew) + 2 : sizeof(MultiBlock);
+                        }
+                    }
+
+                    File.FillEntries(ref Entries);
                 }
-
-                _file.FillEntries(ref Entries);
-
-            });
+            );
         }
 
+        // MobileUO: added ClearResources method
         public override void ClearResources()
         {
-            _file?.Dispose();
-            _file = null;
+            File?.Dispose();
+            File = null;
             _instance = null;
         }
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    ref struct MultiBlock
+    internal ref struct MultiBlock
     {
         public ushort ID;
         public short X;
@@ -112,7 +107,7 @@ namespace ClassicUO.IO.Resources
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    ref struct MultiBlockNew
+    internal ref struct MultiBlockNew
     {
         public ushort ID;
         public short X;

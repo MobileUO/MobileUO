@@ -1,56 +1,52 @@
 ﻿#region license
-// Copyright (C) 2020 ClassicUO Development Community on Github
+
+// Copyright (c) 2021, andreakarasho
+// All rights reserved.
 // 
-// This project is an alternative client for the game Ultima Online.
-// The goal of this is to develop a lightweight client considering
-// new technologies.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+// 3. All advertising materials mentioning features or use of this software
+//    must display the following acknowledgement:
+//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
+// 4. Neither the name of the copyright holder nor the
+//    names of its contributors may be used to endorse or promote products
+//    derived from this software without specific prior written permission.
 // 
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-// 
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-// 
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
+// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 #endregion
 
 using System;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-
 using ClassicUO.Utility;
-using Microsoft.Xna.Framework;
 
 namespace ClassicUO.IO.Resources
 {
     internal class HuesLoader : UOFileLoader
     {
+        private static HuesLoader _instance;
+
         private HuesLoader()
         {
-
         }
 
-        private static HuesLoader _instance;
-        public static HuesLoader Instance
-        {
-            get
-            {
-                if (_instance == null)
-                {
-                    _instance = new HuesLoader();
-                }
-
-                return _instance;
-            }
-        }
-
+        public static HuesLoader Instance => _instance ?? (_instance = new HuesLoader());
 
         public HuesGroup[] HuesRange { get; private set; }
 
@@ -60,76 +56,94 @@ namespace ClassicUO.IO.Resources
 
         public ushort[] RadarCol { get; private set; }
 
-        public override Task Load()
+        public override unsafe Task Load()
         {
-            return Task.Run(() =>
-            {
-                string path = UOFileManager.GetUOFilePath("hues.mul");
+            return Task.Run
+            (
+                () =>
+                {
+                    string path = UOFileManager.GetUOFilePath("hues.mul");
 
-                FileSystemHelper.EnsureFileExists(path);
+                    FileSystemHelper.EnsureFileExists(path);
 
-                UOFileMul file = new UOFileMul(path);
-                int groupSize = Marshal.SizeOf<HuesGroup>();
-                int entrycount = (int) file.Length / groupSize;
-                HuesCount = entrycount * 8;
-                HuesRange = new HuesGroup[entrycount];
-                ulong addr = (ulong) file.StartAddress;
+                    UOFileMul file = new UOFileMul(path);
+                    int groupSize = Marshal.SizeOf<HuesGroup>();
+                    int entrycount = (int) file.Length / groupSize;
+                    HuesCount = entrycount * 8;
+                    HuesRange = new HuesGroup[entrycount];
+                    ulong addr = (ulong) file.StartAddress;
 
-                for (int i = 0; i < entrycount; i++)
-                    HuesRange[i] = Marshal.PtrToStructure<HuesGroup>((IntPtr) (addr + (ulong) (i * groupSize)));
+                    for (int i = 0; i < entrycount; i++)
+                    {
+                        HuesRange[i] = Marshal.PtrToStructure<HuesGroup>((IntPtr) (addr + (ulong) (i * groupSize)));
+                    }
 
-                path = UOFileManager.GetUOFilePath("radarcol.mul");
+                    path = UOFileManager.GetUOFilePath("radarcol.mul");
 
-                FileSystemHelper.EnsureFileExists(path);
+                    FileSystemHelper.EnsureFileExists(path);
 
-                UOFileMul radarcol = new UOFileMul(path);
-                RadarCol = radarcol.ReadArray<ushort>((int) radarcol.Length >> 1);
-                file.Dispose();
-                radarcol.Dispose();
-            });
+                    UOFileMul radarcol = new UOFileMul(path);
+                    RadarCol = new ushort[(int)(radarcol.Length >> 1)];
+
+                    fixed (ushort* ptr = RadarCol)
+                    {
+                        Unsafe.CopyBlockUnaligned((void*)(byte*)ptr, radarcol.PositionAddress.ToPointer(), (uint)radarcol.Length);
+                    }
+                    
+                    file.Dispose();
+                    radarcol.Dispose();
+                }
+            );
         }
 
-
+        // MobileUO: added override method
         public override void ClearResources()
         {
             _instance = null;
         }
 
-        //public float[] CreateHuesPalette()
-        //{
-        //    float[] p = new float[32 * 3 * HuesCount];
+        public float[] CreateHuesPalette()
+        {
+            float[] p = new float[32 * 3 * HuesCount];
 
-        //    Palette = new FloatHues[HuesCount];
-        //    int entrycount = HuesCount >> 3;
-        //    int iddd = 0;
-        //    for (int i = 0; i < entrycount; i++)
-        //    {
-        //        for (int j = 0; j < 8; j++)
-        //        {
-        //            int idx = i * 8 + j;
-        //            Palette[idx].Palette = new float[32 * 3];
+            Palette = new FloatHues[HuesCount];
+            int entrycount = HuesCount >> 3;
 
-        //            for (int h = 0; h < 32; h++)
-        //            {
-        //                int idx1 = h * 3;
-        //                ushort c = HuesRange[i].Entries[j].ColorTable[h];
-        //                Palette[idx].Palette[idx1] = ((c >> 10) & 0x1F) / 31.0f;
-        //                Palette[idx].Palette[idx1 + 1] = ((c >> 5) & 0x1F) / 31.0f;
-        //                Palette[idx].Palette[idx1 + 2] = (c & 0x1F) / 31.0f;
+            for (int i = 0; i < entrycount; i++)
+            {
+                for (int j = 0; j < 8; j++)
+                {
+                    int idx = i * 8 + j;
 
-        //                p[(idx * 96) + idx1 + 0] = Palette[idx].Palette[idx1];
-        //                p[(idx * 96) + idx1 + 1] = Palette[idx].Palette[idx1 + 1];
-        //                p[(idx * 96) + idx1 + 2] = Palette[idx].Palette[idx1 + 2];
+                    Palette[idx].Palette = new float[32 * 3];
 
-        //                //p[iddd++] = Palette[idx].Palette[idx1];
-        //                //p[iddd++] = Palette[idx].Palette[idx1 + 1];
-        //                //p[iddd++] = Palette[idx].Palette[idx1 + 2];
-        //            }
-        //        }
-        //    }
+                    for (int h = 0; h < 32; h++)
+                    {
+                        int idx1 = h * 3;
 
-        //    return p;
-        //}
+                        ushort c = HuesRange[i].Entries[j].ColorTable[h];
+
+                        Palette[idx].Palette[idx1] = ((c >> 10) & 0x1F) / 31.0f;
+
+                        Palette[idx].Palette[idx1 + 1] = ((c >> 5) & 0x1F) / 31.0f;
+
+                        Palette[idx].Palette[idx1 + 2] = (c & 0x1F) / 31.0f;
+
+                        p[idx * 96 + idx1 + 0] = Palette[idx].Palette[idx1];
+
+                        p[idx * 96 + idx1 + 1] = Palette[idx].Palette[idx1 + 1];
+
+                        p[idx * 96 + idx1 + 2] = Palette[idx].Palette[idx1 + 2];
+
+                        //p[iddd++] = Palette[idx].Palette[idx1];
+                        //p[iddd++] = Palette[idx].Palette[idx1 + 1];
+                        //p[iddd++] = Palette[idx].Palette[idx1 + 2];
+                    }
+                }
+            }
+
+            return p;
+        }
 
         public void CreateShaderColors(uint[] buffer)
         {
@@ -146,7 +160,9 @@ namespace ClassicUO.IO.Resources
                         buffer[idx++] = HuesHelper.Color16To32(HuesRange[r].Entries[y].ColorTable[x]) | 0xFF_00_00_00;
 
                         if (idx >= buffer.Length)
+                        {
                             return;
+                        }
                     }
                 }
             }
@@ -238,7 +254,7 @@ namespace ClassicUO.IO.Resources
                 return HuesHelper.Color16To32(HuesRange[g].Entries[e].ColorTable[(c >> 10) & 0x1F]);
             }
 
-            return HuesHelper.Color16To32(c);
+            return color != 0 ? HuesHelper.Color16To32(color) : HuesHelper.Color16To32(c);
         }
 
         public uint GetPartialHueColor(ushort c, ushort color)
@@ -258,17 +274,21 @@ namespace ClassicUO.IO.Resources
                 {
                     cl = HuesHelper.Color16To32(HuesRange[g].Entries[e].ColorTable[(c >> 10) & 0x1F]);
                 }
+
                 return cl;
             }
 
             return HuesHelper.Color16To32(c);
         }
 
-        [MethodImpl(256)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ushort GetRadarColorData(int c)
         {
             if (c >= 0 && c < RadarCol.Length)
+            {
                 return RadarCol[c];
+            }
+
             return 0;
         }
     }
@@ -310,7 +330,7 @@ namespace ClassicUO.IO.Resources
     {
         public readonly uint Header;
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
-        public readonly HuesBlock[] Entries;
+        public readonly VerdataHuesBlock[] Entries;
     }
 
     internal struct FloatHues

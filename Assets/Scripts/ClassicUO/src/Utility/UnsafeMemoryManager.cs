@@ -1,145 +1,176 @@
 ﻿#region license
-// Copyright (C) 2020 ClassicUO Development Community on Github
+
+// Copyright (c) 2021, andreakarasho
+// All rights reserved.
 // 
-// This project is an alternative client for the game Ultima Online.
-// The goal of this is to develop a lightweight client considering
-// new technologies.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+// 3. All advertising materials mentioning features or use of this software
+//    must display the following acknowledgement:
+//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
+// 4. Neither the name of the copyright holder nor the
+//    names of its contributors may be used to endorse or promote products
+//    derived from this software without specific prior written permission.
 // 
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-// 
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-// 
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
+// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 #endregion
 
 using System;
-using System.Runtime.CompilerServices;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
-
-using ClassicUO.Utility.Platforms;
 
 namespace ClassicUO.Utility
 {
+    public unsafe struct UnmanagedMemoryPool
+    {
+        public byte* Alloc;
+        public void* Free;
+        public int BlockSize;
+        public int NumBlocks;
+    }
+
+
+    // UnmanagedMemoryPool and stuff from --> https://www.jacksondunstan.com/articles/3770
     public static unsafe class UnsafeMemoryManager
     {
-        // static UnsafeMemoryManager()
-        // {
-        //     Console.WriteLine("Platform: {0}", PlatformHelper.IsMonoRuntime ? "Mono" : ".NET");
-        // }
+        // MobileUO: commented out
+        public static readonly int SizeOfPointer = sizeof(void*);
 
-        // [MethodImpl(256)]
-        // public static void* AsPointer<T>(ref T v)
-        // {
-        //     TypedReference t = __makeref(v);
-        //
-        //     return (void*) *((IntPtr*) &t + (PlatformHelper.IsMonoRuntime ? 1 : 0));
-        // }
+        public static readonly int MinimumPoolBlockSize = SizeOfPointer;
 
-        public static T ToStruct<T>(IntPtr ptr)
+
+        public static void Memset(void* ptr, byte value, int count)
         {
-            //NOTE: __makeref and TypedReference usage breaks IL2CPP compiler, use Marshal class instead
-            return Marshal.PtrToStructure<T>(ptr);
-            // return ToStruct<T>(ptr, SizeOf<T>());
+            long* c = (long*) ptr;
+
+            count /= 8;
+
+            for (int i = 0; i < count; ++i)
+            {
+                *c++ = (long) value;
+            }
         }
 
-        // [MethodImpl(256)]
-        // public static T ToStruct<T>(IntPtr ptr, int size)
-        // {
-        //     byte* str = (byte*) ptr;
-        //
-        //     T result = default;
-        //     byte* resultPtr = (byte*) AsPointer(ref result);
-        //     Buffer.MemoryCopy(str, resultPtr, size, size);
-        //
-        //     return result;
-        // }
-
-        // [MethodImpl(256)]
-        // public static T As<T>(object v)
-        // {
-        //     int size = SizeOf<T>();
-        //
-        //     return Reinterpret<object, T>(v, size);
-        // }
-
-        [MethodImpl(256)]
-        public static int SizeOf<T>()
+        public static IntPtr Alloc(int size)
         {
-            //NOTE: __makeref and TypedReference usage breaks IL2CPP compiler, use Marshal class instead
-            return Marshal.SizeOf<T>();
-            // DoubleStruct<T> doubleStruct = DoubleStruct<T>.Value;
-            // TypedReference tRef0 = __makeref(doubleStruct.First);
-            // TypedReference tRef1 = __makeref(doubleStruct.Second);
-            // IntPtr ptrToT0, ptrToT1;
-            //
-            // if (PlatformHelper.IsMonoRuntime)
-            // {
-            //     ptrToT0 = *((IntPtr*) &tRef0 + 1);
-            //     ptrToT1 = *((IntPtr*) &tRef1 + 1);
-            // }
-            // else
-            // {
-            //     ptrToT0 = *(IntPtr*) &tRef0;
-            //     ptrToT1 = *(IntPtr*) &tRef1;
-            // }
-            //
-            // return (int) ((byte*) ptrToT1 - (byte*) ptrToT0);
+            size = ((size + 7) & (-8));
+
+            IntPtr ptr = Marshal.AllocHGlobal(size);
+
+            return ptr;
         }
 
+        public static IntPtr Calloc(int size)
+        {
+            IntPtr ptr = Alloc(size);
 
-        // [MethodImpl(256)]
-        // public static TOut Reinterpret<TIn, TOut>(TIn curValue, int sizeBytes) //where TIn : struct where TOut : struct
-        // {
-        //     TOut result = default;
-        //
-        //     //SingleStruct<TIn> inS = SingleStruct<TIn>.Value;
-        //     //SingleStruct<TOut> outS = SingleStruct<TOut>.Value;
-        //
-        //     TypedReference resultRef = __makeref(result);
-        //     TypedReference curValueRef = __makeref(curValue);
-        //
-        //
-        //     int offset = PlatformHelper.IsMonoRuntime ? 1 : 0;
-        //
-        //     byte* resultPtr = (byte*) *((IntPtr*) &resultRef + offset);
-        //     byte* curValuePtr = (byte*) *((IntPtr*) &curValueRef + offset);
-        //
-        //     //for (int i = 0; i < sizeBytes; ++i)
-        //     //    resultPtr[i] = curValuePtr[i];
-        //
-        //     Buffer.MemoryCopy(curValuePtr, resultPtr, sizeBytes, sizeBytes);
-        //
-        //     return result;
-        // }
+            Memset((void*) ptr, 0, size);
 
-        // [StructLayout(LayoutKind.Sequential, Pack = 1)]
-        // private struct DoubleStruct<T>
-        // {
-        //     public T First;
-        //     public T Second;
-        //     public static readonly DoubleStruct<T> Value;
-        // }
+            return ptr;
+        }
 
-        //[StructLayout(LayoutKind.Sequential, Pack = 1)]
-        //private struct DoubleStruct<T> //where T : struct
-        //{
-        //    public T First;
-        //    public T Second;
-        //    public static readonly DoubleStruct<T> Value;
-        //}
+        public static void* Alloc(ref UnmanagedMemoryPool pool)
+        {
+            void* pRet = pool.Free;
 
-        //[StructLayout(LayoutKind.Sequential, Pack = 1)]
-        //private struct SingleStruct<T> //where T : struct
-        //{
-        //    public T First;
-        //    public static readonly SingleStruct<T> Value;
-        //}
+            pool.Free = *((byte**) pool.Free);
+
+            return pRet;
+        }
+
+        public static void* Calloc(ref UnmanagedMemoryPool pool)
+        {
+            void* ptr = Alloc(ref pool);
+
+            Memset(ptr, 0, pool.BlockSize);
+
+            return ptr;
+        }
+
+        public static UnmanagedMemoryPool AllocPool(int blockSize, int numBlocks)
+        {
+            Debug.Assert(blockSize >= MinimumPoolBlockSize);
+            Debug.Assert(numBlocks > 0);
+
+            blockSize = ((blockSize + 7) & (-8));
+
+            UnmanagedMemoryPool pool = new UnmanagedMemoryPool();
+            pool.Free = null;
+            pool.NumBlocks = numBlocks;
+            pool.BlockSize = blockSize;
+
+            pool.Alloc = (byte*) Alloc(blockSize * numBlocks);
+
+            FreeAll(&pool);
+
+            return pool;
+        }
+
+        public static void Free(IntPtr ptr)
+        {
+            if (ptr != IntPtr.Zero)
+            {
+                Marshal.FreeHGlobal(ptr);
+            }
+        }
+
+        public static void Free(UnmanagedMemoryPool* pool, void* ptr)
+        {
+            if (ptr != null)
+            {
+                void** pHead = (void**) ptr;
+                *pHead = pool->Free;
+                pool->Free = pHead;
+            }
+        }
+
+        public static void Free(ref UnmanagedMemoryPool pool, void* ptr)
+        {
+            if (ptr != null)
+            {
+                void** pHead = (void**)ptr;
+                *pHead = pool.Free;
+                pool.Free = pHead;
+            }
+        }
+
+        public static void FreeAll(UnmanagedMemoryPool* pool)
+        {
+            void** pCur = (void**) pool->Alloc;
+            byte* pNext = pool->Alloc + pool->BlockSize;
+
+            for (int i = 0, count = pool->NumBlocks - 1; i < count; ++i)
+            {
+                *pCur = pNext;
+                pCur = (void**) pNext;
+                pNext += pool->BlockSize;
+            }
+
+            *pCur = default(void*);
+
+            pool->Free = pool->Alloc;
+        }
+
+        public static void FreePool(UnmanagedMemoryPool* pool)
+        {
+            Free((IntPtr) pool->Alloc);
+            pool->Alloc = null;
+            pool->Free = null;
+        }
     }
 }

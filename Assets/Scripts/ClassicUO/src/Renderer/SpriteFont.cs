@@ -1,22 +1,33 @@
 ﻿#region license
-// Copyright (C) 2020 ClassicUO Development Community on Github
+
+// Copyright (c) 2021, andreakarasho
+// All rights reserved.
 // 
-// This project is an alternative client for the game Ultima Online.
-// The goal of this is to develop a lightweight client considering
-// new technologies.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+// 3. All advertising materials mentioning features or use of this software
+//    must display the following acknowledgement:
+//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
+// 4. Neither the name of the copyright holder nor the
+//    names of its contributors may be used to endorse or promote products
+//    derived from this software without specific prior written permission.
 // 
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-// 
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-// 
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
+// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 #endregion
 
 using System;
@@ -24,7 +35,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Text;
-
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -33,7 +43,17 @@ namespace ClassicUO.Renderer
 {
     internal sealed class SpriteFont
     {
-        private SpriteFont(Texture2D texture, List<Rectangle> glyph, List<Rectangle> cropping, List<char> characters, int lineSpacing, float spacing, List<Vector3> kerning, char? defaultCharacter)
+        private SpriteFont
+        (
+            Texture2D texture,
+            List<Rectangle> glyph,
+            List<Rectangle> cropping,
+            List<char> characters,
+            int lineSpacing,
+            float spacing,
+            List<Vector3> kerning,
+            char? defaultCharacter
+        )
         {
             Characters = new ReadOnlyCollection<char>(characters.ToArray());
             DefaultCharacter = defaultCharacter;
@@ -46,7 +66,6 @@ namespace ClassicUO.Renderer
             Kerning = kerning;
             CharacterMap = characters;
         }
-
 
 
         public ReadOnlyCollection<char> Characters { get; }
@@ -62,9 +81,15 @@ namespace ClassicUO.Renderer
 
         public Vector2 MeasureString(string text)
         {
-            if (text == null) throw new ArgumentNullException("text");
+            if (text == null)
+            {
+                throw new ArgumentNullException("text");
+            }
 
-            if (text.Length == 0) return Vector2.Zero;
+            if (text.Length == 0)
+            {
+                return Vector2.Zero;
+            }
 
             Vector2 result = Vector2.Zero;
             float curLineWidth = 0.0f;
@@ -74,7 +99,10 @@ namespace ClassicUO.Renderer
             foreach (char c in text)
             {
                 // Special characters
-                if (c == '\r') continue;
+                if (c == '\r')
+                {
+                    continue;
+                }
 
                 if (c == '\n')
                 {
@@ -121,7 +149,9 @@ namespace ClassicUO.Renderer
                     firstInLine = false;
                 }
                 else
+                {
                     curLineWidth += Spacing + cKern.X;
+                }
 
                 /* Add the character width and right-side bearing to the line
 				 * width.
@@ -132,7 +162,11 @@ namespace ClassicUO.Renderer
 				 * increase the height to that of the line's tallest character.
 				 */
                 int cCropHeight = CroppingData[index].Height;
-                if (cCropHeight > finalLineHeight) finalLineHeight = cCropHeight;
+
+                if (cCropHeight > finalLineHeight)
+                {
+                    finalLineHeight = cCropHeight;
+                }
             }
 
             // Calculate the final width/height of the text box
@@ -145,6 +179,7 @@ namespace ClassicUO.Renderer
 
         public static SpriteFont Create(string name)
         {
+            // MobileUO: load resource from Unity
             var bytes = UnityEngine.Resources.Load<UnityEngine.TextAsset>(name).bytes;
             var stream = new MemoryStream(bytes);
 
@@ -160,7 +195,10 @@ namespace ClassicUO.Renderer
                 byte flags = reader.ReadByte();
                 bool compressed = (flags & 0x80) != 0;
 
-                if (version != 5 && version != 4) throw new ContentLoadException("Invalid XNB version");
+                if (version != 5 && version != 4)
+                {
+                    throw new ContentLoadException("Invalid XNB version");
+                }
 
                 int xnbLength = reader.ReadInt32();
 
@@ -194,7 +232,15 @@ namespace ClassicUO.Renderer
                     levelDataSizeInBytes = levelData.Length;
                 }
 
-                Texture2D texture = new Texture2D(Client.Game.GraphicsDevice, width, height, false, SurfaceFormat.Color);
+                Texture2D texture = new Texture2D
+                (
+                    Client.Game.GraphicsDevice,
+                    width,
+                    height,
+                    false,
+                    SurfaceFormat.Color
+                );
+
                 texture.SetData(levelData);
 
                 reader.Read7BitEncodedInt();
@@ -230,7 +276,9 @@ namespace ClassicUO.Renderer
                 List<char> charMap = new List<char>(charCount);
 
                 for (int i = 0; i < charCount; i++)
+                {
                     charMap.Add(reader.ReadChar());
+                }
 
                 int lineSpacing = reader.ReadInt32();
                 float spacing = reader.ReadSingle();
@@ -251,16 +299,31 @@ namespace ClassicUO.Renderer
                 char? defaultChar = null;
 
                 if (reader.ReadBoolean())
+                {
                     defaultChar = reader.ReadChar();
+                }
 
 
-                return new SpriteFont(texture, glyphs, croppings, charMap, lineSpacing, spacing, kernings, defaultChar);
+                return new SpriteFont
+                (
+                    texture,
+                    glyphs,
+                    croppings,
+                    charMap,
+                    lineSpacing,
+                    spacing,
+                    kernings,
+                    defaultChar
+                );
             }
         }
 
         private static byte[] DecompressDxt3(byte[] imageData, int width, int height)
         {
-            using (MemoryStream imageStream = new MemoryStream(imageData)) return DecompressDxt3(imageStream, width, height);
+            using (MemoryStream imageStream = new MemoryStream(imageData))
+            {
+                return DecompressDxt3(imageStream, width, height);
+            }
         }
 
         internal static byte[] DecompressDxt3(Stream imageStream, int width, int height)
@@ -274,7 +337,19 @@ namespace ClassicUO.Renderer
 
                 for (int y = 0; y < blockCountY; y++)
                 {
-                    for (int x = 0; x < blockCountX; x++) DecompressDxt3Block(imageReader, x, y, blockCountX, width, height, imageData);
+                    for (int x = 0; x < blockCountX; x++)
+                    {
+                        DecompressDxt3Block
+                        (
+                            imageReader,
+                            x,
+                            y,
+                            blockCountX,
+                            width,
+                            height,
+                            imageData
+                        );
+                    }
                 }
             }
 
@@ -291,7 +366,16 @@ namespace ClassicUO.Renderer
             b = (byte) ((temp / 32 + temp) / 32);
         }
 
-        private static void DecompressDxt3Block(BinaryReader imageReader, int x, int y, int blockCountX, int width, int height, byte[] imageData)
+        private static void DecompressDxt3Block
+        (
+            BinaryReader imageReader,
+            int x,
+            int y,
+            int blockCountX,
+            int width,
+            int height,
+            byte[] imageData
+        )
         {
             byte a0 = imageReader.ReadByte();
             byte a1 = imageReader.ReadByte();
