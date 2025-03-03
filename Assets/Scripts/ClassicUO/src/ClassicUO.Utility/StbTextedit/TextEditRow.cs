@@ -1,0 +1,1 @@
+../../../../../../external/ClassicUO/src/ClassicUO.Utility/StbTextedit/TextEditRow.cs

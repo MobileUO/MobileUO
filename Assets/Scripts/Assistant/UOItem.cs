@@ -4,7 +4,7 @@ using System.Collections.Generic;
 //TODO: Agents
 //using Assistant.Agents;
 
-using ClassicUO.IO.Resources;
+using ClassicUO.Assets;
 using ClassicUO.Game;
 
 namespace Assistant

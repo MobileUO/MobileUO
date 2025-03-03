@@ -7,7 +7,7 @@ using System.Text;
 //using Assistant.UI;
 
 using ClassicUO.Network;
-using ClassicUO.IO.Resources;
+using ClassicUO.Assets;
 
 namespace Assistant
 {

@@ -7,14 +7,15 @@ using System.Runtime.InteropServices;
 using CUO_API;
 using ClassicUO.Network;
 using ClassicUO;
-using ClassicUO.IO.Resources;
-using ClassicUO.Data;
+using ClassicUO.Assets;
+
 using ClassicUO.Game;
 using ClassicUO.Game.Managers;
 using Assistant.Core;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.IO;
+using ClassicUO.Utility;
 
 namespace Assistant
 {

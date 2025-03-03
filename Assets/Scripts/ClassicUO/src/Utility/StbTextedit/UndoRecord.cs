@@ -1,1 +1,0 @@
-../../../../../../external/ClassicUO/src/Utility/StbTextedit/UndoRecord.cs

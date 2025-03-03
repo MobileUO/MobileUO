@@ -52,7 +52,7 @@ namespace Microsoft.Xna.Framework.Graphics
             Mesh.normals = normals;
         }
 
-        internal void Populate(UltimaBatcher2D.PositionTextureColor4 vertex)
+        internal void Populate(UltimaBatcher2D.PositionNormalTextureColor4 vertex)
         {
             vertex.TextureCoordinate0.y = 1 - vertex.TextureCoordinate0.y;
             vertices[0] = vertex.Position0;

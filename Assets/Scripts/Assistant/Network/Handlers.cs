@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 using ClassicUO.Network;
 using ClassicUO.Game;
 using ClassicUO.Game.Data;
-using ClassicUO.IO.Resources;
+using ClassicUO.Assets;
 using ClassicUO.Utility;
 
 using Assistant.Core;

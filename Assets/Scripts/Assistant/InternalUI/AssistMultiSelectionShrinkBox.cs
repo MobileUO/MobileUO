@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 using ClassicUO.Input;
-using ClassicUO.IO.Resources;
+using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
 
@@ -129,7 +129,7 @@ namespace ClassicUO.Game.UI.Controls
 
             while (c != null)
             {
-                if (c is ScrollArea area)
+                if (c is AssistScrollArea area)
                 {
                     _arrow.IsVisible = true;
                     _nestedBoxes.Add(box);
@@ -255,7 +255,7 @@ namespace ClassicUO.Game.UI.Controls
 
         private void OnGroupSelection()
         {
-            if (Parent != null && Parent.Parent is ScrollArea area)
+            if (Parent != null && Parent.Parent is AssistScrollArea area)
             {
                 foreach (Control sai in area.Children)
                 {

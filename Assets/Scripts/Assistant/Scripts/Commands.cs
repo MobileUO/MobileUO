@@ -9,7 +9,7 @@ using ClassicUO.Game.UI.Gumps;
 using ClassicUO.Game;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.Data;
-using ClassicUO.IO.Resources;
+using ClassicUO.Assets;
 using UOScript;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
@@ -278,7 +278,7 @@ namespace Assistant.Scripts
             }
             int soundid = Utility.ToInt32(args[0].AsString(), -1);
             if(soundid >= 0)
-                Client.Game.Scene.Audio.PlaySound(soundid);
+                Client.Game.Audio.PlaySound(soundid);
             else
                 ScriptManager.Error(quiet, "Invalid sound id, only numbers are supported at the moment, and the number must be greater or equal than zero");
             return true;
@@ -1953,26 +1953,34 @@ namespace Assistant.Scripts
                 {
                     if (args.Length > 3 && args[3].AsString() == "right")
                     {
-                        UIManager.OnRightMouseDoubleClick();
-                        UIManager.OnRightMouseButtonUp();
+                        //UIManager.OnRightMouseDoubleClick();
+                        //UIManager.OnRightMouseButtonUp();
+                        UIManager.OnMouseDoubleClick(MouseButtonType.Right);
+                        UIManager.OnMouseButtonUp(MouseButtonType.Right);
                     }
                     else
                     {
-                        UIManager.OnLeftMouseDoubleClick();
-                        UIManager.OnLeftMouseButtonUp();
+                        //UIManager.OnLeftMouseDoubleClick();
+                        //UIManager.OnLeftMouseButtonUp();
+                        UIManager.OnMouseDoubleClick(MouseButtonType.Left);
+                        UIManager.OnMouseButtonUp(MouseButtonType.Left);
                     }
                 }
                 else
                 {
                     if (args.Length > 3 && args[3].AsString() == "right")
                     {
-                        UIManager.OnRightMouseButtonDown();
-                        UIManager.OnRightMouseButtonUp();
+                        //UIManager.OnRightMouseButtonDown();
+                        //UIManager.OnRightMouseButtonUp();
+                        UIManager.OnMouseButtonDown(MouseButtonType.Right);
+                        UIManager.OnMouseButtonUp(MouseButtonType.Right);
                     }
                     else
                     {
-                        UIManager.OnLeftMouseButtonDown();
-                        UIManager.OnLeftMouseButtonUp();
+                        //UIManager.OnLeftMouseButtonDown();
+                        //UIManager.OnLeftMouseButtonUp();
+                        UIManager.OnMouseButtonDown(MouseButtonType.Left);
+                        UIManager.OnMouseButtonUp(MouseButtonType.Left);
                     }
                 }
             }
