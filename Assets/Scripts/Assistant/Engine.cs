@@ -7,14 +7,15 @@ using System.Runtime.InteropServices;
 using CUO_API;
 using ClassicUO.Network;
 using ClassicUO;
-using ClassicUO.IO.Resources;
-using ClassicUO.Data;
+using ClassicUO.Assets;
+
 using ClassicUO.Game;
 using ClassicUO.Game.Managers;
 using Assistant.Core;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.IO;
+using ClassicUO.Utility;
 
 namespace Assistant
 {
@@ -69,7 +70,7 @@ namespace Assistant
             {
                 if (_Gump == null || _Gump.IsDisposed)
                 {
-                    _Gump = new ClassicUO.Game.UI.Gumps.AssistantGump();
+                    _Gump = new ClassicUO.Game.UI.Gumps.AssistantGump(Client.Game.UO.World);
                     AfterBuild();
                 }
                 return _Gump;
@@ -206,12 +207,12 @@ namespace Assistant
 
             foreach (UOItem i in Items.Values)
             {
-                if (Utility.InRange(Player.Position, i.GetWorldPosition(), restrictrange ? Math.Min(range, World.ClientViewRange) : range))
+                if (Utility.InRange(Player.Position, i.GetWorldPosition(), restrictrange ? Math.Min(range, Client.Game.UO.World.ClientViewRange) : range))
                     list.Add(i);
             }
             foreach (UOMobile m in Mobiles.Values)
             {
-                if (Utility.InRange(UOSObjects.Player.Position, m.Position, restrictrange ? Math.Min(range, World.ClientViewRange) : range))
+                if (Utility.InRange(UOSObjects.Player.Position, m.Position, restrictrange ? Math.Min(range, Client.Game.UO.World.ClientViewRange) : range))
                     list.Add(m);
             }
 
@@ -220,7 +221,7 @@ namespace Assistant
 
         internal static List<UOItem> ItemsInRange()
         {
-            return ItemsInRange(World.ClientViewRange);
+            return ItemsInRange(Client.Game.UO.World.ClientViewRange);
         }
 
         internal static List<UOItem> ItemsInRange(int range, bool restrictrange = true, bool sort = false)
@@ -232,7 +233,7 @@ namespace Assistant
 
             foreach(UOItem i in Items.Values)
             {
-                if (Utility.InRange(Player.Position, i.GetWorldPosition(), restrictrange ? Math.Min(range, World.ClientViewRange) : range))
+                if (Utility.InRange(Player.Position, i.GetWorldPosition(), restrictrange ? Math.Min(range, Client.Game.UO.World.ClientViewRange) : range))
                     list.Add(i);
             }
 
@@ -251,7 +252,7 @@ namespace Assistant
 
             foreach (UOMobile m in Mobiles.Values)
             {
-                if (Utility.InRange(Player.Position, m.Position, restrictrange ? Math.Min(range, World.ClientViewRange) : range))
+                if (Utility.InRange(Player.Position, m.Position, restrictrange ? Math.Min(range, Client.Game.UO.World.ClientViewRange) : range))
                     list.Add(m);
             }
             list.Remove(Player);
@@ -317,7 +318,7 @@ namespace Assistant
 
         internal static List<UOMobile> MobilesInRange()
         {
-            return MobilesInRange(World.ClientViewRange);
+            return MobilesInRange(Client.Game.UO.World.ClientViewRange);
         }
 
         internal static void AddItem(UOItem item)
@@ -369,10 +370,10 @@ namespace Assistant
             }
         }
 
-        internal static bool UsePostKRPackets => Client.Version >= ClientVersion.CV_6017;
-        internal static bool UseNewMobileIncoming => Client.Version >= ClientVersion.CV_70331;
-        internal static bool UsePostSAChanges => Client.Version >= ClientVersion.CV_7000;
-        internal static bool UsePostHSChanges => Client.Version >= ClientVersion.CV_7090;
+        internal static bool UsePostKRPackets => Client.Game.UO.Version >= ClientVersion.CV_6017;
+        internal static bool UseNewMobileIncoming => Client.Game.UO.Version >= ClientVersion.CV_70331;
+        internal static bool UsePostSAChanges => Client.Game.UO.Version >= ClientVersion.CV_7000;
+        internal static bool UsePostHSChanges => Client.Game.UO.Version >= ClientVersion.CV_7090;
 
         private static int _PreviousHour = -1;
         private static int _Differential;
@@ -557,7 +558,7 @@ namespace Assistant
 
             private void OnMouseHandler(int button, int wheel)
             {
-                if (World.Player == null)
+                if (Client.Game.UO.World.Player == null)
                     return;
                 if (wheel > 0)
                     button = 0x101;

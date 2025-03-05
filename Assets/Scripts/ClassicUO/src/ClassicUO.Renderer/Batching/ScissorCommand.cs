@@ -1,0 +1,1 @@
+../../../../../../external/ClassicUO/src/ClassicUO.Renderer/Batching/ScissorCommand.cs

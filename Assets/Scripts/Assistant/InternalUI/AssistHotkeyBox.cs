@@ -24,7 +24,7 @@ using System.Linq;
 using System.Text;
 
 using ClassicUO.Input;
-using ClassicUO.IO.Resources;
+using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
 

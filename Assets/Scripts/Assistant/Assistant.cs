@@ -24,7 +24,7 @@ using Assistant.Scripts;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.UI.Controls;
-using ClassicUO.IO.Resources;
+using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
 using ClassicUO.Utility.Collections;
@@ -44,7 +44,7 @@ namespace ClassicUO.Game.UI.Gumps
     {
         internal class MessageBoxGump : Gump
         {
-            internal MessageBoxGump(string title, string body) : base(0, 0)
+            internal MessageBoxGump(World world, string title, string body) : base(world, 0, 0)
             {
                 AssistantGump gump = UOSObjects.Gump;
                 if(gump == null || gump.IsDisposed || string.IsNullOrEmpty(body))
@@ -99,7 +99,7 @@ namespace ClassicUO.Game.UI.Gumps
                 invulnerable = 0x07,
             }
 
-            internal ObjectInspectorGump(UOEntity inspected) : base(0, 0)
+            internal ObjectInspectorGump(World world, UOEntity inspected) : base(world, 0, 0)
             {
                 AssistantGump gump = UOSObjects.Gump;
                 if (gump == null || gump.IsDisposed || inspected == null)
@@ -132,8 +132,9 @@ namespace ClassicUO.Game.UI.Gumps
                 Add(new SelectableReadOnlyBox(FONT, -1, 0, true, FontStyle.None, ScriptTextBox.GREEN_HUE) { X = x + mw, Y = y, Width = w - (40 + mw), Text = $"{inspected.Hue}" });
                 if (inspected.Hue > 0 && inspected.Hue <= HuesLoader.Instance.HuesCount)
                 {
+                    // MobileUO: TODO: ColorBox dropped a parameter in CUO 0.1.9.0, this may need to be revisited
                     for(ushort i = 0; i < 32; ++i)
-                        Add(new ColorBox(3, 14, inspected.Hue, HuesLoader.Instance.GetPolygoneColor(i, inspected.Hue)) { X = 190 + (3 * i), Y = y + 3 });
+                        Add(new ColorBox(3, 14, inspected.Hue/*, HuesLoader.Instance.GetPolygoneColor(i, inspected.Hue)*/) { X = 190 + (3 * i), Y = y + 3 });
                 }
                 y += mh + 2;
                 Add(new Label("Position (X Y Z):", true, ScriptTextBox.GRAY_HUE, mw) { X = x, Y = y });
@@ -212,7 +213,7 @@ namespace ClassicUO.Game.UI.Gumps
         internal class ChangeAssistantGump : Gump
         {
             Checkbox _control;
-            internal ChangeAssistantGump(OptionsGump gump, Checkbox control) : base(0, 0)
+            internal ChangeAssistantGump(World world, OptionsGump gump, Checkbox control) : base(world, 0, 0)
             {
                 if (gump != null && !gump.IsDisposed && control != null && !control.IsDisposed)
                 {
@@ -233,7 +234,7 @@ namespace ClassicUO.Game.UI.Gumps
                     Add(new Label("Click on OKAY to close ClassicUO!", true, ScriptTextBox.GRAY_HUE, 280, FONT, FontStyle.None, TEXT_ALIGN_TYPE.TS_CENTER) { X = 20, Y = 50 });
                     Add(new NiceButton(40, 80, 80, 30, ButtonAction.Activate, "OKAY") { ButtonParameter = 123, IsSelectable = false });
                     Add(new NiceButton(180, 80, 80, 30, ButtonAction.Activate, "CANCEL") { ButtonParameter = 321, IsSelectable = false });
-                    ControlInfo.IsModal = true;
+                    IsModal = true;
                 }
                 else
                     Dispose();
@@ -274,7 +275,7 @@ namespace ClassicUO.Game.UI.Gumps
             private Label _warning;
             private Line[] _lines;
             private AlphaBlendControl _alpha;
-            internal NewProfileGump() : base(0,0)
+            internal NewProfileGump(World world) : base(world, 0, 0)
             {
                 AcceptMouseInput = true;
                 CanMove = false;
@@ -390,7 +391,7 @@ namespace ClassicUO.Game.UI.Gumps
             private Label _warning;
             private Line[] _lines;
             private AlphaBlendControl _alpha;
-            internal NewMacroGump() : base(0, 0)
+            internal NewMacroGump(World world) : base(world, 0, 0)
             {
                 AcceptMouseInput = true;
                 CanMove = false;
@@ -480,7 +481,7 @@ namespace ClassicUO.Game.UI.Gumps
             private HotKeyOpts _hotkeyOpts;
             private AssistHotkeyBox _hkbox;
             private string _selHK;
-            internal OverWriteHKGump(uint num, HotKeyOpts hkopts, AssistHotkeyBox box, ref string selHK, string oldHKname) : base(0, 0)
+            internal OverWriteHKGump(World world, uint num, HotKeyOpts hkopts, AssistHotkeyBox box, ref string selHK, string oldHKname) : base(world, 0, 0)
             {
                 if (!string.IsNullOrEmpty(selHK) && hkopts != null && !string.IsNullOrEmpty(hkopts.Action))
                 {
@@ -503,7 +504,7 @@ namespace ClassicUO.Game.UI.Gumps
                     Add(new Label("Click on OKAY to overwrite it!", true, ScriptTextBox.GRAY_HUE, 280, FONT, FontStyle.None, TEXT_ALIGN_TYPE.TS_CENTER) { X = 20, Y = 50 });
                     Add(new NiceButton(40, 80, 80, 30, ButtonAction.Activate, "OKAY") { ButtonParameter = 123, IsSelectable = false });
                     Add(new NiceButton(180, 80, 80, 30, ButtonAction.Activate, "CANCEL") { ButtonParameter = 321, IsSelectable = false });
-                    ControlInfo.IsModal = true;
+                    IsModal = true;
                 }
                 else
                     Dispose();
@@ -693,7 +694,7 @@ namespace ClassicUO.Game.UI.Gumps
         }
 
         internal static int InsertFriendButton => (int)ButtonType.InsertFriend;
-        internal static readonly byte FONT = (byte)(Client.Version >= ClassicUO.Data.ClientVersion.CV_305D ? 1 : 0);
+        internal static readonly byte FONT = (byte)(Client.Game.UO.Version >= ClassicUO.Utility.ClientVersion.CV_305D ? 1 : 0);
         //WARNING, MINIMUM WIDTH IS 500, HEIGHT IS 325, if you go lower than this, the items won't fit inside the gump! YOU HAVE BEEN WARNED!
         private static int _width = 500;
         private static int _height = 325;
@@ -722,14 +723,14 @@ namespace ClassicUO.Game.UI.Gumps
             }
         }
 
-        private readonly AlphaBlendControl _alphaBlend = new AlphaBlendControl(0.0f)
+        private readonly AlphaBlendControl _alphaBlend = new AlphaBlendControl(1.0f)
         {
             X = 1,
             Y = 1,
             Width = WIDTH - 2,
             Height = HEIGHT - 2
         };
-        private readonly AlphaBlendControl _alphaMinimizedBlend = new AlphaBlendControl(0.0f)
+        private readonly AlphaBlendControl _alphaMinimizedBlend = new AlphaBlendControl(1.0f)
         {
             X = 1,
             Y = 1,
@@ -774,7 +775,7 @@ namespace ClassicUO.Game.UI.Gumps
         private static int _buttonHeight = HEIGHT / 13;
         private static int _buttonWidth = WIDTH / 20;
 
-        public AssistantGump() : base(0, 0)
+        public AssistantGump(World world) : base(world, 0, 0)
         {
             _controls.Add(_alphaBlend);
             Add(_alphaBlend);
@@ -882,7 +883,7 @@ namespace ClassicUO.Game.UI.Gumps
 
         private void OnOpacityChanged(object sender, EventArgs e)
         {
-            float val = (99 - _opacity.Value) * 0.01f;
+            float val = (_opacity.Value) * 0.01f;
             _alphaBlend.Alpha = val;
             _alphaMinimizedBlend.Alpha = val;
             WantUpdateSize = true;
@@ -922,9 +923,9 @@ namespace ClassicUO.Game.UI.Gumps
         }
 
         private static bool _updated = false;
-        public override void Update(double totalMS, double frameMS)
+        public override void Update()
         {
-            base.Update(totalMS, frameMS);
+            base.Update();
             if(!_updated)
             {
                 _updated = true;
@@ -1009,7 +1010,7 @@ namespace ClassicUO.Game.UI.Gumps
         private void BuildGeneral(int page)
         {
             int starty = (_buttonHeight * 2) - (_buttonHeight >> 2), startx = (WIDTH >> 5) * 13, diffx = (_buttonWidth - (_buttonWidth >> 3)) >> 2, diffy = ((_buttonHeight - (_buttonHeight >> 3)) >> 2);
-            ScrollArea leftArea = new ScrollArea(8, _buttonHeight * 2, (_buttonWidth >> 2) * 30, diffy * 45, true);
+            AssistScrollArea leftArea = new AssistScrollArea(8, _buttonHeight * 2, (_buttonWidth >> 2) * 30, diffy * 45, true);
             Line.CreateRectangleArea(this, 3, starty, startx, leftArea.Height + (_buttonHeight >> 1), page, Color.Gray.PackedValue, 1, "Filters");
             FiltersCB = new AssistCheckbox[Filter.List.Count];
             for(int i = 0; i < Filter.List.Count; i++)
@@ -1165,7 +1166,7 @@ namespace ClassicUO.Game.UI.Gumps
         private Combobox _openDoorsOptions, _openCorpsesOptions, //_commandPrefix,//Generic
             _spellShareTargetOn, _smartLastTarget, _shareEnemyTargetOn,//Combat
             _friendHealSelection;//Friends
-        private ScrollArea _friendListArea;//Friends
+        private AssistScrollArea _friendListArea;//Friends
         private uint _friendSelected;//Friends
 
         private void BuildOptions()
@@ -1345,7 +1346,7 @@ namespace ClassicUO.Game.UI.Gumps
                         Line.CreateRectangleArea(this, x - (_buttonWidth >> 3), y, (WIDTH >> 1) - (_buttonWidth >> 2), HEIGHT - (_buttonHeight * 6 + (diffy >> 3)), page, Color.Gray.PackedValue, 1, "Friends List");
                         y += (_buttonHeight >> 3) + (diffy >> 3);
                         //The FRIENDLIST is created here, but only for dimensional and positioning handling, the list is populated later on
-                        _friendListArea = new ScrollArea(x, y, (WIDTH >> 1) - (_buttonHeight >> 1), HEIGHT - ((_buttonHeight * 6) + (diffy >> 1)), true);
+                        _friendListArea = new AssistScrollArea(x, y, (WIDTH >> 1) - (_buttonHeight >> 1), HEIGHT - ((_buttonHeight * 6) + (diffy >> 1)), true);
                         Add(_friendListArea, page);
                         y += _friendListArea.Height + (_buttonHeight >> 3);
                         Add(new NiceButton(x, y, (_friendListArea.Width >> 1) - buttondiffx, diffy, ButtonAction.Activate, "Remove Friend") { IsSelectable = false, ButtonParameter = (int)ButtonType.RemoveFriend }, page);
@@ -1462,7 +1463,7 @@ namespace ClassicUO.Game.UI.Gumps
             Line.CreateRectangleArea(this, x, y, WIDTH - (y + _buttonWidth * 6), HEIGHT - (y + (_buttonHeight >> 3)), page, Color.Gray.PackedValue, 1, "Controllable Elements", ScriptTextBox.GRAY_HUE, FONT);
             x += _buttonWidth >> 3;
             y += _buttonHeight >> 2;
-            ScrollArea leftArea = new ScrollArea(x, y, WIDTH - (y + _buttonWidth * 6), HEIGHT - (y + (_buttonHeight >> 2)), true);
+            AssistScrollArea leftArea = new AssistScrollArea(x, y, WIDTH - (y + _buttonWidth * 6), HEIGHT - (y + (_buttonHeight >> 2)), true);
             Add(leftArea, page);
             _mainHK = CreateMultiSelection(leftArea, "Main", new string[] { "Ping", "Resyncronize", "Toggle Hotkeys", "Snapshot" }, 2, (int)ButtonType.HotKeyList, 0x93A, 0x939);
             _mainHK.OnOptionSelected += HotKey_OnOptionSelected;
@@ -1568,7 +1569,7 @@ namespace ClassicUO.Game.UI.Gumps
         private void _keyName_AddButton(object sender, EventArgs e)
         {
             UIManager.Gumps.OfType<AssistantHotkeyButtonGump>().FirstOrDefault(s => s._hotkeyName == _selectedHK)?.Dispose();
-            var hotkeyButtonGump = new AssistantHotkeyButtonGump(_selectedHK, Mouse.Position.X, Mouse.Position.Y);
+            var hotkeyButtonGump = new AssistantHotkeyButtonGump(World, _selectedHK, Mouse.Position.X, Mouse.Position.Y);
             UIManager.Add(hotkeyButtonGump);
         }
 
@@ -1691,7 +1692,7 @@ namespace ClassicUO.Game.UI.Gumps
         #endregion
 
         #region Macros
-        private ScrollArea _macroListArea;
+        private AssistScrollArea _macroListArea;
         private NiceButton _playMacro, _recordMacro, _newMacro, _delMacro, _saveMacro;
         internal NiceButton PlayMacro => _playMacro;
         internal NiceButton RecordMacro => _recordMacro;
@@ -1717,7 +1718,7 @@ namespace ClassicUO.Game.UI.Gumps
             Line.CreateRectangleArea(this, x, y, (WIDTH >> 2) + _buttonWidth + (_buttonWidth >> 1), HEIGHT - (y + _buttonHeight * 2) + (_buttonHeight >> 3), page, Color.Gray.PackedValue, 1, "Macro Names", ScriptTextBox.GRAY_HUE, FONT);
             x += _buttonWidth >> 4;
             y += _buttonHeight >> 2;
-            _macroListArea = new ScrollArea(x, y, (WIDTH >> 2) + _buttonWidth + (_buttonWidth >> 2) + (_buttonWidth >> 3), HEIGHT - (y + _buttonHeight * 2), true);
+            _macroListArea = new AssistScrollArea(x, y, (WIDTH >> 2) + _buttonWidth + (_buttonWidth >> 2) + (_buttonWidth >> 3), HEIGHT - (y + _buttonHeight * 2), true);
             Add(_macroListArea, page);
             y += _macroListArea.Height + (_buttonHeight >> 3);
             x = _buttonWidth >> 3;
@@ -1731,7 +1732,7 @@ namespace ClassicUO.Game.UI.Gumps
             y = _buttonHeight + (_buttonHeight >> 1);
             Add(_macroPicTiled = new GumpPicTiled(x, y, (WIDTH >> 1) - _buttonWidth, HEIGHT - (y + _buttonHeight * 2), 0xBBC), page);
             Line.CreateRectangleArea(this, x, y, _macroPicTiled.Width, _macroPicTiled.Height, page, Color.Red.PackedValue, 1, null);
-            _macroArea = new AreaContainer(_macroPicTiled.X + 2, _macroPicTiled.Y + 2, _macroPicTiled.Width - 4, _macroPicTiled.Height - 4, MacroBox = new ScriptTextBox(FONT, _macroPicTiled.Width));
+            _macroArea = new AreaContainer(_macroPicTiled.X + 2, _macroPicTiled.Y + 2, _macroPicTiled.Width - 4, _macroPicTiled.Height - 4, MacroBox = new ScriptTextBox(this, FONT, _macroPicTiled.Width));
             Add(_macroArea, page);
             Add(b = new NiceButton(x, _macroPicTiled.Y + _macroPicTiled.Height + (_buttonHeight >> 2), _buttonWidth * 5, _buttonHeight, ButtonAction.Activate, "Object Inspector") { IsSelectable = false, ButtonParameter = (int)ButtonType.ObjectInspector }, page);
             Add(_returnToParent = new AssistCheckbox(0x00D2, 0x00D3, "playmacro Returns to Parent", FONT, ScriptTextBox.GRAY_HUE, true) { X = b.X + b.Width + (_buttonWidth >> 3), Y = b.Y }, page);
@@ -1764,7 +1765,7 @@ namespace ClassicUO.Game.UI.Gumps
         private void _macrokeyName_AddButton(object sender, EventArgs e)
         {
             UIManager.Gumps.OfType<AssistantMacroButtonGump>().FirstOrDefault(s => s._macroName == _macroSelected)?.Dispose();
-            var macroButtonGump = new AssistantMacroButtonGump(_macroSelected, Mouse.Position.X, Mouse.Position.Y);
+            var macroButtonGump = new AssistantMacroButtonGump(World, _macroSelected, Mouse.Position.X, Mouse.Position.Y);
             UIManager.Add(macroButtonGump);
         }
 
@@ -1812,7 +1813,7 @@ namespace ClassicUO.Game.UI.Gumps
                 HotKeys.AddHotkey(vkey, new HotKeyOpts(box.PassToCUO, macroselected), box, ref macroselected, this);
         }
 
-        private class AreaContainer : ScrollArea
+        private class AreaContainer : AssistScrollArea
         {
             internal StbTextBox _textBox;
             internal AreaContainer(int x, int y, int w, int h, StbTextBox box) : base(x, y, w, h, true)
@@ -1957,11 +1958,11 @@ namespace ClassicUO.Game.UI.Gumps
             _newBuySellList, _removeBuySellList, _removeBuySellItem, _insertBuySellItem;
         private Combobox _BuySellCombo;
         internal NiceButton PlayOrganizer { get { return _playOrganizer; } }
-        private ScrollArea _autolootArea, //autoloot
+        private AssistScrollArea _autolootArea, //autoloot
             _dressItemsArea, _dressListsArea,//dress
             _organizerListArea,//organizer
             _vendorsListArea;//vendors
-        private ScrollArea _organizerItems,//organizer
+        private AssistScrollArea _organizerItems,//organizer
             _scavengerItems,//scavenger
             _vendorsItemsArea;//vendors
         private int[] _organizerItemsWidth, _scavengerItemsWidth, _BuySellItemsWidth;
@@ -2030,7 +2031,7 @@ namespace ClassicUO.Game.UI.Gumps
                         Line[] l = Line.CreateRectangleArea(this, x, y, _autolootContainer.Width + _autolootContainer.X + (buttondiffx >> 2), HEIGHT - (_disableInGuardZone.Y + (_buttonHeight * 3)) , page, Color.Gray.PackedValue, 1, "Loot Items", ScriptTextBox.GRAY_HUE, FONT);
                         y += (buttondiffy >> 1);
                         x += 2;
-                        _autolootArea = new ScrollArea(x, y, l[2].Width - 6, l[0].Height - ((buttondiffy >> 2) * 3), true);
+                        _autolootArea = new AssistScrollArea(x, y, l[2].Width - 6, l[0].Height - ((buttondiffy >> 2) * 3), true);
                         Add(_autolootArea, page);
                         y = l[2].Y + (_buttonHeight >> 2);
                         x -= 2;
@@ -2066,7 +2067,7 @@ namespace ClassicUO.Game.UI.Gumps
                         Line[] l = Line.CreateRectangleArea(this, x, y, _buttonWidth * 7, HEIGHT - (_buttonHeight * 5), page, Color.Gray.PackedValue, 1, "Dress Lists", ScriptTextBox.GRAY_HUE, FONT);
                         y += (buttondiffy >> 1);
                         x += 2;
-                        _dressListsArea = new ScrollArea(x, y, l[2].Width - 6, l[0].Height - ((buttondiffy >> 2) * 3), true);
+                        _dressListsArea = new AssistScrollArea(x, y, l[2].Width - 6, l[0].Height - ((buttondiffy >> 2) * 3), true);
                         Add(_dressListsArea, page);
                         x -= 2;
                         y += l[0].Height;
@@ -2079,7 +2080,7 @@ namespace ClassicUO.Game.UI.Gumps
                         l = Line.CreateRectangleArea(this, x, y, WIDTH - (x + _buttonWidth * 4), HEIGHT - (_buttonHeight * 4), page, Color.Gray.PackedValue, 1, "Dress Items", ScriptTextBox.GRAY_HUE, FONT);
                         y += (buttondiffy >> 1);
                         x += 2;
-                        _dressItemsArea = new ScrollArea(x, y, l[2].Width - 6, l[0].Height - ((buttondiffy >> 2) * 3), true);
+                        _dressItemsArea = new AssistScrollArea(x, y, l[2].Width - 6, l[0].Height - ((buttondiffy >> 2) * 3), true);
                         Add(_dressItemsArea, page);
                         y = l[2].Y + (_buttonHeight >> 2);
                         x -= 2;
@@ -2134,7 +2135,7 @@ namespace ClassicUO.Game.UI.Gumps
                         Line[] l = Line.CreateRectangleArea(this, x, y, _buttonWidth * 5 + (_buttonWidth >> 1), HEIGHT - (_buttonHeight * 6), page, Color.Gray.PackedValue, 1, "Organizer Lists", ScriptTextBox.GRAY_HUE, FONT);
                         y += (buttondiffy >> 1);
                         x += 2;
-                        _organizerListArea = new ScrollArea(x, y, l[2].Width - 6, l[0].Height - ((buttondiffy >> 2) * 3), true);
+                        _organizerListArea = new AssistScrollArea(x, y, l[2].Width - 6, l[0].Height - ((buttondiffy >> 2) * 3), true);
                         Add(_organizerListArea, page);
                         x -= 2;
                         y += l[0].Height;
@@ -2165,7 +2166,7 @@ namespace ClassicUO.Game.UI.Gumps
                         _insertOrganizerItem.TextLabel.Hue = ScriptTextBox.RED_HUE;
                         x += l[2].Width - 1;
                         l = Line.CreateRectangleArea(this, x, l[0].Y, 16, l[0].Height, page, Color.Gray.PackedValue, 1, "", ScriptTextBox.GRAY_HUE, FONT);
-                        Add(_organizerItems = new ScrollArea(tmpx, y + (buttondiffy >> 1), (_organizerItemsWidth.Sum() + (2 * _organizerItemsWidth.Length) + 12), l[0].Height - ((buttondiffy >> 2) * 3), true), page);
+                        Add(_organizerItems = new AssistScrollArea(tmpx, y + (buttondiffy >> 1), (_organizerItemsWidth.Sum() + (2 * _organizerItemsWidth.Length) + 12), l[0].Height - ((buttondiffy >> 2) * 3), true), page);
                         break;
                     }
                     #endregion
@@ -2200,7 +2201,7 @@ namespace ClassicUO.Game.UI.Gumps
                         _scavengerItemsWidth[2] = l[2].Width - 2;
                         x += l[2].Width - 1;
                         l = Line.CreateRectangleArea(this, x, y, 16, l[0].Height, page, Color.Gray.PackedValue, 1, "", ScriptTextBox.GRAY_HUE, FONT);
-                        Add(_scavengerItems = new ScrollArea(temp, y + (buttondiffy >> 1), (_scavengerItemsWidth.Sum() + (2 * _scavengerItemsWidth.Length) + 12), l[0].Height - ((buttondiffy >> 2) * 3), true), page);
+                        Add(_scavengerItems = new AssistScrollArea(temp, y + (buttondiffy >> 1), (_scavengerItemsWidth.Sum() + (2 * _scavengerItemsWidth.Length) + 12), l[0].Height - ((buttondiffy >> 2) * 3), true), page);
                         break;
                     }
                     #endregion
@@ -2219,7 +2220,7 @@ namespace ClassicUO.Game.UI.Gumps
                         Line[] l = Line.CreateRectangleArea(this, x, y, _buttonWidth * 5 + (_buttonWidth >> 1), HEIGHT - (_buttonHeight * 5), page, Color.Gray.PackedValue, 1, "Lists", ScriptTextBox.GRAY_HUE, FONT);
                         y += (buttondiffy >> 1);
                         x += 2;
-                        Add(_vendorsListArea = new ScrollArea(x, y, l[2].Width - 6, l[0].Height - ((buttondiffy >> 2) * 3), true), page);
+                        Add(_vendorsListArea = new AssistScrollArea(x, y, l[2].Width - 6, l[0].Height - ((buttondiffy >> 2) * 3), true), page);
                         x -= 2;
                         y += l[0].Height;
                         Add(_removeBuySellList = new NiceButton(x + 4, y - 4, (l[2].Width >> 2) + (_buttonWidth >> 1), _buttonHeight, ButtonAction.Activate, "Remove", (int)ButtonType.RemoveBuySellList, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.RemoveBuySellList }, page);
@@ -2250,7 +2251,7 @@ namespace ClassicUO.Game.UI.Gumps
                         _insertBuySellItem.TextLabel.Hue = ScriptTextBox.RED_HUE;
                         x += l[2].Width - 1;
                         l = Line.CreateRectangleArea(this, x, l[0].Y, 16, l[0].Height, page, Color.Gray.PackedValue, 1, "", ScriptTextBox.GRAY_HUE, FONT);
-                        Add(_vendorsItemsArea = new ScrollArea(tmpx, y + (buttondiffy >> 1), (_BuySellItemsWidth.Sum() + (2 * _BuySellItemsWidth.Length) + 12), l[0].Height - ((buttondiffy >> 2) * 3), true), page);
+                        Add(_vendorsItemsArea = new AssistScrollArea(tmpx, y + (buttondiffy >> 1), (_BuySellItemsWidth.Sum() + (2 * _BuySellItemsWidth.Length) + 12), l[0].Height - ((buttondiffy >> 2) * 3), true), page);
                         break;
                     }
                     #endregion
@@ -3543,7 +3544,7 @@ namespace ClassicUO.Game.UI.Gumps
                         WIDTH = x;
                         HEIGHT = y;
                         XmlFileParser.SaveProfile();
-                        UIManager.Add(UOSObjects.Gump = new AssistantGump() { X = 200, Y = 200 });
+                        UIManager.Add(UOSObjects.Gump = new AssistantGump(World) { X = 200, Y = 200 });
                     }
                     break;
                 }
@@ -3594,7 +3595,7 @@ namespace ClassicUO.Game.UI.Gumps
                 }
                 case ButtonType.NewMacro:
                 {
-                    UIManager.Add(new NewMacroGump());
+                    UIManager.Add(new NewMacroGump(World));
                     break;
                 }
                 case ButtonType.RemoveMacro:
@@ -3666,7 +3667,7 @@ namespace ClassicUO.Game.UI.Gumps
                     {
                         UOEntity entity;
                         if (SerialHelper.IsValid(serial) && (entity = UOSObjects.FindEntity(serial)) != null)
-                            UIManager.Add(new ObjectInspectorGump(entity));
+                            UIManager.Add(new ObjectInspectorGump(World, entity));
                     }
                     Targeting.OneTimeTarget(false, OnTargetSelected);
                     break;
@@ -3678,7 +3679,7 @@ namespace ClassicUO.Game.UI.Gumps
                 }
                 case ButtonType.AddNewProfile:
                 {
-                    UIManager.Add(new NewProfileGump());
+                    UIManager.Add(new NewProfileGump(World));
                     break;
                 }
                 default:
@@ -3698,8 +3699,10 @@ namespace ClassicUO.Game.UI.Gumps
                 _edge = new Texture2D(batcher.GraphicsDevice, 1, 1, false, SurfaceFormat.Color);
                 _edge.SetData(new Color[] { Color.Gray });
             }
-            Vector3 vec = Vector3.Zero;
-            batcher.DrawRectangle(_edge, x, y, Width, Height, ref vec);
+            // MobileUO: TODO: should this be... 1?
+            Vector3 vec = ShaderHueTranslator.GetHueVector(0, false, 1);
+            //Vector3 vec = Vector3.Zero;
+            batcher.DrawRectangle(_edge, x, y, Width, Height, vec);
             return base.Draw(batcher, x, y);
         }
 
@@ -3709,7 +3712,7 @@ namespace ClassicUO.Game.UI.Gumps
             base.Dispose();
         }
 
-        private AssistCheckbox CreateCheckBox(ScrollArea area, string text, bool ischecked, int x, int y, ushort inactiveimg = 0x00D2, ushort activeimg = 0x00D3)
+        private AssistCheckbox CreateCheckBox(AssistScrollArea area, string text, bool ischecked, int x, int y, ushort inactiveimg = 0x00D2, ushort activeimg = 0x00D3)
         {
             AssistCheckbox box = new AssistCheckbox(inactiveimg, activeimg, text, FONT, ScriptTextBox.GRAY_HUE, true)
             {
@@ -3741,13 +3744,14 @@ namespace ClassicUO.Game.UI.Gumps
             if (hue != 0xFFFF)
                 color = HuesLoader.Instance.GetPolygoneColor(12, hue);
 
-            ClickableColorBox box = new ClickableColorBox(x, y, 13, 14, hue, color);
+            // MobileUO: TODO: ClickableColorBox dropped a parameter in CUO 0.1.9.0, this may need to be revisited
+            ClickableColorBox box = new ClickableColorBox(World, x, y, 13, 14, hue/*, color*/);
             Add(box, page);
             Add(new Label(text, true, ScriptTextBox.GRAY_HUE) { X = x + box.Width * 2, Y = y }, page);
             return box;
         }
 
-        private NiceButtonStbText CreateTextSelection(ScrollArea area, int y, int group, int index, object tag, TEXT_ALIGN_TYPE align, int[] width, byte labelentry = 0, bool hascheckbox = false, params string[] text)
+        private NiceButtonStbText CreateTextSelection(AssistScrollArea area, int y, int group, int index, object tag, TEXT_ALIGN_TYPE align, int[] width, byte labelentry = 0, bool hascheckbox = false, params string[] text)
         {
             if (width.Length != text.Length)
                 new Exception($"zero text parameters or width Length ({width.Length}) is not equal to text Length ({text.Length}) - parameters must be equal in length or arrays");
@@ -3757,14 +3761,14 @@ namespace ClassicUO.Game.UI.Gumps
             return but;
         }
 
-        private NiceButton CreateSelection(ScrollArea area, string text, int y, int group, int index, object tag)
+        private NiceButton CreateSelection(AssistScrollArea area, string text, int y, int group, int index, object tag)
         {
             NiceButton but = new NiceButton(0, y, area.Width - (_buttonHeight >> 1), _buttonHeight - (_buttonHeight >> 2), ButtonAction.Activate, text, group) { ButtonParameter = index, Tag = tag };
             area.Add(but);
             return but;
         }
 
-        private AssistMultiSelectionShrinkbox CreateMultiSelection(ScrollArea area, string text, string[] items, int y, int group, ushort buttonimg, ushort pressbuttonimg)
+        private AssistMultiSelectionShrinkbox CreateMultiSelection(AssistScrollArea area, string text, string[] items, int y, int group, ushort buttonimg, ushort pressbuttonimg)
         {
             AssistMultiSelectionShrinkbox msb = new AssistMultiSelectionShrinkbox(0, y, area.Width - (_buttonWidth >> 1), text, items, ScriptTextBox.GRAY_HUE, true, FONT, group, buttonimg, pressbuttonimg);
             area.Add(msb);
@@ -3901,8 +3905,9 @@ namespace ClassicUO.Game.UI.Gumps
         internal ushort HLTargetHue => _highlightCurrentTarget.IsChecked ? _highlightCurrentTargetHue.Hue : (ushort)0;
         internal ushort HighlightCurrentTargetHue
         {
+            // MobileUO: TODO: ClickableColorBox dropped SetColor in CUO 0.1.9.0, this may need to be revisited
             get => _highlightCurrentTargetHue.Hue;
-            set => _highlightCurrentTargetHue.SetColor(value, HuesLoader.Instance.GetPolygoneColor(12, value));
+            set => _highlightCurrentTargetHue.Hue = value; //SetColor(value, HuesLoader.Instance.GetPolygoneColor(12, value));
         }
 
         internal bool BlockInvalidHeal

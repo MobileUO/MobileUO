@@ -4,8 +4,9 @@ using System.Collections.Generic;
 //TODO: Agents
 //using Assistant.Agents;
 
-using ClassicUO.IO.Resources;
+using ClassicUO.Assets;
 using ClassicUO.Game;
+using ClassicUO;
 
 namespace Assistant
 {
@@ -440,7 +441,7 @@ namespace Assistant
             else if (m_Parent is UOMobile)
                 ((UOMobile)m_Parent).AddItem(this);
 
-            if (World.Player != null && (IsChildOf(UOSObjects.Player.Backpack) || IsChildOf(UOSObjects.Player.Quiver)))
+            if (Client.Game.UO.World.Player != null && (IsChildOf(UOSObjects.Player.Backpack) || IsChildOf(UOSObjects.Player.Quiver)))
             {
                 //TODO: SearchExemptions
                 bool exempt = false;// = SearchExemptionAgent.IsExempt(this);

@@ -7,13 +7,14 @@ using System.Text.RegularExpressions;
 using ClassicUO.Network;
 using ClassicUO.Game;
 using ClassicUO.Game.Data;
-using ClassicUO.IO.Resources;
+using ClassicUO.Assets;
 using ClassicUO.Utility;
 
 using Assistant.Core;
 using BuffIcon = Assistant.Core.BuffIcon;
 using ClassicUO.Game.UI.Gumps;
 using UOScript;
+using ClassicUO;
 
 namespace Assistant
 {
@@ -227,7 +228,7 @@ namespace Assistant
 
             if (UOSObjects.Gump.UseObjectsQueue)
                 args.Block = !PlayerData.DoubleClick(ser, false);
-            if (SerialHelper.IsItem(ser) && World.Player != null)
+            if (SerialHelper.IsItem(ser) && Client.Game.UO.World.Player != null)
                 UOSObjects.Player.LastObject = ser;
 
             if (ScriptManager.Recording)
@@ -322,7 +323,7 @@ namespace Assistant
 
                         if (ent != null && ent.ContextMenu != null)
                         {
-                            ScriptManager.AddToScript($"contextmenu {(ser == World.Player.Serial ? "'self'" : $"0x{ser:X}")} {idx}");
+                            ScriptManager.AddToScript($"contextmenu {(ser == Client.Game.UO.World.Player.Serial ? "'self'" : $"0x{ser:X}")} {idx}");
                         }
                     }
                     break;

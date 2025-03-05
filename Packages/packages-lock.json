@@ -1,5 +1,12 @@
 {
   "dependencies": {
+    "com.github-glitchenzo.nugetforunity": {
+      "version": "https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "07514511512e3cd45c2c737cb0b393b9ea701f72"
+    },
     "com.unity.ext.nunit": {
       "version": "2.0.5",
       "depth": 1,

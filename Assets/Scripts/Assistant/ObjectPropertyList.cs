@@ -3,7 +3,7 @@ using System.Text;
 using System.Collections.Generic;
 
 using ClassicUO.Network;
-using ClassicUO.IO.Resources;
+using ClassicUO.Assets;
 
 namespace Assistant
 {

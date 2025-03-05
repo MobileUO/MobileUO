@@ -4,11 +4,12 @@ using System.IO;
 using ClassicUO;
 using ClassicUO.Configuration;
 using ClassicUO.IO;
-using ClassicUO.IO.Resources;
+using ClassicUO.Assets;
 using ClassicUO.Utility.Logging;
 using UnityEditor;
 using UnityEngine;
 using Texture2D = Microsoft.Xna.Framework.Graphics.Texture2D;
+using ClassicUO.Utility.Platforms;
 
 public static class UoTextureExplorerHelper
 {
@@ -34,7 +35,8 @@ public static class UoTextureExplorerHelper
         Log.Start( LogTypes.All );
         Settings.GlobalSettings = new Settings();
         Settings.GlobalSettings.UltimaOnlineDirectory = folderPath;
-        Client.Game = new GameController();
+        // MobileUO: TODO: pluginHost - is null okay?
+        Client.Game = new GameController(null);
         //Calling the getter to trigger the creation of GraphicsDevice
         var graphicsDevice = Client.Game.GraphicsDevice;
         ArtLoader.Instance.Load().Wait();
@@ -52,7 +54,8 @@ public static class UoTextureExplorerHelper
     public static void TriggerFirstTexture()
     {
         ArtLoader.Instance.ClearResources();
-        ArtLoader.Instance.GetLandTexture(0);
+        // MobileUO: TODO: update later
+        //ArtLoader.Instance.GetLandTexture(0);
     }
 
     public static void CreateLandTileTextureAtlas()
@@ -108,13 +111,15 @@ public static class UoTextureExplorerHelper
 
     public static Texture2D GetLandTexture(uint g)
     {
-        var uoTexture = ArtLoader.Instance.GetLandTexture(g);
+        // MobileUO: TODO: update later
+        //var uoTexture = ArtLoader.Instance.GetLandTexture(g);
+        var uoTexture = new Texture2D(Client.Game.GraphicsDevice, 0, 0);
         return uoTexture != null && uoTexture.UnityTexture != null ? uoTexture : null;
     }
 
     public static Texture2D GetGumpTexture(ushort g)
     {
-        var uoTexture = GumpsLoader.Instance.GetTexture(g);
+        var uoTexture = Client.Game.UO.Gumps.GetGump(g).Texture;
         return uoTexture != null && uoTexture.UnityTexture != null ? uoTexture : null;
     }
 

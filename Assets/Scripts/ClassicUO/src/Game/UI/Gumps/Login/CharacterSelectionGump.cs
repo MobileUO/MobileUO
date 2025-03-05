@@ -1,1 +1,0 @@
-../../../../../../../../external/ClassicUO/src/Game/UI/Gumps/Login/CharacterSelectionGump.cs

@@ -1,0 +1,1 @@
+../../../../../../external/ClassicUO/src/ClassicUO.Renderer/Effects/XBREffect.cs

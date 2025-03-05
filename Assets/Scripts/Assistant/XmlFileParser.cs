@@ -12,7 +12,7 @@ using ClassicUO.Utility.Logging;
 using ClassicUO.Game;
 using ClassicUO.Game.Data;
 using ClassicUO.Game.Scenes;
-using ClassicUO.IO.Resources;
+using ClassicUO.Assets;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.UI.Assistant;
 
@@ -228,7 +228,7 @@ namespace Assistant
                     }
 
                     FileInfo profileinfo = new FileInfo(Path.Combine(Profile.ProfilePath, profile));
-                    if (profileinfo.Exists && SerialHelper.IsMobile(serial) && World.Player.Serial == serial && ProfileManager.Current.Username == account)
+                    if (profileinfo.Exists && SerialHelper.IsMobile(serial) && Client.Game.UO.World.Player.Serial == serial && ProfileManager.CurrentProfile.Username == account)
                     {
                         gump.LastProfile = profileinfo.Name;
                         break;
