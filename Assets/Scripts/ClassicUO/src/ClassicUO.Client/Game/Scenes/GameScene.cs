@@ -378,7 +378,7 @@ namespace ClassicUO.Game.Scenes
             Client.Game.SetWindowBorderless(false);
             
             // MobileUO: dispose
-            CircleOfTransparency.Dispose();
+            //CircleOfTransparency.Dispose();
 
             base.Unload();
         }
@@ -550,7 +550,7 @@ namespace ClassicUO.Game.Scenes
                     }
                     else
                     {
-                        ref StaticTiles data = ref TileDataLoader.Instance.StaticData[obj.Graphic];
+                        ref StaticTiles data = ref Client.Game.UO.FileManager.TileData.StaticData[obj.Graphic];
                         light.ID = data.Layer;
                     }
                 }
@@ -591,21 +591,10 @@ namespace ClassicUO.Game.Scenes
 
         private void FillGameObjectList()
         {
-            _renderListStaticsHead = null;
-            _renderList = null;
-            _renderListStaticsCount = 0;
-
-            _renderListTransparentObjectsHead = null;
-            _renderListTransparentObjects = null;
-            _renderListTransparentObjectsCount = 0;
-
-            _renderListAnimationsHead = null;
-            _renderListAnimations = null;
-            _renderListAnimationCount = 0;
-
-            _renderListEffectsHead = null;
-            _renderListEffects = null;
-            _renderListEffectCount = 0;
+            _renderListStatics.Clear();
+            _renderListAnimations.Clear();
+            _renderListEffects.Clear();
+            _renderListTransparentObjects.Clear();
 
             _foliageCount = 0;
 
@@ -668,45 +657,50 @@ namespace ClassicUO.Game.Scenes
             int maxCotZ = _world.Player.Z + 5;
             Vector2 playerPos = _world.Player.GetScreenPosition();
 
-            for (int i = 0; i < 2; ++i)
+
+            (var minChunkX, var minChunkY) = (minX >> 3, minY >> 3);
+            (var maxChunkX, var maxChunkY) = (maxX >> 3, maxY >> 3);
+
+            for (var chunkX = minChunkX; chunkX <= maxChunkX; chunkX++)
             {
-                int minValue = minY;
-                int maxValue = maxY;
-
-                if (i != 0)
+                for (var chunkY = minChunkY; chunkY <= maxChunkY; chunkY++)
                 {
-                    minValue = minX;
-                    maxValue = maxX;
-                }
+                    var chunk = map.GetChunk2(chunkX, chunkY, true);
+                    if (chunk == null || chunk.IsDestroyed)
+                        continue;
 
-                for (int lead = minValue; lead < maxValue; ++lead)
-                {
-                    int x = minX;
-                    int y = lead;
-
-                    if (i != 0)
+                    for (var x = 0; x < 8; x++)
                     {
-                        x = lead;
-                        y = maxY;
-                    }
+                        for (var y = 0; y < 8; y++)
+                        {
+                            var firstObj = chunk.GetHeadObject(x, y);
+                            if (firstObj == null || firstObj.IsDestroyed)
+                                continue;
 
-                    while (x >= minX && x <= maxX && y >= minY && y <= maxY)
-                    {
-                        AddTileToRenderList(
-                            map.GetTile(x, y),
-                            x,
-                            y,
-                            use_handles,
-                            150,
-                            maxCotZ,
-                            ref playerPos
-                        );
-
-                        ++x;
-                        --y;
+                            AddTileToRenderList(
+                                firstObj,
+                                use_handles,
+                                150,
+                                maxCotZ,
+                                ref playerPos
+                            );
+                        }
                     }
                 }
             }
+
+
+            //for (var x = minX; x <= maxX; x++)
+            //    for (var y = minY; y <= maxY; y++)
+            //    {
+            //        AddTileToRenderList(
+            //            map.GetTile(x, y),
+            //            use_handles,
+            //            150,
+            //            maxCotZ,
+            //            ref playerPos
+            //        );
+            //    }
 
             if (_alphaChanged)
             {
@@ -1005,7 +999,7 @@ namespace ClassicUO.Game.Scenes
 
             if (_use_render_target)
             {
-                // MobileUO: commented out
+                // MobileUO: TODO: commented out - get this working
                 //can_draw_lights = PrepareLightsRendering(batcher, ref matrix);
                 batcher.GraphicsDevice.Viewport = camera_viewport;
             }
@@ -1132,27 +1126,23 @@ namespace ClassicUO.Game.Scenes
             RenderedObjectsCount = 0;
             RenderedObjectsCount += DrawRenderList(
                 batcher,
-                _renderListStaticsHead,
-                _renderListStaticsCount
+                _renderListStatics
             );
             //RenderedObjectsCount += DrawRenderList(
             //    batcher,
-            //    _renderListAnimationsHead,
-            //    _renderListAnimationCount
+            //    _renderListAnimations
             //);
             //RenderedObjectsCount += DrawRenderList(
             //    batcher,
-            //    _renderListEffectsHead,
-            //    _renderListEffectCount
+            //    _renderListEffects
             //);
 
-            //if (_renderListTransparentObjectsCount > 0)
+            //if (_renderListTransparentObjects.Count > 0)
             //{
             //    batcher.SetStencil(DepthStencilState.DepthRead);
             //    RenderedObjectsCount += DrawRenderList(
             //        batcher,
-            //        _renderListTransparentObjectsHead,
-            //        _renderListTransparentObjectsCount
+            //        _renderListTransparentObjects
             //    );
             //}
 
@@ -1214,14 +1204,14 @@ namespace ClassicUO.Game.Scenes
             //batcher.End();
         }
 
-        private int DrawRenderList(UltimaBatcher2D batcher, GameObject obj, int count)
+        private int DrawRenderList(UltimaBatcher2D batcher, List<GameObject> renderList)
         {
             int done = 0;
 
             // MobileUO: this is my naive implementation of fixing the depth rendering issue
             var sortedObjects = new SortedDictionary<float, List<GameObject>>();
 
-            for (int i = 0; i < count; obj = obj.RenderListNext, ++i)
+            foreach (var obj in renderList)
             {
                 if (obj.Z <= _maxGroundZ)
                 {

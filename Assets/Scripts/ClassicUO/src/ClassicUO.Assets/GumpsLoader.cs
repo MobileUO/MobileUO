@@ -39,188 +39,182 @@ using System.Threading.Tasks;
 
 namespace ClassicUO.Assets
 {
-    public class GumpsLoader : UOFileLoader
+    public sealed class GumpsLoader : UOFileLoader
     {
-        private static GumpsLoader _instance;
-        private UOFile _file;
-
         public const int MAX_GUMP_DATA_INDEX_COUNT = 0x10000;
 
-        private GumpsLoader(int count) { }
 
-        public static GumpsLoader Instance =>
-            _instance ?? (_instance = new GumpsLoader(MAX_GUMP_DATA_INDEX_COUNT));
+        private UOFile _file;
+
+        public GumpsLoader(UOFileManager fileManager) : base(fileManager) { }
+
 
         public bool UseUOPGumps = false;
+        public UOFile File => _file;
 
-        public override Task Load()
+        public override void Load()
         {
-            return Task.Run(() =>
+            string path = FileManager.GetUOFilePath("gumpartLegacyMUL.uop");
+
+            if (FileManager.IsUOPInstallation && System.IO.File.Exists(path))
             {
-                string path = UOFileManager.GetUOFilePath("gumpartLegacyMUL.uop");
+                _file = new UOFileUop(path, "build/gumpartlegacymul/{0:D8}.tga", true);
+                UseUOPGumps = true;
+            }
+            else
+            {
+                path = FileManager.GetUOFilePath("gumpart.mul");
+                string pathidx = FileManager.GetUOFilePath("gumpidx.mul");
 
-                if (UOFileManager.IsUOPInstallation && File.Exists(path))
+                if (!System.IO.File.Exists(path))
                 {
-                    _file = new UOFileUop(path, "build/gumpartlegacymul/{0:D8}.tga", true);
-                    Entries = new UOFileIndex[
-                        Math.Max(((UOFileUop)_file).TotalEntriesCount, MAX_GUMP_DATA_INDEX_COUNT)
-                    ];
-                    UseUOPGumps = true;
+                    path = FileManager.GetUOFilePath("Gumpart.mul");
                 }
-                else
-                {
-                    path = UOFileManager.GetUOFilePath("gumpart.mul");
-                    string pathidx = UOFileManager.GetUOFilePath("gumpidx.mul");
 
-                    if (!File.Exists(path))
+                if (!System.IO.File.Exists(pathidx))
+                {
+                    pathidx = FileManager.GetUOFilePath("Gumpidx.mul");
+                }
+
+                _file = new UOFileMul(path, pathidx);
+
+                UseUOPGumps = false;
+            }
+
+            _file.FillEntries();
+
+            string pathdef = FileManager.GetUOFilePath("gump.def");
+
+            if (!System.IO.File.Exists(pathdef))
+            {
+                return;
+            }
+
+            using (DefReader defReader = new DefReader(pathdef, 3))
+            {
+                while (defReader.Next())
+                {
+                    int ingump = defReader.ReadInt();
+
+                    if (
+                        ingump < 0
+                        || ingump >= MAX_GUMP_DATA_INDEX_COUNT
+                        || ingump >= _file.Entries.Length
+                        || _file.Entries[ingump].Length > 0
+                    )
                     {
-                        path = UOFileManager.GetUOFilePath("Gumpart.mul");
+                        continue;
                     }
 
-                    if (!File.Exists(pathidx))
+                    int[] group = defReader.ReadGroup();
+
+                    if (group == null)
                     {
-                        pathidx = UOFileManager.GetUOFilePath("Gumpidx.mul");
+                        continue;
                     }
 
-                    _file = new UOFileMul(path, pathidx, MAX_GUMP_DATA_INDEX_COUNT, 12);
-
-                    UseUOPGumps = false;
-                }
-
-                _file.FillEntries(ref Entries);
-
-                string pathdef = UOFileManager.GetUOFilePath("gump.def");
-
-                if (!File.Exists(pathdef))
-                {
-                    return;
-                }
-
-                using (DefReader defReader = new DefReader(pathdef, 3))
-                {
-                    while (defReader.Next())
+                    for (int i = 0; i < group.Length; i++)
                     {
-                        int ingump = defReader.ReadInt();
+                        int checkIndex = group[i];
 
                         if (
-                            ingump < 0
-                            || ingump >= MAX_GUMP_DATA_INDEX_COUNT
-                            || ingump >= Entries.Length
-                            || Entries[ingump].Length > 0
+                            checkIndex < 0
+                            || checkIndex >= MAX_GUMP_DATA_INDEX_COUNT
+                            || checkIndex >= _file.Entries.Length
+                            || _file.Entries[checkIndex].Length <= 0
                         )
                         {
                             continue;
                         }
 
-                        int[] group = defReader.ReadGroup();
+                        _file.Entries[ingump] = _file.Entries[checkIndex];
+                        _file.Entries[ingump].Hue = (ushort)defReader.ReadInt();
 
-                        if (group == null)
-                        {
-                            continue;
-                        }
-
-                        for (int i = 0; i < group.Length; i++)
-                        {
-                            int checkIndex = group[i];
-
-                            if (
-                                checkIndex < 0
-                                || checkIndex >= MAX_GUMP_DATA_INDEX_COUNT
-                                || checkIndex >= Entries.Length
-                                || Entries[checkIndex].Length <= 0
-                            )
-                            {
-                                continue;
-                            }
-
-                            Entries[ingump] = Entries[checkIndex];
-
-                            Entries[ingump].Hue = (ushort)defReader.ReadInt();
-
-                            break;
-                        }
+                        break;
                     }
                 }
-            });
+            }
         }
 
-        public unsafe GumpInfo GetGump(uint index)
+        public GumpInfo GetGump(uint index)
         {
-            ref UOFileIndex entry = ref GetValidRefEntry((int)index);
+            ref var entry = ref _file.GetValidRefEntry((int)index);
 
-            if (entry.Width <= 0 && entry.Height <= 0)
+            if (entry.CompressionFlag != CompressionType.ZlibBwt && entry.Width <= 0 && entry.Height <= 0)
             {
                 return default;
             }
 
             ushort color = entry.Hue;
 
-            _file.SetData(entry.Address, entry.FileSize);
-            _file.Seek(entry.Offset);
+            var file = _file;
+            if (entry.File != null)
+                file = entry.File;
 
+            file.Seek(entry.Offset, SeekOrigin.Begin);
 
-            ReadOnlySpan<byte> output;
-            var newFileFormat = UOFileManager.Version >= ClientVersion.CV_7010400;
-            if (newFileFormat)
+            var buf = new byte[entry.Length];
+            file.Read(buf);
+
+            var reader = new StackDataReader(buf);
+            var w = (uint)entry.Width;
+            var h = (uint)entry.Height;
+
+            if (entry.CompressionFlag >= CompressionType.Zlib)
             {
-                var cbuf = _file.ReadArray(entry.Length);
                 var dbuf = new byte[entry.DecompressedLength];
-                var result = ZLib.Decompress(cbuf, 0, dbuf, dbuf.Length);
-                if (result != ZLib.ZLibError.Okay)
+                var result = ClassicUO.Utility.ZLib.Decompress(reader.Buffer.Slice(reader.Position), dbuf);
+                if (result != Utility.ZLib.ZLibError.Ok)
                 {
                     return default;
                 }
 
-                output = BwtDecompress.Decompress(dbuf);
-            }
-            else
-            {
-                output = new ReadOnlySpan<byte>(_file.PositionAddress.ToPointer(), entry.Length);
+                if (entry.CompressionFlag == CompressionType.ZlibBwt)
+                {
+                    dbuf = ClassicUO.Utility.BwtDecompress.Decompress(dbuf);
+                }
+
+                reader = new StackDataReader(dbuf);
+                w = reader.ReadUInt32LE();
+                h = reader.ReadUInt32LE();
+
+                if (entry.Width <= 0)
+                    entry.Width = (int)w;
+                if (entry.Height <= 0)
+                    entry.Height = (int)h;
             }
 
-            var reader = new StackDataReader(output);
-            var w = newFileFormat ? reader.ReadUInt32LE() : (uint)entry.Width;
-            var h = newFileFormat ? reader.ReadUInt32LE() : (uint)entry.Height;
-
-            IntPtr dataStart = reader.PositionAddress;
-            var pixels = new uint[w * h];
-            int* lookuplist = (int*)dataStart;
-            int gsize;
+            Span<uint> pixels = new uint[w * h];
             var len = reader.Remaining;
+            var halfLen = len >> 2;
 
-            for (int y = 0, half_len = len >> 2; y < h; y++)
+            var start = reader.Position;
+            var rowLookup = new int[h];
+            reader.Read(MemoryMarshal.AsBytes<int>(rowLookup));
+
+            for (var y = 0; y < h; ++y)
             {
-                if (y < h - 1)
+                reader.Seek(start + (rowLookup[y] << 2));
+                var pixelIndex = (int)(y * w);
+                var gsize = (y < h - 1) ? rowLookup[y + 1] - rowLookup[y] : halfLen - rowLookup[y];
+                for (var i = 0; i < gsize; ++i)
                 {
-                    gsize = lookuplist[y + 1] - lookuplist[y];
-                }
-                else
-                {
-                    gsize = half_len - lookuplist[y];
-                }
+                    var value = reader.ReadUInt16LE();
+                    var run = reader.ReadUInt16LE();
+                    var rbga = 0u;
 
-                GumpBlock* gmul = (GumpBlock*)(dataStart + (lookuplist[y] << 2));
-
-                var pos = y * w;
-
-                for (int i = 0; i < gsize; i++)
-                {
-                    uint val = gmul[i].Value;
-
-                    if (color != 0 && val != 0)
+                    if (color != 0 && value != 0)
                     {
-                        val = HuesLoader.Instance.GetColor16(gmul[i].Value, color);
+                        value = FileManager.Hues.GetColor16(value, color);
                     }
 
-                    if (val != 0)
+                    if (value != 0)
                     {
-                        //val = 0x8000 | val;
-                        val = HuesHelper.Color16To32(gmul[i].Value) | 0xFF_00_00_00;
+                        rbga = HuesHelper.Color16To32(value) | 0xFF_00_00_00;
                     }
 
-                    var count = gmul[i].Run;
-                    pixels.AsSpan().Slice((int)pos, count).Fill(val);
-                    pos += count;
+                    pixels.Slice(pixelIndex, run).Fill(rbga);
+                    pixelIndex += run;
                 }
             }
 
@@ -239,14 +233,7 @@ namespace ClassicUO.Assets
             
             _file?.Dispose();
             _file = null;
-            _instance = null;
-        }
-
-        [StructLayout(LayoutKind.Sequential, Pack = 1)]
-        private ref struct GumpBlock
-        {
-            public readonly ushort Value;
-            public readonly ushort Run;
+            //_instance = null;
         }
     }
 

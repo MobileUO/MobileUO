@@ -300,6 +300,8 @@ namespace ClassicUO.Configuration
 
         public bool HighlightContainerWhenSelected { get; set; }
 
+        public bool UseNewTargetSystem { get; set; } = true;
+        public bool UseKrEquipUnequipPacket { get; set; }
         public bool ShowHouseContent { get; set; }
         public bool SaveHealthbars { get; set; }
         public bool TextFading { get; set; } = true;
@@ -323,6 +325,7 @@ namespace ClassicUO.Configuration
         public int WorldMapZoomIndex { get; set; } = 4;
         public bool WorldMapShowCoordinates { get; set; } = true;
         public bool WorldMapShowMouseCoordinates { get; set; } = true;
+        public bool WorldMapShowSextantCoordinates { get; set; } = false;
         public bool WorldMapShowMobiles { get; set; } = true;
         public bool WorldMapShowPlayerName { get; set; } = true;
         public bool WorldMapShowPlayerBar { get; set; } = true;
@@ -337,7 +340,7 @@ namespace ClassicUO.Configuration
         public bool WorldMapAllowPositionalTarget { get; set; } = false;
 
 
-        // MobileUO: this was moved to ProfileManager, but think we need to keep them for now
+        // MobileUO: TODO: this was moved to ProfileManager, but think we need to keep them for now
         internal static string ProfilePath { get; } = Path.Combine(CUOEnviroment.ExecutablePath, "Data", "Profiles");
         internal static string DataPath { get; } = Path.Combine(CUOEnviroment.ExecutablePath, "Data");
         public static uint GumpsVersion { get; private set; }

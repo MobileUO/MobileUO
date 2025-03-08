@@ -230,9 +230,9 @@ namespace Assistant
             {
                 _HotKeyActions["skills.last"] = (input) =>
                 {
-                    if (UOSObjects.Player.LastSkill >= 0 && UOSObjects.Player.LastSkill < SkillsLoader.Instance.Skills.Count)
+                    if (UOSObjects.Player.LastSkill >= 0 && UOSObjects.Player.LastSkill < Client.Game.UO.FileManager.Skills.Skills.Count)
                     {
-                        SkillEntry se = SkillsLoader.Instance.Skills[UOSObjects.Player.LastSkill];
+                        SkillEntry se = Client.Game.UO.FileManager.Skills.Skills[UOSObjects.Player.LastSkill];
                         if (se.HasAction)
                         {
                             Engine.Instance.SendToServer(new UseSkill(UOSObjects.Player.LastSkill));

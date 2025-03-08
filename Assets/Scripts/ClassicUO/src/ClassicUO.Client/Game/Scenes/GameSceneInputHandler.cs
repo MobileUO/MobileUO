@@ -530,7 +530,7 @@ namespace ClassicUO.Game.Scenes
                         if (gobj is Land land) { }
                         else
                         {
-                            ref StaticTiles itemData = ref TileDataLoader.Instance.StaticData[
+                            ref StaticTiles itemData = ref Client.Game.UO.FileManager.TileData.StaticData[
                                 gobj.Graphic
                             ];
 
@@ -683,7 +683,7 @@ namespace ClassicUO.Game.Scenes
 
                         if (string.IsNullOrEmpty(name))
                         {
-                            name = ClilocLoader.Instance.GetString(
+                            name = Client.Game.UO.FileManager.Clilocs.GetString(
                                 1020000 + st.Graphic,
                                 st.ItemData.Name
                             );
@@ -713,7 +713,7 @@ namespace ClassicUO.Game.Scenes
 
                         if (string.IsNullOrEmpty(name))
                         {
-                            name = ClilocLoader.Instance.GetString(
+                            name = Client.Game.UO.FileManager.Clilocs.GetString(
                                 1020000 + multi.Graphic,
                                 multi.ItemData.Name
                             );
@@ -899,7 +899,7 @@ namespace ClassicUO.Game.Scenes
                 {
                     if (obj is Static || obj is Multi || obj is Item)
                     {
-                        ref StaticTiles itemdata = ref TileDataLoader.Instance.StaticData[
+                        ref StaticTiles itemdata = ref Client.Game.UO.FileManager.TileData.StaticData[
                             obj.Graphic
                         ];
 

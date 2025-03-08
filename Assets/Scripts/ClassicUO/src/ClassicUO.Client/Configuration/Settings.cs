@@ -66,6 +66,11 @@ namespace ClassicUO.Configuration
         [JsonPropertyName("ip")] public string IP { get; set; } = "127.0.0.1";
 
         [JsonPropertyName("port"), JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)] public ushort Port { get; set; } = 2593;
+        
+        /**
+         * Ignores the login servers relay packet, connects back with the settings IP
+         */
+        [JsonPropertyName("ignore_relay_ip")] public bool IgnoreRelayIp { get; set; } = false;
 
         [JsonPropertyName("ultimaonlinedirectory")] public string UltimaOnlineDirectory { get; set; } = "";
 
@@ -97,8 +102,6 @@ namespace ClassicUO.Configuration
         [JsonPropertyName("login_music")] public bool LoginMusic { get; set; } = true;
 
         [JsonPropertyName("login_music_volume")] public int LoginMusicVolume { get; set; } = 70;
-
-        [JsonPropertyName("shard_type")] public int ShardType { get; set; } // 0 = normal (no customization), 1 = old, 2 = outlands??
 
         [JsonPropertyName("fixed_time_step")] public bool FixedTimeStep { get; set; } = true;
 

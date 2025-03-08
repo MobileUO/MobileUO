@@ -42,6 +42,7 @@ using ClassicUO.Game.UI.Controls;
 using ClassicUO.Game.UI.Gumps;
 using ClassicUO.Input;
 using ClassicUO.Network;
+using ClassicUO.Network.Encryption;
 using ClassicUO.Renderer;
 using ClassicUO.Resources;
 using ClassicUO.Utility;
@@ -49,6 +50,7 @@ using ClassicUO.Utility.Logging;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -67,6 +69,7 @@ namespace ClassicUO
         private UltimaBatcher2D _uoSpriteBatch;
         private bool _suppressedDraw;
         private Texture2D _background;
+        private bool _pluginsInitialized = false;
 
         // MobileUO: Batcher and TouchScreenKeyboard
         public UltimaBatcher2D Batcher => _uoSpriteBatch;
@@ -98,12 +101,16 @@ namespace ClassicUO
         public Scene Scene { get; private set; }
         public AudioManager Audio { get; private set; }
         public UltimaOnline UO { get; } = new UltimaOnline();
-
         public IPluginHost PluginHost { get; private set; }
-
         public GraphicsDeviceManager GraphicManager { get; }
         public readonly uint[] FrameDelay = new uint[2];
 
+        private readonly List<(uint, Action)> _queuedActions = new ();
+
+        public void EnqueueAction(uint time, Action action)
+        {
+            _queuedActions.Add((Time.Ticks + time, action));
+        }
 
         protected override void Initialize()
         {
@@ -128,13 +135,9 @@ namespace ClassicUO
         {
             base.LoadContent();
 
-            MapLoader.MapsLayouts = Settings.GlobalSettings.MapsLayouts;
-
             Fonts.Initialize(GraphicsDevice);
             SolidColorTextureCache.Initialize(GraphicsDevice);
-
             Audio = new AudioManager();
-            Audio.Initialize();
 
             // MobileUO: commented out
             //var bytes = Loader.GetBackgroundImage().ToArray();
@@ -145,15 +148,18 @@ namespace ClassicUO
             SetScene(new MainScene(this));
 #else
             UO.Load(this);
+            Audio.Initialize();
+            // TODO: temporary fix to avoid crash when laoding plugins
+            Settings.GlobalSettings.Encryption = (byte) NetClient.Socket.Load(UO.FileManager.Version, (EncryptionType) Settings.GlobalSettings.Encryption);
 
             Log.Trace("Loading plugins...");
-
             PluginHost?.Initialize();
 
             foreach (string p in Settings.GlobalSettings.Plugins)
             {
                 Plugin.Create(p);
             }
+            _pluginsInitialized = true;
 
             Log.Trace("Done!");
 
@@ -400,7 +406,7 @@ namespace ClassicUO
             MouseUpdate();
 
             var data = NetClient.Socket.CollectAvailableData();
-            var packetsCount = PacketHandlers.Handler.ParsePackets(UO.World, data);
+            var packetsCount = PacketHandlers.Handler.ParsePackets(NetClient.Socket, UO.World, data);
 
             NetClient.Socket.Statistics.TotalPacketsReceived += (uint)packetsCount;
             NetClient.Socket.Flush();
@@ -457,7 +463,20 @@ namespace ClassicUO
             UO.GameCursor?.Update();
             Audio?.Update();
 
-            base.Update(gameTime);
+
+            for (var i = _queuedActions.Count - 1; i >= 0; i--)
+            {
+                (var time, var fn) = _queuedActions[i];
+                
+                if (Time.Ticks > time)
+                {
+                    fn();
+                    _queuedActions.RemoveAt(i);
+                    break;
+                }
+            }
+
+             base.Update(gameTime);
         }
 
         protected override void Draw(GameTime gameTime)
@@ -561,7 +580,9 @@ namespace ClassicUO
         {
             SDL_Event* sdlEvent = (SDL_Event*)ptr;
 
-            if (Plugin.ProcessWndProc(sdlEvent) != 0)
+            // Don't pass SDL events to the plugin host before the plugins are initialized
+            // or the garbage collector can get screwed up
+            if (_pluginsInitialized && Plugin.ProcessWndProc(sdlEvent) != 0)
             {
                 if (sdlEvent->type == SDL_EventType.SDL_MOUSEMOTION)
                 {

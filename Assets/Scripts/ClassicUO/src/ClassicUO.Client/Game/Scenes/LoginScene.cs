@@ -92,6 +92,7 @@ namespace ClassicUO.Game.Scenes
         public static string Account { get; internal set; }
         public string Password { get; private set; }
         public bool CanAutologin => _autoLogin || Reconnect;
+        public (int min, int max) LoginDelay { get; private set; }
 
 
         public override void Load()
@@ -277,26 +278,26 @@ namespace ClassicUO.Game.Scenes
                 switch (CurrentLoginStep)
                 {
                     case LoginSteps.Connecting:
-                        labelText = ClilocLoader.Instance.GetString(3000002, ResGeneral.Connecting); // "Connecting..."
+                        labelText = Client.Game.UO.FileManager.Clilocs.GetString(3000002, ResGeneral.Connecting); // "Connecting..."
 
                         showButtons = LoginButtons.Cancel;
 
                         break;
 
                     case LoginSteps.VerifyingAccount:
-                        labelText = ClilocLoader.Instance.GetString(3000003, ResGeneral.VerifyingAccount); // "Verifying Account..."
+                        labelText = Client.Game.UO.FileManager.Clilocs.GetString(3000003, ResGeneral.VerifyingAccount); // "Verifying Account..."
 
                         showButtons = LoginButtons.Cancel;
 
                         break;
 
                     case LoginSteps.LoginInToServer:
-                        labelText = ClilocLoader.Instance.GetString(3000053, ResGeneral.LoggingIntoShard); // logging into shard
+                        labelText = Client.Game.UO.FileManager.Clilocs.GetString(3000053, ResGeneral.LoggingIntoShard); // logging into shard
 
                         break;
 
                     case LoginSteps.EnteringBritania:
-                        labelText = ClilocLoader.Instance.GetString(3000001, ResGeneral.EnteringBritannia); // Entering Britania...
+                        labelText = Client.Game.UO.FileManager.Clilocs.GetString(3000001, ResGeneral.EnteringBritannia); // Entering Britania...
 
                         break;
 
@@ -533,7 +534,7 @@ namespace ClassicUO.Game.Scenes
 
             uint address = NetClient.Socket.LocalIP;
 
-            EncryptionHelper.Initialize(true, address, (ENCRYPTION_TYPE)Settings.GlobalSettings.Encryption);
+            NetClient.Socket.Encryption?.Initialize(true, address);
 
             if (Client.Game.UO.Version >= ClientVersion.CV_6040)
             {
@@ -683,8 +684,15 @@ namespace ClassicUO.Game.Scenes
         {
             byte code = p.ReadUInt8();
 
-            PopupMessage = ServerErrorMessages.GetError(p[0], code);
+            PopupMessage = ServerErrorMessages.GetError(p[0], code, LoginDelay);
             CurrentLoginStep = LoginSteps.PopUpMessage;
+            LoginDelay = default;
+        }
+
+        public void HandleLoginDelayPacket(ref StackDataReader p)
+        {
+            var delay = p.ReadUInt8();
+            LoginDelay = ((delay - 1) * 10, delay * 10);
         }
 
         public void HandleRelayServerPacket(ref StackDataReader p)
@@ -694,25 +702,37 @@ namespace ClassicUO.Game.Scenes
             uint seed = p.ReadUInt32BE();
 
             NetClient.Socket.Disconnect();
-            // NOTE: i don't think i need to create a new socket wrapper anymore
-            //NetClient.Socket = new NetClient();
-            EncryptionHelper.Initialize(false, seed, (ENCRYPTION_TYPE) Settings.GlobalSettings.Encryption);
+            NetClient.Socket.Connected -= OnNetClientConnected;
 
-            NetClient.Socket.Connect(new IPAddress(ip).ToString(), port);
-
-            if (NetClient.Socket.IsConnected)
+            try
             {
-                NetClient.Socket.EnableCompression();
-                unsafe
+                // Ignore the packet, connect with the original IP regardless (i.e. websocket proxying)
+                if (Settings.GlobalSettings.IgnoreRelayIp || ip == 0)
                 {
-                    Span<byte> b = stackalloc byte[4] { (byte)(seed >> 24), (byte)(seed >> 16), (byte)(seed >> 8), (byte)seed };
-                    NetClient.Socket.Send(b, true, true);
+                    Log.Trace("Ignoring relay server packet IP address");
+                    NetClient.Socket.Connect(Settings.GlobalSettings.IP, Settings.GlobalSettings.Port);
                 }
+                else
+                    NetClient.Socket.Connect(new IPAddress(ip).ToString(), port);
 
-                NetClient.Socket.Send_SecondLogin(Account, Password, seed);
+                if (NetClient.Socket.IsConnected)
+                {
+                    NetClient.Socket.Encryption?.Initialize(false, seed);
+                    NetClient.Socket.EnableCompression();
+                    unsafe
+                    {
+                        Span<byte> b = stackalloc byte[4] { (byte)(seed >> 24), (byte)(seed >> 16), (byte)(seed >> 8), (byte)seed };
+                        NetClient.Socket.Send(b, true, true);
+                    }
+
+                    NetClient.Socket.Send_SecondLogin(Account, Password, seed);
+                }
+            }
+            finally
+            {
+                NetClient.Socket.Connected += OnNetClientConnected;
             }
         }
-
 
         private void ParseCharacterList(ref StackDataReader p)
         {
@@ -770,7 +790,7 @@ namespace ClassicUO.Game.Scenes
                         cityIndex,
                         cityName,
                         cityBuilding,
-                        ClilocLoader.Instance.GetString((int) cityDescription),
+                        Client.Game.UO.FileManager.Clilocs.GetString((int) cityDescription),
                         cityX,
                         cityY,
                         cityZ,
@@ -804,7 +824,7 @@ namespace ClassicUO.Game.Scenes
 
         private string[] ReadCityTextFile(int count)
         {
-            string path = UOFileManager.GetUOFilePath("citytext.enu");
+            string path = Client.Game.UO.FileManager.GetUOFilePath("citytext.enu");
 
             if (!File.Exists(path))
             {

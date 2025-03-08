@@ -39,23 +39,23 @@ public static class UoTextureExplorerHelper
         Client.Game = new GameController(null);
         //Calling the getter to trigger the creation of GraphicsDevice
         var graphicsDevice = Client.Game.GraphicsDevice;
-        ArtLoader.Instance.Load().Wait();
-        GumpsLoader.Instance.Load().Wait();
+        Client.Game.UO.FileManager.Arts.Load();//.Wait();
+        Client.Game.UO.FileManager.Gumps.Load();//.Wait();
         loaded = true;
     }
 
     public static void UnloadArt()
     {
-        ArtLoader.Instance.Dispose();
-        GumpsLoader.Instance.Dispose();
+        Client.Game.UO.FileManager.Arts.Dispose();
+        Client.Game.UO.FileManager.Gumps.Dispose();
         loaded = false;
     }
 
     public static void TriggerFirstTexture()
     {
-        ArtLoader.Instance.ClearResources();
+        Client.Game.UO.FileManager.Arts.ClearResources();
         // MobileUO: TODO: update later
-        //ArtLoader.Instance.GetLandTexture(0);
+        //Client.Game.UO.FileManager.Arts.GetLandTexture(0);
     }
 
     public static void CreateLandTileTextureAtlas()
@@ -76,7 +76,7 @@ public static class UoTextureExplorerHelper
             var graphic = (ushort) i;
             //Value used from ArtLoader._graphicMask
             graphic &= 0x3FFF;
-            ref readonly var entry = ref ArtLoader.Instance.GetValidRefEntry(graphic);
+            ref readonly var entry = ref Client.Game.UO.FileManager.Arts.File.GetValidRefEntry(graphic);
 
             if (entry.Length == 0)
             {
@@ -112,7 +112,7 @@ public static class UoTextureExplorerHelper
     public static Texture2D GetLandTexture(uint g)
     {
         // MobileUO: TODO: update later
-        //var uoTexture = ArtLoader.Instance.GetLandTexture(g);
+        //var uoTexture = Client.Game.UO.FileManager.Arts.GetLandTexture(g);
         var uoTexture = new Texture2D(Client.Game.GraphicsDevice, 0, 0);
         return uoTexture != null && uoTexture.UnityTexture != null ? uoTexture : null;
     }
@@ -133,7 +133,7 @@ public static class UoTextureExplorerHelper
             var graphic = (ushort) i;
             //Value used from ArtLoader._graphicMask
             graphic &= 0x3FFF;
-            ref readonly var entry = ref ArtLoader.Instance.GetValidRefEntry(graphic);
+            ref readonly var entry = ref Client.Game.UO.FileManager.Arts.File.GetValidRefEntry(graphic);
             if (entry.Length != 0 && seenIndexes.Add(entry))
             {
                 var texture = GetLandTexture((uint) i);

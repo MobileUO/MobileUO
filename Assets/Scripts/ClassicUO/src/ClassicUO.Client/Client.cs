@@ -64,6 +64,7 @@ namespace ClassicUO
         public ClientVersion Version { get; private set; }
         public ClientFlags Protocol { get; set; }
         public string ClientPath { get; private set; }
+        public UOFileManager FileManager { get; private set; }
 
 
         public UltimaOnline()
@@ -91,7 +92,7 @@ namespace ClassicUO
 
             fixed (uint* ptr = buffer)
             {
-                HuesLoader.Instance.CreateShaderColors(buffer);
+                FileManager.Hues.CreateShaderColors(buffer);
 
                 // MobileUO: true parameters for invertY
                 hueSamplers[0].SetDataPointerEXT(
@@ -115,13 +116,13 @@ namespace ClassicUO
             game.GraphicsDevice.Textures[1] = hueSamplers[0];
             game.GraphicsDevice.Textures[2] = hueSamplers[1];
 
-            Animations = new Renderer.Animations.Animations(game.GraphicsDevice);
-            Arts = new Renderer.Arts.Art(game.GraphicsDevice);
-            Gumps = new Renderer.Gumps.Gump(game.GraphicsDevice);
-            Texmaps = new Renderer.Texmaps.Texmap(game.GraphicsDevice);
-            Lights = new Renderer.Lights.Light(game.GraphicsDevice);
-            MultiMaps = new Renderer.MultiMaps.MultiMap(game.GraphicsDevice);
-            Sounds = new Renderer.Sounds.Sound();
+            Animations = new Renderer.Animations.Animations(FileManager.Animations, game.GraphicsDevice);
+            Arts = new Renderer.Arts.Art(FileManager.Arts, FileManager.Hues, game.GraphicsDevice);
+            Gumps = new Renderer.Gumps.Gump(FileManager.Gumps, game.GraphicsDevice);
+            Texmaps = new Renderer.Texmaps.Texmap(FileManager.Texmaps, game.GraphicsDevice);
+            Lights = new Renderer.Lights.Light(FileManager.Lights, game.GraphicsDevice);
+            MultiMaps = new Renderer.MultiMaps.MultiMap(FileManager.MultiMaps, game.GraphicsDevice);
+            Sounds = new Renderer.Sounds.Sound(FileManager.Sounds);
 
             LightColors.LoadLights();
 
@@ -139,24 +140,7 @@ namespace ClassicUO
 
         public void Unload()
         {
-            ArtLoader.Instance?.Dispose();
-            GumpsLoader.Instance?.Dispose();
-            TexmapsLoader.Instance?.Dispose();
-            AnimationsLoader.Instance?.Dispose();
-            LightsLoader.Instance?.Dispose();
-            TileDataLoader.Instance?.Dispose();
-            AnimDataLoader.Instance?.Dispose();
-            ClilocLoader.Instance?.Dispose();
-            FontsLoader.Instance?.Dispose();
-            HuesLoader.Instance?.Dispose();
-            MapLoader.Instance?.Dispose();
-            MultiLoader.Instance?.Dispose();
-            MultiMapLoader.Instance?.Dispose();
-            ProfessionLoader.Instance?.Dispose();
-            SkillsLoader.Instance?.Dispose();
-            SoundsLoader.Instance?.Dispose();
-            SpeechesLoader.Instance?.Dispose();
-            Verdata.File?.Dispose();
+            FileManager.Dispose();
             World?.Map?.Destroy();
         }
 
@@ -244,31 +228,16 @@ namespace ClassicUO
             Log.Trace($"Client version: {clientVersion}");
             Log.Trace($"Protocol: {Protocol}");
 
-            // ok now load uo files
-            UOFileManager.Load(Version, Settings.GlobalSettings.UltimaOnlineDirectory, Settings.GlobalSettings.UseVerdata, Settings.GlobalSettings.Language);
-            StaticFilters.Load();
-
+            FileManager = new UOFileManager(clientVersion, clientPath);
+            FileManager.Load(Settings.GlobalSettings.UseVerdata, Settings.GlobalSettings.Language, Settings.GlobalSettings.MapsLayouts);
+            
+            StaticFilters.Load(FileManager.TileData);
             BuffTable.Load();
             ChairTable.Load();
 
-            Log.Trace("Network calibration...");
             //ATTENTION: you will need to enable ALSO ultimalive server-side, or this code will have absolutely no effect!
             // MobileUO: commented out
             //UltimaLive.Enable();
-            PacketsTable.AdjustPacketSizeByVersion(Version);
-
-            if (Settings.GlobalSettings.Encryption != 0)
-            {
-                Log.Trace("Calculating encryption by client version...");
-                EncryptionHelper.CalculateEncryption(Version);
-                Log.Trace($"encryption: {EncryptionHelper.Type}");
-
-                if (EncryptionHelper.Type != (ENCRYPTION_TYPE) Settings.GlobalSettings.Encryption)
-                {
-                    Log.Warn($"Encryption found: {EncryptionHelper.Type}");
-                    Settings.GlobalSettings.Encryption = (byte) EncryptionHelper.Type;
-                }
-            }
         }
     }
 
@@ -278,7 +247,7 @@ namespace ClassicUO
         // MobileUO: removed private setter
         public static GameController Game { get; set; }
 
-         // MobileUO: added variable
+        // MobileUO: added variable
         public static event Action SceneChanged;
 
         // MobileUO: added method

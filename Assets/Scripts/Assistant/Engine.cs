@@ -299,7 +299,7 @@ namespace Assistant
 
         internal static string GetDefaultItemName(ushort graphic)
         {
-            return (graphic < TileDataLoader.Instance.StaticData.Length ? TileDataLoader.Instance.StaticData[graphic].Name : TileDataLoader.Instance.StaticData[0].Name).Replace("%", "");
+            return (graphic < Client.Game.UO.FileManager.TileData.StaticData.Length ? Client.Game.UO.FileManager.TileData.StaticData[graphic].Name : Client.Game.UO.FileManager.TileData.StaticData[0].Name).Replace("%", "");
         }
 
         internal class PlayerDistanceComparer : IComparer<UOEntity>

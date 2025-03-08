@@ -39,7 +39,8 @@ namespace ClassicUO.Network
         {
             _data = data;
             Length = length;
-            IsDynamic = PacketsTable.GetPacketLength(ID) < 0;
+            // MobileUO: TODO: PacktsTable no longer static:
+            IsDynamic = PacketsTable.Instance.GetPacketLength(ID) < 0;
         }
 
         public override byte this[int index]

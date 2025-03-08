@@ -456,7 +456,7 @@ namespace ClassicUO.Network
     {
         public PASCIISpeechRequest(string text, MessageType type, byte font, ushort hue) : base(0x03)
         {
-            List<SpeechEntry> entries = SpeechesLoader.Instance.GetKeywords(text);
+            List<SpeechEntry> entries = Client.Game.UO.FileManager.Speeches.GetKeywords(text);
 
             bool encoded = entries != null && entries.Count != 0;
 
@@ -476,7 +476,7 @@ namespace ClassicUO.Network
     {
         public PUnicodeSpeechRequest(string text, MessageType type, byte font, ushort hue, string lang) : base(0xAD)
         {
-            List<SpeechEntry> entries = SpeechesLoader.Instance.GetKeywords(text);
+            List<SpeechEntry> entries = Client.Game.UO.FileManager.Speeches.GetKeywords(text);
 
             bool encoded = entries != null && entries.Count != 0;
 
@@ -552,7 +552,8 @@ namespace ClassicUO.Network
             else
             {
                 this[0] = 0x12;
-                IsDynamic = PacketsTable.GetPacketLength(this[0]) < 0;
+                // MobileUO: TODO: PacktsTable no longer static:
+                IsDynamic = PacketsTable.Instance.GetPacketLength(this[0]) < 0;
                 WriteByte(0x56);
                 WriteASCII(idx.ToString());
                 // need a \0 ?

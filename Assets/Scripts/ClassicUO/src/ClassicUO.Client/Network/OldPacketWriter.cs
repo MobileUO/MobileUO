@@ -75,7 +75,8 @@ namespace ClassicUO.Network
 
         private void SetPacketId(byte id)
         {
-            short len = PacketsTable.GetPacketLength(id);
+            // MobileUO: TODO: PacktsTable no longer static:
+            short len = PacketsTable.Instance.GetPacketLength(id);
             IsDynamic = len < 0;
             _data = new byte[IsDynamic ? 32 : len];
             _data[0] = id;

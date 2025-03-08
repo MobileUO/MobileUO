@@ -59,8 +59,8 @@ namespace ClassicUO.Game.UI.Gumps
                 X = gump.X + (gump.Width >> 2);
                 Y = gump.Y + (gump.Height >> 2);
                 gump.IsEnabled = false;
-                int w = Math.Min(300, FontsLoader.Instance.GetWidthUnicode(FONT, body) >> 1);
-                int h = FontsLoader.Instance.GetHeightUnicode(FONT, body, w, TEXT_ALIGN_TYPE.TS_CENTER, 0x0);
+                int w = Math.Min(300, Client.Game.UO.FileManager.Fonts.GetWidthUnicode(FONT, body) >> 1);
+                int h = Client.Game.UO.FileManager.Fonts.GetHeightUnicode(FONT, body, w, TEXT_ALIGN_TYPE.TS_CENTER, 0x0);
                 w = Math.Max(160, w + 20);
                 h = Math.Max(80, h + 60);
                 Width = w;
@@ -130,7 +130,7 @@ namespace ClassicUO.Game.UI.Gumps
                 y += mh + 2;
                 Add(new Label("Color:", true, ScriptTextBox.GRAY_HUE, mw) { X = x, Y = y });
                 Add(new SelectableReadOnlyBox(FONT, -1, 0, true, FontStyle.None, ScriptTextBox.GREEN_HUE) { X = x + mw, Y = y, Width = w - (40 + mw), Text = $"{inspected.Hue}" });
-                if (inspected.Hue > 0 && inspected.Hue <= HuesLoader.Instance.HuesCount)
+                if (inspected.Hue > 0 && inspected.Hue <= Client.Game.UO.FileManager.Hues.HuesCount)
                 {
                     // MobileUO: TODO: ColorBox dropped a parameter in CUO 0.1.9.0, this may need to be revisited
                     for(ushort i = 0; i < 32; ++i)
@@ -3742,7 +3742,7 @@ namespace ClassicUO.Game.UI.Gumps
             uint color = 0xFF7F7F7F;
 
             if (hue != 0xFFFF)
-                color = HuesLoader.Instance.GetPolygoneColor(12, hue);
+                color = Client.Game.UO.FileManager.Hues.GetPolygoneColor(12, hue);
 
             // MobileUO: TODO: ClickableColorBox dropped a parameter in CUO 0.1.9.0, this may need to be revisited
             ClickableColorBox box = new ClickableColorBox(World, x, y, 13, 14, hue/*, color*/);

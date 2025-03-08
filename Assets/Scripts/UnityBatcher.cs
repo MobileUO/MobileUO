@@ -125,9 +125,12 @@ namespace ClassicUO.Renderer
             _basicUOEffect.Brighlight.SetValue(f);
         }
 
-        public void DrawString(SpriteFont spriteFont, string text, int x, int y, XnaVector3 color)
+        public void DrawString(SpriteFont spriteFont, ReadOnlySpan<char> text, int x, int y, XnaVector3 color)
+            => DrawString(spriteFont, text, new XnaVector2(x, y), color);
+
+        public void DrawString(SpriteFont spriteFont, ReadOnlySpan<char> text, XnaVector2 position, XnaVector3 color)
         {
-            if (String.IsNullOrEmpty(text))
+            if (text.IsEmpty)
                 return;
 
             Texture2D textureValue = spriteFont.Texture;
@@ -204,14 +207,11 @@ namespace ClassicUO.Renderer
                                     curOffset.Y + cCrop.Y
                                 ) * axisDirY;
 
+                var pos = new XnaVector2(offsetX, offsetY);
                 Draw
                 (
                     textureValue,
-                    new XnaVector2
-                    (
-                        x + (int) Math.Round(offsetX),
-                        y + (int) Math.Round(offsetY)
-                    ),
+                    position + pos,
                     cGlyph,
                     color
                 );

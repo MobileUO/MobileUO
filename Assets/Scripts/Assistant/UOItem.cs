@@ -150,7 +150,7 @@ namespace Assistant
             }
         }
 
-        internal StaticTiles TileDataInfo => m_ItemID < TileDataLoader.Instance.StaticData.Length ? TileDataLoader.Instance.StaticData[m_ItemID] : TileDataLoader.Instance.StaticData[0];
+        internal StaticTiles TileDataInfo => m_ItemID < Client.Game.UO.FileManager.TileData.StaticData.Length ? Client.Game.UO.FileManager.TileData.StaticData[m_ItemID] : Client.Game.UO.FileManager.TileData.StaticData[0];
 
         internal Layer Layer
         {

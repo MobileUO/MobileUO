@@ -1,1 +1,0 @@
-../../../../../external/ClassicUO/src/ClassicUO.Assets/Verdata.cs

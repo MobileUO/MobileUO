@@ -1,5 +1,5 @@
 ﻿using System;
-
+using ClassicUO;
 using ClassicUO.Assets;
 
 namespace Assistant
@@ -94,7 +94,7 @@ namespace Assistant
 
                 foreach (var t in ClilocNums)
                 {
-                    if (ClilocLoader.Instance.GetString(t) == msg)
+                    if (Client.Game.UO.FileManager.Clilocs.GetString(t) == msg)
                     {
                         Stop();
 

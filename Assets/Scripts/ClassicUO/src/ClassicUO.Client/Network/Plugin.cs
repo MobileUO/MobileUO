@@ -206,7 +206,7 @@ namespace ClassicUO.Network
             _send = OnPluginSend;
             _recv_new = OnPluginRecv_new;
             _send_new = OnPluginSend_new;
-            _getPacketLength = PacketsTable.GetPacketLength;
+            _getPacketLength = OnGetPacketLength;
             _getPlayerPosition = GetPlayerPosition;
             _castSpell = GameActions.CastSpell;
             _getStaticImage = GetStaticImage;
@@ -448,6 +448,9 @@ namespace ClassicUO.Network
             {
                 try
                 {
+                    // MobileUO: TODO: PacktsTable no longer static:
+                    var PacketsTable = new PacketsTable(Client.Game.UO.FileManager.Version);
+
                     Assistant.Engine.Install(null);
                     
                     Assistant.Engine.UOSteamClient._sendToClient = OnPluginRecv;
@@ -516,7 +519,7 @@ namespace ClassicUO.Network
         {
             if (index >= 0 && index < ArtLoader.MAX_STATIC_DATA_INDEX_COUNT)
             {
-                ref StaticTiles st = ref TileDataLoader.Instance.StaticData[index];
+                ref StaticTiles st = ref Client.Game.UO.FileManager.TileData.StaticData[index];
 
                 flags = (ulong)st.Flags;
                 weight = st.Weight;
@@ -542,7 +545,7 @@ namespace ClassicUO.Network
         {
             if (index >= 0 && index < ArtLoader.MAX_STATIC_DATA_INDEX_COUNT)
             {
-                ref LandTiles st = ref TileDataLoader.Instance.LandData[index];
+                ref LandTiles st = ref Client.Game.UO.FileManager.TileData.LandData[index];
 
                 flags = (ulong)st.Flags;
                 textid = st.TexID;
@@ -556,14 +559,14 @@ namespace ClassicUO.Network
 
         private static bool GetCliloc(int cliloc, string args, bool capitalize, out string buffer)
         {
-            buffer = ClilocLoader.Instance.Translate(cliloc, args, capitalize);
+            buffer = Client.Game.UO.FileManager.Clilocs.Translate(cliloc, args, capitalize);
 
             return buffer != null;
         }
 
         private static void GetStaticImage(ushort g, ref CUO_API.ArtInfo info)
         {
-            //ArtLoader.Instance.TryGetEntryInfo(g, out long address, out long size, out long compressedsize);
+            //Client.Game.UO.FileManager.Arts.TryGetEntryInfo(g, out long address, out long size, out long compressedsize);
             //info.Address = address;
             //info.Size = size;
             //info.CompressedSize = compressedsize;
@@ -843,6 +846,11 @@ namespace ClassicUO.Network
                     Log.Error("Plugin initialization failed, please re login");
                 }
             }
+        }
+
+        internal static short OnGetPacketLength(int id)
+        {
+            return NetClient.Socket.PacketsTable.GetPacketLength(id);
         }
 
         internal static bool OnPluginRecv(ref byte[] data, ref int length)

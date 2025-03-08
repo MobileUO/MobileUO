@@ -108,7 +108,6 @@ namespace ClassicUO.Game.GameObjects
         public ushort X,
             Y;
         public sbyte Z;
-        public GameObject RenderListNext;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Vector2 GetScreenPosition()
@@ -163,6 +162,7 @@ namespace ClassicUO.Game.GameObjects
             OnPositionChanged();
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void UpdateRealScreenPosition(int offsetX, int offsetY)
         {
             RealScreenPosition.X = ((X - Y) * 22) - offsetX - 22;
@@ -382,7 +382,6 @@ namespace ClassicUO.Game.GameObjects
 
             Next = null;
             Previous = null;
-            RenderListNext = null;
 
             Clear();
             RemoveFromTile();
@@ -402,6 +401,9 @@ namespace ClassicUO.Game.GameObjects
 
         public static bool CanBeDrawn(World world, ushort g)
         {
+            if (Client.Game == null)
+                return true;
+
             switch (g)
             {
                 case 0x0001:
@@ -417,7 +419,7 @@ namespace ClassicUO.Game.GameObjects
                 case 0x9E64:
                 case 0x9E65:
                 case 0x9E7D:
-                    ref StaticTiles data = ref TileDataLoader.Instance.StaticData[g];
+                    ref var data = ref Client.Game.UO.FileManager.TileData.StaticData[g];
 
                     return !data.IsBackground && !data.IsSurface;
             }
@@ -438,9 +440,13 @@ namespace ClassicUO.Game.GameObjects
                     return true;
                 }
 
-                if (g < TileDataLoader.Instance?.StaticData?.Length)
+                if (g < Client.Game.UO.FileManager.TileData.StaticData.Length)
                 {
-                    ref StaticTiles data = ref TileDataLoader.Instance.StaticData[g];
+                    ref var data = ref Client.Game.UO.FileManager.TileData.StaticData[g];
+
+                    // Hacky way to do not render "nodraw"
+                    if (!string.IsNullOrEmpty(data.Name) && data.Name.StartsWith("nodraw", StringComparison.OrdinalIgnoreCase))
+                        return false;
 
                     if (
                         !data.IsNoDiagonal

@@ -1158,9 +1158,9 @@ namespace Assistant.Scripts
             else
             {
                 Skill sk = ScriptManager.GetSkill(args[0].AsString());
-                if (sk != null && sk.Index < SkillsLoader.Instance.Skills.Count)
+                if (sk != null && sk.Index < Client.Game.UO.FileManager.Skills.Skills.Count)
                 {
-                    if(SkillsLoader.Instance.Skills[sk.Index].HasAction)
+                    if(Client.Game.UO.FileManager.Skills.Skills[sk.Index].HasAction)
                         Engine.Instance.SendToServer(new UseSkill(sk.Index));
                     else
                         new RunTimeError(null, $"Non usable skill: {args[0].AsString()}");

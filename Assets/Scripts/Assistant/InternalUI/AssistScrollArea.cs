@@ -186,7 +186,7 @@ namespace ClassicUO.Game.UI.Controls
             }
         }
 
-        public override void Add(Control c, int page = 0)
+        public override T Add<T>(T c, int page = 0)
         {
             ScrollAreaItem item = new ScrollAreaItem
             {
@@ -195,6 +195,8 @@ namespace ClassicUO.Game.UI.Controls
 
             item.Add(c);
             base.Add(item, page);
+
+            return c;
         }
 
         public void Add(ScrollAreaItem c, int page = 0)

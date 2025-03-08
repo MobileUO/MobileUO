@@ -312,26 +312,28 @@ public class ClientRunner : MonoBehaviour
 	    Settings.GlobalSettings.Port = ushort.Parse(config.UoServerPort);
 	    
 	    //Reset static encryption type variable
-	    EncryptionHelper.Type = ENCRYPTION_TYPE.NONE;
+		// MobileUO: TODO: does this need to be re-added?
+	    //NetClient.Socket.Encryption.Type = EncryptionType.NONE;
 	    Settings.GlobalSettings.Encryption = (byte) (config.UseEncryption ? 1 : 0);
 
 	    //Empty the plugins array because no plugins are working at the moment
 	    Settings.GlobalSettings.Plugins = new string[0];
 	    
+		// MobileUO: this was removed in CUO 1.1.0.x
 	    //If connecting to UO Outlands, set shard type to 2 for outlands
-	    Settings.GlobalSettings.ShardType = config.UoServerUrl.ToLower().Contains("uooutlands") ? 2 : 0;
+	    //Settings.GlobalSettings.ShardType = config.UoServerUrl.ToLower().Contains("uooutlands") ? 2 : 0;
 
 	    //Try to detect old client version to set ShardType to 1, for using StatusGumpOld. Otherwise, it's possible
 	    //to get null-refs in StatusGumpModern.
-	    if (ClientVersionHelper.IsClientVersionValid(config.ClientVersion, out var clientVersion))
-	    {
-		    if (clientVersion < ClientVersion.CV_308Z)
-		    {
-			    Settings.GlobalSettings.ShardType = 1;
-		    }
-	    }
+	    //if (ClientVersionHelper.IsClientVersionValid(config.ClientVersion, out var clientVersion))
+	    //{
+		   // if (clientVersion < ClientVersion.CV_308Z)
+		   // {
+			  //  Settings.GlobalSettings.ShardType = 1;
+		   // }
+	    //}
 	    
-	    CUOEnviroment.IsOutlands = Settings.GlobalSettings.ShardType == 2;
+	    //CUOEnviroment.IsOutlands = Settings.GlobalSettings.ShardType == 2;
 
 	    Settings.GlobalSettings.ClientVersion = config.ClientVersion;
 	    

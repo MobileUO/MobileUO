@@ -9,15 +9,10 @@ namespace ClassicUO.IO
 {
     public unsafe ref struct StackDataReader
     {
-        private const MethodImplOptions IMPL_OPTION = MethodImplOptions.AggressiveInlining
-#if !NETFRAMEWORK && !NETSTANDARD2_0
-                                                      // MobileUO: commenting out
-                                                      //| MethodImplOptions.AggressiveOptimization
-#endif
-                                                      ;
+        private const MethodImplOptions IMPL_OPTION = MethodImplOptions.AggressiveInlining;
+
 
         private readonly ReadOnlySpan<byte> _data;
-
 
         public StackDataReader(ReadOnlySpan<byte> data)
         {
@@ -25,6 +20,7 @@ namespace ClassicUO.IO
             Length = data.Length;
             Position = 0;
         }
+
 
         public int Position { get; private set; }
         public long Length { get; }
@@ -64,10 +60,23 @@ namespace ClassicUO.IO
             Position += count;
         }
 
+        public byte[] ReadArray(int count)
+        {
+            if (Position + count > Length)
+            {
+                return Array.Empty<byte>();
+            }
+
+            var buf = Buffer.Slice(Position, count).ToArray();
+            Position += count;
+
+            return buf;
+        }
+
         [MethodImpl(IMPL_OPTION)]
         public byte ReadUInt8()
         {
-            if (Position + 1 > Length)
+            if (Position + sizeof(byte) > Length)
             {
                 return 0;
             }
@@ -78,7 +87,7 @@ namespace ClassicUO.IO
         [MethodImpl(IMPL_OPTION)]
         public sbyte ReadInt8()
         {
-            if (Position + 1 > Length)
+            if (Position + sizeof(sbyte) > Length)
             {
                 return 0;
             }
@@ -91,14 +100,14 @@ namespace ClassicUO.IO
         [MethodImpl(IMPL_OPTION)]
         public ushort ReadUInt16LE()
         {
-            if (Position + 2 > Length)
+            if (Position + sizeof(ushort) > Length)
             {
                 return 0;
             }
 
             BinaryPrimitives.TryReadUInt16LittleEndian(_data.Slice(Position), out ushort v);
 
-            Skip(2);
+            Skip(sizeof(ushort));
 
             return v;
         }
@@ -106,14 +115,14 @@ namespace ClassicUO.IO
         [MethodImpl(IMPL_OPTION)]
         public short ReadInt16LE()
         {
-            if (Position + 2 > Length)
+            if (Position + sizeof(short) > Length)
             {
                 return 0;
             }
 
             BinaryPrimitives.TryReadInt16LittleEndian(_data.Slice(Position), out short v);
 
-            Skip(2);
+            Skip(sizeof(short));
 
             return v;
         }
@@ -121,14 +130,14 @@ namespace ClassicUO.IO
         [MethodImpl(IMPL_OPTION)]
         public uint ReadUInt32LE()
         {
-            if (Position + 4 > Length)
+            if (Position + sizeof(uint) > Length)
             {
                 return 0;
             }
 
             BinaryPrimitives.TryReadUInt32LittleEndian(_data.Slice(Position), out uint v);
 
-            Skip(4);
+            Skip(sizeof(uint));
 
             return v;
         }
@@ -136,14 +145,14 @@ namespace ClassicUO.IO
         [MethodImpl(IMPL_OPTION)]
         public int ReadInt32LE()
         {
-            if (Position + 4 > Length)
+            if (Position + sizeof(int) > Length)
             {
                 return 0;
             }
 
             int v = BinaryPrimitives.ReadInt32LittleEndian(_data.Slice(Position));
 
-            Skip(4);
+            Skip(sizeof(int));
 
             return v;
         }
@@ -151,14 +160,14 @@ namespace ClassicUO.IO
         [MethodImpl(IMPL_OPTION)]
         public ulong ReadUInt64LE()
         {
-            if (Position + 8 > Length)
+            if (Position + sizeof(ulong) > Length)
             {
                 return 0;
             }
 
             BinaryPrimitives.TryReadUInt64LittleEndian(_data.Slice(Position), out ulong v);
 
-            Skip(8);
+            Skip(sizeof(ulong));
 
             return v;
         }
@@ -166,33 +175,52 @@ namespace ClassicUO.IO
         [MethodImpl(IMPL_OPTION)]
         public long ReadInt64LE()
         {
-            if (Position + 8 > Length)
+            if (Position + sizeof(long) > Length)
             {
                 return 0;
             }
 
             BinaryPrimitives.TryReadInt64LittleEndian(_data.Slice(Position), out long v);
 
-            Skip(8);
+            Skip(sizeof(long));
 
             return v;
         }
 
+        public int Read(Span<byte> buffer)
+        {
+            if (Position + buffer.Length > Length)
+            {
+                return -1;
+            }
 
+            _data.Slice(Position, buffer.Length).CopyTo(buffer);
+            Skip(buffer.Length);
+            return buffer.Length;
+        }
+
+        [MethodImpl(IMPL_OPTION)]
+        public T Read<T>() where T : unmanaged
+        {
+            Unsafe.SkipInit<T>(out var v);
+            var p = new Span<byte>(&v, sizeof(T));
+            Read(p);
+            return v;
+        }
 
 
 
         [MethodImpl(IMPL_OPTION)]
         public ushort ReadUInt16BE()
         {
-            if (Position + 2 > Length)
+            if (Position + sizeof(ushort) > Length)
             {
                 return 0;
             }
 
             BinaryPrimitives.TryReadUInt16BigEndian(_data.Slice(Position), out ushort v);
 
-            Skip(2);
+            Skip(sizeof(ushort));
 
             return v;
         }
@@ -200,14 +228,14 @@ namespace ClassicUO.IO
         [MethodImpl(IMPL_OPTION)]
         public short ReadInt16BE()
         {
-            if (Position + 2 > Length)
+            if (Position + sizeof(short) > Length)
             {
                 return 0;
             }
 
             BinaryPrimitives.TryReadInt16BigEndian(_data.Slice(Position), out short v);
 
-            Skip(2);
+            Skip(sizeof(short));
 
             return v;
         }
@@ -215,14 +243,14 @@ namespace ClassicUO.IO
         [MethodImpl(IMPL_OPTION)]
         public uint ReadUInt32BE()
         {
-            if (Position + 4 > Length)
+            if (Position + sizeof(uint) > Length)
             {
                 return 0;
             }
 
             BinaryPrimitives.TryReadUInt32BigEndian(_data.Slice(Position), out uint v);
 
-            Skip(4);
+            Skip(sizeof(uint));
 
             return v;
         }
@@ -230,14 +258,14 @@ namespace ClassicUO.IO
         [MethodImpl(IMPL_OPTION)]
         public int ReadInt32BE()
         {
-            if (Position + 4 > Length)
+            if (Position + sizeof(int) > Length)
             {
                 return 0;
             }
 
             BinaryPrimitives.TryReadInt32BigEndian(_data.Slice(Position), out int v);
 
-            Skip(4);
+            Skip(sizeof(int));
 
             return v;
         }
@@ -245,14 +273,14 @@ namespace ClassicUO.IO
         [MethodImpl(IMPL_OPTION)]
         public ulong ReadUInt64BE()
         {
-            if (Position + 8 > Length)
+            if (Position + sizeof(ulong) > Length)
             {
                 return 0;
             }
 
             BinaryPrimitives.TryReadUInt64BigEndian(_data.Slice(Position), out ulong v);
 
-            Skip(8);
+            Skip(sizeof(ulong));
 
             return v;
         }
@@ -260,14 +288,14 @@ namespace ClassicUO.IO
         [MethodImpl(IMPL_OPTION)]
         public long ReadInt64BE()
         {
-            if (Position + 8 > Length)
+            if (Position + sizeof(long) > Length)
             {
                 return 0;
             }
 
             BinaryPrimitives.TryReadInt64BigEndian(_data.Slice(Position), out long v);
 
-            Skip(8);
+            Skip(sizeof(long));
 
             return v;
         }

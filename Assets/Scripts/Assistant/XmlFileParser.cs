@@ -250,7 +250,7 @@ namespace Assistant
                     ushort type = GetAttributeUShort(item, "type");
                     ushort limit = Math.Min((ushort)60000, GetAttributeUShort(item, "limit"));
                     string name = GetAttribute(item, "name");
-                    if (type > 0 && type < TileDataLoader.Instance.StaticData.Length && !string.IsNullOrEmpty(name))
+                    if (type > 0 && type < Client.Game.UO.FileManager.TileData.StaticData.Length && !string.IsNullOrEmpty(name))
                         gump.ItemsToLoot[type] = (limit, name);
                 }
             }
@@ -456,7 +456,7 @@ namespace Assistant
             }
             else
             {
-                skillEntries.AddRange(SkillsLoader.Instance.Skills);
+                skillEntries.AddRange(Client.Game.UO.FileManager.Skills.Skills);
             }
 
             Dictionary<int, string> skn = new Dictionary<int, string>
@@ -633,11 +633,11 @@ namespace Assistant
 
         private static void SetAllSkills(List<SkillEntry> entries)
         {
-            SkillsLoader.Instance.Skills.Clear();
-            SkillsLoader.Instance.Skills.AddRange(entries);
-            SkillsLoader.Instance.SortedSkills.Clear();
-            SkillsLoader.Instance.SortedSkills.AddRange(entries);
-            SkillsLoader.Instance.SortedSkills.Sort((a, b) => a.Name.CompareTo(b.Name));
+            Client.Game.UO.FileManager.Skills.Skills.Clear();
+            Client.Game.UO.FileManager.Skills.Skills.AddRange(entries);
+            Client.Game.UO.FileManager.Skills.SortedSkills.Clear();
+            Client.Game.UO.FileManager.Skills.SortedSkills.AddRange(entries);
+            Client.Game.UO.FileManager.Skills.SortedSkills.Sort((a, b) => a.Name.CompareTo(b.Name));
         }
 
 
@@ -1884,7 +1884,7 @@ namespace Assistant
                                         uint serial = GetUInt(item);
                                         if (SerialHelper.IsItem(serial))//Max Item Value - MaxItemValue
                                         {
-                                            if (type >= TileDataLoader.Instance.StaticData.Length)
+                                            if (type >= Client.Game.UO.FileManager.TileData.StaticData.Length)
                                             {
                                                 //we have an invalid loaded type? reset to zero, so we allow the subsystem to recalculate it on next dress action
                                                 type = 0;

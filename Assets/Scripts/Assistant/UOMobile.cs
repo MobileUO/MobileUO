@@ -8,6 +8,7 @@ using System.Text;
 
 using ClassicUO.Network;
 using ClassicUO.Assets;
+using ClassicUO;
 
 namespace Assistant
 {
@@ -117,7 +118,7 @@ namespace Assistant
                 {
                     if (int.TryParse(ss.Substring(1), out int x))
                     {
-                        ss = ClilocLoader.Instance.GetString(x);
+                        ss = Client.Game.UO.FileManager.Clilocs.GetString(x);
                         if (string.IsNullOrEmpty(ss))
                         {
                             ss = arr[i];

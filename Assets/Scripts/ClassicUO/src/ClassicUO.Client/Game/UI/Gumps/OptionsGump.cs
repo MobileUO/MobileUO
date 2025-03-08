@@ -134,6 +134,7 @@ namespace ClassicUO.Game.UI.Gumps
         private ClickableColorBox _innocentColorPickerBox, _friendColorPickerBox, _crimialColorPickerBox, _canAttackColorPickerBox, _enemyColorPickerBox, _murdererColorPickerBox, _neutralColorPickerBox, _beneficColorPickerBox, _harmfulColorPickerBox;
         private HSliderBar _lightBar;
         private Checkbox _buffBarTime, _uiButtonsSingleClick, _queryBeforAttackCheckbox, _queryBeforeBeneficialCheckbox, _spellColoringCheckbox, _spellFormatCheckbox, _enableFastSpellsAssign;
+        private Checkbox _newTargetSystem;
 
         // macro
         private MacroControl _macroControl;
@@ -988,7 +989,7 @@ namespace ClassicUO.Game.UI.Gumps
                 )
             );
 
-            _use_old_status_gump.IsVisible = !CUOEnviroment.IsOutlands;
+            _use_old_status_gump.IsVisible = true;
 
             section3.Add
             (
@@ -2635,6 +2636,17 @@ namespace ClassicUO.Game.UI.Gumps
             int startX = 5;
             int startY = 5;
 
+
+            _newTargetSystem = AddCheckBox(
+                rightArea,
+                ResGumps.NewTargetSystem,
+                _currentProfile.UseNewTargetSystem,
+                startX,
+                startY
+            );
+
+            startY += _newTargetSystem.Height + 2;
+
             _holdDownKeyTab = AddCheckBox
             (
                 rightArea,
@@ -3458,6 +3470,7 @@ namespace ClassicUO.Game.UI.Gumps
                     _reduceFPSWhenInactive.IsChecked = true;
                     _highlightObjects.IsChecked = true;
                     _enableTopbar.IsChecked = false;
+                    _newTargetSystem.IsChecked = true;
                     _holdDownKeyTab.IsChecked = true;
                     _holdDownKeyAlt.IsChecked = true;
                     _closeAllAnchoredGumpsWithRClick.IsChecked = false;
@@ -3699,6 +3712,7 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.InvulnerableHue = _invulnerableColorPickerBox.Hue;
             _currentProfile.MobileHPType = _hpComboBox.SelectedIndex;
             _currentProfile.MobileHPShowWhen = _hpComboBoxShowWhen.SelectedIndex;
+            _currentProfile.UseNewTargetSystem = _newTargetSystem.IsChecked;
             _currentProfile.HoldDownKeyTab = _holdDownKeyTab.IsChecked;
             _currentProfile.HoldDownKeyAltToCloseAnchored = _holdDownKeyAlt.IsChecked;
 
@@ -3846,7 +3860,7 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.EnableMousewheelScaleZoom = _zoomCheckbox.IsChecked;
             _currentProfile.RestoreScaleAfterUnpressCtrl = _restorezoomCheckbox.IsChecked;
 
-            if (!CUOEnviroment.IsOutlands && _use_old_status_gump.IsChecked != _currentProfile.UseOldStatusGump)
+            if (_use_old_status_gump.IsChecked != _currentProfile.UseOldStatusGump)
             {
                 StatusGumpBase status = StatusGumpBase.GetStatusGump();
 
@@ -4548,7 +4562,7 @@ namespace ClassicUO.Game.UI.Gumps
                 _databox.WantUpdateSize = true;
             }
 
-            public override void Add(Control c, int page = 0)
+            public override T Add<T>(T c, int page = 0)
             {
                 int i = _databox.Children.Count - 1;
                 int bottom = 0;
@@ -4575,6 +4589,8 @@ namespace ClassicUO.Game.UI.Gumps
                 _databox.WantUpdateSize = true;
 
                 Height += c.Height + 2;
+
+                return c;
             }
         }
 
@@ -4593,7 +4609,7 @@ namespace ClassicUO.Game.UI.Gumps
 
                 for (byte i = 0; i < max_font; i++)
                 {
-                    if (FontsLoader.Instance.UnicodeFontExists(i))
+                    if (Client.Game.UO.FileManager.Fonts.UnicodeFontExists(i))
                     {
                         Add
                         (
@@ -4675,7 +4691,7 @@ namespace ClassicUO.Game.UI.Gumps
                     maxCharsCount,
                     maxWidthText,
                     unicode,
-                    FontStyle.BlackBorder,
+                    FontStyle.Cropped | FontStyle.BlackBorder,
                     hue
                 )
                 {

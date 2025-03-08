@@ -48,13 +48,12 @@ namespace ClassicUO
         public static bool IsHighDPI;
         public static uint CurrentRefreshRate;
         public static bool SkipLoginScreen;
-        public static bool IsOutlands;
         public static bool NoServerPing;
 
         public static readonly bool IsUnix = Environment.OSVersion.Platform != PlatformID.Win32NT && Environment.OSVersion.Platform != PlatformID.Win32Windows && Environment.OSVersion.Platform != PlatformID.Win32S && Environment.OSVersion.Platform != PlatformID.WinCE;
 
         // MobileUO: hard coded CUO version MobileUO is based on
-        public static readonly string Version = "1.1.0.0";// Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "0.0.0.0";
+        public static readonly string Version = "1.1.0.174";// Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString() ?? "0.0.0.0";
         // MobileUO: removed readonly
         public static string ExecutablePath =
 #if NETFRAMEWORK
