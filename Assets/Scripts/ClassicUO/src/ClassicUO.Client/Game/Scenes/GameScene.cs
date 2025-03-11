@@ -995,6 +995,7 @@ namespace ClassicUO.Game.Scenes
             DrawWorld(batcher, ref matrix, _use_render_target);
 
             // MobileUO: Return to original scaling
+            // MobileUO: TODO: probably need to move this lower after we bring back lights
             batcher.scale = originalBatcherScale;
 
             if (_use_render_target)
