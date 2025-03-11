@@ -184,12 +184,36 @@ namespace Microsoft.Xna.Framework.Graphics
 
         public static Texture2D FromStream(GraphicsDevice graphicsDevice, Stream stream)
         {
-            Console.WriteLine("Texture2D.FromStream is not implemented yet.");
             if (!UnityMainThreadDispatcher.IsMainThread())
-                return null;
-            var texture = new Texture2D(graphicsDevice, 2, 2);
-            return texture;
+            {
+                Debug.Log($"FromStream must be called from the main thread.");
+                throw new InvalidOperationException("FromStream must be called from the main thread.");
+            }
 
+            // Read the stream into a byte array
+            byte[] imageData;
+            using (var memoryStream = new MemoryStream())
+            {
+                stream.CopyTo(memoryStream);
+                imageData = memoryStream.ToArray();
+            }
+
+            // Create a new Unity texture
+            var texture = new UnityEngine.Texture2D(2, 2);
+            if (!texture.LoadImage(imageData))
+            {
+                Debug.Log("Failed to load texture from stream.");
+                throw new InvalidOperationException("Failed to load texture from stream.");
+            }
+
+            // Initialize the XNA texture wrapper
+            var xnaTexture = new Texture2D(graphicsDevice, texture.width, texture.height)
+            {
+                UnityTexture = texture
+            };
+
+
+            return xnaTexture;
         }
 
         // https://github.com/FNA-XNA/FNA/blob/85a8457420278087dc7a81f16661ff68e67b75af/src/Graphics/Texture2D.cs#L213

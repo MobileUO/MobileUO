@@ -123,8 +123,8 @@ namespace ClassicUO.Game.UI.Gumps
         private Task _loadingTask;
 
         // MobileUO: added variables
-        // MobileUO: TODO: this may no longer be necessary as this is no longer used inside of a Task.Run()
         private bool readyToCreateTexture;
+        public string worldMapFilePath;
 
         public WorldMapGump(World world) : base
         (
@@ -541,9 +541,13 @@ namespace ClassicUO.Game.UI.Gumps
             base.Update();
 
             // MobileUO: added logic
-            // MobileUO: TODO: this may no longer be necessary as this is no longer used inside of a Task.Run()
             if (readyToCreateTexture)
             {
+                if (File.Exists(worldMapFilePath))
+                {
+                    using var stream = File.OpenRead(worldMapFilePath);
+                    _mapTexture = Texture2D.FromStream(Client.Game.GraphicsDevice, stream);
+                }
                 GameActions.Print(World, ResGumps.WorldMapLoaded, 0x48);
                 readyToCreateTexture = false;
             }
@@ -1372,15 +1376,16 @@ namespace ClassicUO.Game.UI.Gumps
                     }
                 }
 
-                if (File.Exists(fileMapPath))
-                {
-                    using var stream = File.OpenRead(fileMapPath);
-                    _mapTexture = Texture2D.FromStream(Client.Game.GraphicsDevice, stream);
-                }
+                // MobileUO: TODO: we have to be in the main thread to do this in Unity
+                worldMapFilePath = fileMapPath;
+                //if (File.Exists(fileMapPath))
+                //{
+                //    using var stream = File.OpenRead(fileMapPath);
+                //    _mapTexture = Texture2D.FromStream(Client.Game.GraphicsDevice, stream);
+                //}
 
                 // MobileUO: loading map - show map loaded message on next Update()
-                // MobileUO: TODO: this may no longer be necessary as this is no longer used inside of a Task.Run()
-                //GameActions.Print(ResGumps.WorldMapLoaded, 0x48);
+                //GameActions.Print(World, ResGumps.WorldMapLoaded, 0x48);
 
                 readyToCreateTexture = true;
                     
