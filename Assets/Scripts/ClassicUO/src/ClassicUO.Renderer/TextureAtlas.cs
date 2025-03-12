@@ -27,7 +27,6 @@ namespace ClassicUO.Renderer
 
         public int TexturesCount => _textureList.Count;
 
-
         public unsafe Texture2D AddSprite(
             ReadOnlySpan<uint> pixels,
             int width,
@@ -81,7 +80,6 @@ namespace ClassicUO.Renderer
             _packer = new Packer(_width, _height);
         }
 
-      
         public void SaveImages(string name)
         {
             for (int i = 0, count = TexturesCount; i < count; ++i)

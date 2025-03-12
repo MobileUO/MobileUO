@@ -1,34 +1,4 @@
-﻿#region license
-
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
+﻿// SPDX-License-Identifier: BSD-2-Clause
 
 using ClassicUO.IO;
 using ClassicUO.Utility;
@@ -90,31 +60,31 @@ namespace ClassicUO.Assets
         public int[] MapPatchCount { get; private set; }
         public int[] StaticPatchCount { get; private set; }
 
-        protected UOFileMul[] _filesStatics, _filesIdxStatics, _filesStaticsX, _filesIdxStaticsX;
-        protected UOFile[] _filesMap, _filesMapX;
+        protected FileReader[] _filesStatics, _filesIdxStatics, _filesStaticsX, _filesIdxStaticsX;
+        protected FileReader[] _filesMap, _filesMapX;
 
-        private UOFile[] _currentMapFiles;
-        private UOFileMul[] _currentStaticsFiles, _currentIdxStaticsFiles;
+        protected FileReader[] _currentMapFiles;
+        protected FileReader[] _currentStaticsFiles, _currentIdxStaticsFiles;
 
-        public UOFile GetMapFile(int map)
+        public FileReader GetMapFile(int map)
         {
             return map < _currentMapFiles.Length ? _currentMapFiles[map] : null;
         }
 
-        public UOFileMul GetStaticFile(int map)
+        public FileReader GetStaticFile(int map)
         {
             return map < _currentStaticsFiles.Length ? _currentStaticsFiles[map] : null;
         }
 
         protected void Initialize()
         {
-            _filesMap = new UOFile[MAPS_COUNT];
-            _filesStatics = new UOFileMul[MAPS_COUNT];
-            _filesIdxStatics = new UOFileMul[MAPS_COUNT];
+            _filesMap = new FileReader[MAPS_COUNT];
+            _filesStatics = new FileReader[MAPS_COUNT];
+            _filesIdxStatics = new FileReader[MAPS_COUNT];
 
-            _filesMapX = new UOFile[MAPS_COUNT];
-            _filesStaticsX = new UOFileMul[MAPS_COUNT];
-            _filesIdxStaticsX = new UOFileMul[MAPS_COUNT];
+            _filesMapX = new FileReader[MAPS_COUNT];
+            _filesStaticsX = new FileReader[MAPS_COUNT];
+            _filesIdxStaticsX = new FileReader[MAPS_COUNT];
 
             MapPatchCount = new int[MAPS_COUNT];
             StaticPatchCount = new int[MAPS_COUNT];
@@ -176,14 +146,17 @@ namespace ClassicUO.Assets
 
                 if (FileManager.IsUOPInstallation && File.Exists(path))
                 {
-                    _filesMap[i] = new UOFileUop(path, $"build/map{i}legacymul/{{0:D8}}.dat");
-                    _filesMap[i].FillEntries();
+                    var uopFile = new UOFileUop(path, $"build/map{i}legacymul/{{0:D8}}.dat");
+                    uopFile.FillEntries();
+
+                    _filesMap[i] = uopFile;
 
                     path = FileManager.GetUOFilePath($"map{i}xLegacyMUL.uop");
                     if (File.Exists(path))
                     {
-                        _filesMapX[i] = new UOFileUop(path, $"build/map{i}legacymul/{{0:D8}}.dat");
-                        _filesMapX[i].FillEntries();
+                        var uopFileX = new UOFileUop(path, $"build/map{i}legacymul/{{0:D8}}.dat");
+                        uopFileX.FillEntries();
+                        _filesMapX[i] = uopFileX;
                     }
 
 
@@ -273,9 +246,9 @@ namespace ClassicUO.Assets
             }
 
 
-            _currentMapFiles = new UOFile[_filesMap.Length];
-            _currentIdxStaticsFiles = new UOFileMul[_filesIdxStatics.Length];
-            _currentStaticsFiles = new UOFileMul[_filesStatics.Length];
+            _currentMapFiles = new FileReader[_filesMap.Length];
+            _currentIdxStaticsFiles = new FileReader[_filesIdxStatics.Length];
+            _currentStaticsFiles = new FileReader[_filesStatics.Length];
 
             _filesMap.CopyTo(_currentMapFiles, 0);
             _filesIdxStatics.CopyTo(_currentIdxStaticsFiles, 0);
@@ -759,13 +732,16 @@ namespace ClassicUO.Assets
 
     public struct IndexMap
     {
-        public UOFile MapFile, StaticFile;
+        public FileReader MapFile, StaticFile;
         public ulong MapAddress;
         public ulong OriginalMapAddress;
         public ulong OriginalStaticAddress;
         public uint OriginalStaticCount;
         public ulong StaticAddress;
         public uint StaticCount;
-        public static IndexMap Invalid = new IndexMap();
+
+        public static IndexMap Invalid = new IndexMap() { MapAddress = ulong.MaxValue };
+
+        public readonly bool IsValid() => MapAddress != ulong.MaxValue;
     }
 }

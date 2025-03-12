@@ -1,34 +1,4 @@
-﻿#region license
-
-// Copyright (c) 2024, andreakarasho
-// All rights reserved.
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-// 1. Redistributions of source code must retain the above copyright
-//    notice, this list of conditions and the following disclaimer.
-// 2. Redistributions in binary form must reproduce the above copyright
-//    notice, this list of conditions and the following disclaimer in the
-//    documentation and/or other materials provided with the distribution.
-// 3. All advertising materials mentioning features or use of this software
-//    must display the following acknowledgement:
-//    This product includes software developed by andreakarasho - https://github.com/andreakarasho
-// 4. Neither the name of the copyright holder nor the
-//    names of its contributors may be used to endorse or promote products
-//    derived from this software without specific prior written permission.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ''AS IS'' AND ANY
-// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
-// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-#endregion
+// SPDX-License-Identifier: BSD-2-Clause
 
 using System;
 using System.Collections.Generic;
@@ -85,6 +55,7 @@ namespace ClassicUO.Game.UI.Gumps
         private static readonly Color _semiTransparentWhiteForGrid = new Color(255, 255, 255, 56);
         private static Point _last_position = new Point(100, 100);
         private static Texture2D _mapTexture;
+        private Map.Map _map = null;
 
         private Point _center, _lastScroll, _mouseCenter, _scroll;
         private Point? _lastMousePosition = null;
@@ -92,8 +63,7 @@ namespace ClassicUO.Game.UI.Gumps
         private bool _freeView;
         private List<string> _hiddenMarkerFiles;
         private bool _isScrolling;
-        private bool _isTopMost;  
-        private int _mapIndex;
+        private bool _isTopMost;
         private bool _mapMarkersLoaded;
         private List<string> _hiddenZoneFiles;
         private ZoneSets _zoneSets = new ZoneSets();
@@ -144,10 +114,11 @@ namespace ClassicUO.Game.UI.Gumps
             X = _last_position.X;
             Y = _last_position.Y;
 
-            _mapIndex = -1;
+            _map = World.Map;
             LoadSettings();
 
             GameActions.Print(World, ResGumps.WorldMapLoading, 0x35);
+            ChangeMap(World.MapIndex);
             OnResize();
 
             LoadMarkers();
@@ -310,6 +281,20 @@ namespace ClassicUO.Game.UI.Gumps
 
             _options["free_view"] = new ContextMenuItemEntry(ResGumps.FreeView, () => { FreeView = !FreeView; }, true, FreeView);
 
+            for (int i = 0; i < MapLoader.MAPS_COUNT; i++)
+            {
+                var idx = i;
+
+                _options[$"free_view_map_{idx}"] = new ContextMenuItemEntry
+                (
+                    string.Format(ResGumps.WorldMapChangeMap0, idx), () =>
+                    {
+                        FreeView = true;
+                        ChangeMap(idx);
+                    }
+                );
+            }
+
             _options["show_party_members"] = new ContextMenuItemEntry
             (
                 ResGumps.ShowPartyMembers,
@@ -339,7 +324,7 @@ namespace ClassicUO.Game.UI.Gumps
             _options["show_coordinates"] = new ContextMenuItemEntry(ResGumps.ShowYourCoordinates, () => { _showCoordinates = !_showCoordinates; SaveSettings(); }, true, _showCoordinates);
 
             _options["show_sextant_coordinates"] = new ContextMenuItemEntry(ResGumps.ShowSextantCoordinates, () => { _showSextantCoordinates = !_showSextantCoordinates; }, true, _showSextantCoordinates);
-            
+
             _options["show_mouse_coordinates"] = new ContextMenuItemEntry(ResGumps.ShowMouseCoordinates, () => { _showMouseCoordinates = !_showMouseCoordinates; }, true, _showMouseCoordinates);
 
             _options["allow_positional_target"] = new ContextMenuItemEntry(
@@ -373,7 +358,7 @@ namespace ClassicUO.Game.UI.Gumps
             _gotoMarker = new WMapMarker
             {
                 Color = Color.Aquamarine,
-                MapId = World.MapIndex,
+                MapId = _map.Index,
                 Name = isManualType ? $"Go to: {x}, {y}" : "",
                 X = x,
                 Y = y,
@@ -516,7 +501,15 @@ namespace ClassicUO.Game.UI.Gumps
             ContextMenu.Add(_options["goto_location"]);
             ContextMenu.Add(_options["flip_map"]);
             ContextMenu.Add(_options["top_most"]);
-            ContextMenu.Add(_options["free_view"]);
+
+            ContextMenuItemEntry freeView = new ContextMenuItemEntry(ResGumps.FreeView);
+            freeView.Add(_options["free_view"]);
+
+            for (int i = 0; i < MapLoader.MAPS_COUNT; i++)
+                freeView.Add(_options[$"free_view_map_{i}"]);
+
+            ContextMenu.Add(freeView);
+
             ContextMenu.Add("", null);
             ContextMenu.Add(_options["show_party_members"]);
             ContextMenu.Add(_options["show_mobiles"]);
@@ -557,16 +550,22 @@ namespace ClassicUO.Game.UI.Gumps
                 return;
             }
 
-            if (_mapIndex != World.MapIndex)
-            {
-                _mapIndex = World.MapIndex;
-                if (_loadingTask != null && _loadingTask.Status == TaskStatus.Running)
-                    _loadingTask = _loadingTask.ContinueWith(s => LoadMap(_mapIndex));
-                else
-                    _loadingTask = Task.Run(() => LoadMap(_mapIndex));
-            }
+            if (_map.Index != World.MapIndex && !_freeView)
+                ChangeMap(World.MapIndex);
 
             World.WMapManager.RequestServerPartyGuildInfo();
+        }
+
+        public void ChangeMap(int index)
+        {
+            Client.Game.UO.FileManager.Maps.LoadMap(index, World.ClientFeatures.Flags.HasFlag(CharacterListFlags.CLF_UNLOCK_FELUCCA_AREAS));
+            _map = new Map.Map(World, index);
+
+
+            if (_loadingTask is { Status: TaskStatus.Running })
+                _loadingTask = _loadingTask.ContinueWith(_ => LoadMap(index));
+            else
+                _loadingTask = Task.Run(() => LoadMap(index));
         }
 
         #endregion
@@ -710,7 +709,7 @@ namespace ClassicUO.Game.UI.Gumps
                 0,
                 (ushort)xMap,
                 (ushort)yMap,
-                World.Map.GetTileZ(xMap, yMap)
+                _map.GetTileZ(xMap, yMap)
             );
         }
 
@@ -1182,12 +1181,11 @@ namespace ClassicUO.Game.UI.Gumps
                     _mapCache[mapFile.FilePath] = fileMapPath;
                 }
 
-
                 if (!File.Exists(fileMapPath))
                 {
                     try
                     {
-                        var map = World.Map;
+                        var map = _map;
                         Interlocked.Increment(ref _mapLoading);
 
                         var size = (realWidth + OFFSET_PIX) * (realHeight + OFFSET_PIX);
@@ -1218,7 +1216,7 @@ namespace ClassicUO.Game.UI.Gumps
                             {
                                 ref var indexMap = ref map.GetIndex(bx, by);
 
-                                if (indexMap.MapAddress == 0)
+                                if (!indexMap.IsValid())
                                 {
                                     continue;
                                 }
@@ -1354,6 +1352,7 @@ namespace ClassicUO.Game.UI.Gumps
                         {
                             ColorType = PngColorType.Palette,
                             CompressionLevel = PngCompressionLevel.DefaultCompression,
+                            // MobileUO: commented out
                             //SkipMetadata = true,
                             FilterMethod = PngFilterMethod.None,
                             ChunkFilter = PngChunkFilter.ExcludeAll,
@@ -1827,7 +1826,7 @@ namespace ClassicUO.Game.UI.Gumps
             var markerIcon = "";
             var markerZoomLevel = 3;
 
-            var markerCsv = $"{World.Player.X},{World.Player.Y},{World.Map.Index},{markerName},{markerIcon},{markerColor},{markerZoomLevel}";
+            var markerCsv = $"{World.Player.X},{World.Player.Y},{_map.Index},{markerName},{markerIcon},{markerColor},{markerZoomLevel}";
 
             using (var fileStream = File.Open(UserMarkersFilePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Write))
             using (var streamWriter = new StreamWriter(fileStream))
@@ -1842,7 +1841,7 @@ namespace ClassicUO.Game.UI.Gumps
                 Y = World.Player.Y,
                 Color = GetColor(markerColor),
                 ColorName = markerColor,
-                MapId = World.Map.Index,
+                MapId = _map.Index,
                 MarkerIconName = markerIcon,
                 Name = markerName,
                 ZoomIndex = markerZoomLevel
@@ -2040,7 +2039,7 @@ namespace ClassicUO.Game.UI.Gumps
 
         private void DrawAll(UltimaBatcher2D batcher, Rectangle srcRect, int gX, int gY, int halfWidth, int halfHeight)
         {
-            foreach (Zone zone in _zoneSets.GetZonesForMapIndex(World.MapIndex))
+            foreach (Zone zone in _zoneSets.GetZonesForMapIndex(_map.Index))
             {
                 if (zone.BoundingRectangle.Intersects(srcRect))
                 {
@@ -2296,10 +2295,10 @@ namespace ClassicUO.Game.UI.Gumps
             if (_showCoordinates)
             {
                 string text = $"{World.Player.X}, {World.Player.Y} ({World.Player.Z}) [{_zoomIndex}]";
-                
-                if (_showSextantCoordinates && Sextant.FormatString(new Point(World.Player.X, World.Player.Y), World.Map, out var sextantCoords))
+
+                if (_showSextantCoordinates && Sextant.FormatString(new Point(World.Player.X, World.Player.Y), _map, out var sextantCoords))
                     text += "\n" + sextantCoords;
-                
+
                 Vector3 hueVector = new(0f, 1f, 1f);
 
                 batcher.DrawString(Fonts.Bold, text, gX + 6, gY + 6, hueVector);
@@ -2310,12 +2309,12 @@ namespace ClassicUO.Game.UI.Gumps
             if (_showMouseCoordinates && _lastMousePosition != null)
             {
                 CanvasToWorld(_lastMousePosition.Value.X, _lastMousePosition.Value.Y, out int mouseWorldX, out int mouseWorldY);
-                
+
                 string mouseCoordinateString = $"{mouseWorldX} {mouseWorldY}";
-                
-                if (_showSextantCoordinates && Sextant.FormatString(new Point(mouseWorldX, mouseWorldY), World.Map, out var sextantCoords))
+
+                if (_showSextantCoordinates && Sextant.FormatString(new Point(mouseWorldX, mouseWorldY), _map, out var sextantCoords))
                     mouseCoordinateString += "\n" + sextantCoords;
-                
+
                 Vector2 size = Fonts.Regular.MeasureString(mouseCoordinateString);
                 int mx = gX + 5;
                 int my = gY + Height - (int)Math.Ceiling(size.Y) - 15;
@@ -2508,7 +2507,7 @@ namespace ClassicUO.Game.UI.Gumps
             float zoom
         )
         {
-            if (marker.MapId != World.MapIndex)
+            if (marker.MapId != _map.Index)
             {
                 return false;
             }
@@ -2843,7 +2842,7 @@ namespace ClassicUO.Game.UI.Gumps
                 color = Color.Yellow;
             }
 
-            if (entity.Map != World.MapIndex)
+            if (entity.Map != _map.Index)
             {
                 uohue = 992;
                 color = Color.DarkGray;
@@ -3157,14 +3156,14 @@ namespace ClassicUO.Game.UI.Gumps
                     _center.Y = 0;
                 }
 
-                if (_center.X > Client.Game.UO.FileManager.Maps.MapsDefaultSize[World.MapIndex, 0])
+                if (_center.X > Client.Game.UO.FileManager.Maps.MapsDefaultSize[_map.Index, 0])
                 {
-                    _center.X = Client.Game.UO.FileManager.Maps.MapsDefaultSize[World.MapIndex, 0];
+                    _center.X = Client.Game.UO.FileManager.Maps.MapsDefaultSize[_map.Index, 0];
                 }
 
-                if (_center.Y > Client.Game.UO.FileManager.Maps.MapsDefaultSize[World.MapIndex, 1])
+                if (_center.Y > Client.Game.UO.FileManager.Maps.MapsDefaultSize[_map.Index, 1])
                 {
-                    _center.Y = Client.Game.UO.FileManager.Maps.MapsDefaultSize[World.MapIndex, 1];
+                    _center.Y = Client.Game.UO.FileManager.Maps.MapsDefaultSize[_map.Index, 1];
                 }
             }
             else

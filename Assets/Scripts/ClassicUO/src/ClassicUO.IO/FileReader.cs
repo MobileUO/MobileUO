@@ -1,7 +1,6 @@
 ﻿using ClassicUO.Assets;
 using System;
 using System.IO;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -15,10 +14,10 @@ namespace ClassicUO.IO
         protected FileReader(FileStream stream)
         {
             _stream = stream;
-            Length = stream.Length;
         }
 
-        public long Length { get; }
+        public string FilePath => _stream.Name;
+        public long Length => _stream.Length;
         public long Position => _position;
 
         public abstract BinaryReader Reader { get; }
@@ -92,4 +91,3 @@ namespace ClassicUO.IO
         }
     }
 }
-
