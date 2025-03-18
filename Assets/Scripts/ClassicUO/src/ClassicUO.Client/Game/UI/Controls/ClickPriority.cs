@@ -1,1 +1,11 @@
-../../../../../../../../external/ClassicUO/src/ClassicUO.Client/Game/UI/Controls/ClickPriority.cs
+// SPDX-License-Identifier: BSD-2-Clause
+
+namespace ClassicUO.Game.UI.Controls
+{
+    internal enum ClickPriority
+    {
+        High,
+        Default,
+        Low
+    }
+}

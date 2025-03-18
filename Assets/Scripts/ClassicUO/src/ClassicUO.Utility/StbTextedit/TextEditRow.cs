@@ -1,1 +1,14 @@
-../../../../../../external/ClassicUO/src/ClassicUO.Utility/StbTextedit/TextEditRow.cs
+// SPDX-License-Identifier: BSD-2-Clause
+
+namespace StbTextEditSharp
+{
+    public struct TextEditRow
+    {
+        public float x0;
+        public float x1;
+        public float baseline_y_delta;
+        public float ymin;
+        public float ymax;
+        public int num_chars;
+    }
+}

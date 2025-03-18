@@ -1,1 +1,11 @@
-../../../../../../../../external/ClassicUO/src/ClassicUO.Client/Game/UI/Controls/GumpControlInfo.cs
+﻿// SPDX-License-Identifier: BSD-2-Clause
+
+namespace ClassicUO.Game.UI.Controls
+{
+    internal enum UILayer
+    {
+        Over,
+        Default,
+        Under
+    }
+}

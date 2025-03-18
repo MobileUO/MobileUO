@@ -1,1 +1,11 @@
-../../../../../../../external/ClassicUO/src/ClassicUO.Client/Game/Scenes/SceneType.cs
+﻿// SPDX-License-Identifier: BSD-2-Clause
+
+namespace ClassicUO.Game.Scenes
+{
+    internal enum SceneType
+    {
+        None,
+        Login,
+        Game
+    }
+}

@@ -1,1 +1,11 @@
-../../../../../../../external/ClassicUO/src/ClassicUO.Client/Game/Managers/ChatStatus.cs
+// SPDX-License-Identifier: BSD-2-Clause
+
+namespace ClassicUO.Game.Managers
+{
+    internal enum ChatStatus : byte
+    {
+        Disabled,
+        Enabled,
+        EnabledUserRequest
+    }
+}
