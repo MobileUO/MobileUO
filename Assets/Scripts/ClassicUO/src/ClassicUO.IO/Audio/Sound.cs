@@ -105,7 +105,7 @@ namespace ClassicUO.IO.Audio
 
         protected int Frequency = 22050;
 
-        protected abstract byte[] GetBuffer();
+        protected abstract ArraySegment<byte> GetBuffer();
         protected abstract void OnBufferNeeded(object sender, EventArgs e);
 
         protected virtual void AfterStop()
@@ -139,9 +139,9 @@ namespace ClassicUO.IO.Audio
             }
 
 
-            byte[] buffer = GetBuffer();
+            var buffer = GetBuffer();
 
-            if (buffer != null && buffer.Length > 0)
+            if (buffer.Count > 0)
             {
                 // MobileUO: added distortion fix
                 _lastPlayedTime = curTime + Delay - DistortionFix;
@@ -149,11 +149,11 @@ namespace ClassicUO.IO.Audio
                 SoundInstance.BufferNeeded += OnBufferNeeded;
                 // MobileUO: keep this version of SubmitBuffer
                 // MobileUO: TODO: can we get new way to work?
-                SoundInstance.SubmitBuffer(buffer, this is UOMusic, buffer.Length);
+                SoundInstance.SubmitBuffer(buffer.Array, this is UOMusic, buffer.Count);
                 VolumeFactor = volumeFactor;
                 Volume = volume;
 
-                DurationTime = curTime + SoundInstance.GetSampleDuration(buffer.Length).TotalMilliseconds;
+                DurationTime = curTime + SoundInstance.GetSampleDuration(buffer.Count).TotalMilliseconds;
 
                 // MobileUO: keep this version of Play
                 // MobileUO: TODO: can we get new way to work?

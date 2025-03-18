@@ -35,7 +35,7 @@ namespace ClassicUO.IO.Audio
             // OnBufferNeeded(null, null);
         }
 
-        protected override byte[] GetBuffer()
+        protected override ArraySegment<byte> GetBuffer()
         {
             try
             {
@@ -59,7 +59,7 @@ namespace ClassicUO.IO.Audio
                         }
                     }
 
-                    return m_WaveBuffer;
+                    return new ArraySegment<byte>(m_WaveBuffer, 0, bytesReturned);
                 }
             }
             catch (Exception ex)
@@ -69,7 +69,7 @@ namespace ClassicUO.IO.Audio
 
             Stop();
 
-            return null;
+            return ArraySegment<byte>.Empty;
         }
 
         protected override void OnBufferNeeded(object sender, EventArgs e)
@@ -86,15 +86,17 @@ namespace ClassicUO.IO.Audio
                 // MobileUO: commented out
                 //while (SoundInstance.PendingBufferCount < 3)
                 {
-                    byte[] buffer = GetBuffer();
+                    var buffer = GetBuffer();
 
-                    if (SoundInstance.IsDisposed || buffer == null)
+                    if (SoundInstance.IsDisposed || buffer.Count == 0)
                     {
                         // MobileUO: return instead of break
                         return;
                     }
 
-                    SoundInstance.SubmitBuffer(buffer);
+                    // MobileUO: use this version
+                    // MobileUO: TODO: get new version to work
+                    SoundInstance.SubmitBuffer(buffer.Array);
                 }
             }
         }
