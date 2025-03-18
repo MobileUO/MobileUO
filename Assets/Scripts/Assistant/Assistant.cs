@@ -401,7 +401,7 @@ namespace ClassicUO.Game.UI.Gumps
                 Y = UOSObjects.Gump.Y + (UOSObjects.Gump.Height >> 2);
                 Width = 300;
                 Height = 100;
-                Add(_alpha = new AlphaBlendControl(0.0f) { X = 1, Y = 1, Width = 298, Height = 98 });
+                Add(_alpha = new AlphaBlendControl(1.0f) { X = 1, Y = 1, Width = 298, Height = 98 });
                 _lines = Line.CreateRectangleArea(this, 10, 10, 280, 80, 0, Color.Gray.PackedValue, 2, "Enter the New Macro Name");
                 Add(new GumpPicTiled(15, 30, 270, 23, 0x52));
                 Add(new GumpPicTiled(16, 31, 269, 21, 0xBBC));
