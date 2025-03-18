@@ -107,7 +107,7 @@ namespace ClassicUO.Game.UI.Controls
         internal static NiceButton GetSelected(Control p, int group)
         {
             // MobileUO: for assistant
-            IEnumerable<NiceButton> list = p is ScrollArea
+            IEnumerable<NiceButton> list = p is AssistScrollArea
                                             ? p.FindControls<ScrollAreaItem>()
                                                .SelectMany(s => s.Children.OfType<NiceButton>())
                                             : p.FindControls<NiceButton>();
