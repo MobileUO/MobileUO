@@ -18,6 +18,7 @@ namespace ClassicUO.Assets
     // https://github.com/cbnolok/UOETE/blob/master/src/uotileart.cpp
     public sealed class TileArtLoader : UOFileLoader
     {
+        // MobileUO: collection expressions are not available in Unity's C#
         private readonly Dictionary<uint, TileArtInfo> _tileArtInfos = new Dictionary<uint, TileArtInfo>();//[];
         private UOFileUop _file;
 
@@ -255,20 +256,22 @@ namespace ClassicUO.Assets
                 {
                     var subCount = reader.ReadUInt32LE();
 
-                    if (!Appareances.TryGetValue(subType, out var dict))
+                    if (!Appearances.TryGetValue(subType, out var dict))
                     {
+                        // MobileUO: collection expressions are not available in Unity's C#
                         dict = new Dictionary<uint, uint>(); //[];
-                        Appareances.Add(subType, dict);
+                        Appearances.Add(subType, dict);
                     }
 
                     for (var k = 0; k < subCount; ++k)
                     {
-                        var unk1 = reader.ReadUInt32LE();
-                        var unk2 = reader.ReadUInt32LE();
+                        var val = reader.ReadUInt32LE();
+                        var animId = reader.ReadUInt32LE();
 
-                        var body = unk1 % 10000;
+                        uint offset = val / 1000;
+                        uint body = val % 1000;
 
-                        if (!dict.TryAdd(body, unk2))
+                        if (!dict.TryAdd(body, animId + offset))
                         {
 
                         }
@@ -335,16 +338,17 @@ namespace ClassicUO.Assets
         public TAEFlag[] Flags { get; } = new TAEFlag[2] { 0, 0 }; //[0, 0];
         public List<(TAEPropID PropType, uint Value)>[] Props { get; } = new List<(TAEPropID PropType, uint Value)>[2];// = [[], []];
         public List<(uint, uint)> StackAliases { get; } = new List<(uint, uint)>();// = [];
-        public Dictionary<byte, Dictionary<uint, uint>> Appareances { get; } = new Dictionary<byte, Dictionary<uint, uint>>();// = [];
+        public Dictionary<byte, Dictionary<uint, uint>> Appearances { get; } = new Dictionary<byte, Dictionary<uint, uint>>();// = [];
 
 
-        public bool TryGetAppearance(uint mobGraphic, out uint appareanceId)
+        public bool TryGetAppearance(uint mobGraphic, out uint appearanceId)
         {
-            appareanceId = 0;
+            appearanceId = 0;
 
             // get in account only type 0 for some unknown reason :D
-            return Appareances.TryGetValue(0, out var appareanceDict) &&
-                appareanceDict.TryGetValue(mobGraphic, out appareanceId);
+            // added the Appearances.Count > 1 because seems like the conversion should happen only when there is more than 1 appearance (?)
+            return Appearances.Count > 1 && Appearances.TryGetValue(0, out var appearanceDict) &&
+                appearanceDict.TryGetValue(mobGraphic, out appearanceId);
         }
     }
 }

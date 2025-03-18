@@ -13,24 +13,34 @@ namespace ClassicUO.Configuration
          // MobileUO: added variable
         public static System.Action ProfileLoaded;
 
+        private static string _rootPath;
+        private static string RootPath
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(_rootPath))
+                {
+                    if (string.IsNullOrWhiteSpace(Settings.GlobalSettings.ProfilesPath))
+                    {
+                        _rootPath = Path.Combine(CUOEnviroment.ExecutablePath, "Data", "Profiles");
+                    }
+                    else
+                    {
+                        _rootPath = Settings.GlobalSettings.ProfilesPath;
+                    }
+                }
+
+                return _rootPath;
+            }
+        }
+
         public static void Load(string servername, string username, string charactername)
         {
-            string rootpath;
-
-            if (string.IsNullOrWhiteSpace(Settings.GlobalSettings.ProfilesPath))
-            {
-                rootpath = Path.Combine(CUOEnviroment.ExecutablePath, "Data", "Profiles");
-            }
-            else
-            {
-                rootpath = Settings.GlobalSettings.ProfilesPath;
-            }
-
-            string path = FileSystemHelper.CreateFolderIfNotExists(rootpath, username, servername, charactername);
+            string path = FileSystemHelper.CreateFolderIfNotExists(RootPath, username, servername, charactername);
             string fileToLoad = Path.Combine(path, "profile.json");
 
             ProfilePath = path;
-            CurrentProfile = ConfigurationResolver.Load<Profile>(fileToLoad, ProfileJsonContext.DefaultToUse.Profile) ?? new Profile();
+            CurrentProfile = ConfigurationResolver.Load<Profile>(fileToLoad, ProfileJsonContext.DefaultToUse.Profile) ?? NewFromDefault();
 
             CurrentProfile.Username = username;
             CurrentProfile.ServerName = servername;
@@ -42,6 +52,15 @@ namespace ClassicUO.Configuration
             ProfileLoaded?.Invoke();
         }
 
+        public static void SetProfileAsDefault(Profile profile)
+        {
+            profile.SaveAs(RootPath, "default.json");
+        }
+
+        public static Profile NewFromDefault()
+        {
+            return ConfigurationResolver.Load<Profile>(Path.Combine(RootPath, "default.json"), ProfileJsonContext.DefaultToUse.Profile) ?? new Profile();
+        }
 
         private static void ValidateFields(Profile profile)
         {

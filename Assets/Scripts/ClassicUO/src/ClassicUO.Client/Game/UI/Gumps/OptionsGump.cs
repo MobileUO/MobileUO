@@ -104,7 +104,7 @@ namespace ClassicUO.Game.UI.Gumps
         private ClickableColorBox _innocentColorPickerBox, _friendColorPickerBox, _crimialColorPickerBox, _canAttackColorPickerBox, _enemyColorPickerBox, _murdererColorPickerBox, _neutralColorPickerBox, _beneficColorPickerBox, _harmfulColorPickerBox;
         private HSliderBar _lightBar;
         private Checkbox _buffBarTime, _uiButtonsSingleClick, _queryBeforAttackCheckbox, _queryBeforeBeneficialCheckbox, _spellColoringCheckbox, _spellFormatCheckbox, _enableFastSpellsAssign;
-        private Checkbox _newTargetSystem;
+        private Checkbox _newTargetSystem, _showDPSCheckbox;
 
         // macro
         private MacroControl _macroControl;
@@ -134,6 +134,7 @@ namespace ClassicUO.Game.UI.Gumps
         private FontSelector _tooltip_font_selector;
         private HSliderBar _dragSelectStartX, _dragSelectStartY;
         private Checkbox _dragSelectAsAnchor;
+        private NiceButton _setAsNewDefault;
 
         // video
         private Checkbox _use_old_status_gump, _statusGumpBarMutuallyExclusive, _windowBorderless, _enableDeathScreen, _enableBlackWhiteEffect, _altLights, _enableLight, _enableShadows, _enableShadowsStatics, _auraMouse, _runMouseInSeparateThread, _useColoredLights, _darkNights, _partyAura, _hideChatGradient, _animatedWaterEffect;
@@ -1298,6 +1299,25 @@ namespace ClassicUO.Game.UI.Gumps
             );
 
             section4.PopIndent();
+
+            section4.Add
+            (
+                _setAsNewDefault = new NiceButton
+                (
+                    startX, 
+                    startY,
+                    section4.Width - 18,
+                    25,
+                    ButtonAction.Default,
+                    ResGumps.SetAsNewDefault
+                )
+                { IsSelectable = true, IsSelected = true } //For styling, easier to distinguish as a button.
+            );
+            _setAsNewDefault.MouseUp += (s, e) => 
+            {
+                ProfileManager.SetProfileAsDefault(_currentProfile);
+                GameActions.Print(World, ResGeneral.DefaultProfileSet);
+            };
 
 
             SettingsSection section5 = AddSettingsSection(box, "Terrain & Statics");
@@ -2740,6 +2760,17 @@ namespace ClassicUO.Game.UI.Gumps
                 startY
             );
 
+            startY += _enableFastSpellsAssign.Height + 2;
+
+            _showDPSCheckbox = AddCheckBox
+            (
+                rightArea,
+                ResGumps.ShowDPSWithDamage,
+                _currentProfile.ShowDPSWithDamageNumbers,
+                startX,
+                startY
+            );
+
             startY += 30;
 
             int initialY = startY;
@@ -3633,6 +3664,7 @@ namespace ClassicUO.Game.UI.Gumps
                     break;
 
                 case 8: // combat
+                    _showDPSCheckbox.IsChecked = false;
                     _innocentColorPickerBox.Hue = 0x005A;
                     _friendColorPickerBox.Hue = 0x0044;
                     _crimialColorPickerBox.Hue = 0x03b2;
@@ -4031,6 +4063,7 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.EnabledSpellHue = _spellColoringCheckbox.IsChecked;
             _currentProfile.EnabledSpellFormat = _spellFormatCheckbox.IsChecked;
             _currentProfile.SpellDisplayFormat = _spellFormatBox.Text;
+            _currentProfile.ShowDPSWithDamageNumbers = _showDPSCheckbox.IsChecked;
 
             // macros
             World.Macros.Save();

@@ -311,6 +311,7 @@ namespace ClassicUO.Configuration
         public string WorldMapHiddenZoneFiles { get; set; } = string.Empty;
         public bool WorldMapShowGridIfZoomed { get; set; } = true;
         public bool WorldMapAllowPositionalTarget { get; set; } = false;
+        public bool ShowDPSWithDamageNumbers { get; set; } = true;
 
 
         // MobileUO: TODO: this was moved to ProfileManager, but think we need to keep them for now
@@ -362,6 +363,11 @@ namespace ClassicUO.Configuration
             SaveGumps(world, path);
 
             Log.Trace("Saving done!");
+        }
+
+        public void SaveAs(string path, string filename = "default.json")
+        {
+            ConfigurationResolver.Save(this, Path.Combine(path, filename), ProfileJsonContext.DefaultToUse.Profile);
         }
 
         private void SaveGumps(World world, string path)
