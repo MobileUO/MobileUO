@@ -31,6 +31,7 @@ If applicable, add screenshots to help explain your problem.
  - Device: [e.g. Google Pixel 7, iPhone 16 Pro, etc.]
  - MobileUO Version: (can be fetched from shard selection screen)
  - ClassicUO Version: (can be fetched from the login screen)
+ - UO Version: (can be fetched from the login screen)
  - [ ] Using DEV Version?
    - If yes: does the problem also exist in the current production version (from the app stores) or is it a new issue?
 
