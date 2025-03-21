@@ -23,9 +23,10 @@ using System;
 using System.Collections.Generic;
 
 using ClassicUO.Input;
-using ClassicUO.IO.Resources;
+using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace ClassicUO.Game.UI.Controls
 {
@@ -34,13 +35,13 @@ namespace ClassicUO.Game.UI.Controls
         private const int INACTIVE = 0;
         private const int ACTIVE = 1;
         private readonly RenderedText _text;
-        private readonly UOTexture32[] _textures = new UOTexture32[2];
+        private readonly Texture2D[] _textures = new Texture2D[2];
         private bool _isChecked;
 
         public AssistCheckbox(ushort inactive, ushort active, string text = "", byte font = 0, ushort color = 0, bool isunicode = true, int maxWidth = 0)
         {
-            _textures[INACTIVE] = GumpsLoader.Instance.GetTexture(inactive);
-            _textures[ACTIVE] = GumpsLoader.Instance.GetTexture(active);
+            _textures[INACTIVE] = Client.Game.UO.Gumps.GetGump(inactive).Texture;
+            _textures[ACTIVE] =  Client.Game.UO.Gumps.GetGump(active).Texture;
 
             if (_textures[0] == null || _textures[1] == null)
             {
@@ -49,7 +50,7 @@ namespace ClassicUO.Game.UI.Controls
                 return;
             }
 
-            UOTexture32 t = _textures[INACTIVE];
+            Texture2D t = _textures[INACTIVE];
             Width = t.Width;
 
             _text = RenderedText.Create(text, color, font, isunicode, maxWidth: maxWidth);
@@ -101,17 +102,18 @@ namespace ClassicUO.Game.UI.Controls
 
         public event EventHandler ValueChanged;
 
-        public override void Update(double totalMS, double frameMS)
+        public override void Update()
         {
-            for (int i = 0; i < _textures.Length; i++)
-            {
-                UOTexture32 t = _textures[i];
+            //for (int i = 0; i < _textures.Length; i++)
+            //{
+            //    Texture2D t = _textures[i];
 
-                if (t != null)
-                    t.Ticks = (long) totalMS;
-            }
+            // MobileUO: CUO 0.1.11.0 removed totalMS from Update method
+            //    if (t != null)
+            //        t.Ticks = (long) totalMS;
+            //}
 
-            base.Update(totalMS, frameMS);
+            base.Update();
         }
 
         public override bool Draw(UltimaBatcher2D batcher, int x, int y)
@@ -119,10 +121,12 @@ namespace ClassicUO.Game.UI.Controls
             if (IsDisposed)
                 return false;
 
-            ResetHueVector();
+            // MobileUO: CUO 0.1.11.0 drops ResetHueVector()
+            var hueVector = ShaderHueTranslator.GetHueVector(0);
+            //ResetHueVector();
 
             bool ok = base.Draw(batcher, x, y);
-            batcher.Draw2D(IsChecked ? _textures[ACTIVE] : _textures[INACTIVE], x, y, ref _hueVector);
+            batcher.Draw2D(IsChecked ? _textures[ACTIVE] : _textures[INACTIVE], x, y, ref hueVector);
             _text.Draw(batcher, x + _textures[ACTIVE].Width + 2, y);
 
             return ok;

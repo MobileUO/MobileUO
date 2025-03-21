@@ -1,1 +1,0 @@
-../../../../../../../../external/ClassicUO/src/IO/Audio/MP3Sharp/IO/RiffFile.cs

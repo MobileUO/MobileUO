@@ -10,3 +10,5 @@
 /*.csproj
 /UserSettings/
 *.DS_Store
+/ClassicUO.Resources/.vs/ClassicUO.Resources
+/ClassicUO.Resources/obj/Debug
