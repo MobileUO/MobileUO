@@ -1,4 +1,5 @@
-﻿using ClassicUO.Game;
+﻿using ClassicUO;
+using ClassicUO.Game;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -442,7 +443,7 @@ namespace Assistant
 
                     //Log("Lift timeout, forced drop to pack for {0}", m_Pending);
 
-                    if (World.Player != null)
+                    if (Client.Game.UO.World.Player != null)
                     {
                         UOSObjects.Player.SendMessage(MsgLevel.Force, "WARNING: Drag/Drop timeout! Dropping item in hand to backpack");
 

@@ -1,1 +1,0 @@
-../../../../../external/ClassicUO/src/Configuration/ConfigurationResolver.cs

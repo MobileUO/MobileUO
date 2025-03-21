@@ -3,7 +3,7 @@ using System.Xml;
 using ClassicUO.Configuration;
 using ClassicUO.Game.UI.Controls;
 using ClassicUO.Input;
-using ClassicUO.IO.Resources;
+using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -19,7 +19,7 @@ namespace ClassicUO.Game.UI.Gumps
         private Texture2D backgroundTexture;
         private Label label;
 
-        public AssistantMacroButtonGump(string macroName, int x, int y) : this()
+        public AssistantMacroButtonGump(World world, string macroName, int x, int y) : this(world)
         {
             X = x;
             Y = y;
@@ -27,7 +27,7 @@ namespace ClassicUO.Game.UI.Gumps
             BuildGump();
         }
 
-        public AssistantMacroButtonGump() : base(0, 0)
+        public AssistantMacroButtonGump(World world) : base(world, 0, 0)
         {
             CanMove = true;
             AcceptMouseInput = true;
@@ -40,7 +40,7 @@ namespace ClassicUO.Game.UI.Gumps
             AnchorType = ANCHOR_TYPE.SPELL;
         }
 
-        public override GUMP_TYPE GumpType => GUMP_TYPE.GT_ASSISTANTMACROBUTTON;
+        public override GumpType GumpType => GumpType.AssistantMacroButton;
 
         private void BuildGump()
         {
@@ -55,20 +55,20 @@ namespace ClassicUO.Game.UI.Gumps
             label.Y = (Height >> 1) - (label.Height >> 1);
             Add(label);
 
-            backgroundTexture = Texture2DCache.GetTexture(new Color(30, 30, 30));
+            backgroundTexture = SolidColorTextureCache.GetTexture(new Color(30, 30, 30));
         }
 
         protected override void OnMouseEnter(int x, int y)
         {
             label.Hue = 53;
-            backgroundTexture = Texture2DCache.GetTexture(Color.DimGray);
+            backgroundTexture = SolidColorTextureCache.GetTexture(Color.DimGray);
             base.OnMouseEnter(x, y);
         }
 
         protected override void OnMouseExit(int x, int y)
         {
             label.Hue = 1001;
-            backgroundTexture = Texture2DCache.GetTexture(new Color(30, 30, 30));
+            backgroundTexture = SolidColorTextureCache.GetTexture(new Color(30, 30, 30));
             base.OnMouseExit(x, y);
         }
 
@@ -76,9 +76,9 @@ namespace ClassicUO.Game.UI.Gumps
         {
             base.OnMouseUp(x, y, MouseButtonType.Left);
 
-            Point offset = Mouse.LDroppedOffset;
+            Point offset = Mouse.LDragOffset;
 
-            if (ProfileManager.Current.CastSpellsByOneClick && button == MouseButtonType.Left && !Keyboard.Alt && Math.Abs(offset.X) < 5 && Math.Abs(offset.Y) < 5)
+            if (ProfileManager.CurrentProfile.CastSpellsByOneClick && button == MouseButtonType.Left && !Keyboard.Alt && Math.Abs(offset.X) < 5 && Math.Abs(offset.Y) < 5)
             {
                 RunMacro();
             }
@@ -86,7 +86,7 @@ namespace ClassicUO.Game.UI.Gumps
 
         protected override bool OnMouseDoubleClick(int x, int y, MouseButtonType button)
         {
-            if (ProfileManager.Current.CastSpellsByOneClick || button != MouseButtonType.Left)
+            if (ProfileManager.CurrentProfile.CastSpellsByOneClick || button != MouseButtonType.Left)
                 return false;
 
             RunMacro();
@@ -103,13 +103,15 @@ namespace ClassicUO.Game.UI.Gumps
 
         public override bool Draw(UltimaBatcher2D batcher, int x, int y)
         {
-            ResetHueVector();
-            _hueVector.Z = 0.1f;
+            // MobileUO: CUO 0.1.11.0 drops ResetHueVector()
+            var hueVector = ShaderHueTranslator.GetHueVector(0);
+            //ResetHueVector();
+            hueVector.Z = 0.9f;
 
-            batcher.Draw2D(backgroundTexture, x, y, Width, Height, ref _hueVector);
+            batcher.Draw2D(backgroundTexture, x, y, Width, Height, ref hueVector);
 
-            _hueVector.Z = 0;
-            batcher.DrawRectangle(Texture2DCache.GetTexture(Color.Gray), x, y, Width, Height, ref _hueVector);
+            hueVector.Z = 1;
+            batcher.DrawRectangle(SolidColorTextureCache.GetTexture(Color.Gray), x, y, Width, Height, hueVector);
 
             base.Draw(batcher, x, y);
             return true;

@@ -8,6 +8,7 @@ using ClassicUO.Network;
 using Assistant.Core;
 using UOScript;
 using AssistGump = ClassicUO.Game.UI.Gumps.AssistantGump;
+using ClassicUO;
 
 namespace Assistant
 {
@@ -239,7 +240,7 @@ namespace Assistant
                         continue;
                 }
 
-                if (!m.Blessed && m.IsGhost == isdead && m.Serial != World.Player.Serial &&
+                if (!m.Blessed && m.IsGhost == isdead && m.Serial != Client.Game.UO.World.Player.Serial &&
                     Utility.InRange(UOSObjects.Player.Position, m.Position, UOSObjects.Gump.SmartTargetRangeValue))
                 {
                     if (noto == TargetType.Any && !friends)
@@ -329,7 +330,7 @@ namespace Assistant
             byte map = UOSObjects.Player.Map;
             foreach (UOMobile m in UOSObjects.Mobiles.Values)
             {
-                if (m.Map == map && Utility.InRange(UOSObjects.Player.Position, m.Position, World.ClientViewRange))
+                if (m.Map == map && Utility.InRange(UOSObjects.Player.Position, m.Position, Client.Game.UO.World.ClientViewRange))
                 {
                     if (ValidTarget(targets, m.Notoriety) && ((filter & FilterType.AnyForm) == 0 || (GetFilterType(m) & filter) != 0))
                     {
@@ -1883,7 +1884,7 @@ namespace Assistant
                     if (!m.IsMonster)
                         continue;
                 }
-                if (!m.Blessed && m.IsGhost == isdead && m.Serial != World.Player.Serial &&
+                if (!m.Blessed && m.IsGhost == isdead && m.Serial != Client.Game.UO.World.Player.Serial &&
                     Utility.InRange(UOSObjects.Player.Position, m.Position, UOSObjects.Gump.SmartTargetRangeValue))
                 {
                     if (noto.Length == 0 && !friends)

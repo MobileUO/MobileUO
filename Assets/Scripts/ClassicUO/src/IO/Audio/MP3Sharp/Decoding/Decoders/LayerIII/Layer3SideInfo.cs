@@ -1,1 +1,0 @@
-../../../../../../../../../../external/ClassicUO/src/IO/Audio/MP3Sharp/Decoding/Decoders/LayerIII/Layer3SideInfo.cs

@@ -1,1 +1,0 @@
-../../../../../external/ClassicUO/src/Interfaces/IDrawable.cs

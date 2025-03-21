@@ -8,7 +8,7 @@ namespace Microsoft.Xna.Framework.Graphics
     {
         private readonly bool[] modifiedSamplers = new bool[16];
 
-        public GraphicsDevice()
+        public GraphicsDevice(PresentationParameters presentationParameters=null)
         {
             // TODO: Complete member initialization
             //NOTE: For now, just assume 16 slots are fine instead of trying to find GLDevice.MaxTextureSlots equivalent in Unity
@@ -16,6 +16,7 @@ namespace Microsoft.Xna.Framework.Graphics
             int slots1 = 16;
             this.SamplerStates = new SamplerStateCollection(slots1, this.modifiedSamplers);
             Viewport = new Viewport(0, 0, Screen.width, Screen.height);
+            pPublicCachedParams = new PresentationParameters().Clone();
         }
 
         public Viewport Viewport { get; set; }
@@ -25,8 +26,17 @@ namespace Microsoft.Xna.Framework.Graphics
         public BlendState BlendState { get; set; }
         public DepthStencilState DepthStencilState { get; set; }
         public RasterizerState RasterizerState { get; set; }
-        public Texture2D[] Textures = new Texture2D[3];
+        public Texture2D[] Textures = new Texture2D[4];
         public SamplerStateCollection SamplerStates { get; }
+        private PresentationParameters pPublicCachedParams;
+        public PresentationParameters PresentationParameters
+        {
+            get
+            {
+                return this.pPublicCachedParams;
+            }
+            set { pPublicCachedParams = value; }
+        }
         public IndexBuffer Indices { get; set; }
 
         internal void SetRenderTarget(RenderTarget2D renderTarget)

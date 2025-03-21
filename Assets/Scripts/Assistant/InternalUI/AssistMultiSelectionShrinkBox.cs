@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 using ClassicUO.Input;
-using ClassicUO.IO.Resources;
+using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
 
@@ -129,7 +129,7 @@ namespace ClassicUO.Game.UI.Controls
 
             while (c != null)
             {
-                if (c is ScrollArea area)
+                if (c is AssistScrollArea area)
                 {
                     _arrow.IsVisible = true;
                     _nestedBoxes.Add(box);
@@ -182,16 +182,16 @@ namespace ClassicUO.Game.UI.Controls
                 int w, h;
 
                 if (_label.Unicode)
-                    w = FontsLoader.Instance.GetWidthUnicode(_label.Font, item);
+                    w = Client.Game.UO.FileManager.Fonts.GetWidthUnicode(_label.Font, item);
                 else
-                    w = FontsLoader.Instance.GetWidthASCII(_label.Font, item);
+                    w = Client.Game.UO.FileManager.Fonts.GetWidthASCII(_label.Font, item);
 
                 if (w > width)
                 {
                     if (_label.Unicode)
-                        h = FontsLoader.Instance.GetHeightUnicode(_label.Font, item, w, TEXT_ALIGN_TYPE.TS_LEFT, 0x0);
+                        h = Client.Game.UO.FileManager.Fonts.GetHeightUnicode(_label.Font, item, w, TEXT_ALIGN_TYPE.TS_LEFT, 0x0);
                     else
-                        h = FontsLoader.Instance.GetHeightASCII(_label.Font, item, w, TEXT_ALIGN_TYPE.TS_LEFT, 0x0);
+                        h = Client.Game.UO.FileManager.Fonts.GetHeightASCII(_label.Font, item, w, TEXT_ALIGN_TYPE.TS_LEFT, 0x0);
                     width = w;
                     height = h + 2;
                 }
@@ -255,7 +255,7 @@ namespace ClassicUO.Game.UI.Controls
 
         private void OnGroupSelection()
         {
-            if (Parent != null && Parent.Parent is ScrollArea area)
+            if (Parent != null && Parent.Parent is AssistScrollArea area)
             {
                 foreach (Control sai in area.Children)
                 {

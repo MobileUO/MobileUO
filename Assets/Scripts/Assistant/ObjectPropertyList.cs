@@ -3,7 +3,8 @@ using System.Text;
 using System.Collections.Generic;
 
 using ClassicUO.Network;
-using ClassicUO.IO.Resources;
+using ClassicUO.Assets;
+using ClassicUO;
 
 namespace Assistant
 {
@@ -88,7 +89,7 @@ namespace Assistant
             for(int i = 0; i < list.Count; i++)
             {
                 if(i == 0)
-                    name = ClilocLoader.Instance.Translate(list[i].Item1, list[i].Item2, true);
+                    name = Client.Game.UO.FileManager.Clilocs.Translate(list[i].Item1, list[i].Item2, true);
                 Content.Add(new OPLEntry(list[i].Item1, list[i].Item2));
             }
  
