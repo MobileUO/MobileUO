@@ -3,6 +3,7 @@ using ClassicUO.Game.UI.Controls;
 using ClassicUO.Game.Managers;
 using System;
 using System.Collections.Generic;
+using ClassicUO;
 
 namespace Assistant
 {
@@ -181,7 +182,7 @@ namespace Assistant
                         _Init = _Organizer.Items.Count > _Num;
                     if (_Init)
                     {
-                        var c = ContainerManager.Get(_Dest.Graphic);
+                        var c = Client.Game.UO.World.ContainerManager.Get(_Dest.Graphic);
                         x = c.Bounds.X;
                         endx = c.Bounds.X + c.Bounds.Width;
                         y = c.Bounds.Y;
