@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using ClassicUO.Utility;
 using DG.Tweening;
@@ -59,7 +60,7 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
 
     [SerializeField]
     private Transform saveButtonTransform;
-    
+     
     [SerializeField]
     private Button cancelButton;
     
@@ -74,6 +75,15 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
 
     [SerializeField]
     private Text deleteServerFilesButtonText;
+
+    [SerializeField]
+    private Text importCharacterProfilesFilesButtonText;
+
+    [SerializeField]
+    private Button importCharacterProfilesFilesButton;
+
+    [SerializeField]
+    private Button exportCharacterProfilesFilesButton;
     
     [SerializeField]
     private Button markFilesAsDownloadedButton;
@@ -114,6 +124,14 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
 
     private const string deleteButtonConfirmText = "Click again to Delete!";
     private const float deleteButtonRevertDuration = 2f;
+
+    private const string importCharacterProfilesFilesButtonSuccessText = "Successfully imported!";
+    private const float importCharacterProfilesFilesButtonSuccessTextDuration = 5f;
+    private int importCharacterProfilesFilesButtonClickCount;
+    private float importCharacterProfilesFilesButtonClickTime;
+    private string importCharacterProfilesFilesButtonOriginalText;
+    private Color importCharacterProfilesFilesButtonOriginalColor;
+    private Color successColor = new Color(0.5897633f, 0.8490566f, 0.5727127f, 1f);
     
     private void UpdateInputFields()
     {
@@ -140,9 +158,12 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
         
         deleteServerConfigurationButtonOriginalText = deleteServerConfigurationButtonText.text;
         deleteServerFilesButtonOriginalText = deleteServerFilesButtonText.text;
-        
+        importCharacterProfilesFilesButtonOriginalText = importCharacterProfilesFilesButtonText.text;
+        importCharacterProfilesFilesButtonOriginalColor = importCharacterProfilesFilesButton.GetComponent<Image>().color;
+
         ResetDeleteServerConfigurationButton();
         ResetDeleteServerFilesButton();
+        ResetImportCharacterProfilesFilesButton();
     }
 
     private void OnEnable()
@@ -153,6 +174,8 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
         deleteServerFilesButton.onClick.AddListener(OnDeleteServerFilesButtonClicked);
         markFilesAsDownloadedButton.onClick.AddListener(OnMarkFilesAsDownloadedButtonClicked);
         discoverButton.onClick.AddListener(SearchForDevices);
+        exportCharacterProfilesFilesButton.onClick.AddListener(OnExportCharacterProfilesButtonClicked);
+        importCharacterProfilesFilesButton.onClick.AddListener(OnImportCharacterProfilesButtonClicked);
 
         saveButtonOriginalLocalPosition = saveButtonTransform.localPosition;
     }
@@ -214,9 +237,12 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
         deleteServerConfigurationButton.onClick.RemoveAllListeners();
         deleteServerFilesButton.onClick.RemoveAllListeners();
         markFilesAsDownloadedButton.onClick.RemoveAllListeners();
+        exportCharacterProfilesFilesButton.onClick.RemoveAllListeners();
+        importCharacterProfilesFilesButton.onClick.RemoveAllListeners();
         
         ResetDeleteServerConfigurationButton();
         ResetDeleteServerFilesButton();
+        ResetImportCharacterProfilesFilesButton();
     }
     
     private void OnSaveButtonClicked()
@@ -412,6 +438,41 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
             ResetDeleteServerFilesButton();
         }
     }
+
+    private void OnExportCharacterProfilesButtonClicked()
+    {
+        var dataFolderPath = $"{serverConfigurationToEdit.GetPathToSaveFiles()}/Data";
+        var exportZipFileName = $"{DateTime.Now.ToString("yyyy-MM-dd-HH-mm-ss")}-{serverConfigurationToEdit.Name}.zip";
+        var exportZipFilePath = $"{serverConfigurationToEdit.GetPathToSaveFiles()}/{exportZipFileName}";
+        Debug.Log($"Export zip file path: {exportZipFilePath}");
+        ZipFile.CreateFromDirectory(dataFolderPath, exportZipFilePath);
+
+        NativeFilePicker.ExportFile(exportZipFilePath, null);
+    }
+
+    private void OnImportCharacterProfilesButtonClicked()
+    {
+        var dataFolderPath = $"{serverConfigurationToEdit.GetPathToSaveFiles()}/Data";
+
+        NativeFilePicker.PickFile((path) =>
+        {
+            if (path == null)
+            {
+                Debug.Log("Import character profiles canceled");
+                return;
+            }
+
+            Debug.Log($"r {saveButton.GetComponent<Image>().color.r} - g {saveButton.GetComponent<Image>().color.g} - b {saveButton.GetComponent<Image>().color.b} - a {saveButton.GetComponent<Image>().color.a}");
+
+            importCharacterProfilesFilesButtonText.text = importCharacterProfilesFilesButtonSuccessText;
+            importCharacterProfilesFilesButton.GetComponent<Image>().color = successColor;
+            importCharacterProfilesFilesButtonClickCount++;
+            importCharacterProfilesFilesButtonClickTime = Time.time;
+
+            Debug.Log($"path: {path}");
+            ZipFile.ExtractToDirectory(path, dataFolderPath, true);
+        }, new string[] { "application/zip" });
+    }
     
     private void OnMarkFilesAsDownloadedButtonClicked()
     {
@@ -430,12 +491,24 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
         {
             ResetDeleteServerFilesButton();
         }
+
+        if (importCharacterProfilesFilesButtonClickCount > 0 && Time.time > importCharacterProfilesFilesButtonClickTime + importCharacterProfilesFilesButtonSuccessTextDuration)
+        {
+            ResetImportCharacterProfilesFilesButton();
+        }
     }
 
     private void ResetDeleteServerConfigurationButton()
     {
         deleteServerConfigurationButtonText.text = deleteServerConfigurationButtonOriginalText;
         deleteServerConfigurationButtonClickCount = 0;
+    }
+
+    private void ResetImportCharacterProfilesFilesButton()
+    {
+        importCharacterProfilesFilesButtonText.text = importCharacterProfilesFilesButtonOriginalText;
+        importCharacterProfilesFilesButton.GetComponent<Image>().color = importCharacterProfilesFilesButtonOriginalColor;
+        importCharacterProfilesFilesButtonClickCount = 0;
     }
     
     private void ResetDeleteServerFilesButton()
