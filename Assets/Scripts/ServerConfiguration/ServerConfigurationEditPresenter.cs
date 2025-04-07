@@ -447,7 +447,7 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
         Debug.Log($"Export zip file path: {exportZipFilePath}");
         ZipFile.CreateFromDirectory(dataFolderPath, exportZipFilePath);
 
-        NativeFilePicker.ExportFile(exportZipFilePath, null);
+        NativeFilePicker.ExportFile(exportZipFilePath, (callback) => { }) ;
     }
 
     private void OnImportCharacterProfilesButtonClicked()
