@@ -462,8 +462,6 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
                 return;
             }
 
-            Debug.Log($"r {saveButton.GetComponent<Image>().color.r} - g {saveButton.GetComponent<Image>().color.g} - b {saveButton.GetComponent<Image>().color.b} - a {saveButton.GetComponent<Image>().color.a}");
-
             importCharacterProfilesFilesButtonText.text = importCharacterProfilesFilesButtonSuccessText;
             importCharacterProfilesFilesButton.GetComponent<Image>().color = successColor;
             importCharacterProfilesFilesButtonClickCount++;
