@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 250e096504da3aa4f851a4df12262950
+AssemblyDefinitionImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173238
+  packageName: Native File Picker for Android & iOS
+  packageVersion: 1.3.5
+  assetPath: Assets/Plugins/NativeFilePicker/NativeFilePicker.Runtime.asmdef
+  uploadId: 687080
