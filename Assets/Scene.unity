@@ -3035,7 +3035,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   button: {fileID: 500176006}
-  url: https://github.com/VoxelBoy/MobileUO/wiki/How-to-Play
+  url: https://github.com/MobileUO/MobileUO/wiki/How-to-Play
 --- !u!114 &500176006
 MonoBehaviour:
   m_ObjectHideFlags: 0
