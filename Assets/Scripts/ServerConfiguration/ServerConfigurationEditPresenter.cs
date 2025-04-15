@@ -132,9 +132,30 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
     private string importCharacterProfilesFilesButtonOriginalText;
     private Color importCharacterProfilesFilesButtonOriginalColor;
     private Color successColor = new Color(0.5897633f, 0.8490566f, 0.5727127f, 1f);
+
+    public bool CreateServer;
+
     
     private void UpdateInputFields()
     {
+        if(CreateServer)
+        {
+            // don't show import/export/delete buttons when creating a new server configuration
+            importCharacterProfilesFilesButton.gameObject.SetActive(false);
+            exportCharacterProfilesFilesButton.gameObject.SetActive(false);
+            deleteServerConfigurationButton.gameObject.SetActive(false);
+            deleteServerFilesButton.gameObject.SetActive(false);
+            markFilesAsDownloadedButton.gameObject.SetActive(false);
+        }
+        else
+        {
+            importCharacterProfilesFilesButton.gameObject.SetActive(true);
+            exportCharacterProfilesFilesButton.gameObject.SetActive(true);
+            deleteServerConfigurationButton.gameObject.SetActive(true);
+            deleteServerFilesButton.gameObject.SetActive(true);
+            markFilesAsDownloadedButton.gameObject.SetActive(true);
+        }
+
         serverNameInputField.text = serverConfigurationToEdit?.Name ?? "";
         uoServerUrlInputField.text = serverConfigurationToEdit?.UoServerUrl ?? "";
         uoServerPortInputField.text = serverConfigurationToEdit?.UoServerPort ?? "2593";
@@ -513,7 +534,7 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
     {
         deleteServerFilesButtonText.text = deleteServerFilesButtonOriginalText;
         deleteServerFilesButtonClickCount = 0;
-        if (ServerConfigurationToEdit != null)
+        if (ServerConfigurationToEdit != null && !CreateServer)
         {
             deleteServerFilesButton.gameObject.SetActive(ServerConfigurationToEdit.AllFilesDownloaded);
             markFilesAsDownloadedButton.gameObject.SetActive(deleteServerFilesButton.gameObject.activeSelf == false);
