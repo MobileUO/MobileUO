@@ -81,7 +81,10 @@ public static class ServerConfigurationModel
     public static ServerConfiguration CreateNewServerConfiguration()
     {
         var newServerConfiguration = new ServerConfiguration
-            {Name = GetValidNewServerConfigurationName()};
+        {
+            Name = GetValidNewServerConfigurationName()
+        };
+
         return newServerConfiguration;
     }
 
