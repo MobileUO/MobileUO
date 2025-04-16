@@ -167,10 +167,10 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
         clientPathForUnityEditorInputField.text = serverConfigurationToEdit?.ClientPathForUnityEditor ?? "";
         clientPathForUnityEditorParent.SetActive(Application.isMobilePlatform == false);
 
-        foreach (var go in gameObjectToDisableForSupportedServers)
-        {
-            go.SetActive(serverConfigurationToEdit?.SupportedServer == false);
-        }
+        //foreach (var go in gameObjectToDisableForSupportedServers)
+        //{
+        //    go.SetActive(serverConfigurationToEdit?.SupportedServer == false);
+        //}
         
         documentationButtonParent.SetActive(true);
         validationErrorTextParent.SetActive(false);
