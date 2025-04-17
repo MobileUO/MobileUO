@@ -21,7 +21,7 @@ public class Init : MonoBehaviour
     [SerializeField]
     private SupportedServerConfigurations supportedServerConfigurations;
 
-    private const string supportedServerConfigurationsUrl = "https://www.dropbox.com/scl/fi/dvmthuazhp6rlmaklu1xj/supportedServerConfigurations.json?rlkey=lcczmc36r39uovp0w7sy9ssa5&dl=1";
+    private const string supportedServerConfigurationsUrl = "https://mobileuo.github.io/SupportedServerConfigurations/SupportedServerConfigurations.json";
     private const string downloadedSupportedServerConfigurationsPrefKey = "downloadedSupportedServerConfigurations";
 
     public static string ExternalStoragePath { get; private set; }
