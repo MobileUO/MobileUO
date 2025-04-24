@@ -1139,7 +1139,8 @@ namespace ClassicUO.Game.UI.Gumps
                 int fixedWidth = Client.Game.UO.FileManager.Maps.MapBlocksSize[mapIndex, 0];
                 int fixedHeight = Client.Game.UO.FileManager.Maps.MapBlocksSize[mapIndex, 1];
 
-                _mapTexture?.Dispose();
+                // MobileUO: #7: this dispose fails, causing world map to not update correctly when switching facets
+                //_mapTexture?.Dispose();
 
                 var mapFile = Client.Game.UO.FileManager.Maps.GetMapFile(mapIndex);
                 var staticFile = Client.Game.UO.FileManager.Maps.GetStaticFile(mapIndex);
