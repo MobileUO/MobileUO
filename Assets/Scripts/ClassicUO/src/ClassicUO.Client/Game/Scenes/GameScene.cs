@@ -947,6 +947,8 @@ namespace ClassicUO.Game.Scenes
 
             if (CheckDeathScreen(batcher))
             {
+                // MobileUO: Return to original scaling
+                batcher.scale = originalBatcherScale;
                 return true;
             }
 
