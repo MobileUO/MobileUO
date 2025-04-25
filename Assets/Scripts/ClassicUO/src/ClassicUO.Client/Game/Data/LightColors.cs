@@ -390,6 +390,9 @@ namespace ClassicUO.Game.Data
 
         public static void LoadLights()
         {
+            // MobileUO: clear light data if it has values from previous shard
+            _itemlightdata.Clear();
+
             string path = Path.Combine(CUOEnviroment.ExecutablePath, "Data", "Client");
 
             if (!Directory.Exists(path))

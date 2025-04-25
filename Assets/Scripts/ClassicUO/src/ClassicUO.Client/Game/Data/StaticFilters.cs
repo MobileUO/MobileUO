@@ -237,6 +237,14 @@ namespace ClassicUO.Game.Data
             //Client.Game.UO.FileManager.Arts.CleaUnusedResources(short.MaxValue);
         }
 
+        // MobileUO: added function to reset data when switching shards
+        public static void Unload()
+        {
+            Array.Clear(_filteredTiles, 0, _filteredTiles.Length);
+            CaveTiles.Clear();
+            TreeTiles.Clear();
+        }
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool IsTree(ushort g, out int index)
         {

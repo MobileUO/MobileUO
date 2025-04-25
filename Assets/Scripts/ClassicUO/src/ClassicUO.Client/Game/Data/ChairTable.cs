@@ -52,6 +52,12 @@ namespace ClassicUO.Game.Data
             }
         }
 
+        // MobileUO: added function to reset data when switching shards
+        public static void Unload()
+        {
+            Table.Clear();
+        }
+
         private static readonly SittingInfoData[] _defaultTable =
         {
             new SittingInfoData

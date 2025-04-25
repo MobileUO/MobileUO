@@ -110,6 +110,10 @@ namespace ClassicUO
 
         public void Unload()
         {
+            // MobileUO: clear static data
+            StaticFilters.Unload();
+            ChairTable.Unload();
+
             FileManager.Dispose();
             World?.Map?.Destroy();
         }
