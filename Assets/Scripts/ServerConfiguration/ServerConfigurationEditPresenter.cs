@@ -490,7 +490,7 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
 
             Debug.Log($"path: {path}");
             ZipFile.ExtractToDirectory(path, dataFolderPath, true);
-        }, new string[] { "application/zip" });
+        }, new string[] { "application/zip", "public.zip-archive" });
     }
     
     private void OnMarkFilesAsDownloadedButtonClicked()
