@@ -24,4 +24,9 @@ public static class ColorExt
 		Color32 c = color;
 		return c.ToHex();
 	}
+
+	public unsafe static Color ToColor(this Vector3 v)
+	{
+		return *(Color*)&v;
+	}
 }

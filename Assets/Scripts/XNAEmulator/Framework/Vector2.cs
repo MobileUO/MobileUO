@@ -33,6 +33,7 @@ using System.ComponentModel;
 //using Microsoft.Xna.Framework.Design;
 using System.Text;
 using System.Runtime.InteropServices;
+using UnityVector2 = UnityEngine.Vector2;
 
 namespace Microsoft.Xna.Framework
 {
@@ -595,5 +596,15 @@ namespace Microsoft.Xna.Framework
         }
 
         #endregion Operators
+
+        private static unsafe UnityVector2 convert(Vector2 v)
+        {
+            return *(UnityVector2*)&v;
+        }
+
+        public static implicit operator UnityVector2(Vector2 v)
+        {
+            return convert(v);// new UnityVector3(v.X, v.Y, v.Z);
+        }
     }
 }
