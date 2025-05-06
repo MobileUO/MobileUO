@@ -177,6 +177,96 @@ namespace ClassicUO.Renderer.Arts
             }
         }
 
+        public unsafe UnityEngine.Texture2D CreateCursorSurfaceUnity(
+            int index,
+            ushort customHue,
+            out int hotX,
+            out int hotY
+        )
+        {
+            hotX = hotY = 0;
+
+            var artInfo = _artLoader.GetArt((uint)(index + 0x4000));
+
+            if (artInfo.Pixels.IsEmpty)
+            {
+                return null;
+            }
+
+            Texture2D texture = new Texture2D(Client.Game.GraphicsDevice, artInfo.Width, artInfo.Height);
+
+            fixed (uint* ptr = artInfo.Pixels)
+            {
+                int stride = artInfo.Width;
+                uint* pixels_ptr = ptr;
+                uint* p_line_end = pixels_ptr + artInfo.Width;
+                uint* p_img_end = pixels_ptr + stride * artInfo.Height;
+                int delta = stride - artInfo.Width;
+                short curX = 0;
+                short curY = 0;
+                Color c = default;
+
+                while (pixels_ptr < p_img_end)
+                {
+                    curX = 0;
+
+                    while (pixels_ptr < p_line_end)
+                    {
+                        if (*pixels_ptr != 0 && *pixels_ptr != 0xFF_00_00_00)
+                        {
+                            if (curX >= artInfo.Width - 1 || curY >= artInfo.Height - 1)
+                            {
+                                *pixels_ptr = 0;
+                            }
+                            else if (curX == 0 || curY == 0)
+                            {
+                                if (*pixels_ptr == 0xFF_00_FF_00)
+                                {
+                                    if (curX == 0)
+                                    {
+                                        hotY = curY;
+                                    }
+
+                                    if (curY == 0)
+                                    {
+                                        hotX = curX;
+                                    }
+                                }
+
+                                *pixels_ptr = 0;
+                            }
+                            else if (customHue > 0)
+                            {
+                                c.PackedValue = *pixels_ptr;
+                                *pixels_ptr =
+                                    HuesHelper.Color16To32(
+                                        _huesLoader.GetColor16(
+                                            HuesHelper.ColorToHue(c),
+                                            customHue
+                                        )
+                                    ) | 0xFF_00_00_00;
+                            }
+                        }
+
+                        ++pixels_ptr;
+
+                        ++curX;
+                    }
+
+                    pixels_ptr += delta;
+                    p_line_end += stride;
+                    ++curY;
+                }
+            }
+
+            fixed (uint* p = artInfo.Pixels)
+            {
+                texture.SetDataPointerEXT(0, null, (IntPtr)p, artInfo.Pixels.Length);
+            }
+
+            return texture.UnityTexture as UnityEngine.Texture2D;
+        }
+
         public Rectangle GetRealArtBounds(uint idx) =>
             idx < 0 || idx >= _realArtBounds.Length
                 ? Rectangle.Empty

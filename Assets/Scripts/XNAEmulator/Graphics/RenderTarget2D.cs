@@ -6,8 +6,9 @@ namespace Microsoft.Xna.Framework.Graphics
     {
         public RenderTarget2D( GraphicsDevice graphicsDevice, int width, int height, bool v, SurfaceFormat surfaceFormat, DepthFormat depth24Stencil8, int v1 = 0, RenderTargetUsage discardContents = RenderTargetUsage.DiscardContents) : base(graphicsDevice)
         {
-            Width = width;
-            Height = height;
+            //there is no need to save them
+            //Width = width;
+            //Height = height;
             UnityTexture = new RenderTexture( width, height,24);
             UnityTexture.filterMode = defaultFilterMode;
             UnityTexture.wrapMode = TextureWrapMode.Clamp;

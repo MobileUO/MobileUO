@@ -348,7 +348,7 @@ public class ClientRunner : MonoBehaviour
 
 	    //This flag is tied to whether the GameCursor gets drawn, in a convoluted way
 	    //On mobile platform, set this flag to true to prevent the GameCursor from being drawn
-	    Settings.GlobalSettings.RunMouseInASeparateThread = Application.isMobilePlatform;
+	    //Settings.GlobalSettings.RunMouseInASeparateThread = Application.isMobilePlatform;
 
 	    //Some mobile specific overrides need to be done on the Profile but they can only be done once the Profile has been loaded
 	    ProfileManager.ProfileLoaded += OnProfileLoaded;

@@ -80,16 +80,18 @@ namespace ClassicUO.Game
 
         private readonly Aura _aura;
         private readonly List<CustomBuildObject> _componentsList = new ();
-        private readonly int[,] _cursorOffset = new int[2, 16];
-        private readonly IntPtr[,] _cursors_ptr = new IntPtr[3, 16];
+        private readonly UnityEngine.Vector2[] _cursorOffset = new UnityEngine.Vector2[16];
+        private readonly UnityEngine.Texture2D[,] _cursors_ptr = new UnityEngine.Texture2D[3, 16];
         private ushort _graphic = 0x2073;
         private bool _needGraphicUpdate = true;
         private readonly List<Multi> _temp = new List<Multi>();
         private readonly Tooltip _tooltip;
         private readonly World _world;
+        public World CursorWorld => _world;
 
         public GameCursor(World world)
         {
+            UnityEngine.Cursor.lockState = UnityEngine.CursorLockMode.None;
             _world = world;
             _tooltip = new Tooltip(world);
             _aura = new Aura(30);
@@ -100,22 +102,22 @@ namespace ClassicUO.Game
                 {
                     ushort id = _cursorData[i, j];
 
-                    var surface = Client.Game.UO.Arts.CreateCursorSurfacePtr(
+                    var surface = Client.Game.UO.Arts.CreateCursorSurfaceUnity(//CreateCursorSurfacePtr(
                         id,
                         (ushort)(i == 2 ? 0x0033 : 0),
                         out int hotX,
                         out int hotY
                     );
 
-                    if (surface != IntPtr.Zero)
+                    if (surface != null)//IntPtr.Zero)
                     {
                         if (hotX != 0 || hotY != 0)
                         {
-                            _cursorOffset[0, j] = hotX;
-                            _cursorOffset[1, j] = hotY;
+                            _cursorOffset[0].x = hotX;
+                            _cursorOffset[1].y = hotY;
                         }
 
-                        _cursors_ptr[i, j] = SDL.SDL_CreateColorCursor(surface, hotX, hotY);
+                        _cursors_ptr[i, j] = surface;//SDL.SDL_CreateColorCursor(surface, hotX, hotY);
                     }
                 }
             }
@@ -210,11 +212,13 @@ namespace ClassicUO.Game
                                 ? 2
                                 : 0;
 
-                    ref IntPtr ptrCursor = ref _cursors_ptr[war, id];
+                    //ref IntPtr ptrCursor = ref _cursors_ptr[war, id];
+                    var text = _cursors_ptr[war, id];
 
-                    if (ptrCursor != IntPtr.Zero)
+                    if (text != null)//ptrCursor != IntPtr.Zero)
                     {
-                        SDL.SDL_SetCursor(ptrCursor);
+                        UnityEngine.Cursor.SetCursor(text, -_cursorOffset[id], UnityEngine.CursorMode.ForceSoftware);
+                        //SDL.SDL_SetCursor(ptrCursor);
                     }
                 }
             }
@@ -484,8 +488,8 @@ namespace ClassicUO.Game
                     graphic -= 0x206A;
                 }
 
-                int offX = _cursorOffset[0, graphic];
-                int offY = _cursorOffset[1, graphic];
+                int offX = (int)_cursorOffset[graphic].x;
+                int offY = (int)_cursorOffset[graphic].y;
 
                 Vector3 hueVec;
 
