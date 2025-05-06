@@ -224,7 +224,7 @@ namespace ClassicUO.Assets
             name = Encoding.UTF8.GetString(buf);
             // MobileUO: added silence -> 22050 (0.5 seconds)
             data = new byte[entry.Length + 22050 - 40];
-            data = _file.Reader.ReadBytes(data.Length - 22050);
+            data = _file.ReadBytes(data.Length - 22050);
 
             return true;
         }
