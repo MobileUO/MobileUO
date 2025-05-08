@@ -202,9 +202,6 @@ namespace ClassicUO.Assets
             }
         }
 
-        // MobileUO: this will create a silence of 0.5 sec
-        private static byte[] _SilenceArr = new byte[22050];
-
         public unsafe bool TryGetSound(int sound, out byte[] data, out string name)
         {
             data = null;
@@ -225,12 +222,10 @@ namespace ClassicUO.Assets
             _file.Read(buf);
 
             name = Encoding.UTF8.GetString(buf);
-            data = new byte[entry.Length - 40];
-            _file.Read(data);
+            // MobileUO: added silence -> 22050 (0.5 seconds)
+            data = new byte[entry.Length + 22050 - 40];
+            data = _file.ReadBytes(data.Length - 22050);
 
-            // MobileUO: added silence array
-            data = data.Concat(_SilenceArr).ToArray();
-            
             return true;
         }
 
