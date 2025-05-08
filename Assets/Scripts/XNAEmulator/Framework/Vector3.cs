@@ -32,6 +32,7 @@ using System;
 using System.Text;
 using System.Runtime.InteropServices;
 using UnityVector3 = UnityEngine.Vector3;
+using UnityColor = UnityEngine.Color;
 using Mathf = UnityEngine.Mathf;
 
 namespace Microsoft.Xna.Framework
@@ -687,6 +688,11 @@ namespace Microsoft.Xna.Framework
         public static implicit operator UnityVector3(Vector3 v)
         {
             return convert(v);// new UnityVector3(v.X, v.Y, v.Z);
+        }
+
+        public static implicit operator UnityColor(Vector3 v) 
+        {
+            return ColorExt.ToColor(v);
         }
 
         #endregion
