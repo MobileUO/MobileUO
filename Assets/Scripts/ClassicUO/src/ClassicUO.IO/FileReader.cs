@@ -29,7 +29,8 @@ namespace ClassicUO.IO
         }
 
         public void Seek(long index, SeekOrigin origin) => _position = Reader.BaseStream.Seek(index, origin);
-        public byte[] ReadBytes(int lenght) { _position += lenght; return Reader.ReadBytes(lenght); }
+        // MobileUO: added method
+        public byte[] ReadBytes(int length) { _position += length; return Reader.ReadBytes(length); }
         public sbyte ReadInt8() { _position += sizeof(sbyte); return Reader.ReadSByte(); }
         public byte ReadUInt8() { _position += sizeof(byte); return Reader.ReadByte(); }
         public short ReadInt16() { _position += sizeof(short); return Reader.ReadInt16(); }
