@@ -375,5 +375,137 @@ namespace ClassicUO.Utility
 
             return true;
         }
+
+        private static readonly Dictionary<int, char> CharactersToMap = new Dictionary<int, char>
+        {
+            {130, '‚'},
+            {131, 'ƒ'},
+            {132, '„'},
+            {133, '…'},
+            {134, '†'},
+            {135, '‡'},
+            {136, 'ˆ'},
+            {137, '‰'},
+            {138, 'Š'},
+            {139, '‹'},
+            {140, 'Œ'},
+            {145, '‘'},
+            {146, '’'},
+            {147, '“'},
+            {148, '”'},
+            {149, '•'},
+            {150, '–'},
+            {151, '—'},
+            {152, '˜'},
+            {153, '™'},
+            {154, 'š'},
+            {155, '›'},
+            {156, 'œ'},
+            {159, 'Ÿ'},
+            {173, '-'}
+        };
+
+        private static readonly Dictionary<char, char> Replacements = new Dictionary<char, char>();
+        /// <summary>Returns the specified string with characters not representable in ASCII codepage 437 converted to a suitable representative equivalent.</summary>
+        /// <param name="str">A string.</param>
+        /// <returns>The supplied string, with smart quotes, fractions, accents and punctuation marks 'normalized' to ASCII equivalents.</returns>
+        public static string Asciify(ReadOnlySpan<char> str)
+        {
+            ValueStringBuilder sb = new ValueStringBuilder(str);
+
+            for (int i = 0; i < sb.Length; ++i)
+            {
+                if (Replacements.TryGetValue(sb[i], out char n))
+                {
+                    sb[i] = n;
+                }
+            }
+
+            string ss = sb.ToString();
+
+            sb.Dispose();
+
+            return ss;
+        }
+
+        static StringHelper()
+        {
+            Replacements['’'] = '\'';
+            Replacements['–'] = '-';
+            Replacements['‘'] = '\'';
+            Replacements['”'] = '\"';
+            Replacements['“'] = '\"';
+            //Replacements['…'] = "...";
+            //Replacements['£'] = "GBP";
+            Replacements['•'] = '*';
+            Replacements[' '] = ' ';
+            //Replacements['é'] = "e";
+            //Replacements['ï'] = "i";
+            Replacements['´'] = '\'';
+            Replacements['—'] = '-';
+            Replacements['·'] = '*';
+            Replacements['„'] = '\"';
+            //Replacements['€'] = "EUR";
+            //Replacements['®'] = "(R)";
+            //Replacements['¹'] = "(1)";
+            //Replacements['«'] = "\"";
+            /*Replacements['è'] = "e";
+            Replacements['á'] = "a";
+            Replacements['™'] = "TM"; 
+            Replacements['»'] = "\""; 
+            Replacements['ç'] = "c";
+            Replacements['½'] = "1/2";
+            Replacements['­'] = "-";
+            //Replacements['°'] = " degree";
+            /*Replacements['ä'] = "a"
+            Replacements['É'] = "E";
+            Replacements['‚'] = ",";
+            Replacements['ü'] = "u";
+            Replacements['í'] = "i";
+            Replacements['ë'] = "e";
+            Replacements['ö'] = "o";
+            Replacements['à'] = "a";
+            Replacements['¬'] = " ";
+            /*Replacements['ó'] = "o";
+            Replacements['â'] = "a";
+            Replacements['ñ'] = "n";
+            Replacements['ô'] = "o";
+            Replacements['¨'] = "";
+            //Replacements['å'] = "a";
+            //Replacements['ã'] = "a";
+            Replacements['ˆ'] = "";
+            /*Replacements['©'] = "(c)";
+            Replacements['Ä'] = "A";
+            Replacements['Ï'] = "I";
+            Replacements['ò'] = "o";
+            Replacements['ê'] = "e";
+            Replacements['î'] = "i";
+            Replacements['Ü'] = "U";
+            Replacements['Á'] = "A";
+            Replacements['ß'] = "ss";
+            Replacements['¾'] = "3/4";
+            Replacements['È'] = "E";
+            Replacements['¼'] = "1/4";
+            Replacements['†'] = "+";
+            Replacements['³'] = "'";
+            Replacements['²'] = "'";
+            Replacements['Ø'] = "O";*/
+            Replacements['¸'] = ',';
+            /*Replacements['Ë'] = "E";
+            Replacements['ú'] = "u";
+            Replacements['Ö'] = "O";
+            Replacements['û'] = "u";
+            Replacements['Ú'] = "U";
+            Replacements['Œ'] = "Oe";
+            Replacements['º'] = "?";
+            Replacements['‰'] = "0/00";
+            Replacements['Å'] = "A";
+            Replacements['ø'] = "o";*/
+            Replacements['˜'] = '~';
+            /*Replacements['æ'] = "ae";
+            Replacements['ù'] = "u";*/
+            Replacements['‹'] = '<';
+            //Replacements['±'] = "+/-";
+        }
     }
 }
