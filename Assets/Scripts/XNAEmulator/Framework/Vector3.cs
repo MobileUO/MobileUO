@@ -32,6 +32,8 @@ using System;
 using System.Text;
 using System.Runtime.InteropServices;
 using UnityVector3 = UnityEngine.Vector3;
+using UnityColor = UnityEngine.Color;
+using Mathf = UnityEngine.Mathf;
 
 namespace Microsoft.Xna.Framework
 {
@@ -243,7 +245,7 @@ namespace Microsoft.Xna.Framework
 
         public static float Distance(Vector3 value1, Vector3 value2)
         {
-            return (float)Math.Sqrt((value1.X - value2.X) * (value1.X - value2.X) +
+            return Mathf.Sqrt((value1.X - value2.X) * (value1.X - value2.X) +
                      (value1.Y - value2.Y) * (value1.Y - value2.Y) +
                      (value1.Z - value2.Z) * (value1.Z - value2.Z));
         }
@@ -343,7 +345,7 @@ namespace Microsoft.Xna.Framework
 
         public float Length()
         {
-            return (float)Math.Sqrt((double)(X * X + Y * Y + Z * Z));
+            return Mathf.Sqrt((X * X + Y * Y + Z * Z));
         }
 
         public float LengthSquared()
@@ -446,7 +448,7 @@ namespace Microsoft.Xna.Framework
 
         public void Normalize()
         {
-            float factor = 1f / (float)Math.Sqrt((double)(X * X + Y * Y + Z * Z));
+            float factor = 1f / Mathf.Sqrt((X * X + Y * Y + Z * Z));
             X *= factor;
             Y *= factor;
             Z *= factor;
@@ -454,7 +456,7 @@ namespace Microsoft.Xna.Framework
 
         public static Vector3 Normalize(Vector3 value)
         {
-            float factor = 1f / (float)Math.Sqrt((double)(value.X * value.X + value.Y * value.Y + value.Z * value.Z));
+            float factor = 1f / Mathf.Sqrt((value.X * value.X + value.Y * value.Y + value.Z * value.Z));
             value.X *= factor;
             value.Y *= factor;
             value.Z *= factor;
@@ -463,7 +465,7 @@ namespace Microsoft.Xna.Framework
 
         public static void Normalize(ref Vector3 value, out Vector3 result)
         {
-            float factor = 1f / (float)Math.Sqrt((double)(value.X * value.X + value.Y * value.Y + value.Z * value.Z));
+            float factor = 1f / Mathf.Sqrt((value.X * value.X + value.Y * value.Y + value.Z * value.Z));
             result.X = value.X * factor;
             result.Y = value.Y * factor;
             result.Z = value.Z * factor;
@@ -678,9 +680,19 @@ namespace Microsoft.Xna.Framework
             return value;
         }
 
+        private static unsafe UnityVector3 convert(Vector3 v)
+        {
+            return *(UnityVector3*)&v;
+        }
+
         public static implicit operator UnityVector3(Vector3 v)
         {
-            return new UnityVector3(v.X, v.Y, v.Z);
+            return convert(v);// new UnityVector3(v.X, v.Y, v.Z);
+        }
+
+        public static implicit operator UnityColor(Vector3 v) 
+        {
+            return ColorExt.ToColor(v);
         }
 
         #endregion

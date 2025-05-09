@@ -1938,7 +1938,26 @@ namespace Microsoft.Xna.Framework
 			A = (byte) (vector.W * 255.0f);
 		}
 
-		#endregion
+        #endregion
 
-	}
+        private static unsafe UnityEngine.Color32 convert(Color c)
+        {
+            return *(UnityEngine.Color32*)&c;
+        }
+
+        public static implicit operator UnityEngine.Color32(Color c)
+        {
+            return convert(c);
+        }
+
+        public static implicit operator UnityEngine.Color(Color color)
+        {
+            return convert(color);
+        }
+
+        public static unsafe UnityEngine.Color32 ConvertFromUint(uint c)
+        {
+            return *(UnityEngine.Color32*)&c;
+        }
+    }
 }

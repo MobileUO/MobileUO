@@ -234,7 +234,7 @@ namespace ClassicUO.Renderer
             if (UseGraphicsDrawTexture)
             {
                 var rect = new Rect(x * scale, y * scale, w * scale, h * scale);
-                hueMaterial.SetColor(Hue, new Color(hue.X,hue.Y,hue.Z));
+                hueMaterial.SetColor(Hue, hue);//new Color(hue.X,hue.Y,hue.Z));
                 hueMaterial.SetFloat(UvMirrorX, mirror ? 1 : 0);
                 Graphics.DrawTexture(rect,
                     texture.UnityTexture,new Rect(0,0,1,1),
@@ -813,7 +813,7 @@ namespace ClassicUO.Renderer
 
             var mat = hueMaterial;
             mat.mainTexture = texture.UnityTexture;
-            mat.SetColor(Hue, new Color(hue.x,hue.y,hue.z));
+            mat.SetColor(Hue, ColorExt.ToColor(hue));
             mat.SetPass(0);
 
             Graphics.DrawMeshNow(reusedMesh.Mesh, Vector3.zero, Quaternion.identity);
@@ -1055,7 +1055,7 @@ namespace ClassicUO.Renderer
             if (UseGraphicsDrawTexture)
             {
                 var rect = new Rect(x * scale, y * scale, texture.Width * scale, texture.Height * scale);
-                hueMaterial.SetColor(Hue, new Color(hue.X,hue.Y,hue.Z));
+                hueMaterial.SetColor(Hue, hue);// new Color(hue.X,hue.Y,hue.Z));
                 hueMaterial.SetFloat(UvMirrorX, 0);
                 Graphics.DrawTexture(rect,
                     texture.UnityTexture,new Rect(0,0,1,1),
@@ -1121,7 +1121,7 @@ namespace ClassicUO.Renderer
 
             if (UseGraphicsDrawTexture)
             {
-                hueMaterial.SetColor(Hue, new Color(hue.X,hue.Y,hue.Z));
+                hueMaterial.SetColor(Hue, hue);//new Color(hue.X,hue.Y,hue.Z));
                 hueMaterial.SetFloat(UvMirrorX, 0);
                 //NOTE: given sourceRect needs to be flipped vertically for some reason
                 Graphics.DrawTexture(new Rect(x * scale, y * scale, swidth * scale, sheight * scale),
@@ -1260,7 +1260,7 @@ namespace ClassicUO.Renderer
 
                 if (UseGraphicsDrawTexture)
                 {
-                    hueMaterial.SetColor(Hue, new Color(hue.X,hue.Y,hue.Z));
+                    hueMaterial.SetColor(Hue, hue);//new Color(hue.X,hue.Y,hue.Z));
                     hueMaterial.SetFloat(UvMirrorX, 0);
                     //NOTE: given sourceRect needs to be flipped vertically for some reason
                     Graphics.DrawTexture(new Rect(x * scale, y * scale, dwidth * scale, dheight * scale),
@@ -1326,7 +1326,7 @@ namespace ClassicUO.Renderer
                 }
                 else
                 {
-                    hueMaterial.SetColor(Hue, new Color(hue.X,hue.Y,hue.Z));
+                    hueMaterial.SetColor(Hue, hue);//new Color(hue.X,hue.Y,hue.Z));
                     hueMaterial.SetFloat(UvMirrorX, 0);
                     Graphics.DrawTexture(new Rect(x * scale, y * scale, width * scale, height * scale), texture.UnityTexture, hueMaterial);
                 }
