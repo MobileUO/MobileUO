@@ -7,13 +7,14 @@ using System.Text.RegularExpressions;
 using ClassicUO.Network;
 using ClassicUO.Game;
 using ClassicUO.Game.Data;
-using ClassicUO.IO.Resources;
+using ClassicUO.Assets;
 using ClassicUO.Utility;
 
 using Assistant.Core;
 using BuffIcon = Assistant.Core.BuffIcon;
 using ClassicUO.Game.UI.Gumps;
 using UOScript;
+using ClassicUO;
 
 namespace Assistant
 {
@@ -227,7 +228,7 @@ namespace Assistant
 
             if (UOSObjects.Gump.UseObjectsQueue)
                 args.Block = !PlayerData.DoubleClick(ser, false);
-            if (SerialHelper.IsItem(ser) && World.Player != null)
+            if (SerialHelper.IsItem(ser) && Client.Game.UO.World.Player != null)
                 UOSObjects.Player.LastObject = ser;
 
             if (ScriptManager.Recording)
@@ -322,7 +323,7 @@ namespace Assistant
 
                         if (ent != null && ent.ContextMenu != null)
                         {
-                            ScriptManager.AddToScript($"contextmenu {(ser == World.Player.Serial ? "'self'" : $"0x{ser:X}")} {idx}");
+                            ScriptManager.AddToScript($"contextmenu {(ser == Client.Game.UO.World.Player.Serial ? "'self'" : $"0x{ser:X}")} {idx}");
                         }
                     }
                     break;
@@ -356,12 +357,12 @@ namespace Assistant
                 {
                     case 0x24: // Use skill
                     {
-                        if (!int.TryParse(command.Split(' ')[0], out int skillIndex) || skillIndex >= SkillsLoader.Instance.SkillsCount)
+                        if (!int.TryParse(command.Split(' ')[0], out int skillIndex) || skillIndex >= Client.Game.UO.FileManager.Skills.SkillsCount)
                             break;
 
                         UOSObjects.Player.LastSkill = skillIndex;
                         if (ScriptManager.Recording)
-                            ScriptManager.AddToScript($"useskill '{SkillsLoader.Instance.Skills[skillIndex].Name}'");
+                            ScriptManager.AddToScript($"useskill '{Client.Game.UO.FileManager.Skills.Skills[skillIndex].Name}'");
                         if (skillIndex == (int)SkillName.Stealth && !UOSObjects.Player.Visible)
                             StealthSteps.Hide();
                         SkillTimer.Start();
@@ -1819,7 +1820,7 @@ namespace Assistant
             }
             BandageTimer.OnLocalizedMessage(num);
  
-            string text = ClilocLoader.Instance.Translate(num, ext_str);// Language.ClilocFormat(num, ext_str);
+            string text = Client.Game.UO.FileManager.Clilocs.Translate(num, ext_str);// Language.ClilocFormat(num, ext_str);
             if (text == null)
                 return;
             HandleSpeech(p, args, serial, body, type, hue, font, "ENU", name, text);
@@ -1852,9 +1853,9 @@ namespace Assistant
 
             string text;
             if ((affixType & 1) != 0) // prepend
-                text = String.Format("{0}{1}", affix, ClilocLoader.Instance.Translate(num, args));
+                text = String.Format("{0}{1}", affix, Client.Game.UO.FileManager.Clilocs.Translate(num, args));
             else // 0 == append, 2 = system
-                text = String.Format("{0}{1}", ClilocLoader.Instance.Translate(num, args), affix);
+                text = String.Format("{0}{1}", Client.Game.UO.FileManager.Clilocs.Translate(num, args), affix);
             HandleSpeech(p, phea, serial, body, type, hue, font, "ENU", name, text);
         }
 
@@ -2414,7 +2415,7 @@ namespace Assistant
                 if (!string.IsNullOrEmpty(value))
                 {
                     if (int.TryParse(value, out int i) && ((i >= 500000 && i <= 600000) || (i >= 1000000 && i <= 1200000) || (i >= 3000000 && i <= 3100000)))
-                        gumpStrings.Add(ClilocLoader.Instance.GetString(i));
+                        gumpStrings.Add(Client.Game.UO.FileManager.Clilocs.GetString(i));
                 }
             }
             uint linesNum = p.ReadUInt();
@@ -2489,7 +2490,7 @@ namespace Assistant
                 if (!string.IsNullOrEmpty(value))
                 {
                     if (int.TryParse(value, out int i) && ((i >= 500000 && i <= 600000) || (i >= 1000000 && i <= 1200000) || (i >= 3000000 && i <= 3100000)))
-                        gumpStrings.Add(ClilocLoader.Instance.GetString(i));
+                        gumpStrings.Add(Client.Game.UO.FileManager.Clilocs.GetString(i));
                 }
             }
 
@@ -2619,8 +2620,8 @@ namespace Assistant
                         {
                             IconNumber = icon,
                             BuffIcon = (BuffIcon)icon,
-                            ClilocMessage1 = ClilocLoader.Instance.GetString((int)p.ReadUInt()),
-                            ClilocMessage2 = ClilocLoader.Instance.GetString((int)p.ReadUInt()),
+                            ClilocMessage1 = Client.Game.UO.FileManager.Clilocs.GetString((int)p.ReadUInt()),
+                            ClilocMessage2 = Client.Game.UO.FileManager.Clilocs.GetString((int)p.ReadUInt()),
                             Duration = duration,
                             Timestamp = DateTime.UtcNow
                         };

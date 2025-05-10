@@ -81,7 +81,10 @@ public static class ServerConfigurationModel
     public static ServerConfiguration CreateNewServerConfiguration()
     {
         var newServerConfiguration = new ServerConfiguration
-            {Name = GetValidNewServerConfigurationName()};
+        {
+            Name = GetValidNewServerConfigurationName()
+        };
+
         return newServerConfiguration;
     }
 
@@ -104,10 +107,24 @@ public static class ServerConfigurationModel
     public static void DeleteConfigurationFiles(ServerConfiguration config)
     {
         var directoryInfo = new DirectoryInfo(config.GetPathToSaveFiles());
+
         if (directoryInfo.Exists)
         {
-            directoryInfo.Delete(true);
+            foreach (var dir in directoryInfo.GetDirectories())
+            {
+                // Don't delete character profiles
+                if (!dir.Name.Equals("Data", StringComparison.OrdinalIgnoreCase))
+                {
+                    dir.Delete(true);
+                }
+            }
+
+            foreach (var file in directoryInfo.GetFiles())
+            {
+                file.Delete();
+            }
         }
+
         config.AllFilesDownloaded = false;
         SaveServerConfigurations();
     }

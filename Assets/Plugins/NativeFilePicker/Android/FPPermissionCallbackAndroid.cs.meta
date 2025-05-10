@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 5f8c2de0178a90140b030975551436a5
+timeCreated: 1596973837
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 173238
+  packageName: Native File Picker for Android & iOS
+  packageVersion: 1.3.5
+  assetPath: Assets/Plugins/NativeFilePicker/Android/FPPermissionCallbackAndroid.cs
+  uploadId: 687080

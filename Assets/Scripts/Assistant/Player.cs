@@ -6,7 +6,7 @@ using System.Linq;
 using Assistant.Core;
 //using Assistant.Macros;
 //using Assistant.UI;
-using ClassicUO.IO.Resources;
+using ClassicUO.Assets;
 using ClassicUO.Game;
 using ClassicUO.Configuration;
 using ClassicUO.Network;
@@ -738,7 +738,7 @@ namespace Assistant
 
         internal void Say(string msg)
         {
-            Say(ProfileManager.Current.SpeechHue, msg);
+            Say(ProfileManager.CurrentProfile.SpeechHue, msg);
         }
 
         internal class GumpData

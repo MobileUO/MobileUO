@@ -1,1 +1,0 @@
-../../../../../external/ClassicUO/src/shaders/IsometricWorld.fx

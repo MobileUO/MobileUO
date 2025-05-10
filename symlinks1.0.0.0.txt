@@ -1,0 +1,16 @@
+C:\mobileuo\Assets\Scripts\ClassicUO\src\ClassicUO.Client\Configuration\Json\FNAPointJsonConverter.cs
+C:\mobileuo\Assets\Scripts\ClassicUO\src\ClassicUO.Client\Game\UI\Gumps\RaceChangeGump.cs
+C:\mobileuo\Assets\Scripts\ClassicUO\src\ClassicUO.Client\Network\Encryption\MD5Behaviour.cs
+C:\mobileuo\Assets\Scripts\ClassicUO\src\ClassicUO.Client\Network\PacketLogger.cs
+C:\mobileuo\Assets\Scripts\ClassicUO\src\ClassicUO.Client\Resources\Loader.cs
+C:\mobileuo\Assets\Scripts\ClassicUO\src\ClassicUO.Client\Resources\game-background.png
+C:\mobileuo\Assets\Scripts\ClassicUO\src\ClassicUO.Renderer\Animations\Animation.cs
+C:\mobileuo\Assets\Scripts\ClassicUO\src\ClassicUO.Renderer\Animations\AnimationDirection.cs
+C:\mobileuo\Assets\Scripts\ClassicUO\src\ClassicUO.Renderer\Animations\AnimationGroup.cs
+C:\mobileuo\Assets\Scripts\ClassicUO\src\ClassicUO.Renderer\Arts\Art.cs
+C:\mobileuo\Assets\Scripts\ClassicUO\src\ClassicUO.Renderer\Gumps\Gump.cs
+C:\mobileuo\Assets\Scripts\ClassicUO\src\ClassicUO.Renderer\Lights\Light.cs
+C:\mobileuo\Assets\Scripts\ClassicUO\src\ClassicUO.Renderer\MultiMaps\MultiMap.cs
+C:\mobileuo\Assets\Scripts\ClassicUO\src\ClassicUO.Renderer\Sounds\Sound.cs
+C:\mobileuo\Assets\Scripts\ClassicUO\src\ClassicUO.Renderer\SpriteInfo.cs
+C:\mobileuo\Assets\Scripts\ClassicUO\src\ClassicUO.Renderer\Texmaps\Texmap.cs

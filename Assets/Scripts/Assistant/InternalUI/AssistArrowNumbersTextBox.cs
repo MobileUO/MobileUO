@@ -113,23 +113,26 @@ namespace ClassicUO.Game.UI.Controls
             _textBox.SetText(val.ToString());
         }
 
-        public override void Update(double totalMS, double frameMS)
+        public override void Update()
         {
-            if (IsDisposed)
+             if (IsDisposed)
+            {
                 return;
+            }
 
             if (_up.IsClicked || _down.IsClicked)
             {
-                if (_timeUntilNextClick <= 0f)
+                if (Time.Ticks > _timeUntilNextClick)
                 {
-                    _timeUntilNextClick += TIME_BETWEEN_CLICKS;
+                    // MobileUO: CUO 0.1.11.0 removed frameMS from the Update method
+                    //_timeUntilNextClick -= (float)frameMS;
+                    _timeUntilNextClick = Time.Ticks + TIME_BETWEEN_CLICKS;
+
                     UpdateValue();
                 }
-
-                _timeUntilNextClick -= (float)frameMS;
             }
 
-            base.Update(totalMS, frameMS);
+            base.Update();
         }
     }
 }

@@ -25,6 +25,7 @@ public class ServerConfigurationPresenter : MonoBehaviour
     private void OnAddNewConfigurationButtonClicked()
     {
         var serverConfiguration = ServerConfigurationModel.CreateNewServerConfiguration();
+        serverConfigurationEditPresenter.CreateServer = true;
         SetConfigurationAndSwitchToEdit(serverConfiguration);
     }
 
@@ -37,6 +38,7 @@ public class ServerConfigurationPresenter : MonoBehaviour
 
     private void SwitchToList()
     {
+        serverConfigurationEditPresenter.CreateServer = false;
         serverConfigurationListPresenter.gameObject.SetActive(true);
         serverConfigurationEditPresenter.gameObject.SetActive(false);
     }
