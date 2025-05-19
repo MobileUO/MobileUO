@@ -1001,9 +1001,9 @@ namespace ClassicUO
                     var mouseMotion = finger.ScreenPosition != finger.LastScreenPosition;
                     SimulateMouse(finger.Down, finger.Up, false, false, mouseMotion, false);
                 }
-                
-                if (fingers.Count == 2 && ProfileManager.CurrentProfile.EnableMousewheelScaleZoom && UIManager.IsMouseOverWorld)
-                {                    
+
+                if (fingers.Count == 2 && Client.Game.Scene is GameScene && ProfileManager.CurrentProfile.EnableMousewheelScaleZoom && UIManager.IsMouseOverWorld)
+                {
                     var scale = Lean.Touch.LeanGesture.GetPinchScale(fingers);                  
                     if(scale < 1)
                     {
@@ -1017,12 +1017,12 @@ namespace ClassicUO
                     if(zoomCounter > 3)
                     {
                         zoomCounter = 0;
-                        --Client.Game.Scene.Camera.Zoom;
+                        Client.Game.Scene.Camera.ZoomIn();
                     }
                     else if(zoomCounter < -3)
                     {
                         zoomCounter = 0;
-                        ++Client.Game.Scene.Camera.Zoom;
+                        Client.Game.Scene.Camera.ZoomOut();
                     }
                 }
 
