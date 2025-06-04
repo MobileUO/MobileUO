@@ -60,6 +60,13 @@ namespace ClassicUO.Game.UI.Gumps
 
         protected override bool OnMouseDoubleClick(int x, int y, MouseButtonType button)
         {
+            // MobileUO: TODO: #19: testing saving images of TextureAtalases
+            Client.Game.UO.Animations._atlas.SaveImages("Animations");
+            Client.Game.UO.Arts._atlas.SaveImages("Arts");
+            Client.Game.UO.Gumps._atlas.SaveImages("Gumps");
+            Client.Game.UO.Lights._atlas.SaveImages("Lights");
+            Client.Game.UO.Texmaps._atlas.SaveImages("Texmaps");
+
             if (button == MouseButtonType.Left)
             {
                 IsMinimized = !IsMinimized;

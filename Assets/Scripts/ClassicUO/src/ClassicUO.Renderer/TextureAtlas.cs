@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using StbRectPackSharp;
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace ClassicUO.Renderer
 {
@@ -35,12 +36,13 @@ namespace ClassicUO.Renderer
         )
         {
             var index = _textureList.Count - 1;
-            pr = new Rectangle(0, 0, width, height);
+            //pr = new Rectangle(0, 0, width, height);
 
             // MobileUO: handle 0x0 textures - this shouldn't happen unless the client data is missing newer textures
             if (width <= 0 || height <= 0)
             {
                 Utility.Logging.Log.Trace($"Texture width and height must be greater than zero. Width: {width} Height: {height} Index: {index}");
+                pr = new Rectangle(0, 0, width, height);
                 return null;
             }
 
@@ -50,14 +52,19 @@ namespace ClassicUO.Renderer
                 CreateNewTexture2D(width, height);
             }
 
-            // ref Rectangle pr = ref _spriteBounds[hash];
+            //ref Rectangle pr = ref _spriteBounds[hash];
             //pr = new Rectangle(0, 0, width, height);
             // MobileUO: TODO: figure out how to get packer working correctly
-            //while (!_packer.PackRect(width, height, null, out pr))
+            while (!_packer.PackRect(width, height, out pr))
             {
                 CreateNewTexture2D(width, height);
                 index = _textureList.Count - 1;
             }
+
+            // MobileUO: TODO: #19: added logging output
+            //SaveImages("test");
+
+            Utility.Logging.Log.Trace("Packed rect: " + pr);
 
             Texture2D texture = _textureList[index];
 
@@ -72,8 +79,9 @@ namespace ClassicUO.Renderer
         // MobileUO: TODO: figure out how to get packer working correctly
         private void CreateNewTexture2D(int width, int height)
         {
-            //Utility.Logging.Log.Trace($"creating texture: {width}x{height} for Atlas {_width}x{_height} {_format}");
-            Texture2D texture = new Texture2D(_device, width, height, false, _format);
+            // MobileUO: TODO: #19: added logging output; switched back to _width/_height for full sprite sheet
+            Utility.Logging.Log.Trace($"creating texture: {width}x{height} for Atlas {_width}x{_height} {_format}");
+            Texture2D texture = new Texture2D(_device, _width, _height, false, _format);
             _textureList.Add(texture);
 
             _packer?.Dispose();
@@ -82,13 +90,20 @@ namespace ClassicUO.Renderer
 
         public void SaveImages(string name)
         {
+            // MobileUO: TODO: #19: added logging output
+            Utility.Logging.Log.Trace($"Saving images");
             for (int i = 0, count = TexturesCount; i < count; ++i)
             {
+                Utility.Logging.Log.Trace($"Texture {i}");
                 var texture = _textureList[i];
 
                 using (var stream = System.IO.File.Create($"atlas/{name}_atlas_{i}.png"))
                 {
                     texture.SaveAsPng(stream, texture.Width, texture.Height);
+
+                    string relativePath = $"atlas/{name}_atlas_{i}.png";
+                    string fullPath = Path.GetFullPath(relativePath);
+                    Utility.Logging.Log.Trace($"File created at: {fullPath}");
                 }
             }
         }

@@ -6,7 +6,8 @@ namespace ClassicUO.Renderer.Lights
 {
     public sealed class Light
     {
-        private readonly TextureAtlas _atlas;
+        // MobileUO: TODO: #19: temporarily made public
+        public readonly TextureAtlas _atlas;
         private readonly SpriteInfo[] _spriteInfos;
         private readonly LightsLoader _lightsLoader;
 

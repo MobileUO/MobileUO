@@ -10,7 +10,8 @@ namespace ClassicUO.Renderer.Animations
     {
         const int MAX_ANIMATIONS_DATA_INDEX_COUNT = 2048;
 
-        private readonly TextureAtlas _atlas;
+        // MobileUO: TODO: #19: temporarily made public
+        public readonly TextureAtlas _atlas;
         private readonly PixelPicker _picker = new PixelPicker();
         private readonly AnimationsLoader _animationLoader;
         private IndexAnimation[] _dataIndex = new IndexAnimation[MAX_ANIMATIONS_DATA_INDEX_COUNT];
