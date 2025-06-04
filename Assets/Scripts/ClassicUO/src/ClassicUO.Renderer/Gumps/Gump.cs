@@ -5,7 +5,8 @@ namespace ClassicUO.Renderer.Gumps
 {
     public sealed class Gump
     {
-        private readonly TextureAtlas _atlas;
+        // MobileUO: TODO: #19: temporarily made public
+        public readonly TextureAtlas _atlas;
         private readonly SpriteInfo[] _spriteInfos;
         private readonly PixelPicker _picker = new PixelPicker();
         private readonly GumpsLoader _gumpsLoader;

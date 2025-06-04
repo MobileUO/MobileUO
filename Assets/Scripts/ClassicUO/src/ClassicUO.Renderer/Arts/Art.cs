@@ -10,7 +10,8 @@ namespace ClassicUO.Renderer.Arts
     public sealed class Art
     {
         private readonly SpriteInfo[] _spriteInfos;
-        private readonly TextureAtlas _atlas;
+        // MobileUO: TODO: #19: temporarily made public
+        public readonly TextureAtlas _atlas;
         private readonly PixelPicker _picker = new PixelPicker();
         private readonly Rectangle[] _realArtBounds;
         private readonly ArtLoader _artLoader;

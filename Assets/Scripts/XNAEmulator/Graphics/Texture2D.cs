@@ -8,7 +8,7 @@ namespace Microsoft.Xna.Framework.Graphics
     public class Texture2D : GraphicsResource, IDisposable
     {
         //This hash doesn't work as intended since it's not based on the contents of the UnityTexture but its instanceID
-        //which will be different as old textures are discarded and new ones are created 
+        //which will be different as old textures are discarded and new ones are created
         public Texture UnityTexture { get; protected set; }
 
         public static FilterMode defaultFilterMode = FilterMode.Point;
@@ -96,7 +96,7 @@ namespace Microsoft.Xna.Framework.Graphics
                 var colorByte = tempByteData[index];
                 tmp[i] = colorByte;
             }
-            
+
             dst.CopyFrom(tmp);
             destText.Apply();
             tempByteData = null;
@@ -126,7 +126,7 @@ namespace Microsoft.Xna.Framework.Graphics
                 var color = tempColorData[dataLength - index - 1];
                 tmp[i] = color.PackedValue;
             }
-            
+
             dst.CopyFrom(tmp);
             destText.Apply();
             tempColorData = null;
@@ -175,7 +175,7 @@ namespace Microsoft.Xna.Framework.Graphics
                     tmp[i] = tempUIntData[tempElementCount + tempStartOffset - index - 1];
                 }
             }
-            
+
             dst.CopyFrom(tmp);
             destText.Apply();
 
@@ -256,6 +256,9 @@ namespace Microsoft.Xna.Framework.Graphics
                 h = Math.Max(Height >> level, 1);
             }
 
+            // MobileUO: TODO: #19: added logging output
+            Debug.Log($"Texture width: {destTex.width}, height: {destTex.height}, rect: {x},{y},{w},{h}");
+
             // Check if dimensions are valid
             if (x < 0 || y < 0 || x + w > destTex.width || y + h > destTex.height)
             {
@@ -275,7 +278,7 @@ namespace Microsoft.Xna.Framework.Graphics
 
                     if (tempInvertY)
                     {
-                        colorIndex =  row * w + col;
+                        colorIndex = row * w + col;
                     }
 
                     // Ensure the buffer index is within bounds
@@ -288,6 +291,10 @@ namespace Microsoft.Xna.Framework.Graphics
                             buffer[bufferIndex + 2], // B
                             buffer[bufferIndex + 3]  // A
                         );
+                    }
+                    else
+                    {
+                        Debug.LogError($"Buffer index out of bounds: {bufferIndex}");
                     }
                 }
             }
