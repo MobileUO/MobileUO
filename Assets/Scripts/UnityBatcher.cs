@@ -457,6 +457,12 @@ namespace ClassicUO.Renderer
             
             var vertex = new PositionNormalTextureColor4();
 
+            // Flip for Texture Atlas sprites
+            float flippedY = 1.0f - sourceY - sourceH;
+
+            //if (flipY)
+            sourceY = flippedY;
+
             vertex.TextureCoordinate0.x = (_cornerOffsetX[0] * sourcwW) + sourceX;
             vertex.TextureCoordinate0.y = (_cornerOffsetY[0] * sourceH) + sourceY;
             vertex.TextureCoordinate0.z = 0;
@@ -765,6 +771,12 @@ namespace ClassicUO.Renderer
             float sourceH = ((sourceRect.Height - 1f) / (float)texture.Height);
 
             byte effects = (byte)((flip ? SpriteEffects.FlipHorizontally : SpriteEffects.None) & (SpriteEffects)0x03);
+
+            // Flip for Texture Atlas sprites
+            float flippedY = 1.0f - sourceY - sourceH;
+
+            //if (flipY)
+            sourceY = flippedY;
 
             vertex.TextureCoordinate0.x = (_cornerOffsetX[0 ^ effects] * sourceW) + sourceX;
             vertex.TextureCoordinate0.y = (_cornerOffsetY[0 ^ effects] * sourceH) + sourceY;
@@ -1884,7 +1896,8 @@ namespace ClassicUO.Renderer
                 color,
                 originX, originY,
                 rotationSin, rotationCos,
-                depth, effects
+                depth, effects,
+                texture.IsFromTextureAtlas
             );
 
             RenderVertex(sprite, texture, color);
@@ -1941,7 +1954,8 @@ namespace ClassicUO.Renderer
             float rotationSin,
             float rotationCos,
             float depth,
-            byte effects
+            byte effects,
+            bool flipY = false // flip textures on Y axis from Texture Atlas
         )
         {
             // MobileUO: TODO: temp fix to keep things stable - hopefully future commit makes depth work
@@ -1974,6 +1988,11 @@ namespace ClassicUO.Renderer
             sprite.Position3.x = ((-rotationSin * cornerY) + (rotationCos * cornerX) + destinationX);
             sprite.Position3.y = ((rotationCos * cornerY) + (rotationSin * cornerX) + destinationY);
 
+            // Flip for Texture Atlas sprites
+            float flippedY = 1.0f - sourceY - sourceH;
+
+            if (flipY)
+                sourceY = flippedY;
 
             sprite.TextureCoordinate0.x = (_cornerOffsetX[0 ^ effects] * sourceW) + sourceX;
             sprite.TextureCoordinate0.y = (_cornerOffsetY[0 ^ effects] * sourceH) + sourceY;
@@ -1983,6 +2002,11 @@ namespace ClassicUO.Renderer
             sprite.TextureCoordinate2.y = (_cornerOffsetY[2 ^ effects] * sourceH) + sourceY;
             sprite.TextureCoordinate3.x = (_cornerOffsetX[3 ^ effects] * sourceW) + sourceX;
             sprite.TextureCoordinate3.y = (_cornerOffsetY[3 ^ effects] * sourceH) + sourceY;
+
+            //Log.Info($"UV0: {sprite.TextureCoordinate0}");
+            //Log.Info($"UV1: {sprite.TextureCoordinate1}");
+            //Log.Info($"UV2: {sprite.TextureCoordinate2}");
+            //Log.Info($"UV3: {sprite.TextureCoordinate3}");
 
             sprite.TextureCoordinate0.z = 0;
             sprite.TextureCoordinate1.z = 0;

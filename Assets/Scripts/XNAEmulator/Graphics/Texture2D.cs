@@ -11,6 +11,8 @@ namespace Microsoft.Xna.Framework.Graphics
         //which will be different as old textures are discarded and new ones are created
         public Texture UnityTexture { get; protected set; }
 
+        public bool IsFromTextureAtlas { get; set; }
+
         public static FilterMode defaultFilterMode = FilterMode.Point;
 
         protected Texture2D(GraphicsDevice graphicsDevice) : base(graphicsDevice)
@@ -257,7 +259,7 @@ namespace Microsoft.Xna.Framework.Graphics
             }
 
             // MobileUO: TODO: #19: added logging output
-            Debug.Log($"Texture width: {destTex.width}, height: {destTex.height}, rect: {x},{y},{w},{h}");
+            //Debug.Log($"Texture width: {destTex.width}, height: {destTex.height}, rect: {x},{y},{w},{h}");
 
             // Check if dimensions are valid
             if (x < 0 || y < 0 || x + w > destTex.width || y + h > destTex.height)

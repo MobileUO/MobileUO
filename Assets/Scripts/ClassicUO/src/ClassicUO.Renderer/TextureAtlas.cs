@@ -36,7 +36,7 @@ namespace ClassicUO.Renderer
         )
         {
             var index = _textureList.Count - 1;
-            //pr = new Rectangle(0, 0, width, height);
+            pr = new Rectangle(0, 0, width, height);
 
             // MobileUO: handle 0x0 textures - this shouldn't happen unless the client data is missing newer textures
             if (width <= 0 || height <= 0)
@@ -64,9 +64,10 @@ namespace ClassicUO.Renderer
             // MobileUO: TODO: #19: added logging output
             //SaveImages("test");
 
-            Utility.Logging.Log.Trace("Packed rect: " + pr);
+            //Utility.Logging.Log.Trace("Packed rect: " + pr);
 
             Texture2D texture = _textureList[index];
+            texture.IsFromTextureAtlas = true;
 
             fixed (uint* src = pixels)
             {
