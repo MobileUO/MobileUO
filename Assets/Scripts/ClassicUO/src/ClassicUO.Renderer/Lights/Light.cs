@@ -14,7 +14,8 @@ namespace ClassicUO.Renderer.Lights
         public Light(LightsLoader lightsLoader, GraphicsDevice device)
         {
             _lightsLoader = lightsLoader;
-            _atlas = new TextureAtlas(device, 2048, 2048, SurfaceFormat.Color);
+            // MobileUO: use smaller atlas
+            _atlas = new TextureAtlas(device, 512, 512, SurfaceFormat.Color);
             _spriteInfos = new SpriteInfo[lightsLoader.File.Entries.Length];
         }
 

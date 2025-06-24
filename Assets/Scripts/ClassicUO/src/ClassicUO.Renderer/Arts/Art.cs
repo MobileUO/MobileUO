@@ -21,7 +21,8 @@ namespace ClassicUO.Renderer.Arts
         {
             _artLoader = artLoader;
             _huesLoader = huesLoader;
-            _atlas = new TextureAtlas(device, 4096, 4096, SurfaceFormat.Color);
+            // MobileUO: use smaller atlas
+            _atlas = new TextureAtlas(device, 512, 512, SurfaceFormat.Color);
             _spriteInfos = new SpriteInfo[_artLoader.File.Entries.Length];
             _realArtBounds = new Rectangle[_spriteInfos.Length];
         }
