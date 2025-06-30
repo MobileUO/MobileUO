@@ -38,6 +38,7 @@ namespace Microsoft.Xna.Framework.Graphics
             set { pPublicCachedParams = value; }
         }
         public IndexBuffer Indices { get; set; }
+        public VertexBuffer VertexBuffer { get; private set; }
 
         internal void SetRenderTarget(RenderTarget2D renderTarget)
         {
@@ -71,10 +72,58 @@ namespace Microsoft.Xna.Framework.Graphics
 
         public void SetVertexBuffer(VertexBuffer dynamicVertexBuffer)
         {
+            if (dynamicVertexBuffer == null)
+            {
+                UnityEngine.Debug.LogWarning("SetVertexBuffer: null buffer passed.");
+                VertexBuffer = null;
+                return;
+            }
+
+            VertexBuffer = dynamicVertexBuffer;
         }
 
-        public void DrawIndexedPrimitives(PrimitiveType triangleList, int i, int i1, int i2, int i3, int i4)
+        private MeshHolder reusedMesh = new MeshHolder(1);
+
+        public void DrawIndexedPrimitives(
+            PrimitiveType primitiveType,
+            int baseVertex,
+            int minVertexIndex,
+            int numVertices,
+            int startIndex,
+            int primitiveCount,
+            Material hueMaterial = null,
+            int Hue = 0)
         {
+            if (VertexBuffer == null || Indices == null || Textures[0] == null)
+            {
+                Debug.LogWarning("DrawIndexedPrimitives: missing vertex/index/texture.");
+                return;
+            }
+
+            var vertexData = VertexBuffer.GetRawVertexData();
+            var indexData = Indices.GetRawIndexData();
+
+            int quadCount = primitiveCount / 2;
+
+            reusedMesh.Clear();
+
+            for (int i = 0; i < quadCount; i++)
+            {
+                int baseIdx = baseVertex + i * 4;
+                if (baseIdx + 3 >= vertexData.Length)
+                    break;
+
+                reusedMesh.AddQuad(vertexData[baseIdx]);
+            }
+
+            reusedMesh.FinalizeMesh();
+
+            var mat = hueMaterial;
+            mat.mainTexture = Textures[0].UnityTexture;
+            mat.SetColor(Hue, reusedMesh.CurrentHue);
+            mat.SetPass(0);
+
+            UnityGraphics.DrawMeshNow(reusedMesh.Mesh, UnityEngine.Vector3.zero, UnityEngine.Quaternion.identity);
         }
     }
 }
