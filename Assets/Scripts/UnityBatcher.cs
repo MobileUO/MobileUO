@@ -1,11 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using ClassicUO.Renderer.Effects;
+﻿using ClassicUO.Renderer.Effects;
 using ClassicUO.Utility.Logging;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.Rendering;
 using BlendState = Microsoft.Xna.Framework.Graphics.BlendState;
@@ -13,13 +13,13 @@ using Color = UnityEngine.Color;
 using CompareFunction = Microsoft.Xna.Framework.Graphics.CompareFunction;
 using Quaternion = UnityEngine.Quaternion;
 using Texture2D = Microsoft.Xna.Framework.Graphics.Texture2D;
+using UnityCamera = UnityEngine.Camera;
 using UnityTexture = UnityEngine.Texture;
 using Vector2 = UnityEngine.Vector2;
 using Vector3 = UnityEngine.Vector3;
 using Vector4 = UnityEngine.Vector4;
 using XnaVector2 = Microsoft.Xna.Framework.Vector2;
 using XnaVector3 = Microsoft.Xna.Framework.Vector3;
-using UnityCamera = UnityEngine.Camera;
 
 namespace ClassicUO.Renderer
 {
@@ -802,21 +802,34 @@ namespace ClassicUO.Renderer
             RenderVertex(vertex, texture, vertex.Hue0);
         }
 
+        //private void RenderVertex(PositionNormalTextureColor4 vertex, Texture2D texture, Vector3 hue)
+        //{
+        //    vertex.Position0 *= scale;
+        //    vertex.Position1 *= scale;
+        //    vertex.Position2 *= scale;
+        //    vertex.Position3 *= scale;
+
+        //    reusedMesh.Populate(vertex);
+
+        //    var mat = hueMaterial;
+        //    mat.mainTexture = texture.UnityTexture;
+        //    mat.SetColor(Hue, new Color(hue.x,hue.y,hue.z));
+        //    mat.SetPass(0);
+
+        //    Graphics.DrawMeshNow(reusedMesh.Mesh, Vector3.zero, Quaternion.identity);
+        //}
+
+        private readonly List<VertexData> _batchedVertices = new List<VertexData>();
+
+        // TODO: rename this to PsuhVertex
         private void RenderVertex(PositionNormalTextureColor4 vertex, Texture2D texture, Vector3 hue)
         {
             vertex.Position0 *= scale;
             vertex.Position1 *= scale;
             vertex.Position2 *= scale;
             vertex.Position3 *= scale;
-
-            reusedMesh.Populate(vertex);
-
-            var mat = hueMaterial;
-            mat.mainTexture = texture.UnityTexture;
-            mat.SetColor(Hue, new Color(hue.x,hue.y,hue.z));
-            mat.SetPass(0);
-
-            Graphics.DrawMeshNow(reusedMesh.Mesh, Vector3.zero, Quaternion.identity);
+            
+            _batchedVertices.Add(new VertexData(vertex, texture, hue));
         }
 
         public void DrawCharacterSitted
@@ -1921,6 +1934,7 @@ namespace ClassicUO.Renderer
 
         public void End()
         {
+            Flush();
             CustomEffect = null;
         }
 
@@ -2108,11 +2122,36 @@ namespace ClassicUO.Renderer
             //_basicUOEffect.Pass.Apply();
         }
 
-        private void Flush()
-        {
-            ApplyStates();
+        //private void Flush()
+        //{
+        //    ApplyStates();
 
+        //    ++FlushesDone;
+        //}
+
+        public void Flush()
+        {
+            if (_batchedVertices.Count == 0)
+                return;
+
+            ApplyStates();
             ++FlushesDone;
+
+            for (int i = 0; i < _batchedVertices.Count; i++)
+            {
+                var v = _batchedVertices[i];
+
+                reusedMesh.Populate(v.vertex);
+
+                var mat = hueMaterial;
+                mat.mainTexture = v.texture.UnityTexture;
+                mat.SetColor(Hue, new Color(v.hue.x, v.hue.y, v.hue.z));
+                mat.SetPass(0);
+
+                Graphics.DrawMeshNow(reusedMesh.Mesh, Vector3.zero, Quaternion.identity);
+            }
+
+            _batchedVertices.Clear();
         }
 
         public bool ClipBegin(int x, int y, int width, int height)
@@ -2161,25 +2200,28 @@ namespace ClassicUO.Renderer
                 return;
 
             _useScissor = enable;
-            ApplyStates();
+            //ApplyStates();
+            Flush();
         }
 
         public void SetBlendState(BlendState blend)
         {
             _blendState = blend ?? BlendState.AlphaBlend;
-            ApplyStates();
+            //ApplyStates();
+            Flush();
         }
 
         public void SetStencil(DepthStencilState stencil)
         {
             _stencil = stencil ?? Stencil;
-            ApplyStates();
+            //ApplyStates();
+            Flush();
         }
 
         public void SetSampler(SamplerState sampler)
         {
             // MobileUO: TODO: add it?
-            //Flush();
+            Flush();
 
             _sampler = sampler ?? SamplerState.PointClamp;
         }
@@ -2225,6 +2267,20 @@ namespace ClassicUO.Renderer
             );
 
             public const int SIZE_IN_BYTES = sizeof(float) * 12 * 4;            
+        }
+
+        public struct VertexData
+        {
+            public PositionNormalTextureColor4 vertex;
+            public Texture2D texture;
+            public Vector3 hue;
+
+            public VertexData(PositionNormalTextureColor4 vertex, Texture2D texture, Vector3 hue)
+            {
+                this.vertex = vertex;
+                this.texture = texture;
+                this.hue = hue;
+            }
         }
     }
 }
