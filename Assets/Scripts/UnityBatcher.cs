@@ -2246,6 +2246,8 @@ namespace ClassicUO.Renderer
             // 3) Draw each group in Z‐order
             foreach (var g in groups)
             {
+                ++TextureSwitches;
+
                 // build just the quads for this bucket
                 _runQuads.Clear();
                 foreach (var vd in g)

@@ -1,7 +1,5 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
-using System;
-using System.Xml;
 using ClassicUO.Configuration;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.Scenes;
@@ -10,6 +8,8 @@ using ClassicUO.Input;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
+using System;
+using System.Xml;
 
 namespace ClassicUO.Game.UI.Gumps
 {
@@ -27,6 +27,9 @@ namespace ClassicUO.Game.UI.Gumps
         private uint _timeToUpdate;
         private readonly AlphaBlendControl _alphaBlendControl;
         private string _cacheText = string.Empty;
+
+        // MobileUO: added Flushes/Switches
+        private int TextureSwitches, FlushesDone;
 
         public DebugGump(World world, int x, int y) : base(world, 0, 0)
         {
@@ -153,6 +156,8 @@ namespace ClassicUO.Game.UI.Gumps
                     }
                 }
 
+                // MobileUO: added Flushes/Switches output TODO: move it into expanded debug info only
+                sb.Append($"\nFlushes: {FlushesDone}\nSwitches: {TextureSwitches}");
 
                 _cacheText = sb.ToString();
 
@@ -169,6 +174,10 @@ namespace ClassicUO.Game.UI.Gumps
 
         public override bool Draw(UltimaBatcher2D batcher, int x, int y)
         {
+            // MobileUO: added Flushes/Switches
+            TextureSwitches = batcher.TextureSwitches;
+            FlushesDone = batcher.FlushesDone;
+
             if (!base.Draw(batcher, x, y))
             {
                 return false;

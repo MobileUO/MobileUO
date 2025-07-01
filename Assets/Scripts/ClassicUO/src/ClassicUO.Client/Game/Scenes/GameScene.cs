@@ -1153,6 +1153,8 @@ namespace ClassicUO.Game.Scenes
             batcher.SetSampler(null);
             batcher.SetStencil(null);
 
+            //batcher.DrawString(Fonts.Bold, $"Flushes: {batcher.FlushesDone}\nSwitches: {batcher.TextureSwitches}", 600, 200, new Vector3(0, 1, 0));
+
             // draw weather
             _world.Weather.Draw(batcher, 0, 0); // TODO: fix the depth
 
