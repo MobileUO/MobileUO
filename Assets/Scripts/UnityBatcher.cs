@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using UnityEngine;
@@ -64,17 +65,17 @@ namespace ClassicUO.Renderer
         private static readonly int TextureSize = Shader.PropertyToID("textureSize");
 
         // MobileUO: TODO: flag to use depths while trying to figure out the depth issue
-        private bool USE_DEPTH = false;
+        private bool USE_DEPTH = true;
         private bool LOG_DEPTH = false;
-        private bool DIVIDE_DEPTH = false; // if depth values are 100 or lower, they will render. Something clips them at over 100 (100.1 or 101 or higher)
+        private bool DIVIDE_DEPTH = true; // if depth values are 100 or lower, they will render. Something clips them at over 100 (100.1 or 101 or higher)
 
         public UltimaBatcher2D(GraphicsDevice device)
         {
-            if (USE_DEPTH)
-            {
-                UnityCamera.main.nearClipPlane = 0.01f;
-                UnityCamera.main.farClipPlane = 10000f;
-            }
+            //if (USE_DEPTH)
+            //{
+            //    UnityCamera.main.nearClipPlane = 0.01f;
+            //    UnityCamera.main.farClipPlane = 10000f;
+            //}
 
             GraphicsDevice = device;
             _blendState = BlendState.AlphaBlend;
@@ -96,6 +97,14 @@ namespace ClassicUO.Renderer
 
             hueMaterial = new Material(UnityEngine.Resources.Load<Shader>("HueShader"));
             xbrMaterial = new Material(UnityEngine.Resources.Load<Shader>("XbrShader"));
+
+            hueMaterial.SetInt("_ZWrite", 1);  // turn on depth writes
+            hueMaterial.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.LessEqual);
+            //hueMaterial.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent - 1;
+            hueMaterial.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Geometry;
+
+            hueMaterial.SetOverrideTag("Queue", "Geometry");
+            hueMaterial.SetOverrideTag("RenderType", "Opaque");
         }
 
         public Matrix TransformMatrix => _transformMatrix;
@@ -821,14 +830,32 @@ namespace ClassicUO.Renderer
 
         private readonly List<VertexData> _batchedVertices = new List<VertexData>();
 
-        // TODO: rename this to PsuhVertex
+        // MobileUO: TODO: #19: rename this to PsuhVertex
         private void RenderVertex(PositionNormalTextureColor4 vertex, Texture2D texture, Vector3 hue)
         {
-            vertex.Position0 *= scale;
-            vertex.Position1 *= scale;
-            vertex.Position2 *= scale;
-            vertex.Position3 *= scale;
-            
+            if (float.IsNaN(vertex.Position0.x) || float.IsNaN(vertex.Position0.y))
+            {
+                //Debug.LogError($"Bad SpriteVertex for tex {texture.UnityTexture.name} @ {vertex.Position0}");
+                return; // skip this sprite entirely until we fix the math
+            }
+
+            //vertex.Position0 *= scale;
+            //vertex.Position1 *= scale;
+            //vertex.Position2 *= scale;
+            //vertex.Position3 *= scale;
+
+            vertex.Position0.x *= scale;
+            vertex.Position0.y *= scale;
+
+            vertex.Position1.x *= scale;
+            vertex.Position1.y *= scale;
+
+            vertex.Position2.x *= scale;
+            vertex.Position2.y *= scale;
+
+            vertex.Position3.x *= scale;
+            vertex.Position3.y *= scale;
+
             _batchedVertices.Add(new VertexData(vertex, texture, hue));
         }
 
@@ -2122,11 +2149,71 @@ namespace ClassicUO.Renderer
             //_basicUOEffect.Pass.Apply();
         }
 
-        //private void Flush()
-        //{
-        //    ApplyStates();
+        private readonly List<PositionNormalTextureColor4> _runQuads = new List<PositionNormalTextureColor4>();
+        private readonly MaterialPropertyBlock _mpb = new MaterialPropertyBlock();
 
+        //public void Flush()
+        //{
+        //    if (_batchedVertices.Count == 0)
+        //        return;
+
+        //    ApplyStates();
         //    ++FlushesDone;
+
+        //    _runQuads.Clear();
+
+        //    // grab first sprite’s key
+        //    var first = _batchedVertices[0];
+        //    Texture2D currentTex = first.texture;
+        //    Vector3 currentHue = first.hue;
+
+        //    // walk them in original order
+        //    for (int i = 0; i < _batchedVertices.Count; i++)
+        //    {
+        //        var vd = _batchedVertices[i];
+
+        //        // if any key changes, flush the existing run
+        //        if (vd.texture != currentTex
+        //          || vd.hue != currentHue)
+        //        {
+        //            DrawRun(currentTex, currentHue, _runQuads);
+        //            _runQuads.Clear();
+        //            currentTex = vd.texture;
+        //            currentHue = vd.hue;
+        //        }
+
+        //        _runQuads.Add(vd.vertex);
+        //    }
+
+        //    // final run
+        //    DrawRun(currentTex, currentHue, _runQuads);
+        //    _batchedVertices.Clear();
+        //}
+
+        //public void Flush()
+        //{
+        //    if (_batchedVertices.Count == 0)
+        //        return;
+
+        //    ApplyStates();
+        //    ++FlushesDone;
+
+        //    // group all sprites by (texture, hue)
+        //    var groups = _batchedVertices
+        //        .GroupBy(v => (v.texture, v.hue));
+
+        //    foreach (var group in groups)
+        //    {
+        //        // collect just the PositionNormalTextureColor4 for this bucket
+        //        _runQuads.Clear();
+        //        foreach (var vd in group)
+        //            _runQuads.Add(vd.vertex);
+
+        //        // draw the entire bucket in one mesh
+        //        DrawRun(group.Key.texture, group.Key.hue, _runQuads);
+        //    }
+
+        //    _batchedVertices.Clear();
         //}
 
         public void Flush()
@@ -2137,22 +2224,87 @@ namespace ClassicUO.Renderer
             ApplyStates();
             ++FlushesDone;
 
-            for (int i = 0; i < _batchedVertices.Count; i++)
+            //foreach (var vertex in _batchedVertices)
+            //{
+            //    Log.Info($"VERTEX Z:{vertex.vertex.Position0.z}");
+            //}
+
+            // 1) Sort all sprites by their Z (Position0.z)
+            var sorted = _batchedVertices
+                .OrderBy(v => v.vertex.Position0.z)
+                .ToList();
+
+            //float bucket = 10000f;
+            // 2) Group by the triple (texture, hue, exact Z)
+            var groups = sorted
+                .GroupBy(v => (
+                    tex: v.texture,
+                    hue: v.hue,
+                    z: v.vertex.Position0.z//Mathf.Floor(v.vertex.Position0.z * bucket) / bucket
+                ));
+
+            // 3) Draw each group in Z‐order
+            foreach (var g in groups)
             {
-                var v = _batchedVertices[i];
+                // build just the quads for this bucket
+                _runQuads.Clear();
+                foreach (var vd in g)
+                    _runQuads.Add(vd.vertex);
 
-                reusedMesh.Populate(v.vertex);
-
-                var mat = hueMaterial;
-                mat.mainTexture = v.texture.UnityTexture;
-                mat.SetColor(Hue, new Color(v.hue.x, v.hue.y, v.hue.z));
-                mat.SetPass(0);
-
-                Graphics.DrawMeshNow(reusedMesh.Mesh, Vector3.zero, Quaternion.identity);
+                // draw them all at once
+                DrawRun(g.Key.tex, g.Key.hue, _runQuads);
             }
 
             _batchedVertices.Clear();
         }
+
+        private void DrawRun(Texture2D tex, Vector3 hue, List<PositionNormalTextureColor4> quads)
+        {
+            // drop the entire run if even one corner is bad
+            foreach (var quad in quads)
+                if (float.IsNaN(quad.Position0.x) || float.IsNaN(quad.Position0.y))
+                    return;
+
+            reusedMesh.Populate(quads);
+            //reusedMesh.Mesh.RecalculateBounds();
+
+            var mat = hueMaterial;
+            mat.mainTexture = tex.UnityTexture;
+            mat.SetColor(Hue, new Color(hue.x, hue.y, hue.z));
+            mat.SetPass(0);
+
+            Graphics.DrawMeshNow(reusedMesh.Mesh, Vector3.zero, Quaternion.identity);
+        }
+
+        //private void DrawRun(Texture2D tex, Vector3 hue, List<PositionNormalTextureColor4> quads)
+        //{
+        //    if (quads.Count == 0) 
+        //        return;
+
+        //    reusedMesh.Populate(quads);
+        //    // NO RecalculateBounds here if you've set a big fixed bounds once,
+        //    // or call it if you need dynamic bounds:
+        //    // reusedMesh.Mesh.RecalculateBounds();
+
+        //    _mpb.Clear();
+        //    _mpb.SetTexture("_MainTex", tex.UnityTexture);
+        //    _mpb.SetColor(Hue, new Color(hue.x, hue.y, hue.z));
+
+        //    var _renderCam = UnityEngine.Camera.main;
+        //    if (_renderCam == null)
+        //        Debug.LogError("Please tag your main camera as MainCamera!");
+
+        //    // draw every quad in this bucket in ONE CALL:
+        //    Graphics.DrawMesh(
+        //        reusedMesh.Mesh,
+        //        Matrix4x4.identity,
+        //        hueMaterial,
+        //        0,               // layer
+        //        UnityEngine.Camera.main,  // make sure you supply a camera
+        //        0,               // submesh
+        //        _mpb
+        //    );
+        //}
 
         public bool ClipBegin(int x, int y, int width, int height)
         {
