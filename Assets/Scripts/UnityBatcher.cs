@@ -2152,43 +2152,45 @@ namespace ClassicUO.Renderer
         private readonly List<PositionNormalTextureColor4> _runQuads = new List<PositionNormalTextureColor4>();
         private readonly MaterialPropertyBlock _mpb = new MaterialPropertyBlock();
 
-        //public void Flush()
-        //{
-        //    if (_batchedVertices.Count == 0)
-        //        return;
+        public void Flush()
+        {
+            if (_batchedVertices.Count == 0)
+                return;
 
-        //    ApplyStates();
-        //    ++FlushesDone;
+            ApplyStates();
+            ++FlushesDone;
 
-        //    _runQuads.Clear();
+            _runQuads.Clear();
 
-        //    // grab first sprite’s key
-        //    var first = _batchedVertices[0];
-        //    Texture2D currentTex = first.texture;
-        //    Vector3 currentHue = first.hue;
+            // grab first sprite’s key
+            var first = _batchedVertices[0];
+            Texture2D currentTex = first.texture;
+            Vector3 currentHue = first.hue;
 
-        //    // walk them in original order
-        //    for (int i = 0; i < _batchedVertices.Count; i++)
-        //    {
-        //        var vd = _batchedVertices[i];
+            // walk them in original order
+            for (int i = 0; i < _batchedVertices.Count; i++)
+            {
+                var vd = _batchedVertices[i];
 
-        //        // if any key changes, flush the existing run
-        //        if (vd.texture != currentTex
-        //          || vd.hue != currentHue)
-        //        {
-        //            DrawRun(currentTex, currentHue, _runQuads);
-        //            _runQuads.Clear();
-        //            currentTex = vd.texture;
-        //            currentHue = vd.hue;
-        //        }
+                // if any key changes, flush the existing run
+                if (vd.texture != currentTex
+                  || vd.hue != currentHue)
+                {
+                    ++TextureSwitches;
 
-        //        _runQuads.Add(vd.vertex);
-        //    }
+                    DrawRun(currentTex, currentHue, _runQuads);
+                    _runQuads.Clear();
+                    currentTex = vd.texture;
+                    currentHue = vd.hue;
+                }
 
-        //    // final run
-        //    DrawRun(currentTex, currentHue, _runQuads);
-        //    _batchedVertices.Clear();
-        //}
+                _runQuads.Add(vd.vertex);
+            }
+
+            // final run
+            DrawRun(currentTex, currentHue, _runQuads);
+            _batchedVertices.Clear();
+        }
 
         //public void Flush()
         //{
@@ -2216,49 +2218,49 @@ namespace ClassicUO.Renderer
         //    _batchedVertices.Clear();
         //}
 
-        public void Flush()
-        {
-            if (_batchedVertices.Count == 0)
-                return;
+        //public void Flush()
+        //{
+        //    if (_batchedVertices.Count == 0)
+        //        return;
 
-            ApplyStates();
-            ++FlushesDone;
+        //    ApplyStates();
+        //    ++FlushesDone;
 
-            //foreach (var vertex in _batchedVertices)
-            //{
-            //    Log.Info($"VERTEX Z:{vertex.vertex.Position0.z}");
-            //}
+        //    //foreach (var vertex in _batchedVertices)
+        //    //{
+        //    //    Log.Info($"VERTEX Z:{vertex.vertex.Position0.z}");
+        //    //}
 
-            // 1) Sort all sprites by their Z (Position0.z)
-            var sorted = _batchedVertices
-                .OrderBy(v => v.vertex.Position0.z)
-                .ToList();
+        //    // 1) Sort all sprites by their Z (Position0.z)
+        //    var sorted = _batchedVertices
+        //        .OrderBy(v => v.vertex.Position0.z)
+        //        .ToList();
 
-            //float bucket = 10000f;
-            // 2) Group by the triple (texture, hue, exact Z)
-            var groups = sorted
-                .GroupBy(v => (
-                    tex: v.texture,
-                    hue: v.hue,
-                    z: v.vertex.Position0.z//Mathf.Floor(v.vertex.Position0.z * bucket) / bucket
-                ));
+        //    //float bucket = 10000f;
+        //    // 2) Group by the triple (texture, hue, exact Z)
+        //    var groups = sorted
+        //        .GroupBy(v => (
+        //            tex: v.texture,
+        //            hue: v.hue,
+        //            z: v.vertex.Position0.z//Mathf.Floor(v.vertex.Position0.z * bucket) / bucket
+        //        ));
 
-            // 3) Draw each group in Z‐order
-            foreach (var g in groups)
-            {
-                ++TextureSwitches;
+        //    // 3) Draw each group in Z‐order
+        //    foreach (var g in groups)
+        //    {
+        //        ++TextureSwitches;
 
-                // build just the quads for this bucket
-                _runQuads.Clear();
-                foreach (var vd in g)
-                    _runQuads.Add(vd.vertex);
+        //        // build just the quads for this bucket
+        //        _runQuads.Clear();
+        //        foreach (var vd in g)
+        //            _runQuads.Add(vd.vertex);
 
-                // draw them all at once
-                DrawRun(g.Key.tex, g.Key.hue, _runQuads);
-            }
+        //        // draw them all at once
+        //        DrawRun(g.Key.tex, g.Key.hue, _runQuads);
+        //    }
 
-            _batchedVertices.Clear();
-        }
+        //    _batchedVertices.Clear();
+        //}
 
         private void DrawRun(Texture2D tex, Vector3 hue, List<PositionNormalTextureColor4> quads)
         {
