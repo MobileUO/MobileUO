@@ -2332,6 +2332,9 @@ namespace ClassicUO.Renderer
             {
                 EnableScissorTest(true);
 
+                // Re-apply the new scissor to the material
+                ApplyStates();
+
                 return true;
             }
 
@@ -2340,10 +2343,14 @@ namespace ClassicUO.Renderer
 
         public void ClipEnd()
         {
+            // Draw whatever was accumulated under the current scissor
+            Flush();
+
             EnableScissorTest(false);
             ScissorStack.PopScissors(GraphicsDevice);
 
-            Flush();
+            // Push scissor change into the material
+            ApplyStates();
         }
 
         // MobileUO: keep old Scissor test logic
