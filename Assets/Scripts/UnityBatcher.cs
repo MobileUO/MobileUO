@@ -512,7 +512,7 @@ namespace ClassicUO.Renderer
 
             vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
 
-            RenderVertex(vertex, texture, hue);
+            RenderVertex(vertex, texture, hue, true);
 
             return true;
         }
@@ -834,7 +834,7 @@ namespace ClassicUO.Renderer
         private readonly List<VertexData> _batchedVertices = new List<VertexData>();
 
         // MobileUO: TODO: #19: rename this to PushVertex
-        private void RenderVertex(PositionNormalTextureColor4 vertex, Texture2D texture, Vector3 hue)
+        private void RenderVertex(PositionNormalTextureColor4 vertex, Texture2D texture, Vector3 hue, bool useMesh = false)
         {
             if (float.IsNaN(vertex.Position0.x) || float.IsNaN(vertex.Position0.y))
             {
@@ -859,7 +859,7 @@ namespace ClassicUO.Renderer
             vertex.Position3.x *= scale;
             vertex.Position3.y *= scale;
 
-            _batchedVertices.Add(new VertexData(vertex, texture, hue));
+            _batchedVertices.Add(new VertexData(vertex, texture, hue, useMesh));
         }
 
         public void DrawCharacterSitted
@@ -2154,28 +2154,29 @@ namespace ClassicUO.Renderer
 
         private readonly List<PositionNormalTextureColor4> _runQuads = new List<PositionNormalTextureColor4>();
         private readonly MaterialPropertyBlock _mpb = new MaterialPropertyBlock();
+        //private readonly List<PositionNormalTextureColor4> _meshBatchVerts = new();
+        //private readonly List<Texture2D> _meshBatchTextures = new();
+        //private readonly List<Vector3> _meshBatchHues = new();
 
-        public void Flush()
+        private readonly List<VertexData> _batchedMeshVertices = new List<VertexData>();
+
+
+        public void FlushMeshBatch()
         {
-            if (_batchedVertices.Count == 0)
+            if (_batchedMeshVertices.Count == 0) 
                 return;
-
-            //Log.Info($"FLUSH! batchedVertices count: {_batchedVertices.Count} - runQuads {_runQuads.Count}");
-
-            ApplyStates();
-            ++FlushesDone;
 
             _runQuads.Clear();
 
             // grab first sprite’s key
-            var first = _batchedVertices[0];
+            var first = _batchedMeshVertices[0];
             Texture2D currentTex = first.texture;
             Vector3 currentHue = first.hue;
 
             // walk them in original order
-            for (int i = 0; i < _batchedVertices.Count; i++)
+            for (int i = 0; i < _batchedMeshVertices.Count; i++)
             {
-                var vd = _batchedVertices[i];
+                var vd = _batchedMeshVertices[i];
 
                 // if any key changes, flush the existing run
                 if (vd.texture != currentTex
@@ -2184,7 +2185,7 @@ namespace ClassicUO.Renderer
                     ++TextureSwitches;
 
                     DrawRun(currentTex, currentHue, _runQuads);
-                    //Log.Info($"DrawRun! batchedVertices count: {_batchedVertices.Count} - runQuads {_runQuads.Count}");
+                    //Log.Info($"DrawRun! batchedVertices count: {_batchedMeshVertices.Count} - runQuads {_runQuads.Count}");
 
                     _runQuads.Clear();
                     currentTex = vd.texture;
@@ -2196,8 +2197,140 @@ namespace ClassicUO.Renderer
 
             // final run
             DrawRun(currentTex, currentHue, _runQuads);
+
+            // clear for next batch
+            _batchedMeshVertices.Clear();
+            //_meshBatchVerts.Clear();
+            //_meshBatchTextures.Clear();
+            //_meshBatchHues.Clear();
+        }
+
+        public void Flush()
+        {
+            if (_batchedVertices.Count == 0)
+                return;
+
+            ApplyStates();
+            ++FlushesDone;
+
+            // For each queued sprite, issue a DrawTexture
+            foreach (var vd in _batchedVertices)
+            {
+                if(true)//vd.UseMesh)
+                {
+                    // accumulate for a mesh‐batch
+                    _batchedMeshVertices.Add(vd);
+                    //_meshBatchVerts.Add(vd.vertex);
+                    //_meshBatchTextures.Add(vd.texture);
+                    //_meshBatchHues.Add(vd.hue);
+                }
+                else
+                {
+                    FlushMeshBatch();
+
+                    var q = vd.vertex;
+                    var tex = vd.texture;
+                    var hue = vd.hue;
+
+                    // compute dst rect
+                    var x0 = q.Position0.x;
+                    var y0 = q.Position0.y;
+                    var x1 = q.Position1.x;
+                    var y1 = q.Position3.y;
+                    var dst = new Rect(x0, y0, x1 - x0, y1 - y0);
+
+                    // compute uv rect
+                    float u0 = q.TextureCoordinate0.x;
+                    float v0 = 1 - q.TextureCoordinate3.y;
+                    float u1 = q.TextureCoordinate1.x - u0;
+                    float v1 = q.TextureCoordinate2.y - q.TextureCoordinate0.y;
+                    var src = new Rect(u0, v0, u1, v1);
+
+                    hueMaterial.SetColor(Hue, new Color(hue.x, hue.y, hue.z));
+                    hueMaterial.SetFloat(UvMirrorX, 0);
+                    Graphics.DrawTexture(dst, tex.UnityTexture, src, 0, 0, 0, 0, hueMaterial);
+                }
+            }
+
+            FlushMeshBatch();
             _batchedVertices.Clear();
         }
+
+        //public void Flush()
+        //{
+        //    if (_batchedVertices.Count == 0)
+        //        return;
+
+        //    if (true)//UseGraphicsDrawTexture)
+        //    {
+        //        // For each queued sprite, issue a DrawTexture
+        //        foreach (var vd in _batchedVertices)
+        //        {
+        //            var q = vd.vertex;
+        //            var tex = vd.texture;
+        //            var hue = vd.hue;
+
+        //            // compute dst rect
+        //            var x0 = q.Position0.x;
+        //            var y0 = q.Position0.y;
+        //            var x1 = q.Position1.x;
+        //            var y1 = q.Position3.y;
+        //            var dst = new Rect(x0, y0, x1 - x0, y1 - y0);
+
+        //            // compute uv rect
+        //            float u0 = q.TextureCoordinate0.x;
+        //            float v0 = 1 - q.TextureCoordinate3.y;
+        //            float u1 = q.TextureCoordinate1.x - u0;
+        //            float v1 = q.TextureCoordinate2.y - q.TextureCoordinate0.y;
+        //            var src = new Rect(u0, v0, u1, v1);
+
+        //            hueMaterial.SetColor(Hue, new Color(hue.x, hue.y, hue.z));
+        //            hueMaterial.SetFloat(UvMirrorX, 0);
+        //            Graphics.DrawTexture(dst, tex.UnityTexture, src, 0, 0, 0, 0, hueMaterial);
+        //        }
+
+        //        _batchedVertices.Clear();
+        //        return;
+        //    }
+
+        //    //Log.Info($"FLUSH! batchedVertices count: {_batchedVertices.Count} - runQuads {_runQuads.Count}");
+
+        //    ApplyStates();
+        //    ++FlushesDone;
+
+        //    _runQuads.Clear();
+
+        //    // grab first sprite’s key
+        //    var first = _batchedVertices[0];
+        //    Texture2D currentTex = first.texture;
+        //    Vector3 currentHue = first.hue;
+
+        //    // walk them in original order
+        //    for (int i = 0; i < _batchedVertices.Count; i++)
+        //    {
+        //        var vd = _batchedVertices[i];
+
+        //        // if any key changes, flush the existing run
+        //        if (vd.texture != currentTex
+        //          || vd.hue != currentHue)
+        //        {
+        //            ++TextureSwitches;
+
+        //            DrawRun(currentTex, currentHue, _runQuads);
+        //            //Log.Info($"DrawRun! batchedVertices count: {_batchedVertices.Count} - runQuads {_runQuads.Count}");
+
+        //            _runQuads.Clear();
+        //            currentTex = vd.texture;
+        //            currentHue = vd.hue;
+        //        }
+
+        //        _runQuads.Add(vd.vertex);
+        //    }
+
+        //    // final run
+        //    DrawRun(currentTex, currentHue, _runQuads);
+        //    _batchedVertices.Clear();
+        //}
 
         //public void Flush()
         //{
@@ -2551,12 +2684,14 @@ namespace ClassicUO.Renderer
             public PositionNormalTextureColor4 vertex;
             public Texture2D texture;
             public Vector3 hue;
+            public bool UseMesh;
 
-            public VertexData(PositionNormalTextureColor4 vertex, Texture2D texture, Vector3 hue)
+            public VertexData(PositionNormalTextureColor4 vertex, Texture2D texture, Vector3 hue, bool UseMesh = false)
             {
                 this.vertex = vertex;
                 this.texture = texture;
                 this.hue = hue;
+                this.UseMesh = UseMesh;
             }
         }
     }
