@@ -2483,11 +2483,11 @@ namespace ClassicUO.Renderer
 
         public void SetBlendState(BlendState blend)
         {
+            Flush();
+
             _blendState = blend ?? BlendState.AlphaBlend;
 
-            // MobileUO: TODO: this is supposed to be Flush(), but it causes weird graphics issues when casting spells
-            ApplyStates();
-            //Flush();
+            //ApplyStates();
         }
 
         public void SetStencil(DepthStencilState stencil)
