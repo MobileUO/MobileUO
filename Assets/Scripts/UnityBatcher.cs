@@ -811,7 +811,7 @@ namespace ClassicUO.Renderer
             vertex.Hue0.y = vertex.Hue1.y = vertex.Hue2.y = vertex.Hue3.y = ShaderHueTranslator.SHADER_SHADOW;
 
             //PushSprite(texture);
-            RenderVertex(vertex, texture, vertex.Hue0);
+            RenderVertex(vertex, texture, vertex.Hue0, true);
         }
 
         //private void RenderVertex(PositionNormalTextureColor4 vertex, Texture2D texture, Vector3 hue)
@@ -2216,7 +2216,7 @@ namespace ClassicUO.Renderer
             // For each queued sprite, issue a DrawTexture
             foreach (var vd in _batchedVertices)
             {
-                if(true)//vd.UseMesh)
+                if(vd.UseMesh)
                 {
                     // accumulate for a mesh‐batch
                     _batchedMeshVertices.Add(vd);
