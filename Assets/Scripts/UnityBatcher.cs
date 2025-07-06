@@ -2579,7 +2579,7 @@ namespace ClassicUO.Renderer
             {
                 EnableScissorTest(true);
 
-                // Re-apply the new scissor to the material
+                // MobileUO: Re-apply the new scissor to the material
                 ApplyStates();
 
                 return true;
@@ -2590,13 +2590,13 @@ namespace ClassicUO.Renderer
 
         public void ClipEnd()
         {
-            // Draw whatever was accumulated under the current scissor
+            // MobileUO: Draw whatever was accumulated under the current scissor
             Flush();
 
             EnableScissorTest(false);
             ScissorStack.PopScissors(GraphicsDevice);
 
-            // Push scissor change into the material
+            // MobileUO: Push scissor change into the material
             ApplyStates();
         }
 
@@ -2619,20 +2619,19 @@ namespace ClassicUO.Renderer
             Flush();
 
             _blendState = blend ?? BlendState.AlphaBlend;
-
             //ApplyStates();
         }
 
         public void SetStencil(DepthStencilState stencil)
         {
+            Flush();
+
             _stencil = stencil ?? Stencil;
             //ApplyStates();
-            Flush();
         }
 
         public void SetSampler(SamplerState sampler)
         {
-            // MobileUO: TODO: add it?
             Flush();
 
             _sampler = sampler ?? SamplerState.PointClamp;
@@ -2642,7 +2641,6 @@ namespace ClassicUO.Renderer
         {
             _basicUOEffect?.Dispose();
         }
-
 
         // MobileUO: make public
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
