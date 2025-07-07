@@ -2216,7 +2216,8 @@ namespace ClassicUO.Renderer
             // For each queued sprite, issue a DrawTexture
             foreach (var vd in _batchedVertices)
             {
-                if(vd.UseMesh)
+                if(UserPreferences.UseDrawTexture.CurrentValue == (int)PreferenceEnums.UseDrawTexture.Off 
+                    || (UserPreferences.UseDrawTexture.CurrentValue == (int)PreferenceEnums.UseDrawTexture.On && vd.UseMesh))
                 {
                     // accumulate for a mesh‐batch
                     _batchedMeshVertices.Add(vd);

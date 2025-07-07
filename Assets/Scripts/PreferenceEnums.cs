@@ -130,4 +130,10 @@ namespace PreferenceEnums
         Off = 0,
         On = 1
     }
+
+    public enum UseDrawTexture
+    {
+        Off = 0,
+        On = 1
+    }
 }
