@@ -64,9 +64,10 @@ namespace ClassicUO.Renderer
             // MobileUO: TODO: #19: added logging output
             //SaveImages("test");
 
-            Utility.Logging.Log.Trace("Packed rect: " + pr);
+            //Utility.Logging.Log.Trace("Packed rect: " + pr);
 
             Texture2D texture = _textureList[index];
+            texture.IsFromTextureAtlas = true;
 
             fixed (uint* src = pixels)
             {

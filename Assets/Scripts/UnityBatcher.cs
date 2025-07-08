@@ -1927,7 +1927,8 @@ namespace ClassicUO.Renderer
                 color,
                 originX, originY,
                 rotationSin, rotationCos,
-                depth, effects
+                depth, effects,
+                texture.IsFromTextureAtlas
             );
 
             RenderVertex(sprite, texture, color);
@@ -1985,7 +1986,8 @@ namespace ClassicUO.Renderer
             float rotationSin,
             float rotationCos,
             float depth,
-            byte effects
+            byte effects,
+            bool isFromTextureAtlas
         )
         {
             // MobileUO: TODO: temp fix to keep things stable - hopefully future commit makes depth work
@@ -2033,6 +2035,26 @@ namespace ClassicUO.Renderer
             sprite.TextureCoordinate2.z = 0;
             sprite.TextureCoordinate3.z = 0;
 
+            // MobileUO: we must flip vertically for rendering
+            if (isFromTextureAtlas)
+            {
+                // flip vertically relative to the sprite sheet
+                var old0 = sprite.TextureCoordinate0;
+                var old1 = sprite.TextureCoordinate1;
+
+                sprite.TextureCoordinate0 = sprite.TextureCoordinate2;   // BL → TL
+                sprite.TextureCoordinate1 = sprite.TextureCoordinate3;   // BR → TR
+                sprite.TextureCoordinate2 = old0;                        // TL → BL
+                sprite.TextureCoordinate3 = old1;                        // TR → BR
+            }
+            else
+            {
+                // flip vertically
+                sprite.TextureCoordinate0.y = 1f - sprite.TextureCoordinate0.y;
+                sprite.TextureCoordinate1.y = 1f - sprite.TextureCoordinate1.y;
+                sprite.TextureCoordinate2.y = 1f - sprite.TextureCoordinate2.y;
+                sprite.TextureCoordinate3.y = 1f - sprite.TextureCoordinate3.y;
+            }
 
             sprite.Position0.z = depth;
             sprite.Position1.z = depth;
@@ -2239,6 +2261,12 @@ namespace ClassicUO.Renderer
                     var x1 = q.Position1.x;
                     var y1 = q.Position3.y;
                     var dst = new Rect(x0, y0, x1 - x0, y1 - y0);
+
+                    // flip vertically
+                    q.TextureCoordinate0.y = 1f - q.TextureCoordinate0.y;
+                    q.TextureCoordinate1.y = 1f - q.TextureCoordinate1.y;
+                    q.TextureCoordinate2.y = 1f - q.TextureCoordinate2.y;
+                    q.TextureCoordinate3.y = 1f - q.TextureCoordinate3.y;
 
                     // compute uv rect
                     float u0 = q.TextureCoordinate0.x;

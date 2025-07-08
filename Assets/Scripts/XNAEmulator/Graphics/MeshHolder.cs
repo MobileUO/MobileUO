@@ -99,7 +99,7 @@ namespace Microsoft.Xna.Framework.Graphics
         //    Mesh.normals = normals;
         //}
 
-        public void Populate(IList<PositionNormalTextureColor4> quads)
+        public void Populate(IList<PositionNormalTextureColor4> quads)//, bool isFromTextureAtlas)
         {
             int quadCount = quads.Count;
 
@@ -121,10 +121,29 @@ namespace Microsoft.Xna.Framework.Graphics
                 vertices.Add(quad.Position3); // BR
 
                 // --- UVs (flip Y)
-                var uv0 = quad.TextureCoordinate0; uv0.y = 1f - uv0.y;
-                var uv1 = quad.TextureCoordinate1; uv1.y = 1f - uv1.y;
-                var uv2 = quad.TextureCoordinate2; uv2.y = 1f - uv2.y;
-                var uv3 = quad.TextureCoordinate3; uv3.y = 1f - uv3.y;
+                //if (isFromTextureAtlas)
+                //{
+                //    uvs.Add(quad.TextureCoordinate2); // old BL -> new TL
+                //    uvs.Add(quad.TextureCoordinate3); // old BR -> new TR
+                //    uvs.Add(quad.TextureCoordinate0); // old TL -> new BL
+                //    uvs.Add(quad.TextureCoordinate1); // old TR -> new BR
+                //}
+                //else
+                //{
+                //    var uv0 = quad.TextureCoordinate0; uv0.y = 1f - uv0.y;
+                //    var uv1 = quad.TextureCoordinate1; uv1.y = 1f - uv1.y;
+                //    var uv2 = quad.TextureCoordinate2; uv2.y = 1f - uv2.y;
+                //    var uv3 = quad.TextureCoordinate3; uv3.y = 1f - uv3.y;
+                //    uvs.Add(uv0);
+                //    uvs.Add(uv1);
+                //    uvs.Add(uv2);
+                //    uvs.Add(uv3);
+                //}
+
+                var uv0 = quad.TextureCoordinate0;
+                var uv1 = quad.TextureCoordinate1;
+                var uv2 = quad.TextureCoordinate2;
+                var uv3 = quad.TextureCoordinate3;
                 uvs.Add(uv0);
                 uvs.Add(uv1);
                 uvs.Add(uv2);
