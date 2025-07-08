@@ -790,7 +790,28 @@ namespace ClassicUO.Renderer
             vertex.TextureCoordinate1.z = 0;
             vertex.TextureCoordinate2.z = 0;
             vertex.TextureCoordinate3.z = 0;
-           
+
+            // MobileUO: we must flip vertically for rendering
+            if (texture.IsFromTextureAtlas)
+            {
+                // flip vertically relative to the sprite sheet
+                var old0 = vertex.TextureCoordinate0;
+                var old1 = vertex.TextureCoordinate1;
+
+                vertex.TextureCoordinate0 = vertex.TextureCoordinate2;   // BL → TL
+                vertex.TextureCoordinate1 = vertex.TextureCoordinate3;   // BR → TR
+                vertex.TextureCoordinate2 = old0;                        // TL → BL
+                vertex.TextureCoordinate3 = old1;                        // TR → BR
+            }
+            else
+            {
+                // flip vertically
+                vertex.TextureCoordinate0.y = 1f - vertex.TextureCoordinate0.y;
+                vertex.TextureCoordinate1.y = 1f - vertex.TextureCoordinate1.y;
+                vertex.TextureCoordinate2.y = 1f - vertex.TextureCoordinate2.y;
+                vertex.TextureCoordinate3.y = 1f - vertex.TextureCoordinate3.y;
+            }
+
             vertex.Normal0.x = 0;
             vertex.Normal0.y = 0;
             vertex.Normal0.z = 1;
