@@ -15,6 +15,7 @@ namespace ClassicUO.Renderer
         private readonly GraphicsDevice _device;
         private readonly List<Texture2D> _textureList;
         private Packer _packer;
+        private bool _useSpriteSheet;
 
         public TextureAtlas(GraphicsDevice device, int width, int height, SurfaceFormat format)
         {
@@ -22,6 +23,7 @@ namespace ClassicUO.Renderer
             _width = width;
             _height = height;
             _format = format;
+            _useSpriteSheet = UserPreferences.UseSpriteSheet.CurrentValue == (int)PreferenceEnums.UseSpriteSheet.On;
 
             _textureList = new List<Texture2D>();
         }
@@ -35,6 +37,15 @@ namespace ClassicUO.Renderer
             out Rectangle pr
         )
         {
+            // MobileUO: reset texture list because we are swapping whether or not we are using sprite sheets
+            if (_useSpriteSheet != (UserPreferences.UseSpriteSheet.CurrentValue == (int)PreferenceEnums.UseSpriteSheet.On))
+            {
+                _packer?.Dispose();
+                _packer = new Packer(_width, _height);
+                _textureList.Clear();
+                _useSpriteSheet = UserPreferences.UseSpriteSheet.CurrentValue == (int)PreferenceEnums.UseSpriteSheet.On;
+            }
+
             var index = _textureList.Count - 1;
             //pr = new Rectangle(0, 0, width, height);
 
@@ -55,8 +66,18 @@ namespace ClassicUO.Renderer
             //ref Rectangle pr = ref _spriteBounds[hash];
             //pr = new Rectangle(0, 0, width, height);
             // MobileUO: TODO: figure out how to get packer working correctly
-            while (!_packer.PackRect(width, height, out pr))
+            if (_useSpriteSheet)
             {
+                while (!_packer.PackRect(width, height, out pr))
+                {
+                    CreateNewTexture2D(width, height);
+                    index = _textureList.Count - 1;
+                }
+            }
+            else
+            {
+                pr = new Rectangle(0, 0, width, height);
+
                 CreateNewTexture2D(width, height);
                 index = _textureList.Count - 1;
             }
@@ -67,7 +88,8 @@ namespace ClassicUO.Renderer
             //Utility.Logging.Log.Trace("Packed rect: " + pr);
 
             Texture2D texture = _textureList[index];
-            texture.IsFromTextureAtlas = true;
+            if (_useSpriteSheet)
+                texture.IsFromTextureAtlas = true;
 
             fixed (uint* src = pixels)
             {
@@ -80,9 +102,17 @@ namespace ClassicUO.Renderer
         // MobileUO: TODO: figure out how to get packer working correctly
         private void CreateNewTexture2D(int width, int height)
         {
-            // MobileUO: TODO: #19: added logging output; switched back to _width/_height for full sprite sheet
-            Utility.Logging.Log.Trace($"creating texture: {width}x{height} for Atlas {_width}x{_height} {_format}");
-            Texture2D texture = new Texture2D(_device, _width, _height, false, _format);
+            // MobileUO: TODO: #19: added logging output; added toggle for sprite sheet
+            var textureWidth = width;
+            var textureHeight = height;
+            if (_useSpriteSheet)
+            {
+                textureWidth = _width;
+                textureHeight = _height;
+            }
+
+            //Utility.Logging.Log.Trace($"creating texture: {width}x{height} for Atlas {textureWidth}x{textureHeight} {_format}");
+            Texture2D texture = new Texture2D(_device, textureWidth, textureHeight, false, _format);
             _textureList.Add(texture);
 
             _packer?.Dispose();

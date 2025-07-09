@@ -136,4 +136,10 @@ namespace PreferenceEnums
         Off = 0,
         On = 1
     }
+
+    public enum UseSpriteSheet
+    {
+        Off = 0,
+        On = 1
+    }
 }

@@ -1,6 +1,7 @@
 using ClassicUO.Assets;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
 
 namespace ClassicUO.Renderer.Lights
 {
@@ -41,6 +42,12 @@ namespace ClassicUO.Renderer.Lights
             }
 
             return ref spriteInfo;
+        }
+
+        // MobileUO: added way to clear sprite arrays when toggling using sprite sheets or not
+        public void ClearSpriteInfo()
+        {
+            Array.Clear(_spriteInfos, 0, _spriteInfos.Length);
         }
     }
 }

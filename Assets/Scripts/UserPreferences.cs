@@ -85,6 +85,7 @@ public static class UserPreferences
     public static IntPreference UseLegacyJoystick;
     public static IntPreference JoystickCancelsFollow;
     public static IntPreference UseDrawTexture;
+    public static IntPreference UseSpriteSheet;
 
     public static void Initialize()
     {
@@ -108,6 +109,7 @@ public static class UserPreferences
         EnlargeSmallButtons = new IntPreference(nameof(EnlargeSmallButtons), (int) PreferenceEnums.EnlargeSmallButtons.Off);
         UseLegacyJoystick = new IntPreference(nameof(UseLegacyJoystick), (int) PreferenceEnums.UseLegacyJoystick.Off);
         JoystickCancelsFollow = new IntPreference(nameof(JoystickCancelsFollow), (int) PreferenceEnums.JoystickCancelsFollow.On);
-        UseDrawTexture = new IntPreference(nameof(UseDrawTexture), (int)PreferenceEnums.UseDrawTexture.Off);
+        UseDrawTexture = new IntPreference(nameof(UseDrawTexture), (int)PreferenceEnums.UseDrawTexture.On);
+        UseSpriteSheet = new IntPreference(nameof(UseSpriteSheet), (int)PreferenceEnums.UseSpriteSheet.Off);
     }
 }

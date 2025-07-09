@@ -423,6 +423,12 @@ namespace ClassicUO.Renderer.Animations
             return false;
         }
 
+        // MobileUO: added way to clear sprite arrays when toggling using sprite sheets or not
+        public void ClearSpriteInfo()
+        {
+            Array.Clear(_dataIndex, 0, _dataIndex.Length);
+        }
+
         private sealed class IndexAnimation
         {
             public int FileIndex;
