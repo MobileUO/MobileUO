@@ -77,7 +77,11 @@ namespace ClassicUO.Renderer.Arts
                             }
                         }
 
-                        _realArtBounds[idx] = new Rectangle(minX, minY, maxX - minX, maxY - minY);
+                        // MobileUO: flip Y if using sprite sheet
+                        if(spriteInfo.Texture.IsFromTextureAtlas)
+                            _realArtBounds[idx] = new Rectangle(minX, artInfo.Height - maxY, maxX - minX, maxY - minY);
+                        else
+                            _realArtBounds[idx] = new Rectangle(minX, minY, maxX - minX, maxY - minY);
                     }
                 }
             }
