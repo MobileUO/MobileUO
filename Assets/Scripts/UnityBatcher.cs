@@ -98,14 +98,6 @@ namespace ClassicUO.Renderer
             hueMaterial = new Material(UnityEngine.Resources.Load<Shader>("HueShader"));
             xbrMaterial = new Material(UnityEngine.Resources.Load<Shader>("XbrShader"));
 
-            hueMaterial.SetInt("_ZWrite", 1);  // turn on depth writes
-            hueMaterial.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.LessEqual);
-            //hueMaterial.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent - 1;
-            hueMaterial.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Geometry;
-
-            hueMaterial.SetOverrideTag("Queue", "Geometry");
-            hueMaterial.SetOverrideTag("RenderType", "Opaque");
-
             _batchedVertices.Capacity = 8192; // ~4351
             _runQuads.Capacity = 256; // ~ 10
         }
