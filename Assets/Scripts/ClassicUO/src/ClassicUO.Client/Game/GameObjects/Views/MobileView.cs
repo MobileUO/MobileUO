@@ -780,34 +780,58 @@ namespace ClassicUO.Game.GameObjects
                     }
                     else
                     {
-                        int diffY = (spriteInfo.UV.Height + spriteInfo.Center.Y) - mountOffset;
-
-                        int value = Math.Max(1, diffY);
-                        int count = Math.Max((spriteInfo.UV.Height / value) + 1, 2);
-
-                        rect.Height = Math.Min(value, rect.Height);
-                        int remains = spriteInfo.UV.Height - rect.Height;
-
-                        int tiles = (byte)owner.Direction % 2 == 0 ? 2 : 2;
-
-                        for (int i = 0; i < count; ++i)
+                        // MobileUO: we have issues with these bands being rendered correctly with the sprite sheet.
+                        // We see the top band rendering at the bottom (top of sprite's head rendering at their feet)
+                        // So for now, just draw the whole sprite instead of bands
+                        // MobileUO: TODO: implement the correct fix to draw in bands
+                        if (UserPreferences.UseSpriteSheet.CurrentValue == (int)PreferenceEnums.UseSpriteSheet.On)
                         {
                             batcher.Draw(
                                 spriteInfo.Texture,
                                 pos,
-                                rect,
+                                spriteInfo.UV,
                                 hueVec,
                                 0f,
                                 Vector2.Zero,
                                 1f,
                                 mirror ? SpriteEffects.FlipHorizontally : SpriteEffects.None,
-                                depth + 1f + (i * tiles)
+                                depth + 1f
                             );
+                        }
+                        else
+                        {
+                            int diffY = (spriteInfo.UV.Height + spriteInfo.Center.Y) - mountOffset;
 
-                            pos.Y += rect.Height;
-                            rect.Y += rect.Height;
-                            rect.Height = remains;
-                            remains -= rect.Height;
+                            int value = Math.Max(1, diffY);
+                            int count = Math.Max((spriteInfo.UV.Height / value) + 1, 2);
+
+                            rect.Height = Math.Min(value, rect.Height);
+                            int remains = spriteInfo.UV.Height - rect.Height;
+
+                            int tiles = (byte)owner.Direction % 2 == 0 ? 2 : 2;
+
+                            for (int i = 0; i < count; ++i)
+                            {
+                                // MobileUO: A way to visually see the bands:
+                                // hueVec.X = i * 10f + 10f;
+
+                                batcher.Draw(
+                                    spriteInfo.Texture,
+                                    pos,
+                                    rect,
+                                    hueVec,
+                                    0f,
+                                    Vector2.Zero,
+                                    1f,
+                                    mirror ? SpriteEffects.FlipHorizontally : SpriteEffects.None,
+                                    depth + 1f + (i * tiles)
+                                );
+
+                                pos.Y += rect.Height;
+                                rect.Y += rect.Height;
+                                rect.Height = remains;
+                                remains -= rect.Height;
+                            }
                         }
                     }
 
