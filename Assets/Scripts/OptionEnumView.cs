@@ -40,15 +40,15 @@ public class OptionEnumView : MonoBehaviour
 
     private void OnValueChanged(int value)
     {
-        // Reset sprite info since we are toggling between using a sprite sheet or not
+        // Reset sprite info since we are toggling between using a sprite sheet or not, or adjust the sprite sheet size
         // MobileUO: TODO: we can remove this setting and functions once we get sprite sheets working correctly
-        if (intPreference == UserPreferences.UseSpriteSheet)
+        if (intPreference == UserPreferences.UseSpriteSheet || intPreference == UserPreferences.SpriteSheetSize)
         {
-            Client.Game.UO.Animations.ClearSpriteInfo();
-            Client.Game.UO.Arts.ClearSpriteInfo();
-            Client.Game.UO.Gumps.ClearSpriteInfo();
-            Client.Game.UO.Lights.ClearSpriteInfo();
-            Client.Game.UO.Texmaps.ClearSpriteInfo();
+            Client.Game?.UO?.Animations?.ClearSpriteInfo();
+            Client.Game?.UO?.Arts?.ClearSpriteInfo();
+            Client.Game?.UO?.Gumps?.ClearSpriteInfo();
+            Client.Game?.UO?.Lights?.ClearSpriteInfo();
+            Client.Game?.UO?.Texmaps?.ClearSpriteInfo();
             Debug.Log("Cleared sprite info!");
         }
 

@@ -21,8 +21,8 @@ namespace ClassicUO.Renderer.Animations
         public Animations(AnimationsLoader animationLoader, GraphicsDevice device)
         {
             _animationLoader = animationLoader;
-            // MobileUO: use smaller atlas
-            _atlas = new TextureAtlas(device, 1024, 1024, SurfaceFormat.Color);
+            // MobileUO: use atlas size from settings 
+            _atlas = new TextureAtlas(device, UserPreferences.SpriteSheetSize.CurrentValue, UserPreferences.SpriteSheetSize.CurrentValue, SurfaceFormat.Color);
         }
 
 

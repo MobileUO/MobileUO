@@ -15,8 +15,8 @@ namespace ClassicUO.Renderer.Gumps
         public Gump(GumpsLoader gumpsLoader, GraphicsDevice device)
         {
             _gumpsLoader = gumpsLoader;
-            // MobileUO: use smaller atlas
-            _atlas = new TextureAtlas(device, 1024, 1024, SurfaceFormat.Color);
+            // MobileUO: use atlas size from settings 
+            _atlas = new TextureAtlas(device, UserPreferences.SpriteSheetSize.CurrentValue, UserPreferences.SpriteSheetSize.CurrentValue, SurfaceFormat.Color);
             _spriteInfos = new SpriteInfo[gumpsLoader.File.Entries.Length];
         }
 

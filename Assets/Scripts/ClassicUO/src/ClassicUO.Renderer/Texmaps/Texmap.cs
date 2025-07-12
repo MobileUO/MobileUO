@@ -15,8 +15,8 @@ namespace ClassicUO.Renderer.Texmaps
         public Texmap(TexmapsLoader texmapsLoader, GraphicsDevice device)
         {
             _texmapsLoader = texmapsLoader;
-            // MobileUO: use smaller atlas
-            _atlas = new TextureAtlas(device, 1024, 1024, SurfaceFormat.Color);
+            // MobileUO: use atlas size from settings - cap at 2048 (CUO is 2048)
+            _atlas = new TextureAtlas(device, Math.Min(UserPreferences.SpriteSheetSize.CurrentValue, 2048), Math.Min(UserPreferences.SpriteSheetSize.CurrentValue, 2048), SurfaceFormat.Color);
             _spriteInfos = new SpriteInfo[texmapsLoader.File.Entries.Length];
         }
 

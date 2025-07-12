@@ -9,7 +9,7 @@ namespace ClassicUO.Renderer
 {
     public class TextureAtlas : IDisposable
     {
-        private readonly int _width,
+        private int _width,
             _height;
         private readonly SurfaceFormat _format;
         private readonly GraphicsDevice _device;
@@ -37,13 +37,16 @@ namespace ClassicUO.Renderer
             out Rectangle pr
         )
         {
-            // MobileUO: reset texture list because we are swapping whether or not we are using sprite sheets
-            if (_useSpriteSheet != (UserPreferences.UseSpriteSheet.CurrentValue == (int)PreferenceEnums.UseSpriteSheet.On))
+            // MobileUO: reset texture list because we are swapping whether or not we are using sprite sheets or their size
+            if (_useSpriteSheet != (UserPreferences.UseSpriteSheet.CurrentValue == (int)PreferenceEnums.UseSpriteSheet.On)
+                || _width != UserPreferences.SpriteSheetSize.CurrentValue)
             {
+                _useSpriteSheet = UserPreferences.UseSpriteSheet.CurrentValue == (int)PreferenceEnums.UseSpriteSheet.On;
+                _width = _height = UserPreferences.SpriteSheetSize.CurrentValue;
+
                 _packer?.Dispose();
                 _packer = new Packer(_width, _height);
                 _textureList.Clear();
-                _useSpriteSheet = UserPreferences.UseSpriteSheet.CurrentValue == (int)PreferenceEnums.UseSpriteSheet.On;
             }
 
             var index = _textureList.Count - 1;
