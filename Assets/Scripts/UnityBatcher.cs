@@ -2205,8 +2205,8 @@ namespace ClassicUO.Renderer
 
             // grab first sprite’s key
             var first = _batchedMeshVertices[0];
-            Texture2D currentTex = first.texture;
-            Vector3 currentHue = first.hue;
+            Texture2D currentTex = first.Texture;
+            Vector3 currentHue = first.Hue;
 
             // walk them in original order
             for (int i = 0; i < _batchedMeshVertices.Count; i++)
@@ -2214,8 +2214,8 @@ namespace ClassicUO.Renderer
                 var vd = _batchedMeshVertices[i];
 
                 // if any key changes, flush the existing run
-                if (vd.texture != currentTex
-                  || vd.hue != currentHue)
+                if (vd.Texture != currentTex
+                  || vd.Hue != currentHue)
                 {
                     ++TextureSwitches;
 
@@ -2223,11 +2223,11 @@ namespace ClassicUO.Renderer
                     //Log.Info($"DrawRun! batchedVertices count: {_batchedMeshVertices.Count} - runQuads {_runQuads.Count}");
 
                     _runQuads.Clear();
-                    currentTex = vd.texture;
-                    currentHue = vd.hue;
+                    currentTex = vd.Texture;
+                    currentHue = vd.Hue;
                 }
 
-                _runQuads.Add(vd.vertex);
+                _runQuads.Add(vd.Vertex);
             }
 
             // final run
@@ -2264,9 +2264,9 @@ namespace ClassicUO.Renderer
                 {
                     FlushMeshBatch();
 
-                    var q = vd.vertex;
-                    var tex = vd.texture;
-                    var hue = vd.hue;
+                        var q = vd.Vertex;
+                        var tex = vd.Texture;
+                        var hue = vd.Hue;
 
                     // compute dst rect
                     var x0 = q.Position0.x;
@@ -2723,17 +2723,17 @@ namespace ClassicUO.Renderer
 
         public struct VertexData
         {
-            public PositionNormalTextureColor4 vertex;
-            public Texture2D texture;
-            public Vector3 hue;
+            public PositionNormalTextureColor4 Vertex;
+            public Texture2D Texture;
+            public Vector3 Hue;
             public bool UseMesh;
 
-            public VertexData(PositionNormalTextureColor4 vertex, Texture2D texture, Vector3 hue, bool UseMesh = false)
+            public VertexData(PositionNormalTextureColor4 vertex, Texture2D texture, Vector3 hue, bool useMesh = false)
             {
-                this.vertex = vertex;
-                this.texture = texture;
-                this.hue = hue;
-                this.UseMesh = UseMesh;
+                this.Vertex = vertex;
+                this.Texture = texture;
+                this.Hue = hue;
+                this.UseMesh = useMesh;
             }
         }
     }
