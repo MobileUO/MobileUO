@@ -122,6 +122,8 @@ namespace ClassicUO.Renderer
 
         public int TextureSwitches, FlushesDone;
         public int TextureSwitchesPerSecond, FlushesPerSecond;
+        public int DrawTextures, DrawMeshes;
+        public int DrawTexturesPerSecond, DrawMeshesPerSecond;
 
         public void SetBrightlight(float f)
         {
@@ -2315,6 +2317,7 @@ namespace ClassicUO.Renderer
                     hueMaterial.SetColor(Hue, new Color(hue.x, hue.y, hue.z));
                     hueMaterial.SetFloat(UvMirrorX, 0);
                     Graphics.DrawTexture(dst, tex.UnityTexture, src, 0, 0, 0, 0, hueMaterial);
+                    DrawTextures++;
                 }
             }
 
@@ -2327,8 +2330,12 @@ namespace ClassicUO.Renderer
             {
                 FlushesPerSecond = FlushesDone;
                 TextureSwitchesPerSecond = TextureSwitches;
+                DrawTexturesPerSecond = DrawTextures;
+                DrawMeshesPerSecond = DrawMeshes;
                 FlushesDone = 0;
                 TextureSwitches = 0;
+                DrawTextures = 0;
+                DrawMeshes = 0;
                 LastSampleTime = now;
             }
         }
@@ -2602,6 +2609,7 @@ namespace ClassicUO.Renderer
             mat.SetPass(0);
 
             Graphics.DrawMeshNow(reusedMesh.Mesh, Vector3.zero, Quaternion.identity);
+            DrawMeshes++;
         }
 
         //private void DrawRun(Texture2D tex, Vector3 hue, List<PositionNormalTextureColor4> quads)

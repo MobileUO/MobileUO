@@ -29,7 +29,7 @@ namespace ClassicUO.Game.UI.Gumps
         private string _cacheText = string.Empty;
 
         // MobileUO: added Flushes/Switches
-        private int TextureSwitchesPerSecond, FlushesPerSecond;
+        private int TextureSwitchesPerSecond, FlushesPerSecond, DrawTexturesPerSecond, DrawMeshesPerSecond;
 
         public DebugGump(World world, int x, int y) : base(world, 0, 0)
         {
@@ -117,8 +117,9 @@ namespace ClassicUO.Game.UI.Gumps
 
                     sb.Append(string.Format(DEBUG_STRING_3, ReadObject(SelectedObject.Object)));
 
-                    // MobileUO: added Flushes/Switches output TODO: move it into expanded debug info only
+                    // MobileUO: added Flushes/Switches/Draws output 
                     sb.Append($"\n- Flushes/sec: {FlushesPerSecond}\n- Switches/sec: {TextureSwitchesPerSecond}");
+                    sb.Append($"\n- DrawTextures/sec: {DrawTexturesPerSecond}\n- DrawMeshes/sec: {DrawMeshesPerSecond}");
 
                     if (Profiler.Enabled)
                     {
@@ -184,6 +185,8 @@ namespace ClassicUO.Game.UI.Gumps
             // MobileUO: added Flushes/Switches
             TextureSwitchesPerSecond = batcher.TextureSwitchesPerSecond;
             FlushesPerSecond = batcher.FlushesPerSecond;
+            DrawTexturesPerSecond = batcher.DrawTexturesPerSecond;
+            DrawMeshesPerSecond = batcher.DrawMeshesPerSecond;
 
             if (!base.Draw(batcher, x, y))
             {
