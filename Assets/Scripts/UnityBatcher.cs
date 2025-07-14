@@ -121,6 +121,7 @@ namespace ClassicUO.Renderer
         public GraphicsDevice GraphicsDevice { get; }
 
         public int TextureSwitches, FlushesDone;
+        public int TextureSwitchesPerSecond, FlushesPerSecond;
 
         public void SetBrightlight(float f)
         {
@@ -1969,8 +1970,8 @@ namespace ClassicUO.Renderer
             //EnsureNotStarted();
             //_started = true;
 
-            TextureSwitches = 0;
-            FlushesDone = 0;
+            //TextureSwitches = 0;
+            //FlushesDone = 0;
 
             CustomEffect = customEffect;
             _transformMatrix = transform_matrix;
@@ -2240,6 +2241,8 @@ namespace ClassicUO.Renderer
             //_meshBatchHues.Clear();
         }
 
+        private DateTime LastSampleTime = DateTime.UtcNow;
+
         public void Flush()
         {
             if (_batchedVertices.Count == 0)
@@ -2264,9 +2267,9 @@ namespace ClassicUO.Renderer
                 {
                     FlushMeshBatch();
 
-                        var q = vd.Vertex;
-                        var tex = vd.Texture;
-                        var hue = vd.Hue;
+                    var q = vd.Vertex;
+                    var tex = vd.Texture;
+                    var hue = vd.Hue;
 
                     // compute dst rect
                     var x0 = q.Position0.x;
@@ -2296,6 +2299,17 @@ namespace ClassicUO.Renderer
 
             FlushMeshBatch();
             _batchedVertices.Clear();
+
+            // Calculate flushes and texture switches per second
+            var now = DateTime.UtcNow;
+            if ((now - LastSampleTime).TotalSeconds >= 1.0)
+            {
+                FlushesPerSecond = FlushesDone;
+                TextureSwitchesPerSecond = TextureSwitches;
+                FlushesDone = 0;
+                TextureSwitches = 0;
+                LastSampleTime = now;
+            }
         }
 
         //public void Flush()
