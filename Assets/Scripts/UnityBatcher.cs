@@ -65,9 +65,9 @@ namespace ClassicUO.Renderer
         private static readonly int TextureSize = Shader.PropertyToID("textureSize");
 
         // MobileUO: TODO: flag to use depths while trying to figure out the depth issue
-        private bool USE_DEPTH = true;
+        private bool USE_DEPTH = false;
         private bool LOG_DEPTH = false;
-        private bool DIVIDE_DEPTH = true; // if depth values are 100 or lower, they will render. Something clips them at over 100 (100.1 or 101 or higher)
+        private bool DIVIDE_DEPTH = false; // if depth values are 100 or lower, they will render. Something clips them at over 100 (100.1 or 101 or higher)
 
         public UltimaBatcher2D(GraphicsDevice device)
         {
