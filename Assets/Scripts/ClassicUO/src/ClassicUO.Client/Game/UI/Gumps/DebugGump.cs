@@ -117,6 +117,9 @@ namespace ClassicUO.Game.UI.Gumps
 
                     sb.Append(string.Format(DEBUG_STRING_3, ReadObject(SelectedObject.Object)));
 
+                    // MobileUO: added Flushes/Switches output TODO: move it into expanded debug info only
+                    sb.Append($"\n- Flushes/sec: {FlushesPerSecond}\n- Switches/sec: {TextureSwitchesPerSecond}");
+
                     if (Profiler.Enabled)
                     {
                         double timeDraw = Profiler.GetContext("RenderFrame").TimeInContext;
@@ -162,9 +165,6 @@ namespace ClassicUO.Game.UI.Gumps
                         sb.Append(string.Format(DEBUG_STRING_SMALL_NO_ZOOM, CUOEnviroment.CurrentRefreshRate));
                     }
                 }
-
-                // MobileUO: added Flushes/Switches output TODO: move it into expanded debug info only
-                sb.Append($"\nFlushes/sec: {FlushesPerSecond}\nSwitches/sec: {TextureSwitchesPerSecond}");
 
                 _cacheText = sb.ToString();
 
