@@ -480,26 +480,7 @@ namespace ClassicUO.Renderer
             vertex.TextureCoordinate3.y = (_cornerOffsetY[3] * sourceH) + sourceY;
             vertex.TextureCoordinate3.z = 0;
 
-            // MobileUO: we must flip vertically for rendering
-            if (texture.IsFromTextureAtlas)
-            {
-                // flip vertically relative to the sprite sheet
-                var old0 = vertex.TextureCoordinate0;
-                var old1 = vertex.TextureCoordinate1;
-
-                vertex.TextureCoordinate0 = vertex.TextureCoordinate2;   // BL → TL
-                vertex.TextureCoordinate1 = vertex.TextureCoordinate3;   // BR → TR
-                vertex.TextureCoordinate2 = old0;                        // TL → BL
-                vertex.TextureCoordinate3 = old1;                        // TR → BR
-            }
-            else
-            {
-                // flip vertically
-                vertex.TextureCoordinate0.y = 1f - vertex.TextureCoordinate0.y;
-                vertex.TextureCoordinate1.y = 1f - vertex.TextureCoordinate1.y;
-                vertex.TextureCoordinate2.y = 1f - vertex.TextureCoordinate2.y;
-                vertex.TextureCoordinate3.y = 1f - vertex.TextureCoordinate3.y;
-            }
+            FlipTextureVertically(ref vertex, texture.IsFromTextureAtlas);
 
             vertex.Normal0 = normalTop;
             vertex.Normal1 = normalRight;
@@ -807,26 +788,7 @@ namespace ClassicUO.Renderer
             vertex.TextureCoordinate2.z = 0;
             vertex.TextureCoordinate3.z = 0;
 
-            // MobileUO: we must flip vertically for rendering
-            if (texture.IsFromTextureAtlas)
-            {
-                // flip vertically relative to the sprite sheet
-                var old0 = vertex.TextureCoordinate0;
-                var old1 = vertex.TextureCoordinate1;
-
-                vertex.TextureCoordinate0 = vertex.TextureCoordinate2;   // BL → TL
-                vertex.TextureCoordinate1 = vertex.TextureCoordinate3;   // BR → TR
-                vertex.TextureCoordinate2 = old0;                        // TL → BL
-                vertex.TextureCoordinate3 = old1;                        // TR → BR
-            }
-            else
-            {
-                // flip vertically
-                vertex.TextureCoordinate0.y = 1f - vertex.TextureCoordinate0.y;
-                vertex.TextureCoordinate1.y = 1f - vertex.TextureCoordinate1.y;
-                vertex.TextureCoordinate2.y = 1f - vertex.TextureCoordinate2.y;
-                vertex.TextureCoordinate3.y = 1f - vertex.TextureCoordinate3.y;
-            }
+            FlipTextureVertically(ref vertex, texture.IsFromTextureAtlas);
 
             vertex.Normal0.x = 0;
             vertex.Normal0.y = 0;
@@ -2072,26 +2034,7 @@ namespace ClassicUO.Renderer
             sprite.TextureCoordinate2.z = 0;
             sprite.TextureCoordinate3.z = 0;
 
-            // MobileUO: we must flip vertically for rendering
-            if (isFromTextureAtlas)
-            {
-                // flip vertically relative to the sprite sheet
-                var old0 = sprite.TextureCoordinate0;
-                var old1 = sprite.TextureCoordinate1;
-
-                sprite.TextureCoordinate0 = sprite.TextureCoordinate2;   // BL → TL
-                sprite.TextureCoordinate1 = sprite.TextureCoordinate3;   // BR → TR
-                sprite.TextureCoordinate2 = old0;                        // TL → BL
-                sprite.TextureCoordinate3 = old1;                        // TR → BR
-            }
-            else
-            {
-                // flip vertically
-                sprite.TextureCoordinate0.y = 1f - sprite.TextureCoordinate0.y;
-                sprite.TextureCoordinate1.y = 1f - sprite.TextureCoordinate1.y;
-                sprite.TextureCoordinate2.y = 1f - sprite.TextureCoordinate2.y;
-                sprite.TextureCoordinate3.y = 1f - sprite.TextureCoordinate3.y;
-            }
+            FlipTextureVertically(ref sprite, isFromTextureAtlas);
 
             sprite.Position0.z = depth;
             sprite.Position1.z = depth;
@@ -2119,6 +2062,30 @@ namespace ClassicUO.Renderer
             sprite.Normal3.x = 0;
             sprite.Normal3.y = 0;
             sprite.Normal3.z = 1;
+        }
+
+        private void FlipTextureVertically(ref PositionNormalTextureColor4 sprite, bool isFromTextureAtlas)
+        {
+            // MobileUO: we must flip the sprite vertically for rendering
+            if (isFromTextureAtlas)
+            {
+                // flip vertically relative to the sprite sheet
+                var oldTextureCoordinate0 = sprite.TextureCoordinate0;
+                var oldTextureCoordinate1 = sprite.TextureCoordinate1;
+
+                sprite.TextureCoordinate0 = sprite.TextureCoordinate2;   // BL → TL
+                sprite.TextureCoordinate1 = sprite.TextureCoordinate3;   // BR → TR
+                sprite.TextureCoordinate2 = oldTextureCoordinate0;       // TL → BL
+                sprite.TextureCoordinate3 = oldTextureCoordinate1;       // TR → BR
+            }
+            else
+            {
+                // flip entire texture vertically
+                sprite.TextureCoordinate0.y = 1f - sprite.TextureCoordinate0.y;
+                sprite.TextureCoordinate1.y = 1f - sprite.TextureCoordinate1.y;
+                sprite.TextureCoordinate2.y = 1f - sprite.TextureCoordinate2.y;
+                sprite.TextureCoordinate3.y = 1f - sprite.TextureCoordinate3.y;
+            }
         }
 
         //Because XNA's Blend enum starts with 1, we duplicate BlendMode.Zero for 0th index
