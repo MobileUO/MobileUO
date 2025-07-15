@@ -2162,6 +2162,7 @@ namespace ClassicUO.Renderer
 
         private readonly List<PositionNormalTextureColor4> _runQuads = new List<PositionNormalTextureColor4>();
         private readonly List<VertexData> _batchedMeshVertices = new List<VertexData>();
+        private DateTime _lastSampleTime = DateTime.UtcNow;
 
         public void FlushMeshBatch()
         {
@@ -2203,8 +2204,6 @@ namespace ClassicUO.Renderer
             // clear for next batch
             _batchedMeshVertices.Clear();
         }
-
-        private DateTime _lastSampleTime = DateTime.UtcNow;
 
         public void Flush()
         {
