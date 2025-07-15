@@ -94,7 +94,7 @@ public static class UserPreferences
         UseMouseOnMobile = new IntPreference(nameof(UseMouseOnMobile), (int) PreferenceEnums.UseMouseOnMobile.Off);
         ScaleSize = new IntPreference(nameof(ScaleSize), (int) ScaleSizes.Default);
         TextureFiltering = new IntPreference(nameof(TextureFiltering), (int) TextureFilterMode.Sharp);
-        TargetFrameRate = new IntPreference(nameof(TargetFrameRate), (int) TargetFrameRates.Sixty);
+        TargetFrameRate = new IntPreference(nameof(TargetFrameRate), (int) TargetFrameRates._60);
         JoystickSize = new IntPreference(nameof(JoystickSize), (int) JoystickSizes.Normal);
         JoystickOpacity = new IntPreference(nameof(JoystickOpacity), (int) PreferenceEnums.JoystickOpacity.Normal);
         CustomJoystickPositionAndSize = new Vector3Preference("customJoystickSizeAndPosition", new Vector3(-1,-1,-1));

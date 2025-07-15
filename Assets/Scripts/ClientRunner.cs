@@ -1,11 +1,5 @@
-using System;
-using System.IO;
-using System.Linq;
-using UnityEngine;
 using ClassicUO;
-using ClassicUO.Utility.Logging;
 using ClassicUO.Configuration;
-using ClassicUO.Utility;
 using ClassicUO.Game;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.Managers;
@@ -13,13 +7,18 @@ using ClassicUO.Game.Scenes;
 using ClassicUO.Game.UI.Controls;
 using ClassicUO.Game.UI.Gumps;
 using ClassicUO.Game.UI.Gumps.Login;
-using Newtonsoft.Json;
 using ClassicUO.Network;
+using ClassicUO.Utility.Logging;
 using Microsoft.Xna.Framework;
+using Newtonsoft.Json;
+using PreferenceEnums;
 using SDL2;
+using System;
+using System.IO;
+using System.Linq;
+using UnityEngine;
 using GameObject = UnityEngine.GameObject;
 using Texture2D = Microsoft.Xna.Framework.Graphics.Texture2D;
-using ClassicUO.Network.Encryption;
 
 public class ClientRunner : MonoBehaviour
 {
@@ -62,7 +61,7 @@ public class ClientRunner : MonoBehaviour
 		UserPreferences.ShowCloseButtons.ValueChanged += OnShowCloseButtonsChanged;
 		UserPreferences.UseMouseOnMobile.ValueChanged += OnUseMouseOnMobileChanged;
 		UserPreferences.TargetFrameRate.ValueChanged += OnTargetFrameRateChanged;
-		UserPreferences.TextureFiltering.ValueChanged += UpdateTextureFiltering;
+        UserPreferences.TextureFiltering.ValueChanged += UpdateTextureFiltering;
 		UserPreferences.JoystickDeadZone.ValueChanged += OnJoystickDeadZoneChanged;
 		UserPreferences.JoystickRunThreshold.ValueChanged += OnJoystickRunThresholdChanged;
 		UserPreferences.ContainerItemSelection.ValueChanged += OnContainerItemSelectionChanged;
@@ -180,7 +179,10 @@ public class ClientRunner : MonoBehaviour
 
 	private static void OnTargetFrameRateChanged(int frameRate)
 	{
-		Application.targetFrameRate = frameRate;
+        if (frameRate == (int)TargetFrameRates.InGameFPS)
+			frameRate = Settings.GlobalSettings.FPS;
+
+        Application.targetFrameRate = frameRate;
 	}
     
 	private void UpdateTextureFiltering(int textureFiltering)
@@ -299,7 +301,7 @@ public class ClientRunner : MonoBehaviour
 
 	    //Load and adjust settings
 	    var settingsFilePath = Settings.GetSettingsFilepath();
-	    if (File.Exists(settingsFilePath))
+        if (File.Exists(settingsFilePath))
 	    {
 		    Settings.GlobalSettings = JsonConvert.DeserializeObject<Settings>(File.ReadAllText(settingsFilePath));
 	    }
