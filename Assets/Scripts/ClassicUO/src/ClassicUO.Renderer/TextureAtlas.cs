@@ -49,6 +49,14 @@ namespace ClassicUO.Renderer
 
                 _packer?.Dispose();
                 _packer = new Packer(_width, _height);
+
+                foreach (var tex in _textureList)
+                {
+                    if (!tex.IsDisposed)
+                    {
+                        tex.Dispose();
+                    }
+                }
                 _textureList.Clear();
             }
 
