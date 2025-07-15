@@ -130,4 +130,23 @@ namespace PreferenceEnums
         Off = 0,
         On = 1
     }
+
+    public enum UseDrawTexture
+    {
+        Off = 0,
+        On = 1
+    }
+
+    public enum UseSpriteSheet
+    {
+        Off = 0,
+        On = 1
+    }
+
+    public enum SpriteSheetSize
+    {
+        Small = 1024,
+        Medium = 2048,
+        Large = 4096,
+    }
 }

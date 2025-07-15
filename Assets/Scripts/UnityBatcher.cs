@@ -1,11 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using ClassicUO.Renderer.Effects;
+﻿using ClassicUO.Renderer.Effects;
 using ClassicUO.Utility.Logging;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.Rendering;
 using BlendState = Microsoft.Xna.Framework.Graphics.BlendState;
@@ -13,13 +14,13 @@ using Color = UnityEngine.Color;
 using CompareFunction = Microsoft.Xna.Framework.Graphics.CompareFunction;
 using Quaternion = UnityEngine.Quaternion;
 using Texture2D = Microsoft.Xna.Framework.Graphics.Texture2D;
+using UnityCamera = UnityEngine.Camera;
 using UnityTexture = UnityEngine.Texture;
 using Vector2 = UnityEngine.Vector2;
 using Vector3 = UnityEngine.Vector3;
 using Vector4 = UnityEngine.Vector4;
 using XnaVector2 = Microsoft.Xna.Framework.Vector2;
 using XnaVector3 = Microsoft.Xna.Framework.Vector3;
-using UnityCamera = UnityEngine.Camera;
 
 namespace ClassicUO.Renderer
 {
@@ -44,7 +45,7 @@ namespace ClassicUO.Renderer
         private Material hueMaterial;
         private Material xbrMaterial;
 
-        private MeshHolder reusedMesh = new MeshHolder(1);
+        private MeshHolder reusedMesh = new MeshHolder(256);
 
         public float scale = 1;
         
@@ -68,13 +69,20 @@ namespace ClassicUO.Renderer
         private bool LOG_DEPTH = false;
         private bool DIVIDE_DEPTH = false; // if depth values are 100 or lower, they will render. Something clips them at over 100 (100.1 or 101 or higher)
 
+        public GraphicsDevice GraphicsDevice { get; }
+
+        public int TextureSwitches, FlushesDone;
+        public int TextureSwitchesPerSecond, FlushesPerSecond;
+        public int DrawTextures, DrawMeshes;
+        public int DrawTexturesPerSecond, DrawMeshesPerSecond;
+
         public UltimaBatcher2D(GraphicsDevice device)
         {
-            if (USE_DEPTH)
-            {
-                UnityCamera.main.nearClipPlane = 0.01f;
-                UnityCamera.main.farClipPlane = 10000f;
-            }
+            //if (USE_DEPTH)
+            //{
+            //    UnityCamera.main.nearClipPlane = 0.01f;
+            //    UnityCamera.main.farClipPlane = 10000f;
+            //}
 
             GraphicsDevice = device;
             _blendState = BlendState.AlphaBlend;
@@ -96,6 +104,9 @@ namespace ClassicUO.Renderer
 
             hueMaterial = new Material(UnityEngine.Resources.Load<Shader>("HueShader"));
             xbrMaterial = new Material(UnityEngine.Resources.Load<Shader>("XbrShader"));
+
+            _batchedVertices.Capacity = 8192; // ~4351
+            _runQuads.Capacity = 256; // ~ 10
         }
 
         public Matrix TransformMatrix => _transformMatrix;
@@ -113,10 +124,6 @@ namespace ClassicUO.Renderer
             StencilDepthBufferFail = StencilOperation.Keep,
             StencilPass = StencilOperation.Keep
         };
-
-        public GraphicsDevice GraphicsDevice { get; }
-
-        public int TextureSwitches, FlushesDone;
 
         public void SetBrightlight(float f)
         {
@@ -331,7 +338,7 @@ namespace ClassicUO.Renderer
 
                 vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
             
-                RenderVertex(vertex, texture, hue);
+                PushVertex(vertex, texture, hue);
             }
 
             return true;
@@ -396,7 +403,7 @@ namespace ClassicUO.Renderer
 
             vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
 
-            RenderVertex(vertex, texture, hue);
+            PushVertex(vertex, texture, hue);
         }
 
         // ==========================
@@ -473,6 +480,8 @@ namespace ClassicUO.Renderer
             vertex.TextureCoordinate3.y = (_cornerOffsetY[3] * sourceH) + sourceY;
             vertex.TextureCoordinate3.z = 0;
 
+            FlipTextureVertically(ref vertex, texture.IsFromTextureAtlas);
+
             vertex.Normal0 = normalTop;
             vertex.Normal1 = normalRight;
             vertex.Normal2 = normalLeft;
@@ -500,7 +509,7 @@ namespace ClassicUO.Renderer
 
             vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
 
-            RenderVertex(vertex, texture, hue);
+            PushVertex(vertex, texture, hue, true);
 
             return true;
         }
@@ -608,7 +617,7 @@ namespace ClassicUO.Renderer
 
             vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
 
-            RenderVertex(vertex, texture, hue);
+            PushVertex(vertex, texture, hue);
         }
 
         // MobileUO: TODO: deprecated, to be deleted
@@ -711,7 +720,7 @@ namespace ClassicUO.Renderer
 
             vertex.Hue0.y = vertex.Hue1.y = vertex.Hue2.y = vertex.Hue3.y = ShaderHueTranslator.SHADER_SHADOW;
 
-            RenderVertex(vertex, texture, vertex.Hue0);
+            PushVertex(vertex, texture, vertex.Hue0);
         }
 
         public void DrawShadow(Texture2D texture, XnaVector2 position, Rectangle sourceRect, bool flip, float depth)
@@ -778,7 +787,9 @@ namespace ClassicUO.Renderer
             vertex.TextureCoordinate1.z = 0;
             vertex.TextureCoordinate2.z = 0;
             vertex.TextureCoordinate3.z = 0;
-           
+
+            FlipTextureVertically(ref vertex, texture.IsFromTextureAtlas);
+
             vertex.Normal0.x = 0;
             vertex.Normal0.y = 0;
             vertex.Normal0.z = 1;
@@ -799,24 +810,37 @@ namespace ClassicUO.Renderer
             vertex.Hue0.y = vertex.Hue1.y = vertex.Hue2.y = vertex.Hue3.y = ShaderHueTranslator.SHADER_SHADOW;
 
             //PushSprite(texture);
-            RenderVertex(vertex, texture, vertex.Hue0);
+            PushVertex(vertex, texture, vertex.Hue0, true);
         }
 
-        private void RenderVertex(PositionNormalTextureColor4 vertex, Texture2D texture, Vector3 hue)
+        private readonly List<VertexData> _batchedVertices = new List<VertexData>();
+
+        private void PushVertex(PositionNormalTextureColor4 vertex, Texture2D texture, Vector3 hue, bool useMesh = false)
         {
-            vertex.Position0 *= scale;
-            vertex.Position1 *= scale;
-            vertex.Position2 *= scale;
-            vertex.Position3 *= scale;
+            if (float.IsNaN(vertex.Position0.x) || float.IsNaN(vertex.Position0.y))
+            {
+                //Debug.LogError($"Bad SpriteVertex for tex {texture.UnityTexture.name} @ {vertex.Position0}");
+                return; // skip this sprite entirely until we fix the math
+            }
 
-            reusedMesh.Populate(vertex);
+            //vertex.Position0 *= scale;
+            //vertex.Position1 *= scale;
+            //vertex.Position2 *= scale;
+            //vertex.Position3 *= scale;
 
-            var mat = hueMaterial;
-            mat.mainTexture = texture.UnityTexture;
-            mat.SetColor(Hue, new Color(hue.x,hue.y,hue.z));
-            mat.SetPass(0);
+            vertex.Position0.x *= scale;
+            vertex.Position0.y *= scale;
 
-            Graphics.DrawMeshNow(reusedMesh.Mesh, Vector3.zero, Quaternion.identity);
+            vertex.Position1.x *= scale;
+            vertex.Position1.y *= scale;
+
+            vertex.Position2.x *= scale;
+            vertex.Position2.y *= scale;
+
+            vertex.Position3.x *= scale;
+            vertex.Position3.y *= scale;
+
+            _batchedVertices.Add(new VertexData(vertex, texture, hue, useMesh));
         }
 
         public void DrawCharacterSitted
@@ -914,7 +938,7 @@ namespace ClassicUO.Renderer
 
                 vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
 
-                RenderVertex(vertex, texture, hue);
+                PushVertex(vertex, texture, hue);
             }
 
             if (mod.Y != 0.0f)
@@ -977,7 +1001,7 @@ namespace ClassicUO.Renderer
 
                 vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
 
-                RenderVertex(vertex, texture, hue);
+                PushVertex(vertex, texture, hue);
             }
 
             if (mod.Z != 0.0f)
@@ -1040,7 +1064,7 @@ namespace ClassicUO.Renderer
 
                 vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
 
-                RenderVertex(vertex, texture, hue);
+                PushVertex(vertex, texture, hue);
             }
         }
 
@@ -1095,7 +1119,7 @@ namespace ClassicUO.Renderer
 
                 vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
                 
-                RenderVertex(vertex, texture, hue);
+                PushVertex(vertex, texture, hue);
             }
 
             return true;
@@ -1170,7 +1194,7 @@ namespace ClassicUO.Renderer
                 vertex.TextureCoordinate3.z = 0;
                 vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
                 
-                RenderVertex(vertex, texture, hue);
+                PushVertex(vertex, texture, hue);
             }
 
             return true;
@@ -1303,7 +1327,7 @@ namespace ClassicUO.Renderer
             vertex.TextureCoordinate3.z = 0;
             vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
 
-            RenderVertex(vertex, texture, hue);
+            PushVertex(vertex, texture, hue);
 
             return true;
         }
@@ -1377,7 +1401,7 @@ namespace ClassicUO.Renderer
 
                 vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
                 
-                RenderVertex(vertex, texture, hue);
+                PushVertex(vertex, texture, hue);
             }
 
             return true;
@@ -1533,7 +1557,7 @@ namespace ClassicUO.Renderer
 
             vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = XnaVector3.Zero;
 
-            RenderVertex(vertex, texture, XnaVector3.Zero);
+            PushVertex(vertex, texture, XnaVector3.Zero);
         }
 
         public void DrawLine
@@ -1884,10 +1908,11 @@ namespace ClassicUO.Renderer
                 color,
                 originX, originY,
                 rotationSin, rotationCos,
-                depth, effects
+                depth, effects,
+                texture.IsFromTextureAtlas
             );
 
-            RenderVertex(sprite, texture, color);
+            PushVertex(sprite, texture, color);
 
             //_textureInfo[_numSprites] = texture;
             //++_numSprites;
@@ -1912,8 +1937,8 @@ namespace ClassicUO.Renderer
             //EnsureNotStarted();
             //_started = true;
 
-            TextureSwitches = 0;
-            FlushesDone = 0;
+            //TextureSwitches = 0;
+            //FlushesDone = 0;
 
             CustomEffect = customEffect;
             _transformMatrix = transform_matrix;
@@ -1921,6 +1946,7 @@ namespace ClassicUO.Renderer
 
         public void End()
         {
+            Flush();
             CustomEffect = null;
         }
 
@@ -1941,7 +1967,8 @@ namespace ClassicUO.Renderer
             float rotationSin,
             float rotationCos,
             float depth,
-            byte effects
+            byte effects,
+            bool isFromTextureAtlas
         )
         {
             // MobileUO: TODO: temp fix to keep things stable - hopefully future commit makes depth work
@@ -1989,6 +2016,7 @@ namespace ClassicUO.Renderer
             sprite.TextureCoordinate2.z = 0;
             sprite.TextureCoordinate3.z = 0;
 
+            FlipTextureVertically(ref sprite, isFromTextureAtlas);
 
             sprite.Position0.z = depth;
             sprite.Position1.z = depth;
@@ -2016,6 +2044,30 @@ namespace ClassicUO.Renderer
             sprite.Normal3.x = 0;
             sprite.Normal3.y = 0;
             sprite.Normal3.z = 1;
+        }
+
+        private void FlipTextureVertically(ref PositionNormalTextureColor4 sprite, bool isFromTextureAtlas)
+        {
+            // MobileUO: we must flip the sprite vertically for rendering
+            if (isFromTextureAtlas)
+            {
+                // flip vertically relative to the sprite sheet
+                var oldTextureCoordinate0 = sprite.TextureCoordinate0;
+                var oldTextureCoordinate1 = sprite.TextureCoordinate1;
+
+                sprite.TextureCoordinate0 = sprite.TextureCoordinate2;   // BL → TL
+                sprite.TextureCoordinate1 = sprite.TextureCoordinate3;   // BR → TR
+                sprite.TextureCoordinate2 = oldTextureCoordinate0;       // TL → BL
+                sprite.TextureCoordinate3 = oldTextureCoordinate1;       // TR → BR
+            }
+            else
+            {
+                // flip entire texture vertically
+                sprite.TextureCoordinate0.y = 1f - sprite.TextureCoordinate0.y;
+                sprite.TextureCoordinate1.y = 1f - sprite.TextureCoordinate1.y;
+                sprite.TextureCoordinate2.y = 1f - sprite.TextureCoordinate2.y;
+                sprite.TextureCoordinate3.y = 1f - sprite.TextureCoordinate3.y;
+            }
         }
 
         //Because XNA's Blend enum starts with 1, we duplicate BlendMode.Zero for 0th index
@@ -2108,11 +2160,169 @@ namespace ClassicUO.Renderer
             //_basicUOEffect.Pass.Apply();
         }
 
-        private void Flush()
-        {
-            ApplyStates();
+        private readonly List<PositionNormalTextureColor4> _runQuads = new List<PositionNormalTextureColor4>();
+        private readonly List<VertexData> _batchedMeshVertices = new List<VertexData>();
+        private DateTime _lastSampleTime = DateTime.UtcNow;
 
+        public void FlushMeshBatch()
+        {
+            if (_batchedMeshVertices.Count == 0) 
+                return;
+
+            _runQuads.Clear();
+
+            // grab first sprite’s key
+            var firstBatchedMeshVertex = _batchedMeshVertices[0];
+            Texture2D currentTexture = firstBatchedMeshVertex.Texture;
+            Vector3 currentHue = firstBatchedMeshVertex.Hue;
+
+            // walk them in original order
+            for (int i = 0; i < _batchedMeshVertices.Count; i++)
+            {
+                var batchedMeshVertex = _batchedMeshVertices[i];
+
+                // if any key changes, flush the existing run
+                if (batchedMeshVertex.Texture != currentTexture
+                  || batchedMeshVertex.Hue != currentHue)
+                {
+                    ++TextureSwitches;
+
+                    DrawRun(currentTexture, currentHue, _runQuads);
+                    //Log.Info($"DrawRun! batchedVertices count: {_batchedMeshVertices.Count} - runQuads {_runQuads.Count}");
+
+                    _runQuads.Clear();
+                    currentTexture = batchedMeshVertex.Texture;
+                    currentHue = batchedMeshVertex.Hue;
+                }
+
+                _runQuads.Add(batchedMeshVertex.Vertex);
+            }
+
+            // final run
+            DrawRun(currentTexture, currentHue, _runQuads);
+
+            // clear for next batch
+            _batchedMeshVertices.Clear();
+        }
+
+        public void Flush()
+        {
+            if (_batchedVertices.Count == 0)
+                return;
+
+            ApplyStates();
             ++FlushesDone;
+
+            foreach (var batchedVertex in _batchedVertices)
+            {
+                // draw with mesh if UseDrawTexture is off or if flagged to use mesh (draw stretched land or shadows)
+                if (UserPreferences.UseDrawTexture.CurrentValue == (int)PreferenceEnums.UseDrawTexture.Off 
+                    || (UserPreferences.UseDrawTexture.CurrentValue == (int)PreferenceEnums.UseDrawTexture.On && batchedVertex.UseMesh))
+                {
+                    // accumulate for a mesh‐batch
+                    _batchedMeshVertices.Add(batchedVertex);
+                }
+                // else use draw texture
+                else
+                {
+                    FlushMeshBatch();
+
+                    var vertex = batchedVertex.Vertex;
+                    var texture = batchedVertex.Texture;
+                    var hue = batchedVertex.Hue;
+
+                    // compute screen dst rect
+                    // Gather the X/Y of all four corners:
+                    float xMin = Mathf.Min(
+                        vertex.Position0.x,
+                        vertex.Position1.x,
+                        vertex.Position2.x,
+                        vertex.Position3.x
+                    );
+                    float xMax = Mathf.Max(
+                        vertex.Position0.x,
+                        vertex.Position1.x,
+                        vertex.Position2.x,
+                        vertex.Position3.x
+                    );
+                    float yMin = Mathf.Min(
+                        vertex.Position0.y,
+                        vertex.Position1.y,
+                        vertex.Position2.y,
+                        vertex.Position3.y
+                    );
+                    float yMax = Mathf.Max(
+                        vertex.Position0.y,
+                        vertex.Position1.y,
+                        vertex.Position2.y,
+                        vertex.Position3.y
+                    );
+
+                    // Snap them to integer pixel coordinates:
+                    int ix0 = Mathf.RoundToInt(xMin);
+                    int iy0 = Mathf.RoundToInt(yMin);
+                    int ix1 = Mathf.RoundToInt(xMax);
+                    int iy1 = Mathf.RoundToInt(yMax);
+
+                    // Build the Rect from min to max:
+                    var dst = Rect.MinMaxRect(ix0, iy0, ix1, iy1);
+
+                    // flip vertically
+                    vertex.TextureCoordinate0.y = 1f - vertex.TextureCoordinate0.y;
+                    vertex.TextureCoordinate1.y = 1f - vertex.TextureCoordinate1.y;
+                    vertex.TextureCoordinate2.y = 1f - vertex.TextureCoordinate2.y;
+                    vertex.TextureCoordinate3.y = 1f - vertex.TextureCoordinate3.y;
+
+                    // compute uv src rect
+                    float u0 = vertex.TextureCoordinate0.x;
+                    float v0 = 1 - vertex.TextureCoordinate3.y;
+                    float u1 = vertex.TextureCoordinate1.x - u0;
+                    float v1 = vertex.TextureCoordinate2.y - vertex.TextureCoordinate0.y;
+                    var src = new Rect(u0, v0, u1, v1);
+
+                    hueMaterial.SetColor(Hue, new Color(hue.x, hue.y, hue.z));
+                    hueMaterial.SetFloat(UvMirrorX, 0);
+                    Graphics.DrawTexture(dst, texture.UnityTexture, src, 0, 0, 0, 0, hueMaterial);
+                    DrawTextures++;
+                }
+            }
+
+            FlushMeshBatch();
+            _batchedVertices.Clear();
+
+            // Calculate flushes and texture switches per second
+            var now = DateTime.UtcNow;
+            if ((now - _lastSampleTime).TotalSeconds >= 1.0)
+            {
+                FlushesPerSecond = FlushesDone;
+                TextureSwitchesPerSecond = TextureSwitches;
+                DrawTexturesPerSecond = DrawTextures;
+                DrawMeshesPerSecond = DrawMeshes;
+                FlushesDone = 0;
+                TextureSwitches = 0;
+                DrawTextures = 0;
+                DrawMeshes = 0;
+                _lastSampleTime = now;
+            }
+        }
+
+        private void DrawRun(Texture2D tex, Vector3 hue, List<PositionNormalTextureColor4> quads)
+        {
+            // drop the entire run if even one corner is bad
+            foreach (var quad in quads)
+                if (float.IsNaN(quad.Position0.x) || float.IsNaN(quad.Position0.y))
+                    return;
+
+            reusedMesh.Populate(quads);
+            //reusedMesh.Mesh.RecalculateBounds();
+
+            var mat = hueMaterial;
+            mat.mainTexture = tex.UnityTexture;
+            mat.SetColor(Hue, new Color(hue.x, hue.y, hue.z));
+            mat.SetPass(0);
+
+            Graphics.DrawMeshNow(reusedMesh.Mesh, Vector3.zero, Quaternion.identity);
+            DrawMeshes++;
         }
 
         public bool ClipBegin(int x, int y, int width, int height)
@@ -2137,6 +2347,9 @@ namespace ClassicUO.Renderer
             {
                 EnableScissorTest(true);
 
+                // MobileUO: Re-apply the new scissor to the material
+                ApplyStates();
+
                 return true;
             }
 
@@ -2145,10 +2358,14 @@ namespace ClassicUO.Renderer
 
         public void ClipEnd()
         {
+            // MobileUO: Draw whatever was accumulated under the current scissor
+            Flush();
+
             EnableScissorTest(false);
             ScissorStack.PopScissors(GraphicsDevice);
 
-            Flush();
+            // MobileUO: Push scissor change into the material
+            ApplyStates();
         }
 
         // MobileUO: keep old Scissor test logic
@@ -2161,25 +2378,29 @@ namespace ClassicUO.Renderer
                 return;
 
             _useScissor = enable;
-            ApplyStates();
+            //ApplyStates();
+            Flush();
         }
 
         public void SetBlendState(BlendState blend)
         {
+            Flush();
+
             _blendState = blend ?? BlendState.AlphaBlend;
-            ApplyStates();
+            //ApplyStates();
         }
 
         public void SetStencil(DepthStencilState stencil)
         {
+            Flush();
+
             _stencil = stencil ?? Stencil;
-            ApplyStates();
+            //ApplyStates();
         }
 
         public void SetSampler(SamplerState sampler)
         {
-            // MobileUO: TODO: add it?
-            //Flush();
+            Flush();
 
             _sampler = sampler ?? SamplerState.PointClamp;
         }
@@ -2188,7 +2409,6 @@ namespace ClassicUO.Renderer
         {
             _basicUOEffect?.Dispose();
         }
-
 
         // MobileUO: make public
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -2225,6 +2445,22 @@ namespace ClassicUO.Renderer
             );
 
             public const int SIZE_IN_BYTES = sizeof(float) * 12 * 4;            
+        }
+
+        public struct VertexData
+        {
+            public PositionNormalTextureColor4 Vertex;
+            public Texture2D Texture;
+            public Vector3 Hue;
+            public bool UseMesh;
+
+            public VertexData(PositionNormalTextureColor4 vertex, Texture2D texture, Vector3 hue, bool useMesh = false)
+            {
+                this.Vertex = vertex;
+                this.Texture = texture;
+                this.Hue = hue;
+                this.UseMesh = useMesh;
+            }
         }
     }
 }
