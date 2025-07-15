@@ -19,6 +19,7 @@ using ClassicUO.Utility;
 using ClassicUO.Utility.Logging;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using PreferenceEnums;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -248,6 +249,12 @@ namespace ClassicUO
 
             _intervalFixedUpdate[0] = frameDelay;
             _intervalFixedUpdate[1] = 217; // 5 FPS
+
+            // MobileUO: Use this frame rate if we aren't capped by MobileUO FPS settings
+            if(UserPreferences.TargetFrameRate.CurrentValue == (int)TargetFrameRates.InGameFPS)
+            {
+                UnityEngine.Application.targetFrameRate = rate;
+            }
         }
 
         private void SetWindowPosition(int x, int y)

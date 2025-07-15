@@ -83,7 +83,7 @@ public class OptionEnumView : MonoBehaviour
             var index = enumValues.IndexOf(intPreference.CurrentValue);
             if (index > -1)
             {
-                text = enumNames[index];
+                text = enumNames[index].Replace("_", "");
             }
             else
             {
