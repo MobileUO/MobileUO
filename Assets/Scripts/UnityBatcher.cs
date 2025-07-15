@@ -2232,11 +2232,40 @@ namespace ClassicUO.Renderer
                     var hue = batchedVertex.Hue;
 
                     // compute screen dst rect
-                    var x0 = vertex.Position0.x;
-                    var y0 = vertex.Position0.y;
-                    var x1 = vertex.Position1.x;
-                    var y1 = vertex.Position3.y;
-                    var dst = new Rect(x0, y0, x1 - x0, y1 - y0);
+                    // Gather the X/Y of all four corners:
+                    float xMin = Mathf.Min(
+                        vertex.Position0.x,
+                        vertex.Position1.x,
+                        vertex.Position2.x,
+                        vertex.Position3.x
+                    );
+                    float xMax = Mathf.Max(
+                        vertex.Position0.x,
+                        vertex.Position1.x,
+                        vertex.Position2.x,
+                        vertex.Position3.x
+                    );
+                    float yMin = Mathf.Min(
+                        vertex.Position0.y,
+                        vertex.Position1.y,
+                        vertex.Position2.y,
+                        vertex.Position3.y
+                    );
+                    float yMax = Mathf.Max(
+                        vertex.Position0.y,
+                        vertex.Position1.y,
+                        vertex.Position2.y,
+                        vertex.Position3.y
+                    );
+
+                    // Snap them to integer pixel coordinates:
+                    int ix0 = Mathf.RoundToInt(xMin);
+                    int iy0 = Mathf.RoundToInt(yMin);
+                    int ix1 = Mathf.RoundToInt(xMax);
+                    int iy1 = Mathf.RoundToInt(yMax);
+
+                    // Build the Rect from min to max:
+                    var dst = Rect.MinMaxRect(ix0, iy0, ix1, iy1);
 
                     // flip vertically
                     vertex.TextureCoordinate0.y = 1f - vertex.TextureCoordinate0.y;
