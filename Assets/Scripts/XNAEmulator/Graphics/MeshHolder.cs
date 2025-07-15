@@ -114,11 +114,25 @@ namespace Microsoft.Xna.Framework.Graphics
                 int vOff = q * 4;
                 var quad = quads[q];
 
-                // --- positions
-                vertices.Add(quad.Position0); // TL
-                vertices.Add(quad.Position1); // TR
-                vertices.Add(quad.Position2); // BL
-                vertices.Add(quad.Position3); // BR
+                // --- positions (snap to nearest pixel)
+                var p0 = quad.Position0; // TL
+                var p1 = quad.Position1; // TR
+                var p2 = quad.Position2; // BL
+                var p3 = quad.Position3; // BR
+
+                p0.x = Mathf.Round(p0.x);
+                p0.y = Mathf.Round(p0.y);
+                p1.x = Mathf.Round(p1.x);
+                p1.y = Mathf.Round(p1.y);
+                p2.x = Mathf.Round(p2.x);
+                p2.y = Mathf.Round(p2.y);
+                p3.x = Mathf.Round(p3.x);
+                p3.y = Mathf.Round(p3.y);
+
+                vertices.Add(p0);
+                vertices.Add(p1);
+                vertices.Add(p2);
+                vertices.Add(p3);
 
                 // --- UVs (flip Y)
                 //if (isFromTextureAtlas)
