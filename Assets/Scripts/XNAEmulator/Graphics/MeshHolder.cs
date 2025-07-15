@@ -172,25 +172,5 @@ namespace Microsoft.Xna.Framework.Graphics
             Mesh.SetTriangles(tris, 0);
             Mesh.RecalculateBounds();
         }
-
-
-        /// <summary>
-        /// Ensures our mesh?buffers are at least as large as needed.
-        /// If not, replaces them with new arrays of the exact needed size.
-        /// </summary>
-        //private void EnsureArraysCapacity(int vertCount, int triCount)
-        //{
-        //    if (vertices == null || vertices.Length < vertCount)
-        //        vertices = new UnityEngine.Vector3[vertCount];
-
-        //    if (uvs == null || uvs.Length < vertCount)
-        //        uvs = new UnityEngine.Vector2[vertCount];
-
-        //    if (normals == null || normals.Length < vertCount)
-        //        normals = new UnityEngine.Vector3[vertCount];
-
-        //    if (triangles == null || triangles.Length < triCount)
-        //        triangles = new int[triCount];
-        //}
     }
 }

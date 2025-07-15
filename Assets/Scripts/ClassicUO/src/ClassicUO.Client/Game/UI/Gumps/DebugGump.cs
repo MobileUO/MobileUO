@@ -28,7 +28,7 @@ namespace ClassicUO.Game.UI.Gumps
         private readonly AlphaBlendControl _alphaBlendControl;
         private string _cacheText = string.Empty;
 
-        // MobileUO: added Flushes/Switches
+        // MobileUO: added Flushes/Switches/Draws
         private int TextureSwitchesPerSecond, FlushesPerSecond, DrawTexturesPerSecond, DrawMeshesPerSecond;
 
         public DebugGump(World world, int x, int y) : base(world, 0, 0)
@@ -64,11 +64,11 @@ namespace ClassicUO.Game.UI.Gumps
         protected override bool OnMouseDoubleClick(int x, int y, MouseButtonType button)
         {
             // MobileUO: TODO: #19: testing saving images of TextureAtalases
-            Client.Game.UO.Animations._atlas.SaveImages("Animations");
-            Client.Game.UO.Arts._atlas.SaveImages("Arts");
-            Client.Game.UO.Gumps._atlas.SaveImages("Gumps");
-            Client.Game.UO.Lights._atlas.SaveImages("Lights");
-            Client.Game.UO.Texmaps._atlas.SaveImages("Texmaps");
+            //Client.Game.UO.Animations._atlas.SaveImages("Animations");
+            //Client.Game.UO.Arts._atlas.SaveImages("Arts");
+            //Client.Game.UO.Gumps._atlas.SaveImages("Gumps");
+            //Client.Game.UO.Lights._atlas.SaveImages("Lights");
+            //Client.Game.UO.Texmaps._atlas.SaveImages("Texmaps");
 
             if (button == MouseButtonType.Left)
             {

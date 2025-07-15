@@ -9,12 +9,14 @@ namespace ClassicUO.Renderer
 {
     public class TextureAtlas : IDisposable
     {
+        // MobileUO: removed readonly
         private int _width,
             _height;
         private readonly SurfaceFormat _format;
         private readonly GraphicsDevice _device;
         private readonly List<Texture2D> _textureList;
         private Packer _packer;
+        // MobileUO: added variable
         private bool _useSpriteSheet;
 
         public TextureAtlas(GraphicsDevice device, int width, int height, SurfaceFormat format)
@@ -23,6 +25,7 @@ namespace ClassicUO.Renderer
             _width = width;
             _height = height;
             _format = format;
+            // MobileUO: added variable
             _useSpriteSheet = UserPreferences.UseSpriteSheet.CurrentValue == (int)PreferenceEnums.UseSpriteSheet.On;
 
             _textureList = new List<Texture2D>();
@@ -68,7 +71,7 @@ namespace ClassicUO.Renderer
 
             //ref Rectangle pr = ref _spriteBounds[hash];
             //pr = new Rectangle(0, 0, width, height);
-            // MobileUO: TODO: figure out how to get packer working correctly
+            // MobileUO: added sprite sheet logic
             if (_useSpriteSheet)
             {
                 while (!_packer.PackRect(width, height, out pr))
@@ -85,12 +88,8 @@ namespace ClassicUO.Renderer
                 index = _textureList.Count - 1;
             }
 
-            // MobileUO: TODO: #19: added logging output
-            //SaveImages("test");
-
-            //Utility.Logging.Log.Trace("Packed rect: " + pr);
-
             Texture2D texture = _textureList[index];
+            // MobileUO: added flagging if texture is from sprite sheet
             if (_useSpriteSheet)
                 texture.IsFromTextureAtlas = true;
 
