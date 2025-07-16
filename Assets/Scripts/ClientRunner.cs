@@ -435,7 +435,7 @@ public class ClientRunner : MonoBehaviour
 		    scale = isGameScene ? gameScale : loginScale;
 	    }
 
-	    if (UserPreferences.ScaleSize.CurrentValue != (int) PreferenceEnums.ScaleSizes.Default && isGameScene)
+	    if (UserPreferences.ScaleSize.CurrentValue != (int) PreferenceEnums.ScaleSizes.One && isGameScene)
 	    {
 		    scale *= UserPreferences.ScaleSize.CurrentValue / 100f;
 	    }

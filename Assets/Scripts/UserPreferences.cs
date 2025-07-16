@@ -89,7 +89,7 @@ public static class UserPreferences
     {
         ShowCloseButtons = new IntPreference(nameof(ShowCloseButtons), (int) PreferenceEnums.ShowCloseButtons.Off);
         UseMouseOnMobile = new IntPreference(nameof(UseMouseOnMobile), (int) PreferenceEnums.UseMouseOnMobile.Off);
-        ScaleSize = new IntPreference(nameof(ScaleSize), (int) ScaleSizes.Default);
+        ScaleSize = new IntPreference(nameof(ScaleSize), (int) ScaleSizes.OneTwentyFive);
         TextureFiltering = new IntPreference(nameof(TextureFiltering), (int) TextureFilterMode.Sharp);
         TargetFrameRate = new IntPreference(nameof(TargetFrameRate), (int) TargetFrameRates.Sixty);
         JoystickSize = new IntPreference(nameof(JoystickSize), (int) JoystickSizes.Normal);
