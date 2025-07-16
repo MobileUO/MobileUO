@@ -4,7 +4,7 @@ namespace PreferenceEnums
     {
         Fifty = 50,
         SeventyFive = 75,
-        Default = 100,
+        One = 100,
         OneTwentyFive = 125,
         OneHalf = 150,
         OneSeventyFive = 175,
