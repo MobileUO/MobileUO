@@ -190,6 +190,7 @@ namespace ClassicUO.Game
             {
                 _needGraphicUpdate = false;
 
+                // MobileUO: TODO: #21 Need to adjust here for mouse in thread
                 if (AllowDrawSDLCursor && Settings.GlobalSettings.RunMouseInASeparateThread)
                 {
                     ushort id = Graphic;
@@ -214,6 +215,7 @@ namespace ClassicUO.Game
 
                     if (ptrCursor != IntPtr.Zero)
                     {
+                        // MobileUO: TODO: #21 implement Unity's SetCursor?
                         SDL.SDL_SetCursor(ptrCursor);
                     }
                 }

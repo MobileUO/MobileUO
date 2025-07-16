@@ -31,7 +31,13 @@ namespace PreferenceEnums
         Off = 0,
         On = 1
     }
-    
+
+    public enum ShowMouseCursor
+    {
+        Off = 0,
+        On = 1
+    }
+
     public enum ShowCloseButtons
     {
         Off = 0,

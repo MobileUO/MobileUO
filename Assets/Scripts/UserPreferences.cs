@@ -66,6 +66,7 @@ public static class UserPreferences
     
     public static IntPreference ShowCloseButtons;
     public static IntPreference UseMouseOnMobile;
+    public static IntPreference ShowMouseCursor;
     public static IntPreference DisableTouchscreenKeyboardOnMobile;
     public static IntPreference ScaleSize;
     public static IntPreference TextureFiltering;
@@ -92,6 +93,7 @@ public static class UserPreferences
     {
         ShowCloseButtons = new IntPreference(nameof(ShowCloseButtons), (int) PreferenceEnums.ShowCloseButtons.Off);
         UseMouseOnMobile = new IntPreference(nameof(UseMouseOnMobile), (int) PreferenceEnums.UseMouseOnMobile.Off);
+        ShowMouseCursor = new IntPreference(nameof(ShowMouseCursor), Application.isMobilePlatform ? (int)PreferenceEnums.ShowMouseCursor.Off : (int)PreferenceEnums.ShowMouseCursor.On);
         ScaleSize = new IntPreference(nameof(ScaleSize), (int) ScaleSizes.Default);
         TextureFiltering = new IntPreference(nameof(TextureFiltering), (int) TextureFilterMode.Sharp);
         TargetFrameRate = new IntPreference(nameof(TargetFrameRate), (int) TargetFrameRates._60);
