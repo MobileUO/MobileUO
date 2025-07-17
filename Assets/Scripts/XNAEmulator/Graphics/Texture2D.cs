@@ -351,16 +351,43 @@ namespace Microsoft.Xna.Framework.Graphics
             GCHandle handle = GCHandle.Alloc(data, GCHandleType.Pinned);
             IntPtr dataPtr = handle.AddrOfPinnedObject() + (startIndex * elementSizeInBytes);
 
+            // Compute the actual dimensions of this mipmap level:
+            int mipWidth = Math.Max(destTex.width >> level, 1);
+            int mipHeight = Math.Max(destTex.height >> level, 1);
+
+            // Convert rect origin from base-texture coords into this mip level’s coords:
+            int xMip = x >> level;
+            int yMip = y >> level;
+
             for (int row = 0; row < h; row++)
             {
+                // srcY: the Y row in the full mipmap we’re sampling from
+                int srcY = yMip + row;
+
+                // destY: the Y row in the output buffer, flipped so row 0 ends up at the bottom
+                int destY = (h - 1) - row;
+
                 for (int col = 0; col < w; col++)
                 {
-                    int colorIndex = (row * w) + col;
-                    int dataIndex = ((h - 1 - row) * w + col) * elementSizeInBytes;
+                    // srcX: the X column in the full mipmap we’re sampling from
+                    int srcX = xMip + col;
 
-                    if (colorIndex < colors.Length && dataIndex < elementCount * elementSizeInBytes)
+                    // Flatten (x, y) into a single index into the Color32[] array:
+                    int srcIndex = srcY * mipWidth + srcX;
+
+                    // Compute the linear index within the destination rectangle (width = w):
+                    int destIndex = destY * w + col;
+
+                    // Safety check to avoid overruns in either array:
+                    if (srcIndex >= 0 && srcIndex < colors.Length &&
+                        destIndex >= 0 && destIndex < elementCount)
                     {
-                        Marshal.StructureToPtr(colors[colorIndex], dataPtr + dataIndex, false);
+                        // Marshal the Color32 at srcIndex into the pinned T[] memory
+                        Marshal.StructureToPtr(
+                            colors[srcIndex],
+                            dataPtr + destIndex * elementSizeInBytes,
+                            false
+                        );
                     }
                 }
             }
