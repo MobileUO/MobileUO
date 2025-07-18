@@ -1688,7 +1688,8 @@ namespace ClassicUO.Renderer
                 (float)Math.Sin(rotation),
                 (float)Math.Cos(rotation),
                 layerDepth,
-                (byte)(effects & (SpriteEffects)0x03)
+                (byte)(effects & (SpriteEffects)0x03),
+                rotation != 0
             );
         }
 
@@ -1742,7 +1743,8 @@ namespace ClassicUO.Renderer
                 (float)Math.Sin(rotation),
                 (float)Math.Cos(rotation),
                 layerDepth,
-                (byte)(effects & (SpriteEffects)0x03)
+                (byte)(effects & (SpriteEffects)0x03),
+                rotation != 0
             );
         }
 
@@ -1869,7 +1871,8 @@ namespace ClassicUO.Renderer
                 (float)Math.Sin(rotation),
                 (float)Math.Cos(rotation),
                 layerDepth,
-                (byte)(effects & (SpriteEffects)0x03)
+                (byte)(effects & (SpriteEffects)0x03),
+                rotation != 0 
             );
         }
 
@@ -1890,7 +1893,8 @@ namespace ClassicUO.Renderer
             float rotationSin,
             float rotationCos,
             float depth,
-            byte effects
+            byte effects,
+            bool useMesh = false
         )
         {
             //EnsureSize();
@@ -1912,7 +1916,7 @@ namespace ClassicUO.Renderer
                 texture.IsFromTextureAtlas
             );
 
-            PushVertex(sprite, texture, color);
+            PushVertex(sprite, texture, color, useMesh);
 
             //_textureInfo[_numSprites] = texture;
             //++_numSprites;
