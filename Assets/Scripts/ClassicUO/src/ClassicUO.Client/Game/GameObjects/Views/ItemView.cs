@@ -414,6 +414,10 @@ namespace ClassicUO.Game.GameObjects
                 rect.Height = Math.Min(value, rect.Height);
                 int remains = spriteInfo.UV.Height - rect.Height;
 
+                // MobileUO: adjust for sprite sheet
+                if (UserPreferences.UseSpriteSheet.CurrentValue == (int)PreferenceEnums.UseSpriteSheet.On)
+                    rect.Y += remains;
+
                 int tiles = (byte)owner.Direction % 2 == 0 ? 2 : 2;
 
                 for (int i = 0; i < count; ++i)
@@ -435,7 +439,15 @@ namespace ClassicUO.Game.GameObjects
                     );
 
                     pos.Y += rect.Height;
-                    rect.Y += rect.Height;
+                    // MobileUO: adjust for spritesheet
+                    if (UserPreferences.UseSpriteSheet.CurrentValue == (int)PreferenceEnums.UseSpriteSheet.On)
+                    {
+                        rect.Y -= remains;
+                    }
+                    else
+                    {
+                        rect.Y += rect.Height;
+                    }
                     rect.Height = remains; // Math.Min(value, remains);
                     remains -= rect.Height;
                 }
