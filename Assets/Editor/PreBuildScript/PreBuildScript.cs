@@ -40,7 +40,7 @@ public class PreBuildScript : IPreprocessBuildWithReport
 
             var environment = "Production";
             var isDevelopmentEnvironment = EditorUserBuildSettings.development;
-            var buildEnvironment = System.Environment.GetEnvironmentVariable("BUILD_ENV");
+            var buildEnvironment = GetBuildEnv();
             Debug.Log($"IsDevelopmentEnvironment: {isDevelopmentEnvironment}");
             Debug.Log($"BuildEnvironment: {buildEnvironment}");
 
@@ -77,6 +77,13 @@ public class PreBuildScript : IPreprocessBuildWithReport
                 Debug.LogWarning($"{jsonFileName} file not found.");
             }
         }
+    }
+
+    private static string GetBuildEnv()
+    {
+        var args = Environment.GetCommandLineArgs();
+        int index = Array.IndexOf(args, "-BUILD_ENV");
+        return (index >= 0 && index < args.Length - 1) ? args[index + 1] : null;
     }
 
     [System.Serializable]
