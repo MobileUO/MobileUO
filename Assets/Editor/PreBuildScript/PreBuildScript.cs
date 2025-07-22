@@ -41,8 +41,10 @@ public class PreBuildScript : IPreprocessBuildWithReport
             var environment = "Production";
             var isDevelopmentEnvironment = EditorUserBuildSettings.development;
             var buildEnvironment = System.Environment.GetEnvironmentVariable("BUILD_ENV");
+            Debug.Log($"IsDevelopmentEnvironment: {isDevelopmentEnvironment}");
+            Debug.Log($"BuildEnvironment: {buildEnvironment}");
 
-            if(isDevelopmentEnvironment)
+            if (isDevelopmentEnvironment)
             {
                 environment = "Development";
             } 
