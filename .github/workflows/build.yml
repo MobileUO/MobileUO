@@ -38,6 +38,7 @@ jobs:
         with:
           targetPlatform: ${{ matrix.targetPlatform }}
           #customParameters: -buildOptions Development #
+          androidKeystoreName: user.keystore # This file won't exist, but this property needs to exist
           androidKeystoreBase64: ${{ secrets.ANDROID_STAGING_KEYSTORE_BASE64 }}
           androidKeystorePass:  ${{ secrets.ANDROID_STAGING_KEYSTORE_PASS }}
           androidKeyaliasName:  ${{ secrets.ANDROID_STAGING_KEYALIAS_NAME }}
