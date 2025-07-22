@@ -34,9 +34,14 @@ jobs:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          BUILD_ENV: Staging
         with:
           targetPlatform: ${{ matrix.targetPlatform }}
-          customParameters: -buildOptions Development
+          #customParameters: -buildOptions Development #
+          androidKeystoreBase64: ${{ secrets.ANDROID_STAGING_KEYSTORE_BASE64 }}
+          androidKeystorePass:  ${{ secrets.ANDROID_STAGING_KEYSTORE_PASS }}
+          androidKeyaliasName:  ${{ secrets.ANDROID_STAGING_KEYALIAS_NAME }}
+          androidKeyaliasPass:  ${{ secrets.ANDROID_STAGING_KEYALIAS_PASS }}
       - uses: actions/upload-artifact@v4
         with:
           name: Build-${{ matrix.targetPlatform }}
