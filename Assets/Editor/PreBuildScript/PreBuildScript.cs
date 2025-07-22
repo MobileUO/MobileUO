@@ -35,7 +35,7 @@ public class PreBuildScript : IPreprocessBuildWithReport
 
     private static void ApplySettingsFromFile(BuildTarget platform)
     {
-        string baseVersionNumber = System.IO.File.ReadAllText("Assets/Scripts/VersionNumber.txt").Trim();
+        string baseVersionNumber = File.ReadAllText("Assets/Scripts/VersionNumber.txt").Trim();
         string buildNumber = GetCommandLineArg("-GITHUB_BUILD_NUMBER", "0");
         string fullVersionNumber = $"{baseVersionNumber}+{buildNumber}";
 
