@@ -37,7 +37,20 @@ public class PreBuildScript : IPreprocessBuildWithReport
     {
         if (platform == BuildTarget.Android)
         {
-            string environment = EditorUserBuildSettings.development ? "Development" : "Production";
+
+            var environment = "Production";
+            var isDevelopmentEnvironment = EditorUserBuildSettings.development;
+            var buildEnvironment = System.Environment.GetEnvironmentVariable("BUILD_ENV");
+
+            if(isDevelopmentEnvironment)
+            {
+                environment = "Development";
+            } 
+            else if(!string.IsNullOrEmpty(buildEnvironment))
+            {
+                environment = buildEnvironment;
+            }
+
             string jsonFileName = $"appsettings.{environment}.json";
 
             Debug.Log($"Environment: {environment}");
