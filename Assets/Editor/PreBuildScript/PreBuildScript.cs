@@ -35,12 +35,23 @@ public class PreBuildScript : IPreprocessBuildWithReport
 
     private static void ApplySettingsFromFile(BuildTarget platform)
     {
+        string baseVersionNumber = System.IO.File.ReadAllText("Assets/Scripts/VersionNumber.txt").Trim();
+        string buildNumber = GetCommandLineArg("-GITHUB_BUILD_NUMBER", "0");
+        string fullVersionNumber = $"{baseVersionNumber}+{buildNumber}";
+
+        Debug.Log($"Version Number: {fullVersionNumber}");
+
+        PlayerSettings.bundleVersion = fullVersionNumber;
+        PlayerSettings.Android.bundleVersionCode = int.Parse(buildNumber);
+        PlayerSettings.iOS.buildNumber = buildNumber;
+
         if (platform == BuildTarget.Android)
         {
-
             var environment = "Production";
+
             var isDevelopmentEnvironment = EditorUserBuildSettings.development;
-            var buildEnvironment = GetBuildEnv();
+            var buildEnvironment = GetCommandLineArg("-BUILD_ENV");
+
             Debug.Log($"IsDevelopmentEnvironment: {isDevelopmentEnvironment}");
             Debug.Log($"BuildEnvironment: {buildEnvironment}");
 
@@ -79,11 +90,11 @@ public class PreBuildScript : IPreprocessBuildWithReport
         }
     }
 
-    private static string GetBuildEnv()
+    private static string GetCommandLineArg(string name, string defaultValue = null)
     {
         var args = Environment.GetCommandLineArgs();
-        int index = Array.IndexOf(args, "-BUILD_ENV");
-        return (index >= 0 && index < args.Length - 1) ? args[index + 1] : null;
+        int index = Array.IndexOf(args, name);
+        return (index >= 0 && index < args.Length - 1) ? args[index + 1] : defaultValue;
     }
 
     [System.Serializable]
