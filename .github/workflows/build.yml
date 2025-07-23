@@ -38,7 +38,7 @@ jobs:
         name: Fast manual cleanup
         run: |
             sudo rm -rf /usr/local/lib/android       # ~9GB
-            #sudo rm -rf /opt/ghc                     # ~6GB
+            sudo rm -rf /opt/ghc                     # ~6GB
             #sudo rm -rf /mnt/swapfile                # ~4GB
       - name: Check disk space after cleanup
         run: df -h
