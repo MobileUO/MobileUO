@@ -41,6 +41,7 @@ jobs:
             sudo rm -rf /opt/ghc                     # ~6GB
             sudo swapoff -a
             sudo rm -rf /mnt/swapfile                # ~4GB
+            sudo rm -rf /usr/share/swift             # ~3-4GB
       - name: Check disk space after cleanup
         run: df -h
       - name: Extract version and build number
