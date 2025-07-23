@@ -63,13 +63,13 @@ jobs:
         if: matrix.targetPlatform == 'Android'
         uses: actions/upload-artifact@v4
         with:
-            name: Build-${{ matrix.targetPlatform }}-${{ steps.versioning.outputs.fullVersionNumber }}
+            name: Build-${{ matrix.targetPlatform }}-MandoUO-${{ steps.versioning.outputs.fullVersionNumber }}
             path: final/${{ matrix.targetPlatform }}
       - name: Upload non-Android artifact
         if: matrix.targetPlatform != 'Android'
         uses: actions/upload-artifact@v4
         with:
-            name: Build-${{ matrix.targetPlatform }}-${{ steps.versioning.outputs.fullVersionNumber }}
+            name: Build-${{ matrix.targetPlatform }}-MandoUO-${{ steps.versioning.outputs.fullVersionNumber }}
             path: build/${{ matrix.targetPlatform }}
       # - uses: actions/upload-artifact@v4
       #   with:
