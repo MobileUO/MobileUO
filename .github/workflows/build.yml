@@ -57,9 +57,21 @@ jobs:
       - name: Rename output APK
         if: matrix.targetPlatform == 'Android'
         run: |
-          chmod +w build/${{ matrix.targetPlatform }}/Android.apk
-          mv build/${{ matrix.targetPlatform }}/Android.apk build/${{ matrix.targetPlatform }}/MandoUO-${{ steps.versioning.outputs.fullVersionNumber }}.apk
-      - uses: actions/upload-artifact@v4
+           mkdir -p final/${{ matrix.targetPlatform }} # have to copy renamed APK due to permission issues - can't just rename'
+           cp build/${{ matrix.targetPlatform }}/Android.apk final/${{ matrix.targetPlatform }}/MandoUO-${{ steps.versioning.outputs.fullVersionNumber }}.apk
+      - name: Upload Android artifact
+        if: matrix.targetPlatform == 'Android'
+        uses: actions/upload-artifact@v4
+        with:
+            name: Build-${{ matrix.targetPlatform }}-${{ steps.versioning.outputs.fullVersionNumber }}
+            path: final/${{ matrix.targetPlatform }}
+      - name: Upload non-Android artifact
+        if: matrix.targetPlatform != 'Android'
+        uses: actions/upload-artifact@v4
         with:
             name: Build-${{ matrix.targetPlatform }}-${{ steps.versioning.outputs.fullVersionNumber }}
             path: build/${{ matrix.targetPlatform }}
+      # - uses: actions/upload-artifact@v4
+      #   with:
+      #       name: Build-${{ matrix.targetPlatform }}-${{ steps.versioning.outputs.fullVersionNumber }}
+      #       path: build/${{ matrix.targetPlatform }}
