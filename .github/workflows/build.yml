@@ -57,6 +57,7 @@ jobs:
       - name: Rename output APK
         if: matrix.targetPlatform == 'Android'
         run: |
+          chmod +w build/${{ matrix.targetPlatform }}/Android.apk
           mv build/${{ matrix.targetPlatform }}/Android.apk build/${{ matrix.targetPlatform }}/MandoUO-${{ steps.versioning.outputs.fullVersionNumber }}.apk
       - uses: actions/upload-artifact@v4
         with:
