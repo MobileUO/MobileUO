@@ -31,6 +31,12 @@ jobs:
                 Library-
       - if: matrix.targetPlatform == 'Android'
         uses: jlumbroso/free-disk-space@v1.3.1
+      - name: Extract version and build number
+        id: versioning
+        run: |
+          version=$(cat Assets/Scripts/VersionNumber.txt | tr -d '\n')
+          echo "baseVersionNumber=$version" >> $GITHUB_OUTPUT
+          echo "fullVersionNumber=${version}+${{ github.run_number }}" >> $GITHUB_OUTPUT
       - uses: game-ci/unity-builder@v4
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
@@ -48,7 +54,11 @@ jobs:
           androidKeystorePass:  ${{ secrets.ANDROID_STAGING_KEYSTORE_PASS }}
           androidKeyaliasName:  ${{ secrets.ANDROID_STAGING_KEYALIAS_NAME }}
           androidKeyaliasPass:  ${{ secrets.ANDROID_STAGING_KEYALIAS_PASS }}
+      - name: Rename output APK
+        if: matrix.targetPlatform == 'Android'
+        run: |
+          mv build/${{ matrix.targetPlatform }}/Android.apk build/${{ matrix.targetPlatform }}/MandoUO-${{ steps.versioning.outputs.fullVersionNumber }}.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: Build-${{ matrix.targetPlatform }}
-          path: build/${{ matrix.targetPlatform }}
+            name: Build-${{ matrix.targetPlatform }}-${{ steps.versioning.outputs.fullVersionNumber }}
+            path: build/${{ matrix.targetPlatform }}
