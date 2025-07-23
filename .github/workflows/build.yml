@@ -29,8 +29,19 @@ jobs:
           restore-keys: |
                 Library-${{ matrix.targetPlatform }}-
                 Library-
+      # this takes ~ 3 minutes
+      # - if: matrix.targetPlatform == 'Android'
+      #   uses: jlumbroso/free-disk-space@v1.3.1
+      - name: Check disk space before cleanup
+        run: df -h
       - if: matrix.targetPlatform == 'Android'
-        uses: jlumbroso/free-disk-space@v1.3.1
+        name: Fast manual cleanup
+        run: |
+            sudo rm -rf /usr/local/lib/android       # ~9GB
+            #sudo rm -rf /opt/ghc                     # ~6GB
+            #sudo rm -rf /mnt/swapfile                # ~4GB
+      - name: Check disk space after cleanup
+        run: df -h
       - name: Extract version and build number
         id: versioning
         run: |
