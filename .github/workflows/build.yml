@@ -150,6 +150,19 @@ jobs:
           tag_name: ${{ env.TAG_NAME }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # - name: Discord Github Updates
+      #   if: github.event_name == 'push'
+      #   uses: tsickert/discord-webhook@v7.0.0
+      #   with:
+      #     webhook-url: ${{ secrets.DISCORDWEBHOOK }}
+      #     content: |
+      #       # v${{ env.VERSION }} (Development build) is available.
+
+      #       [Download here](<https://github.com/MobileUO/MobileUO/releases/tag/MobileUO-BleedingEdge>)  
+          
+      #       # Release notes 
+      #       `These are automatically generated`
+      #       ${{ steps.release_notes.outputs.RELEASE_NOTES }}
       - name: Upload MobileUO BleedingEdge Release
         if: github.event_name == 'push'
         uses: ncipollo/release-action@v1.16.0
