@@ -113,6 +113,11 @@ jobs:
       #   with:
       #       name: Build-${{ matrix.targetPlatform }}-${{ steps.versioning.outputs.fullVersionNumber }}
       #       path: build/${{ matrix.targetPlatform }}
+      - name: Debug current branch and tag state
+        run: |
+          git branch -a
+          git tag -l --sort=-creatordate | head -10
+          git log -1 --oneline
       - name: Get last MobileUO BleedingEdge release commit
         shell: bash
         id: last_release
