@@ -106,20 +106,20 @@ jobs:
       - name: Rename output APK
         if: matrix.targetPlatform == 'Android'
         run: |
-           mkdir -p final/${{ matrix.targetPlatform }} # have to copy renamed APK due to permission issues - can't just rename'
-           cp build/${{ matrix.targetPlatform }}/Android.apk final/${{ matrix.targetPlatform }}/MandoUO-${{ needs.getVersionNumber.outputs.fullVersionNumber }}.apk
+          mkdir -p final/${{ matrix.targetPlatform }} # have to copy renamed APK due to permission issues - can't just rename'
+          cp build/${{ matrix.targetPlatform }}/Android.apk final/${{ matrix.targetPlatform }}/MandoUO-${{ needs.getVersionNumber.outputs.fullVersionNumber }}.apk
       - name: Upload Android artifact
         if: matrix.targetPlatform == 'Android'
         uses: actions/upload-artifact@v4
         with:
-            name: Build-${{ matrix.targetPlatform }}-MandoUO-${{ needs.getVersionNumber.outputs.fullVersionNumber }}
-            path: final/${{ matrix.targetPlatform }}
+          name: Build-${{ matrix.targetPlatform }}-MandoUO-${{ needs.getVersionNumber.outputs.fullVersionNumber }}
+          path: final/${{ matrix.targetPlatform }}
       - name: Upload non-Android artifact
         if: matrix.targetPlatform != 'Android'
         uses: actions/upload-artifact@v4
         with:
-            name: Build-${{ matrix.targetPlatform }}-MandoUO-${{ needs.getVersionNumber.outputs.fullVersionNumber }}
-            path: build/${{ matrix.targetPlatform }}
+          name: Build-${{ matrix.targetPlatform }}-MandoUO-${{ needs.getVersionNumber.outputs.fullVersionNumber }}
+          path: build/${{ matrix.targetPlatform }}
   release:
     name: Release
     runs-on: ubuntu-latest
