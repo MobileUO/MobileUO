@@ -35,9 +35,35 @@ public class PreBuildScript : IPreprocessBuildWithReport
 
     private static void ApplySettingsFromFile(BuildTarget platform)
     {
+        string baseVersionNumber = File.ReadAllText("Assets/Scripts/VersionNumber.txt").Trim();
+        string buildNumber = GetCommandLineArg("-GITHUB_BUILD_NUMBER", "0");
+        string fullVersionNumber = $"{baseVersionNumber}+{buildNumber}";
+
+        Debug.Log($"Version Number: {fullVersionNumber}");
+
+        PlayerSettings.bundleVersion = fullVersionNumber;
+        PlayerSettings.Android.bundleVersionCode = int.Parse(buildNumber);
+        PlayerSettings.iOS.buildNumber = buildNumber;
+
         if (platform == BuildTarget.Android)
         {
-            string environment = EditorUserBuildSettings.development ? "Development" : "Production";
+            var environment = "Production";
+
+            var isDevelopmentEnvironment = EditorUserBuildSettings.development;
+            var buildEnvironment = GetCommandLineArg("-BUILD_ENV");
+
+            Debug.Log($"IsDevelopmentEnvironment: {isDevelopmentEnvironment}");
+            Debug.Log($"BuildEnvironment: {buildEnvironment}");
+
+            if (isDevelopmentEnvironment)
+            {
+                environment = "Development";
+            } 
+            else if(!string.IsNullOrEmpty(buildEnvironment))
+            {
+                environment = buildEnvironment;
+            }
+
             string jsonFileName = $"appsettings.{environment}.json";
 
             Debug.Log($"Environment: {environment}");
@@ -62,6 +88,13 @@ public class PreBuildScript : IPreprocessBuildWithReport
                 Debug.LogWarning($"{jsonFileName} file not found.");
             }
         }
+    }
+
+    private static string GetCommandLineArg(string name, string defaultValue = null)
+    {
+        var args = Environment.GetCommandLineArgs();
+        int index = Array.IndexOf(args, name);
+        return (index >= 0 && index < args.Length - 1) ? args[index + 1] : defaultValue;
     }
 
     [System.Serializable]
