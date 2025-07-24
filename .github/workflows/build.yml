@@ -13,6 +13,9 @@ on:
 permissions:
   contents: write
 
+env:
+  TAG_NAME: "MobileUO-BleedingEdge"
+
 jobs:
   buildForAllSupportedPlatforms:
     name: Build for ${{ matrix.targetPlatform }}
@@ -110,11 +113,12 @@ jobs:
       #       name: Build-${{ matrix.targetPlatform }}-${{ steps.versioning.outputs.fullVersionNumber }}
       #       path: build/${{ matrix.targetPlatform }}
       - name: Get last MobileUO BleedingEdge release commit
+        shell: bash
         id: last_release
         if: github.event_name == 'push'
         run: |
-          if git rev-parse --verify MobileUO-BleedingEdge >/dev/null 2>&1; then
-            LAST_COMMIT=$(git rev-parse MobileUO-BleedingEdge)
+          if git rev-parse --verify "${{ env.TAG_NAME }}" >/dev/null 2>&1; then
+            LAST_COMMIT=$(git rev-parse "${{ env.TAG_NAME }}")
             echo "LAST_COMMIT=$LAST_COMMIT" >> $GITHUB_ENV
             echo "Last release commit: $LAST_COMMIT"
           else
@@ -127,12 +131,12 @@ jobs:
         run: |
           if [ -z "$LAST_COMMIT" ]; then
             echo "No previous release found. Listing 10 latest commits."
-            NOTES=$(git log -10 --pretty=format:'- %s')
+            RELEASE_NOTES=$(git log -10 --pretty=format:%B)
           else
-            echo "Generating release notes from $LAST_COMMIT to HEAD."
-            NOTES=$(git log ${LAST_COMMIT}..HEAD --pretty=format:'- %s')
+            echo "Generating release notes from commit $LAST_COMMIT to HEAD."
+            RELEASE_NOTES=$(git log ${LAST_COMMIT}..HEAD --pretty=format:%B)
           fi
-
+    
           printf "RELEASE_NOTES<<EOF\n%s\nEOF\n" "$RELEASE_NOTES" >> $GITHUB_OUTPUT
       - name: Echo release notes
         shell: bash
@@ -143,7 +147,7 @@ jobs:
         continue-on-error: true  # In case the tag/release doesn't exist yet
         with:
           delete_release: true
-          tag_name: MobileUO-BleedingEdge
+          tag_name: ${{ env.TAG_NAME }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload MobileUO BleedingEdge Release
@@ -163,7 +167,7 @@ jobs:
 
             # Release notes
             ${{ steps.release_notes.outputs.RELEASE_NOTES }}
-          tag: MobileUO-BleedingEdge
+          tag: ${{ env.TAG_NAME }}
           makeLatest: false
           allowUpdates: true
           prerelease: true
