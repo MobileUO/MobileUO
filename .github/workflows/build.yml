@@ -169,6 +169,13 @@ jobs:
       #       # Release notes 
       #       `These are automatically generated`
       #       ${{ steps.release_notes.outputs.RELEASE_NOTES }}
+      - name: Force tag BleedingEdge to HEAD
+        if: github.event_name == 'push'
+        run: |
+            git config user.name "github-actions"
+            git config user.email "github-actions@github.com"
+            git tag -f ${{ env.TAG_NAME }}
+            git push --force origin ${{ env.TAG_NAME }}
       - name: Upload MobileUO BleedingEdge Release
         if: github.event_name == 'push'
         uses: ncipollo/release-action@v1.16.0
