@@ -17,8 +17,27 @@ env:
   BLEEDING_EDGE_TAG: "MobileUO-BleedingEdge"
 
 jobs:
+  getVersionNumber:
+    name: Get version number
+    runs-on: ubuntu-latest
+    outputs: 
+      baseVersionNumber: ${{ steps.version.outputs.baseVersionNumber }}
+      fullVersionNumber: ${{ steps.version.outputs.fullVersionNumber }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+          fetch-tags: true
+      - name: Extract version and build number
+        id: version
+        run: |
+          version=$(cat Assets/Scripts/VersionNumber.txt | tr -d '\n')
+          echo "baseVersionNumber=$version" >> $GITHUB_OUTPUT
+          echo "fullVersionNumber=${version}+${{ github.run_number }}" >> $GITHUB_OUTPUT
   buildForAllSupportedPlatforms:
     name: Build for ${{ matrix.targetPlatform }}
+    needs: getVersionNumber
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -61,12 +80,6 @@ jobs:
       #       sudo rm -rf /usr/share/swift             # ~3-4GB
       - name: Check disk space after cleanup
         run: df -h
-      - name: Extract version and build number
-        id: versioning
-        run: |
-          version=$(cat Assets/Scripts/VersionNumber.txt | tr -d '\n')
-          echo "baseVersionNumber=$version" >> $GITHUB_OUTPUT
-          echo "fullVersionNumber=${version}+${{ github.run_number }}" >> $GITHUB_OUTPUT
       # test step for generating a dummy apk for testing build integrations without having to wait for longer Unity build
       - name: Generate fake APK
         if: matrix.targetPlatform == 'Android'
@@ -96,22 +109,22 @@ jobs:
         if: matrix.targetPlatform == 'Android'
         run: |
            mkdir -p final/${{ matrix.targetPlatform }} # have to copy renamed APK due to permission issues - can't just rename'
-           cp build/${{ matrix.targetPlatform }}/Android.apk final/${{ matrix.targetPlatform }}/MandoUO-${{ steps.versioning.outputs.fullVersionNumber }}.apk
+           cp build/${{ matrix.targetPlatform }}/Android.apk final/${{ matrix.targetPlatform }}/MandoUO-${{ needs.getVersionNumber.outputs.fullVersionNumber }}.apk
       - name: Upload Android artifact
         if: matrix.targetPlatform == 'Android'
         uses: actions/upload-artifact@v4
         with:
-            name: Build-${{ matrix.targetPlatform }}-MandoUO-${{ steps.versioning.outputs.fullVersionNumber }}
+            name: Build-${{ matrix.targetPlatform }}-MandoUO-${{ needs.getVersionNumber.outputs.fullVersionNumber }}
             path: final/${{ matrix.targetPlatform }}
       - name: Upload non-Android artifact
         if: matrix.targetPlatform != 'Android'
         uses: actions/upload-artifact@v4
         with:
-            name: Build-${{ matrix.targetPlatform }}-MandoUO-${{ steps.versioning.outputs.fullVersionNumber }}
+            name: Build-${{ matrix.targetPlatform }}-MandoUO-${{ needs.getVersionNumber.outputs.fullVersionNumber }}
             path: build/${{ matrix.targetPlatform }}
       # - uses: actions/upload-artifact@v4
       #   with:
-      #       name: Build-${{ matrix.targetPlatform }}-${{ steps.versioning.outputs.fullVersionNumber }}
+      #       name: Build-${{ matrix.targetPlatform }}-${{ needs.getVersionNumber.outputs.fullVersionNumber }}
       #       path: build/${{ matrix.targetPlatform }}
       # - name: Debug current branch and tag state
       #   run: |
@@ -121,7 +134,9 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
-    needs: buildForAllSupportedPlatforms
+    needs: 
+      - getVersionNumber
+      - buildForAllSupportedPlatforms
     if: github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
@@ -129,13 +144,6 @@ jobs:
           fetch-depth: 0
           lfs: true
           fetch-tags: true
-      # TODO: remove this duplicate step by adding a non-matrix build step so both can reference it
-      - name: Extract version and build number
-        id: versioning
-        run: |
-          version=$(cat Assets/Scripts/VersionNumber.txt | tr -d '\n')
-          echo "baseVersionNumber=$version" >> $GITHUB_OUTPUT
-          echo "fullVersionNumber=${version}+${{ github.run_number }}" >> $GITHUB_OUTPUT
       - name: Download all builds
         uses: actions/download-artifact@v4
         with:
@@ -144,7 +152,7 @@ jobs:
         id: last_release
         run: |
           # List all tags matching sem version pattern (vX.Y.Z), sort by version descending
-          previous_tag=$(git tag --list "v[0-9]*.[0-9]*.[0-9]*" --sort=-v:refname | grep -v "^v${{ steps.versioning.outputs.baseVersionNumber }}$" | head -n 1)
+          previous_tag=$(git tag --list "v[0-9]*.[0-9]*.[0-9]*" --sort=-v:refname | grep -v "^v${{ needs.getVersionNumber.outputs.baseVersionNumber }}$" | head -n 1)
 
           if [ -n "$previous_tag" ]; then
             echo "Previous version tag found: $previous_tag"
@@ -204,13 +212,13 @@ jobs:
         uses: ncipollo/release-action@v1.16.0
         with:
           artifacts: artifacts/**
-          name: 'MobileUO BleedingEdge Build v${{ steps.versioning.outputs.fullVersionNumber }}'
+          name: 'MobileUO BleedingEdge Build v${{ needs.getVersionNumber.outputs.fullVersionNumber }}'
           body: |
             This is a bleeding-edge development build for all platform builds.
             These are built automatically on the dev branch. 
             These may include features that are still being worked on/not complete.
 
-            Version: `${{ steps.versioning.outputs.fullVersionNumber }}`
+            Version: `${{ needs.getVersionNumber.outputs.fullVersionNumber }}`
 
             These builds may include incomplete or experimental features.
 
@@ -224,7 +232,7 @@ jobs:
       - name: Check if version already released
         id: version_check
         run: |
-          version="v${{ steps.versioning.outputs.baseVersionNumber }}"
+          version="v${{ needs.getVersionNumber.outputs.baseVersionNumber }}"
           if git rev-parse "$version" >/dev/null 2>&1; then
             echo "Version $version already tagged"
             echo "new_release=false" >> $GITHUB_OUTPUT
@@ -237,17 +245,17 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git tag v${{ steps.versioning.outputs.baseVersionNumber }}
-          git push origin v${{ steps.versioning.outputs.baseVersionNumber }}
+          git tag v${{ needs.getVersionNumber.outputs.baseVersionNumber }}
+          git push origin v${{ needs.getVersionNumber.outputs.baseVersionNumber }}
       - name: Create versioned GitHub Release
         if: steps.version_check.outputs.new_release == 'true'
         uses: ncipollo/release-action@v1.16.0
         with:
-          tag: v${{ steps.versioning.outputs.baseVersionNumber }}
-          name: "MobileUO v${{ steps.versioning.outputs.baseVersionNumber }}"
+          tag: v${{ needs.getVersionNumber.outputs.baseVersionNumber }}
+          name: "MobileUO v${{ needs.getVersionNumber.outputs.baseVersionNumber }}"
           body: |
             This is an official versioned release of MobileUO.
-            Version: `${{ steps.versioning.outputs.baseVersionNumber }}`
+            Version: `${{ needs.getVersionNumber.outputs.baseVersionNumber }}`
 
             # Release notes
             ${{ steps.release_notes.outputs.RELEASE_NOTES }}
