@@ -147,40 +147,59 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-      - name: Find previous version tag for release notes
-        id: last_release
+      - name: Get last BleedingEdge commit
+        id: bleed_base
         run: |
-          # List all tags matching sem version pattern (vX.Y.Z), sort by version descending
-          previous_tag=$(git tag --list "v[0-9]*.[0-9]*.[0-9]*" --sort=-v:refname | grep -v "^v${{ needs.getVersionNumber.outputs.baseVersionNumber }}$" | head -n 1)
-
-          if [ -n "$previous_tag" ]; then
-            echo "Previous version tag found: $previous_tag"
-            echo "LAST_COMMIT=$(git rev-parse $previous_tag)" >> $GITHUB_ENV
-            echo "BASE_TAG=$previous_tag" >> $GITHUB_ENV
-          elif git rev-parse "${{ env.BLEEDING_EDGE_TAG }}" >/dev/null 2>&1; then
-            echo "Fallback to bleeding edge tag ${{ env.BLEEDING_EDGE_TAG }}"
-            echo "LAST_COMMIT=$(git rev-parse ${{ env.BLEEDING_EDGE_TAG }})" >> $GITHUB_ENV
-            echo "BASE_TAG=${{ env.BLEEDING_EDGE_TAG }}" >> $GITHUB_ENV
+          if git rev-parse "${{ env.BLEEDING_EDGE_TAG }}" >/dev/null 2>&1; then
+            echo "BLEED_BASE=$(git rev-parse ${BLEEDING_EDGE_TAG})" >> $GITHUB_ENV
           else
-            echo "No previous release tag found"
-            echo "LAST_COMMIT=" >> $GITHUB_ENV
-            echo "BASE_TAG=" >> $GITHUB_ENV
+            echo "BLEED_BASE=" >> $GITHUB_ENV
           fi
-      - name: Generate release notes
-        id: release_notes
+      - name: BleedingEdge release notes
+        id: bleed_notes
         run: |
-          if [ -z "$LAST_COMMIT" ]; then
+          if [ -z "$BLEED_BASE" ]; then
             echo "No previous release found. Listing 10 latest commits."
-            RELEASE_NOTES=$(git log -10 --pretty=format:%B)
+            notes=$(git log -10 --pretty=format:%B)
           else
-            echo "Generating release notes from commit $LAST_COMMIT to HEAD."
-            RELEASE_NOTES=$(git log ${LAST_COMMIT}..HEAD --pretty=format:%B)
+            echo "Generating release notes from commit $BLEED_BASE to HEAD."
+            notes=$(git log $BLEED_BASE..HEAD --pretty=format:%B)
           fi
+          printf "BLEED_NOTES<<EOF\n%s\nEOF\n" "$notes" >> $GITHUB_OUTPUT
+      # - name: Find previous version tag for release notes
+      #   id: last_release
+      #   run: |
+      #     # List all tags matching sem version pattern (vX.Y.Z), sort by version descending
+      #     previous_tag=$(git tag --list "v[0-9]*.[0-9]*.[0-9]*" --sort=-v:refname | grep -v "^v${{ needs.getVersionNumber.outputs.baseVersionNumber }}$" | head -n 1)
+
+      #     if [ -n "$previous_tag" ]; then
+      #       echo "Previous version tag found: $previous_tag"
+      #       echo "LAST_COMMIT=$(git rev-parse $previous_tag)" >> $GITHUB_ENV
+      #       echo "BASE_TAG=$previous_tag" >> $GITHUB_ENV
+      #     elif git rev-parse "${{ env.BLEEDING_EDGE_TAG }}" >/dev/null 2>&1; then
+      #       echo "Fallback to bleeding edge tag ${{ env.BLEEDING_EDGE_TAG }}"
+      #       echo "LAST_COMMIT=$(git rev-parse ${{ env.BLEEDING_EDGE_TAG }})" >> $GITHUB_ENV
+      #       echo "BASE_TAG=${{ env.BLEEDING_EDGE_TAG }}" >> $GITHUB_ENV
+      #     else
+      #       echo "No previous release tag found"
+      #       echo "LAST_COMMIT=" >> $GITHUB_ENV
+      #       echo "BASE_TAG=" >> $GITHUB_ENV
+      #     fi
+      # - name: Generate release notes
+      #   id: release_notes
+      #   run: |
+      #     if [ -z "$LAST_COMMIT" ]; then
+      #       echo "No previous release found. Listing 10 latest commits."
+      #       RELEASE_NOTES=$(git log -10 --pretty=format:%B)
+      #     else
+      #       echo "Generating release notes from commit $LAST_COMMIT to HEAD."
+      #       RELEASE_NOTES=$(git log ${LAST_COMMIT}..HEAD --pretty=format:%B)
+      #     fi
     
-          printf "RELEASE_NOTES<<EOF\n%s\nEOF\n" "$RELEASE_NOTES" >> $GITHUB_OUTPUT
-      - name: Echo release notes
-        shell: bash
-        run: echo "${{ steps.release_notes.outputs.RELEASE_NOTES }}"
+      #     printf "RELEASE_NOTES<<EOF\n%s\nEOF\n" "$RELEASE_NOTES" >> $GITHUB_OUTPUT
+      # - name: Echo release notes
+      #   shell: bash
+      #   run: echo "${{ steps.release_notes.outputs.RELEASE_NOTES }}"
       - name: Remove old MobileUO BleedingEdge Release
         uses: dev-drprasad/delete-tag-and-release@v0.2.1
         continue-on-error: true  # In case the tag/release doesn't exist yet
@@ -222,7 +241,7 @@ jobs:
             These builds may include incomplete or experimental features.
 
             # Release notes
-            ${{ steps.release_notes.outputs.RELEASE_NOTES }}
+            ${{ steps.bleed_notes.outputs.BLEED_NOTES }}
           tag: ${{ env.BLEEDING_EDGE_TAG }}
           makeLatest: false
           allowUpdates: true
@@ -239,6 +258,28 @@ jobs:
             echo "Version $version is new"
             echo "new_release=true" >> $GITHUB_OUTPUT
           fi
+      - name: Get last semver tag commit
+        if: steps.version_check.outputs.new_release == 'true'
+        id: ver_base
+        run: |
+          prev=$(git tag --list "v[0-9]*\.[0-9]*\.[0-9]*" --sort=-v:refname | grep -v "^v${{ needs.getVersionNumber.outputs.baseVersionNumber }}$" | head -n 1)
+          if [ -n "$prev" ]; then
+            echo "VER_BASE=$(git rev-parse $prev)" >> $GITHUB_ENV
+          else
+            echo "VER_BASE=" >> $GITHUB_ENV
+          fi
+      - name: Versioned release notes
+        if: steps.version_check.outputs.new_release == 'true'
+        id: ver_notes
+        run: |
+          if [ -z "$VER_BASE" ]; then
+            echo "No previous release found. Listing 10 latest commits."
+            notes=$(git log -10 --pretty=format:%B)
+          else
+            echo "Generating release notes from commit $VER_BASE to HEAD."
+            notes=$(git log $VER_BASE..HEAD --pretty=format:%B)
+          fi
+          printf "VER_NOTES<<EOF\n%s\nEOF\n" "$notes" >> $GITHUB_OUTPUT
       - name: Tag and push new version if needed
         if: steps.version_check.outputs.new_release == 'true'
         run: |
@@ -257,7 +298,7 @@ jobs:
             Version: `${{ needs.getVersionNumber.outputs.baseVersionNumber }}`
 
             # Release notes
-            ${{ steps.release_notes.outputs.RELEASE_NOTES }}
+            ${{ steps.ver_notes.outputs.VER_NOTES }}
           artifacts: artifacts/**
           prerelease: false
           token: ${{ secrets.GITHUB_TOKEN }}
