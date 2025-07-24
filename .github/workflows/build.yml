@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - dev
-      - github-workflow
+      # - github-workflow
   pull_request:
     branches:
       - dev
@@ -55,55 +55,54 @@ jobs:
           fetch-depth: 0
           lfs: true
           fetch-tags: true
-      # temp comment out
-      # - uses: actions/cache@v3
-      #   with:
-      #     path: Library
-      #     key: Library-${{ matrix.targetPlatform }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
-      #     restore-keys: |
-      #           Library-${{ matrix.targetPlatform }}-
-      #           Library-
+      - uses: actions/cache@v3
+        with:
+          path: Library
+          key: Library-${{ matrix.targetPlatform }}-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+                Library-${{ matrix.targetPlatform }}-
+                Library-
       # this takes ~3 minutes
       # - if: matrix.targetPlatform == 'Android'
       #   uses: jlumbroso/free-disk-space@v1.3.1
       # this takes ~1 minute
       - name: Check disk space before cleanup
         run: df -h
-      # - if: matrix.targetPlatform == 'Android'
-      #   name: Fast manual cleanup
-      #   run: |
-      #       sudo rm -rf /usr/local/lib/android       # ~9GB
-      #       sudo rm -rf /opt/ghc                     # ~6GB
-      #       sudo swapoff -a
-      #       sudo rm -rf /mnt/swapfile                # ~4GB
-      #       sudo rm -rf /usr/share/swift             # ~3-4GB
+      - if: matrix.targetPlatform == 'Android'
+        name: Fast manual cleanup
+        run: |
+            sudo rm -rf /usr/local/lib/android       # ~9GB
+            sudo rm -rf /opt/ghc                     # ~6GB
+            sudo swapoff -a
+            sudo rm -rf /mnt/swapfile                # ~4GB
+            sudo rm -rf /usr/share/swift             # ~3-4GB
       - name: Check disk space after cleanup
         run: df -h
       # test step for generating a dummy apk for testing build integrations without having to wait for longer Unity build
-      - name: Generate fake APK
-        if: matrix.targetPlatform == 'Android'
-        run: |
-          echo "Creating fake APK for ${{ matrix.targetPlatform }} build"
-          mkdir -p build/${{ matrix.targetPlatform }}
-          # write a tiny placeholder file named Android.apk
-          echo "FAKE APK CONTENT" > build/${{ matrix.targetPlatform }}/Android.apk
-      # - uses: game-ci/unity-builder@v4
-      #   env:
-      #     UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-      #     UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-      #     UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-      #     BUILD_ENV: Staging
-      #     GITHUB_BUILD_NUMBER: ${{ github.run_number }}
-      #   with:
-      #     targetPlatform: ${{ matrix.targetPlatform }}
-      #     customParameters: >
-      #       -BUILD_ENV ${{ env.BUILD_ENV }}
-      #       -GITHUB_BUILD_NUMBER ${{ env.GITHUB_BUILD_NUMBER }}
-      #     androidKeystoreName: user.keystore # This file won't exist, but this property needs to exist
-      #     androidKeystoreBase64: ${{ secrets.ANDROID_STAGING_KEYSTORE_BASE64 }}
-      #     androidKeystorePass:  ${{ secrets.ANDROID_STAGING_KEYSTORE_PASS }}
-      #     androidKeyaliasName:  ${{ secrets.ANDROID_STAGING_KEYALIAS_NAME }}
-      #     androidKeyaliasPass:  ${{ secrets.ANDROID_STAGING_KEYALIAS_PASS }}
+      # - name: Generate fake APK
+      #   if: matrix.targetPlatform == 'Android'
+      #   run: |
+      #     echo "Creating fake APK for ${{ matrix.targetPlatform }} build"
+      #     mkdir -p build/${{ matrix.targetPlatform }}
+      #     # write a tiny placeholder file named Android.apk
+      #     echo "FAKE APK CONTENT" > build/${{ matrix.targetPlatform }}/Android.apk
+      - uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          BUILD_ENV: Staging
+          GITHUB_BUILD_NUMBER: ${{ github.run_number }}
+        with:
+          targetPlatform: ${{ matrix.targetPlatform }}
+          customParameters: >
+            -BUILD_ENV ${{ env.BUILD_ENV }}
+            -GITHUB_BUILD_NUMBER ${{ env.GITHUB_BUILD_NUMBER }}
+          androidKeystoreName: user.keystore # This file won't exist, but this property needs to exist
+          androidKeystoreBase64: ${{ secrets.ANDROID_STAGING_KEYSTORE_BASE64 }}
+          androidKeystorePass:  ${{ secrets.ANDROID_STAGING_KEYSTORE_PASS }}
+          androidKeyaliasName:  ${{ secrets.ANDROID_STAGING_KEYALIAS_NAME }}
+          androidKeyaliasPass:  ${{ secrets.ANDROID_STAGING_KEYALIAS_PASS }}
       - name: Rename output APK
         if: matrix.targetPlatform == 'Android'
         run: |
