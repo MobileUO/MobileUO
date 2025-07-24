@@ -29,9 +29,10 @@ jobs:
           restore-keys: |
                 Library-${{ matrix.targetPlatform }}-
                 Library-
-      # this takes ~ 3 minutes
+      # this takes ~3 minutes
       # - if: matrix.targetPlatform == 'Android'
       #   uses: jlumbroso/free-disk-space@v1.3.1
+      # this takes ~1 minute
       - name: Check disk space before cleanup
         run: df -h
       - if: matrix.targetPlatform == 'Android'
@@ -50,23 +51,31 @@ jobs:
           version=$(cat Assets/Scripts/VersionNumber.txt | tr -d '\n')
           echo "baseVersionNumber=$version" >> $GITHUB_OUTPUT
           echo "fullVersionNumber=${version}+${{ github.run_number }}" >> $GITHUB_OUTPUT
-      - uses: game-ci/unity-builder@v4
-        env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-          BUILD_ENV: Staging
-          GITHUB_BUILD_NUMBER: ${{ github.run_number }}
-        with:
-          targetPlatform: ${{ matrix.targetPlatform }}
-          customParameters: >
-            -BUILD_ENV ${{ env.BUILD_ENV }}
-            -GITHUB_BUILD_NUMBER ${{ env.GITHUB_BUILD_NUMBER }}
-          androidKeystoreName: user.keystore # This file won't exist, but this property needs to exist
-          androidKeystoreBase64: ${{ secrets.ANDROID_STAGING_KEYSTORE_BASE64 }}
-          androidKeystorePass:  ${{ secrets.ANDROID_STAGING_KEYSTORE_PASS }}
-          androidKeyaliasName:  ${{ secrets.ANDROID_STAGING_KEYALIAS_NAME }}
-          androidKeyaliasPass:  ${{ secrets.ANDROID_STAGING_KEYALIAS_PASS }}
+      # test step for generating a dummy apk for testing build integrations without having to wait for longer Unity build
+      - name: Generate fake APK
+        if: matrix.targetPlatform == 'Android'
+        run: |
+          echo "Creating fake APK for ${{ matrix.targetPlatform }} build"
+          mkdir -p build/${{ matrix.targetPlatform }}
+          # write a tiny placeholder file named Android.apk
+          echo "FAKE APK CONTENT" > build/${{ matrix.targetPlatform }}/Android.apk
+      # - uses: game-ci/unity-builder@v4
+      #   env:
+      #     UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+      #     UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+      #     UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+      #     BUILD_ENV: Staging
+      #     GITHUB_BUILD_NUMBER: ${{ github.run_number }}
+      #   with:
+      #     targetPlatform: ${{ matrix.targetPlatform }}
+      #     customParameters: >
+      #       -BUILD_ENV ${{ env.BUILD_ENV }}
+      #       -GITHUB_BUILD_NUMBER ${{ env.GITHUB_BUILD_NUMBER }}
+      #     androidKeystoreName: user.keystore # This file won't exist, but this property needs to exist
+      #     androidKeystoreBase64: ${{ secrets.ANDROID_STAGING_KEYSTORE_BASE64 }}
+      #     androidKeystorePass:  ${{ secrets.ANDROID_STAGING_KEYSTORE_PASS }}
+      #     androidKeyaliasName:  ${{ secrets.ANDROID_STAGING_KEYALIAS_NAME }}
+      #     androidKeyaliasPass:  ${{ secrets.ANDROID_STAGING_KEYALIAS_PASS }}
       - name: Rename output APK
         if: matrix.targetPlatform == 'Android'
         run: |
