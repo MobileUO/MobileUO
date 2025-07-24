@@ -113,23 +113,30 @@ jobs:
       #   with:
       #       name: Build-${{ matrix.targetPlatform }}-${{ steps.versioning.outputs.fullVersionNumber }}
       #       path: build/${{ matrix.targetPlatform }}
-      - name: Debug current branch and tag state
-        run: |
-          git branch -a
-          git tag -l --sort=-creatordate | head -10
-          git log -1 --oneline
-      - name: Get last MobileUO BleedingEdge release commit
-        shell: bash
+      # - name: Debug current branch and tag state
+      #   run: |
+      #     git branch -a
+      #     git tag -l --sort=-creatordate | head -10
+      #     git log -1 --oneline
+      - name: Find previous version tag for release notes
         id: last_release
         if: github.event_name == 'push'
         run: |
-          if git rev-parse --verify "${{ env.TAG_NAME }}" >/dev/null 2>&1; then
-            LAST_COMMIT=$(git rev-parse "${{ env.TAG_NAME }}")
-            echo "LAST_COMMIT=$LAST_COMMIT" >> $GITHUB_ENV
-            echo "Last release commit: $LAST_COMMIT"
+          # List all tags matching sem version pattern (vX.Y.Z), sort by version descending
+          previous_tag=$(git tag --list "v[0-9]*.[0-9]*.[0-9]*" --sort=-v:refname | grep -v "^v${{ steps.versioning.outputs.baseVersionNumber }}$" | head -n 1)
+
+          if [ -n "$previous_tag" ]; then
+            echo "Previous version tag found: $previous_tag"
+            echo "LAST_COMMIT=$(git rev-parse $previous_tag)" >> $GITHUB_ENV
+            echo "BASE_TAG=$previous_tag" >> $GITHUB_ENV
+          elif git rev-parse "${{ env.TAG_NAME }}" >/dev/null 2>&1; then
+            echo "Fallback to bleeding edge tag ${{ env.TAG_NAME }}"
+            echo "LAST_COMMIT=$(git rev-parse ${{ env.TAG_NAME }})" >> $GITHUB_ENV
+            echo "BASE_TAG=${{ env.TAG_NAME }}" >> $GITHUB_ENV
           else
-            echo "No previous release found."
+            echo "No previous release tag found"
             echo "LAST_COMMIT=" >> $GITHUB_ENV
+            echo "BASE_TAG=" >> $GITHUB_ENV
           fi
       - name: Generate release notes
         id: release_notes
@@ -197,4 +204,38 @@ jobs:
           makeLatest: false
           allowUpdates: true
           prerelease: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check if version already released
+        if: github.event_name == 'push'
+        id: version_check
+        run: |
+          version="v${{ steps.versioning.outputs.baseVersionNumber }}"
+          if git rev-parse "$version" >/dev/null 2>&1; then
+            echo "Version $version already tagged"
+            echo "new_release=false" >> $GITHUB_OUTPUT
+          else
+            echo "Version $version is new"
+            echo "new_release=true" >> $GITHUB_OUTPUT
+          fi
+      - name: Tag and push new version if needed
+        if: steps.version_check.outputs.new_release == 'true'
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git tag v${{ steps.versioning.outputs.baseVersionNumber }}
+          git push origin v${{ steps.versioning.outputs.baseVersionNumber }}
+      - name: Create versioned GitHub Release
+        if: steps.version_check.outputs.new_release == 'true'
+        uses: ncipollo/release-action@v1.16.0
+        with:
+          tag: v${{ steps.versioning.outputs.baseVersionNumber }}
+          name: "MobileUO v${{ steps.versioning.outputs.baseVersionNumber }}"
+          body: |
+            This is an official versioned release of MobileUO.
+            Version: `${{ steps.versioning.outputs.baseVersionNumber }}`
+
+            # Release notes
+            ${{ steps.release_notes.outputs.RELEASE_NOTES }}
+          artifacts: final/${{ matrix.targetPlatform }}/*
+          prerelease: false
           token: ${{ secrets.GITHUB_TOKEN }}
