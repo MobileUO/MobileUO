@@ -36,6 +36,7 @@ jobs:
         with:
           fetch-depth: 0
           lfs: true
+          fetch-tags: true
       # temp comment out
       # - uses: actions/cache@v3
       #   with:
