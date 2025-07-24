@@ -109,6 +109,34 @@ jobs:
       #   with:
       #       name: Build-${{ matrix.targetPlatform }}-${{ steps.versioning.outputs.fullVersionNumber }}
       #       path: build/${{ matrix.targetPlatform }}
+      - name: Get last MobileUO BleedingEdge release commit
+        id: last_release
+        if: github.event_name == 'push'
+        run: |
+          if git rev-parse --verify MobileUO-BleedingEdge >/dev/null 2>&1; then
+            LAST_COMMIT=$(git rev-parse MobileUO-BleedingEdge)
+            echo "LAST_COMMIT=$LAST_COMMIT" >> $GITHUB_ENV
+            echo "Last release commit: $LAST_COMMIT"
+          else
+            echo "No previous release found."
+            echo "LAST_COMMIT=" >> $GITHUB_ENV
+          fi
+      - name: Generate release notes
+        id: release_notes
+        if: github.event_name == 'push'
+        run: |
+          if [ -z "$LAST_COMMIT" ]; then
+            echo "No previous release found. Listing 10 latest commits."
+            NOTES=$(git log -10 --pretty=format:'- %s')
+          else
+            echo "Generating release notes from $LAST_COMMIT to HEAD."
+            NOTES=$(git log ${LAST_COMMIT}..HEAD --pretty=format:'- %s')
+          fi
+
+          printf "RELEASE_NOTES<<EOF\n%s\nEOF\n" "$RELEASE_NOTES" >> $GITHUB_OUTPUT
+      - name: Echo release notes
+        shell: bash
+        run: echo "${{ steps.release_notes.outputs.RELEASE_NOTES }}"
       - name: Remove old MobileUO BleedingEdge Release
         if: github.event_name == 'push'
         uses: dev-drprasad/delete-tag-and-release@v0.2.1
@@ -126,10 +154,15 @@ jobs:
           name: 'MobileUO BleedingEdge Build v${{ steps.versioning.outputs.fullVersionNumber }}'
           body: |
             This is a bleeding-edge development build for `${{ matrix.targetPlatform }}`.
+            These are built automatically on the dev branch. 
+            These may include features that are still being worked on/not complete.
 
             Version: `${{ steps.versioning.outputs.fullVersionNumber }}`
 
             These builds may include incomplete or experimental features.
+
+            # Release notes
+            ${{ steps.release_notes.outputs.RELEASE_NOTES }}
           tag: MobileUO-BleedingEdge
           makeLatest: false
           allowUpdates: true
