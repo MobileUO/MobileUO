@@ -27,7 +27,7 @@ public class MenuPresenter : MonoBehaviour
         //Only show login button when UO client is running and we're in the login scene
         loginButtonGameObject.transform.SetAsFirstSibling();
         loginButtonGameObject.SetActive(false);
-        
+
         GetOptionEnumViewInstance().Initialize(typeof(ShowCloseButtons), UserPreferences.ShowCloseButtons, "Close Buttons", false, false);
         GetOptionEnumViewInstance().Initialize(typeof(ScaleSizes), UserPreferences.ScaleSize, "View Scale", true, true);
         GetOptionEnumViewInstance().Initialize(typeof(EnlargeSmallButtons), UserPreferences.EnlargeSmallButtons, "Enlarge Small Buttons", false, false);
@@ -52,9 +52,9 @@ public class MenuPresenter : MonoBehaviour
         customizeJoystickButtonGameObject.SetActive(false);
         
         GetOptionEnumViewInstance().Initialize(typeof(ShowModifierKeyButtons), UserPreferences.ShowModifierKeyButtons, "Show Modifier Key Buttons", false, false);
-#if ENABLE_INTERNAL_ASSISTANT
+//#if ENABLE_INTERNAL_ASSISTANT
         GetOptionEnumViewInstance().Initialize(typeof(EnableAssistant), UserPreferences.EnableAssistant, "Enable Assistant", false, false);
-#endif
+//#endif
         
         //Options that are hidden by default
         GetOptionEnumViewInstance().Initialize(typeof(VisualizeFingerInput), UserPreferences.VisualizeFingerInput, "Visualize Finger Input", false, false);

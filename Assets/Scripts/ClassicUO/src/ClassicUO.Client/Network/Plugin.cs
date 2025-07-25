@@ -413,7 +413,7 @@ namespace ClassicUO.Network
             }
             */
 
-            #if ENABLE_INTERNAL_ASSISTANT
+            //#if ENABLE_INTERNAL_ASSISTANT
             if (PluginPath == hardcodedInternalAssistantPath)
             {
                 try
@@ -455,7 +455,7 @@ namespace ClassicUO.Network
                     return;
                 }
             }
-#endif
+//#endif
 
             IsValid = true;
 
