@@ -1117,6 +1117,8 @@ namespace ClassicUO.Renderer
                 vertex.TextureCoordinate3.y = 1;
                 vertex.TextureCoordinate3.z = 0;
 
+                FlipTextureVertically(ref vertex, false);
+
                 vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
                 
                 PushVertex(vertex, texture, hue);
