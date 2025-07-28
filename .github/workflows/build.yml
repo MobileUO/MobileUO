@@ -13,7 +13,7 @@ permissions:
   contents: write
 
 env:
-  BLEEDING_EDGE_TAG: "MobileUO-BleedingEdge"
+  BLEEDING_EDGE_TAG: "MandoUO-BleedingEdge"
 
 jobs:
   getVersionNumber:
@@ -158,7 +158,7 @@ jobs:
             notes=$(git log $BLEED_BASE..HEAD --pretty=format:%B)
           fi
           printf "BLEED_NOTES<<EOF\n%s\nEOF\n" "$notes" >> $GITHUB_OUTPUT
-      - name: Remove old MobileUO BleedingEdge Release
+      - name: Remove old MandoUO BleedingEdge Release
         uses: dev-drprasad/delete-tag-and-release@v0.2.1
         continue-on-error: true  # In case the tag/release doesn't exist yet
         with:
@@ -173,7 +173,7 @@ jobs:
       #     content: |
       #       # v${{ env.VERSION }} (Development build) is available.
 
-      #       [Download here](<https://github.com/MobileUO/MobileUO/releases/tag/MobileUO-BleedingEdge>)  
+      #       [Download here](<https://github.com/MobileUO/MobileUO/releases/tag/MandoUO-BleedingEdge>)  
           
       #       # Release notes 
       #       `These are automatically generated`
@@ -184,11 +184,11 @@ jobs:
             git config user.email "github-actions@github.com"
             git tag -f ${{ env.BLEEDING_EDGE_TAG }}
             git push --force origin ${{ env.BLEEDING_EDGE_TAG }}
-      - name: Upload MobileUO BleedingEdge Release
+      - name: Upload MandoUO BleedingEdge Release
         uses: ncipollo/release-action@v1.16.0
         with:
           artifacts: artifacts/**
-          name: 'MobileUO BleedingEdge Build v${{ needs.getVersionNumber.outputs.fullVersionNumber }}'
+          name: 'MandoUO BleedingEdge Build v${{ needs.getVersionNumber.outputs.fullVersionNumber }}'
           body: |
             This is a bleeding-edge development build for all platform builds.
             These are built automatically on the dev branch. 
@@ -250,9 +250,9 @@ jobs:
         uses: ncipollo/release-action@v1.16.0
         with:
           tag: v${{ needs.getVersionNumber.outputs.baseVersionNumber }}
-          name: "MobileUO v${{ needs.getVersionNumber.outputs.baseVersionNumber }}"
+          name: "MandoUO v${{ needs.getVersionNumber.outputs.baseVersionNumber }}"
           body: |
-            This is an official versioned release of MobileUO.
+            This is an official dev versioned release of MandoUO.
             Version: `${{ needs.getVersionNumber.outputs.baseVersionNumber }}`
 
             # Release notes
