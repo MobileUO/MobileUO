@@ -166,18 +166,6 @@ jobs:
           tag_name: ${{ env.BLEEDING_EDGE_TAG }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # - name: Discord Github Updates
-      #   uses: tsickert/discord-webhook@v7.0.0
-      #   with:
-      #     webhook-url: ${{ secrets.DISCORDWEBHOOK }}
-      #     content: |
-      #       # v${{ env.VERSION }} (Development build) is available.
-
-      #       [Download here](<https://github.com/MobileUO/MobileUO/releases/tag/MandoUO-BleedingEdge>)  
-          
-      #       # Release notes 
-      #       `These are automatically generated`
-      #       ${{ steps.release_notes.outputs.RELEASE_NOTES }}
       - name: Force tag BleedingEdge to HEAD
         run: |
             git config user.name "github-actions"
@@ -260,3 +248,28 @@ jobs:
           artifacts: artifacts/**
           prerelease: false
           token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Discord Github Updates - BleedingEdge Release
+        uses: tsickert/discord-webhook@v7.0.0
+        with:
+          webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
+          content: |
+            v${{ needs.getVersionNumber.outputs.fullVersionNumber }} (MandoUO - BleedingEdge Development build) is available.
+
+            [Download here](<https://github.com/MobileUO/MobileUO/releases/tag/MandoUO-BleedingEdge>)  
+          
+            # Release notes 
+            `These are automatically generated`
+            ${{ steps.bleed_notes.outputs.BLEED_NOTES }}
+      - name: Discord Github Updates - Versioned Release
+        if: steps.version_check.outputs.new_release == 'true'
+        uses: tsickert/discord-webhook@v7.0.0
+        with:
+          webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
+          content: |
+            v${{ needs.getVersionNumber.outputs.baseVersionNumber }} (MandoUO - Versioned Development build) is available.
+
+            [Download here](<https://github.com/MobileUO/MobileUO/releases/tag/v${{ needs.getVersionNumber.outputs.baseVersionNumber }}>)  
+          
+            # Release notes 
+            `These are automatically generated`
+            ${{ steps.ver_notes.outputs.VER_NOTES }}
