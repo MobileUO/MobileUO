@@ -57,7 +57,7 @@ jobs:
           fetch-tags: true
       - uses: actions/cache@v3
         with:
-          path: Library
+          path: ${{ github.workspace }}/Library
           key: Library-${{ matrix.targetPlatform }}
           # We don't want this as it cache busts too often:
           #-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
@@ -96,6 +96,7 @@ jobs:
           BUILD_ENV: Staging
           GITHUB_BUILD_NUMBER: ${{ github.run_number }}
         with:
+          dockerWorkspacePath: /github/workspace
           targetPlatform: ${{ matrix.targetPlatform }}
           customParameters: >
             -BUILD_ENV ${{ env.BUILD_ENV }}
