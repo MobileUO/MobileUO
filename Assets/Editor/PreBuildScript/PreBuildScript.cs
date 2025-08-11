@@ -49,16 +49,8 @@ public class PreBuildScript : IPreprocessBuildWithReport
         {
             var environment = "Production";
 
-            var buildEnvironment = GetCommandLineArg("-BUILD_ENV");
-
-            if(buildEnvironment == "Development")
-            {
-                EditorUserBuildSettings.development = true;
-                EditorUserBuildSettings.connectProfiler = true;
-                EditorUserBuildSettings.allowDebugging = true;
-            }
-
             var isDevelopmentEnvironment = EditorUserBuildSettings.development;
+            var buildEnvironment = GetCommandLineArg("-BUILD_ENV");
 
             Debug.Log($"IsDevelopmentEnvironment: {isDevelopmentEnvironment}");
             Debug.Log($"BuildEnvironment: {buildEnvironment}");
@@ -70,6 +62,13 @@ public class PreBuildScript : IPreprocessBuildWithReport
             else if(!string.IsNullOrEmpty(buildEnvironment))
             {
                 environment = buildEnvironment;
+            }
+
+            if (buildEnvironment == "Development" || buildEnvironment == "Staging")
+            {
+                EditorUserBuildSettings.development = true;
+                EditorUserBuildSettings.connectProfiler = true;
+                EditorUserBuildSettings.allowDebugging = true;
             }
 
             string jsonFileName = $"appsettings.{environment}.json";
