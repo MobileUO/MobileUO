@@ -49,8 +49,16 @@ public class PreBuildScript : IPreprocessBuildWithReport
         {
             var environment = "Production";
 
-            var isDevelopmentEnvironment = EditorUserBuildSettings.development;
             var buildEnvironment = GetCommandLineArg("-BUILD_ENV");
+
+            if(buildEnvironment == "Development")
+            {
+                EditorUserBuildSettings.development = true;
+                EditorUserBuildSettings.connectProfiler = true;
+                EditorUserBuildSettings.allowDebugging = true;
+            }
+
+            var isDevelopmentEnvironment = EditorUserBuildSettings.development;
 
             Debug.Log($"IsDevelopmentEnvironment: {isDevelopmentEnvironment}");
             Debug.Log($"BuildEnvironment: {buildEnvironment}");
