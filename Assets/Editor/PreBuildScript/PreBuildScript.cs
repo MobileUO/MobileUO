@@ -66,6 +66,7 @@ public class PreBuildScript : IPreprocessBuildWithReport
 
             if (buildEnvironment == "Development" || buildEnvironment == "Staging")
             {
+                Debug.Log($"Setting EditorUserBuildSettings to development: {buildEnvironment}");
                 EditorUserBuildSettings.development = true;
                 EditorUserBuildSettings.connectProfiler = true;
                 EditorUserBuildSettings.allowDebugging = true;
