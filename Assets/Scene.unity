@@ -11286,7 +11286,7 @@ MonoBehaviour:
   toggleKey: 96
   openOnStart: 0
   shakeToOpen: 1
-  shakeRequiresTouch: 0
+  shakeRequiresTouch: 1
   shakeAcceleration: 3
   toggleThresholdSeconds: 0.5
   restrictLogCount: 0
