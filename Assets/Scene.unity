@@ -11292,8 +11292,8 @@ MonoBehaviour:
   restrictLogCount: 0
   maxLogCount: 1000
   collapseLogOnStart: 0
-  logFontSize: 12
-  scaleFactor: 1
+  logFontSize: 18
+  scaleFactor: 2
   skin: {fileID: 0}
 --- !u!1 &1971266175
 GameObject:
