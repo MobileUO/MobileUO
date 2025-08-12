@@ -368,13 +368,7 @@ public class ClientRunner : MonoBehaviour
 		    {
 			    modifierKeyButtonsParent.SetActive(true);
 		    }
-
-			if (true) // MobileUO: TODO: add a flag and add it to the MobileUO menu?
-			{
-				Debug.developerConsoleEnabled = true;
-				Debug.Log("Developer Console Enabled");
-			}
-        }
+		}
         catch (Exception e)
 	    {
 		    Console.WriteLine(e);
