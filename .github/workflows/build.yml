@@ -101,7 +101,6 @@ jobs:
           customParameters: >
             -BUILD_ENV ${{ env.BUILD_ENV }}
             -GITHUB_BUILD_NUMBER ${{ env.GITHUB_BUILD_NUMBER }}
-            -development
           androidKeystoreName: user.keystore # This file won't exist, but this property needs to exist
           androidKeystoreBase64: ${{ secrets.ANDROID_STAGING_KEYSTORE_BASE64 }}
           androidKeystorePass:  ${{ secrets.ANDROID_STAGING_KEYSTORE_PASS }}
