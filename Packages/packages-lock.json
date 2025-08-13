@@ -7,13 +7,6 @@
       "dependencies": {},
       "hash": "07514511512e3cd45c2c737cb0b393b9ea701f72"
     },
-    "com.matthewminer.consolation": {
-      "version": "https://github.com/mminer/consolation.git",
-      "depth": 0,
-      "source": "git",
-      "dependencies": {},
-      "hash": "7df41140f99d1fabb2c9e68458b9ba47df93b41a"
-    },
     "com.unity.burst": {
       "version": "1.8.18",
       "depth": 1,
