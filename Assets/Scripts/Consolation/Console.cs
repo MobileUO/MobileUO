@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using ClassicUO.Configuration;
+
 
 #if ENABLE_INPUT_SYSTEM
     using UnityEngine.InputSystem;
@@ -64,6 +66,7 @@ namespace Consolation
         #endregion
 
         static readonly GUIContent clearLabel = new GUIContent("Clear", "Clear contents of console.");
+        static readonly GUIContent closeLabel = new GUIContent("Close", "Close the console.");
         static readonly GUIContent onlyLastLogLabel = new GUIContent("Only Last Log", "Show only most recent log.");
         static readonly GUIContent collapseLabel = new GUIContent("Collapse", "Hide repeated messages.");
         static GUIStyle dividerStyle;
@@ -93,11 +96,11 @@ namespace Consolation
 
         readonly Dictionary<LogType, bool> logTypeFilters = new Dictionary<LogType, bool>
         {
-            { LogType.Assert, true },
+            { LogType.Assert, false },
             { LogType.Error, true },
             { LogType.Exception, true },
-            { LogType.Log, true },
-            { LogType.Warning, true },
+            { LogType.Log, false },
+            { LogType.Warning, false },
         };
 
         #region MonoBehaviour Messages
@@ -292,10 +295,24 @@ namespace Consolation
             }
             GUILayout.EndScrollView();
 
-            if (GUILayout.Button("Hide Stack Trace", GUILayout.ExpandWidth(false)))
+            GUILayout.BeginHorizontal();
             {
-                selectedLogIndex = null;
+                if (GUILayout.Button("Hide Stack Trace", GUILayout.ExpandWidth(false)))
+                {
+                    selectedLogIndex = null;
+                }
+
+                if (GUILayout.Button("Copy Stack Trace", GUILayout.ExpandWidth(false)))
+                {
+                    CopySelectedStackTraceToClipboard();
+                }
+
+                if (GUILayout.Button("Email Stack Trace", GUILayout.ExpandWidth(false)))
+                {
+                    EmailSelectedStackTrace("support@mandaria.net");
+                }
             }
+            GUILayout.EndHorizontal();
         }
 
         void DrawToolbar()
@@ -318,6 +335,11 @@ namespace Consolation
 
                 isCollapsed = GUILayout.Toggle(isCollapsed, collapseLabel, GUILayout.ExpandWidth(false));
                 isOnlyLastLogVisible = GUILayout.Toggle(isOnlyLastLogVisible, onlyLastLogLabel, GUILayout.ExpandWidth(false));
+
+                if (GUILayout.Button(closeLabel))
+                {
+                    Hide();
+                }
             }
             GUILayout.EndHorizontal();
         }
@@ -461,6 +483,73 @@ namespace Consolation
 #else
             Input.multiTouchEnabled = true;
 #endif
+        }
+
+        public void Show() 
+        { 
+            isVisible = true; 
+        }
+
+        public void Hide() 
+        { 
+            isVisible = false; 
+        }
+
+        public void Toggle() 
+        { 
+            isVisible = !isVisible; 
+        }
+
+        static string UrlEscape(string s)
+        {
+            return string.IsNullOrEmpty(s) ? "" : Uri.EscapeDataString(s);
+        }
+
+        string BuildSelectedStackTraceText()
+        {
+            if (!selectedLogIndex.HasValue) 
+                return string.Empty;
+
+            var log = logs[selectedLogIndex.Value];
+
+            var header =
+                $"Time: {DateTime.Now:O}\n" +
+                $"App: {Application.productName} {Application.version}\n" +
+                $"Unity: {Application.unityVersion}\n" +
+                $"Platform: {Application.platform}\n" +
+                $"Device: {SystemInfo.deviceModel} | OS: {SystemInfo.operatingSystem}\n" +
+                $"CPU: {SystemInfo.processorType} x{SystemInfo.processorCount} | RAM: {SystemInfo.systemMemorySize} MB\n" +
+                $"GPU: {SystemInfo.graphicsDeviceName} ({SystemInfo.graphicsMemorySize} MB)\n" +
+                $"Server: {Settings.GlobalSettings.IP}:{Settings.GlobalSettings.Port}\n" +
+                $"Client Version: {Settings.GlobalSettings.ClientVersion}\n" +
+                new string('-', 40) + "\n";
+
+            var body =
+                $"{log.Type}: {log.Message}\n\n" +
+                $"{log.StackTrace}";
+
+            return header + body;
+        }
+
+        void CopySelectedStackTraceToClipboard()
+        {
+            var text = BuildSelectedStackTraceText();
+            if (string.IsNullOrEmpty(text))
+                return;
+
+            GUIUtility.systemCopyBuffer = text;
+        }
+
+        void EmailSelectedStackTrace(string to = null)
+        {
+            var text = BuildSelectedStackTraceText();
+            if (string.IsNullOrEmpty(text))
+                return;
+
+            var subject = $"[{Application.productName}] {Application.version} - Stack Trace";
+            var mailto = $"mailto:{(to ?? "")}?subject={UrlEscape(subject)}&body={UrlEscape(text)}";
+
+            Application.OpenURL(mailto);
         }
     }
 
