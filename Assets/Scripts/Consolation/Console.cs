@@ -487,7 +487,10 @@ namespace Consolation
 
         public void Show() 
         { 
-            isVisible = true; 
+            isVisible = true;
+            var lastLogIndex = logs.Count - 1;
+            selectedLogIndex = lastLogIndex;
+            stackTraceScrollPosition = Vector2.zero;
         }
 
         public void Hide() 
