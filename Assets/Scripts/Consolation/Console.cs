@@ -135,6 +135,13 @@ namespace Consolation
                 GUI.skin = skin;
             }
 
+            var scrollbarThickness = 18;
+
+            GUI.skin.verticalScrollbar.fixedWidth = scrollbarThickness;
+            GUI.skin.verticalScrollbarThumb.fixedWidth = scrollbarThickness;
+            GUI.skin.verticalScrollbarUpButton.fixedHeight = scrollbarThickness;
+            GUI.skin.verticalScrollbarDownButton.fixedHeight = scrollbarThickness;
+
             GUI.matrix = Matrix4x4.Scale(Vector3.one * scaleFactor);
 
             windowRect.width = (Screen.width / scaleFactor) - (margin * 2);
@@ -517,12 +524,20 @@ namespace Consolation
 #endif
         }
 
-        public void Show() 
+        public void Show(bool openLastStackTrace = true) 
         { 
             isVisible = true;
-            var lastLogIndex = logs.Count - 1;
-            selectedLogIndex = lastLogIndex;
-            stackTraceScrollPosition = Vector2.zero;
+
+            if (openLastStackTrace)
+            {
+                var lastLogIndex = logs.Count - 1;
+                selectedLogIndex = lastLogIndex;
+                stackTraceScrollPosition = Vector2.zero;
+            }
+            else
+            {
+                selectedLogIndex = null;
+            }
         }
 
         public void Hide() 
