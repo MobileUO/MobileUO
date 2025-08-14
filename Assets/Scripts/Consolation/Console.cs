@@ -63,6 +63,12 @@ namespace Consolation
         [Tooltip("Custom styles to apply to window.")]
         public GUISkin skin;
 
+        [Tooltip("Two-finger tap anywhere on the console window closes it.")]
+        public bool twoFingerTapToClose = true;
+
+        [Tooltip("Right-click anywhere on the console window closes it.")]
+        public bool rightClickToClose = true;
+
         #endregion
 
         static readonly GUIContent clearLabel = new GUIContent("Clear", "Clear contents of console.");
@@ -150,7 +156,7 @@ namespace Consolation
                 isVisible = true;
             }
 
-            if (shakeRequiresTouch)
+            if (shakeRequiresTouch || twoFingerTapToClose)
             {
                 EnableMultiTouch();
             }
@@ -180,6 +186,22 @@ namespace Consolation
             {
                 isVisible = !isVisible;
                 lastToggleTime = Time.realtimeSinceStartup;
+                return;
+            }
+
+            if (isVisible && twoFingerTapToClose && WasMultiTouchThresholdExceeded(1) &&
+                Time.realtimeSinceStartup - lastToggleTime >= toggleThresholdSeconds)
+            {
+                Hide();
+                lastToggleTime = Time.realtimeSinceStartup;
+                return;
+            }
+
+            if (isVisible && rightClickToClose && WasRightClick())
+            {
+                Hide();
+                lastToggleTime = Time.realtimeSinceStartup;
+                return;
             }
         }
 
@@ -445,7 +467,7 @@ namespace Consolation
             logs.RemoveRange(0, amountToRemove);
         }
 
-        bool WasMultiTouchThresholdExceeded()
+        bool WasMultiTouchThresholdExceeded(int limit = 2)
         {
 #if ENABLE_INPUT_SYSTEM
                 var touchCount = UnityEngine.InputSystem.EnhancedTouch.Touch.activeTouches.Count;
@@ -453,7 +475,7 @@ namespace Consolation
             var touchCount = Input.touchCount;
 #endif
 
-            return touchCount > 2;
+            return touchCount > limit;
         }
 
         bool WasShaken()
@@ -473,6 +495,16 @@ namespace Consolation
                 return Keyboard.current[toggleKey].wasPressedThisFrame;
 #else
             return Input.GetKeyDown(toggleKey);
+#endif
+        }
+
+        bool WasRightClick()
+        {
+#if ENABLE_INPUT_SYSTEM
+            return UnityEngine.InputSystem.Mouse.current != null &&
+                UnityEngine.InputSystem.Mouse.current.rightButton.wasPressedThisFrame;
+#else
+            return Input.GetMouseButtonDown(1);
 #endif
         }
 
