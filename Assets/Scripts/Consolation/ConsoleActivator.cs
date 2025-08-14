@@ -3,7 +3,7 @@ using UnityEngine;
 
 public static class ConsoleActivator
 {
-    public static void Show(string condition, string stackTrace)
+    public static void Show(bool openLastStackTrace = true)
     {
         var console = Object.FindFirstObjectByType<Console>();
 
@@ -13,6 +13,6 @@ public static class ConsoleActivator
             console = go.AddComponent<Console>(); // defaults from inspector/fields
         }
 
-        console.Show();
+        console.Show(openLastStackTrace);
     }
 }

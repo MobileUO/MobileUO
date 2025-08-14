@@ -14,6 +14,7 @@ public class MenuPresenter : MonoBehaviour
     [SerializeField] private OptionEnumView optionEnumViewInstance;
     [SerializeField] private GameObject customizeJoystickButtonGameObject;
     [SerializeField] private GameObject loginButtonGameObject;
+    [SerializeField] private GameObject showConsoleButtonGameObject;
     [SerializeField] private ClientRunner clientRunner;
 
     private readonly List<OptionEnumView> optionEnumViews = new List<OptionEnumView>();
@@ -55,6 +56,8 @@ public class MenuPresenter : MonoBehaviour
         
         //Options that are hidden by default
         GetOptionEnumViewInstance().Initialize(typeof(VisualizeFingerInput), UserPreferences.VisualizeFingerInput, "Visualize Finger Input", false, false);
+
+        showConsoleButtonGameObject.transform.SetAsLastSibling();
 
         clientRunner.SceneChanged += OnUoSceneChanged;
         

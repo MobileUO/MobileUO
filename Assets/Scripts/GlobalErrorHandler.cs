@@ -38,13 +38,13 @@ public class GlobalErrorHook : MonoBehaviour
     static void OnLog(string condition, string stackTrace, LogType type)
     {
         if (type == LogType.Exception || type == LogType.Error || type == LogType.Assert)
-            _dispatch.Enqueue(() => ConsoleActivator.Show(condition, stackTrace));
+            _dispatch.Enqueue(() => ConsoleActivator.Show());
     }
 
     static void OnLogThreaded(string condition, string stackTrace, LogType type)
     {
         if (type == LogType.Exception || type == LogType.Error || type == LogType.Assert)
-            _dispatch.Enqueue(() => ConsoleActivator.Show(condition, stackTrace));
+            _dispatch.Enqueue(() => ConsoleActivator.Show());
     }
 
     static void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
