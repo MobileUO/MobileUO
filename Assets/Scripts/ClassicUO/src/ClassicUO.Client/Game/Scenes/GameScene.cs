@@ -1192,6 +1192,13 @@ namespace ClassicUO.Game.Scenes
                 {
                     float depth = obj.CalculateDepthZ();
 
+                    // MobileUO: give a slight depth bump for mobiles to help with larger mobiles clipping with ground tiles due to the depth sort (e.g. water elementals)
+                    // Also need to apply to things that should appear on top of mobiles (e.g. spell effects)
+                    if (obj is Mobile || obj is GameEffect)
+                    {
+                        depth += 1.0f;
+                    }
+
                     if (!sortedObjects.ContainsKey(depth))
                     {
                         sortedObjects[depth] = new List<GameObject>();
@@ -1201,15 +1208,20 @@ namespace ClassicUO.Game.Scenes
                 }
             }
 
+            //ushort color = 0x0050; // MobileUO: for testing rendering
+
             foreach(var sortedObject in sortedObjects)
             {
                 foreach (var subSortedObject in sortedObject.Value)
                 {
+                    //subSortedObject.Hue = color;
                     if (subSortedObject.Draw(batcher, subSortedObject.RealScreenPosition.X, subSortedObject.RealScreenPosition.Y, sortedObject.Key))
                     {
                         ++done;
                     }
                 }
+
+                //color += 5;
             }
 
             // MobileUO: new implementation
