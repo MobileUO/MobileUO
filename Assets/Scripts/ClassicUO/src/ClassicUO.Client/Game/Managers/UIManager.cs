@@ -463,7 +463,6 @@ namespace ClassicUO.Game.Managers
         private static void HandleMouseInput()
         {
             Control gump = GetMouseOverControl(Mouse.Position);
-            UnityEngine.Debug.Log($"MouseOverControl: {gump?.GetType().Name} at {Mouse.Position}");
 
             if (MouseOverControl != null && gump != MouseOverControl)
             {
