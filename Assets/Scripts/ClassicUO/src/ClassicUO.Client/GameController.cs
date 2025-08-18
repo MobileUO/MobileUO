@@ -992,8 +992,12 @@ namespace ClassicUO
                     //We prefer to get the root parent but sometimes it can be null (like with GridLootGump), in which case we revert to the initially found control
                     firstControlUnderFinger = firstControlUnderFinger?.RootParent ?? firstControlUnderFinger;
                     secondControlUnderFinger = secondControlUnderFinger?.RootParent ?? secondControlUnderFinger;
-                    if (firstControlUnderFinger != null && firstControlUnderFinger == secondControlUnderFinger)
+
+                    if (firstControlUnderFinger != null)// && firstControlUnderFinger == secondControlUnderFinger)
                     {
+                        // Simulate the right click over the first finger position
+                        Mouse.Position = firstMousePositionPoint;
+
                         //Simulate right mouse down and up
                         SimulateMouse(false, false, true, false, false, true);
                         SimulateMouse(false, false, false, true, false, true);
@@ -1340,7 +1344,7 @@ namespace ClassicUO
                 if (Mouse.LastRightButtonClickTime != 0xFFFF_FFFF)
                 {
                     if (skipSceneInput || !Scene.OnMouseUp(MouseButtonType.Right))
-                        UIManager.OnMouseButtonUp(MouseButtonType.Right);
+                        UIManager.OnMouseButtonUp(MouseButtonType.Right, true);
                 }
 
                 //Mouse.End();
