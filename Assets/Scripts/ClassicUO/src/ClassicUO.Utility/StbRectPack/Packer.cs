@@ -49,7 +49,8 @@ namespace StbRectPackSharp
 		/// <param name="width"></param>
 		/// <param name="height"></param>
 		/// <returns></returns>
-		public bool PackRect(int width, int height, out Rectangle packRectangle, int offset = 2)
+		// MobileUO: set offset to 3 from 2 to slightly increase packing space gap so that Texture Filtering = Smooth doesn't create box outline artifact around each sprite from texture bleeds
+		public bool PackRect(int width, int height, out Rectangle packRectangle, int offset = 3)
 		{
 			var rect = new stbrp_rect
 			{
