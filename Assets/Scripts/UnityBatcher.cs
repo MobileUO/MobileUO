@@ -2116,6 +2116,7 @@ namespace ClassicUO.Renderer
         {
             // GraphicsDevice.BlendState = _blendState;
             SetMaterialBlendState(hueMaterial, _blendState);
+            SetMaterialBlendState(xbrMaterial, _blendState);
 
             GraphicsDevice.DepthStencilState = _stencil;
 
@@ -2124,6 +2125,8 @@ namespace ClassicUO.Renderer
 
             // MobileUO: keep old scissor logic or else gumps like world map won't be clipped!
             hueMaterial.SetFloat(Scissor, _useScissor ? 1 : 0);
+            xbrMaterial.SetFloat(Scissor, _useScissor ? 1 : 0);
+
             if (_useScissor)
             {
                 var scissorRect = GraphicsDevice.ScissorRectangle;
@@ -2131,7 +2134,9 @@ namespace ClassicUO.Renderer
                     scissorRect.Y * scale,
                     scissorRect.X * scale + scissorRect.Width * scale,
                     scissorRect.Y * scale + scissorRect.Height * scale);
+
                 hueMaterial.SetVector(ScissorRect, scissorVector4);
+                xbrMaterial.SetVector(ScissorRect, scissorVector4);
             }
 
             GraphicsDevice.RasterizerState = _rasterizerState;
@@ -2286,9 +2291,27 @@ namespace ClassicUO.Renderer
                     float v1 = vertex.TextureCoordinate2.y - vertex.TextureCoordinate0.y;
                     var src = new Rect(u0, v0, u1, v1);
 
-                    hueMaterial.SetColor(Hue, new Color(hue.x, hue.y, hue.z));
-                    hueMaterial.SetFloat(UvMirrorX, 0);
-                    Graphics.DrawTexture(dst, texture.UnityTexture, src, 0, 0, 0, 0, hueMaterial);
+                    if (CustomEffect is XBREffect xbrEffect)
+                    {
+                        // when drawing a sub-rect from an atlas, pass the REGION size in pixels
+                        int w = Mathf.Max(1, Mathf.RoundToInt(src.width * texture.UnityTexture.width));
+                        int h = Mathf.Max(1, Mathf.RoundToInt(src.height * texture.UnityTexture.height));
+
+                        // shader expects "textureSize" - put pixels in XY (and optionally 1/pixels in ZW)
+                        xbrMaterial.SetVector(TextureSize, new Vector4(w, h, 1f / w, 1f / h));
+
+                        // keep it consistent with current texture
+                        xbrMaterial.mainTexture = texture.UnityTexture;
+
+                        Graphics.DrawTexture(dst, texture.UnityTexture, src, 0, 0, 0, 0, xbrMaterial);
+                    }
+                    else
+                    {
+                        hueMaterial.SetColor(Hue, new Color(hue.x, hue.y, hue.z));
+                        hueMaterial.SetFloat(UvMirrorX, 0);
+                        Graphics.DrawTexture(dst, texture.UnityTexture, src, 0, 0, 0, 0, hueMaterial);
+                    }
+
                     DrawTextures++;
                 }
             }

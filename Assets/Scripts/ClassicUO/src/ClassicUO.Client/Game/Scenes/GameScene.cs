@@ -997,12 +997,19 @@ namespace ClassicUO.Game.Scenes
                 //        break;
                 //}
 
-                if (_xbr == null)
+                if (ProfileManager.CurrentProfile != null && ProfileManager.CurrentProfile.UseXBR)
                 {
-                    _xbr = new XBREffect(batcher.GraphicsDevice);
-                }
+                    if (_xbr == null)
+                    {
+                        _xbr = new XBREffect(batcher.GraphicsDevice);
+                    }
 
-                _xbr.TextureSize.SetValue(new Vector2(Camera.Bounds.Width, Camera.Bounds.Height));
+                    _xbr.TextureSize.SetValue(new Vector2(Camera.Bounds.Width, Camera.Bounds.Height));
+
+                    batcher.Begin(_xbr, Camera.ViewTransformMatrix);
+                }
+                else
+                    batcher.Begin(null, Camera.ViewTransformMatrix);
 
                 //Point p = Point.Zero;
 
@@ -1016,7 +1023,6 @@ namespace ClassicUO.Game.Scenes
                 //int maxPixelsX = p.X;
                 //int maxPixelsY = p.Y;
 
-                batcher.Begin(null, Camera.ViewTransformMatrix);
 
                 // MobileUO: fix game window being deattached from view port
                 batcher.Draw(
