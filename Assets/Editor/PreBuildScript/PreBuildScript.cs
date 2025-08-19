@@ -35,6 +35,10 @@ public class PreBuildScript : IPreprocessBuildWithReport
 
     private static void ApplySettingsFromFile(BuildTarget platform)
     {
+        EditorUserBuildSettings.development = false;
+        EditorUserBuildSettings.allowDebugging = false;
+        EditorUserBuildSettings.connectProfiler = false;
+
         string baseVersionNumber = File.ReadAllText("Assets/Scripts/VersionNumber.txt").Trim();
         string buildNumber = GetCommandLineArg("-GITHUB_BUILD_NUMBER", "1");
         string fullVersionNumber = $"{baseVersionNumber}+{buildNumber}";
@@ -64,7 +68,7 @@ public class PreBuildScript : IPreprocessBuildWithReport
                 environment = buildEnvironment;
             }
 
-            if (buildEnvironment == "Development" || buildEnvironment == "Staging")
+            if (buildEnvironment == "Development")
             {
                 Debug.Log($"Setting EditorUserBuildSettings to development: {buildEnvironment}");
                 EditorUserBuildSettings.development = true;
