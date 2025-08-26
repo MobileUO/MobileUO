@@ -418,7 +418,7 @@ namespace ClassicUO.Network
             {
                 try
                 {
-                    // MobileUO: TODO: PacktsTable no longer static:
+                    // MobileUO: TODO: PacketsTable no longer static:
                     var PacketsTable = new PacketsTable(Client.Game.UO.FileManager.Version);
 
                     Assistant.Engine.Install(null);

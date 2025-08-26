@@ -42,6 +42,8 @@ namespace ClassicUO.Game.UI.Gumps
 {
     internal class AssistantGump : Gump
     {
+        public bool AssistantEnabled;
+
         internal class MessageBoxGump : Gump
         {
             internal MessageBoxGump(World world, string title, string body) : base(world, 0, 0)
@@ -925,6 +927,8 @@ namespace ClassicUO.Game.UI.Gumps
         private static bool _updated = false;
         public override void Update()
         {
+            AssistantEnabled = UserPreferences.EnableAssistant.CurrentValue == (int)PreferenceEnums.EnableAssistant.On;
+
             base.Update();
             if(!_updated)
             {
@@ -3694,16 +3698,22 @@ namespace ClassicUO.Game.UI.Gumps
         private Texture2D _edge;
         public override bool Draw(UltimaBatcher2D batcher, int x, int y)
         {
-            if (_edge == null)
+            // MobileUO: TODO: this only hides the assistant if disabled - it should probably actually unload it but this is sufficient for now ~mandlar
+            if (AssistantEnabled)
             {
-                _edge = new Texture2D(batcher.GraphicsDevice, 1, 1, false, SurfaceFormat.Color);
-                _edge.SetData(new Color[] { Color.Gray });
+                if (_edge == null)
+                {
+                    _edge = new Texture2D(batcher.GraphicsDevice, 1, 1, false, SurfaceFormat.Color);
+                    _edge.SetData(new Color[] { Color.Gray });
+                }
+                // MobileUO: TODO: should this be... 1?
+                Vector3 vec = ShaderHueTranslator.GetHueVector(0, false, 1);
+                //Vector3 vec = Vector3.Zero;
+                batcher.DrawRectangle(_edge, x, y, Width, Height, vec);
+                return base.Draw(batcher, x, y);
             }
-            // MobileUO: TODO: should this be... 1?
-            Vector3 vec = ShaderHueTranslator.GetHueVector(0, false, 1);
-            //Vector3 vec = Vector3.Zero;
-            batcher.DrawRectangle(_edge, x, y, Width, Height, vec);
-            return base.Draw(batcher, x, y);
+
+            return false;
         }
 
         public override void Dispose()
