@@ -96,6 +96,9 @@ namespace ClassicUO.Game.UI.Gumps
         private Checkbox _holdShiftForContext, _holdShiftToSplitStack, _reduceFPSWhenInactive, _sallosEasyGrab, _partyInviteGump, _objectsFading, _textFading, _holdAltToMoveGumps;
         private Combobox _hpComboBox, _healtbarType, _fieldsType, _hpComboBoxShowWhen;
 
+        // MobileUO: grid loot double click option
+        private Checkbox _doubleClickForGridLoot;
+
         // infobar
         private List<InfoBarBuilderControl> _infoBarBuilderControls;
         private Combobox _infoBarHighlightType;
@@ -1060,6 +1063,19 @@ namespace ClassicUO.Game.UI.Gumps
                     120
                 ),
                 2
+            );
+
+            // MobileUO: double click for grid loot option
+            section3.Add
+            (
+                _doubleClickForGridLoot = AddCheckBox
+                (
+                    null,
+                    ResGumps.DoubleClickForGridLoot,
+                    _currentProfile.DoubleClickForGridLoot,
+                    0,
+                    0
+                )
             );
 
             section3.Add
@@ -3512,6 +3528,8 @@ namespace ClassicUO.Game.UI.Gumps
                     _holdDownKeyTab.IsChecked = true;
                     _holdDownKeyAlt.IsChecked = true;
                     _closeAllAnchoredGumpsWithRClick.IsChecked = false;
+                    // MobileUO: double click for grid loot
+                    _doubleClickForGridLoot.IsChecked = false;
                     _holdShiftForContext.IsChecked = false;
                     _holdAltToMoveGumps.IsChecked = false;
                     _holdShiftToSplitStack.IsChecked = false;
@@ -3760,6 +3778,7 @@ namespace ClassicUO.Game.UI.Gumps
 
             _currentProfile.CloseAllAnchoredGumpsInGroupWithRightClick = _closeAllAnchoredGumpsWithRClick.IsChecked;
 
+            _currentProfile.DoubleClickForGridLoot = _doubleClickForGridLoot.IsChecked;
             _currentProfile.HoldShiftForContext = _holdShiftForContext.IsChecked;
             _currentProfile.HoldAltToMoveGumps = _holdAltToMoveGumps.IsChecked;
             _currentProfile.HoldShiftToSplitStack = _holdShiftToSplitStack.IsChecked;
