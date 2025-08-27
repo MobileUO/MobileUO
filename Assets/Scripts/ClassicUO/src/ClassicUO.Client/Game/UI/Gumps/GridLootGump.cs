@@ -405,6 +405,28 @@ namespace ClassicUO.Game.UI.Gumps
             return _corpse.Name?.Length > 0 ? _corpse.Name : "a corpse";
         }
 
+        // MobileUO: only loot item if user clicks it twice
+        private uint _selectedItemSerial; // 0 = none
+        internal uint SelectedItemSerial => _selectedItemSerial;
+
+        internal void HandleItemClick(uint serial, Item item, ushort amount)
+        {
+            if (serial == 0 || item == null)
+                return;
+
+            if (_selectedItemSerial == serial || !ProfileManager.CurrentProfile.DoubleClickForGridLoot)
+            {
+                // second click on the same item -> loot it
+                GameActions.GrabItem(World, item, amount);
+                _selectedItemSerial = 0;
+            }
+            else
+            {
+                // first click on this item -> set as selected
+                _selectedItemSerial = serial;
+            }
+        }
+
         private class GridLootItem : Control
         {
             private readonly GridLootGump _gump;
@@ -464,7 +486,11 @@ namespace ClassicUO.Game.UI.Gumps
                 {
                     if (e.Button == MouseButtonType.Left)
                     {
-                        GameActions.GrabItem(_gump.World, item, (ushort)amount.Value);
+                        // MobileUO: handle item click depending on if double click to loot is enabled
+                        var serial = LocalSerial;
+                        var item = _gump.World.Items.Get(serial);
+
+                        _gump.HandleItemClick(serial, item, (ushort)amount.Value);
                     }
                 };
 
@@ -538,7 +564,9 @@ namespace ClassicUO.Game.UI.Gumps
                     hueVector
                 );
 
-                if (_hit.MouseIsOver)
+                // MobileUO: highlight on first selection click
+                bool isSelected = LocalSerial == _gump.SelectedItemSerial && ProfileManager.CurrentProfile.DoubleClickForGridLoot;
+                if (_hit.MouseIsOver || isSelected)
                 {
                     hueVector.Z = 0.7f;
 
