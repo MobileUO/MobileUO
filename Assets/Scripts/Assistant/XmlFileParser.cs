@@ -1943,7 +1943,7 @@ namespace Assistant
                                         name = GetAttribute(item, "name");
                                         if (string.IsNullOrEmpty(name))
                                             name = UOSObjects.GetDefaultItemName(graphic);
-                                        ItemDisplay oi = new ItemDisplay(graphic, name, hue);
+                                        ItemDisplay oi = new ItemDisplay(graphic, name, hue, true, amt);
                                         if (!org.Items.Contains(oi))
                                             org.Items.Add(oi);
                                     }
