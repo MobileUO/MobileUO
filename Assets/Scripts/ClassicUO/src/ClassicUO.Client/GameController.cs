@@ -1175,6 +1175,13 @@ namespace ClassicUO
                         //Revert chat mode to default
                         UIManager.SystemChat.Mode = ChatMode.Default;
                     }
+                    // similarly, for renaming pets or renaming a skill group, press enter
+                    else if (UIManager.KeyboardFocusControl != null && UIManager.KeyboardFocusControl is StbTextBox stb &&
+                             stb.IsEditable && stb.RootParent is BaseHealthBarGump or StandardSkillsGump)
+                    {
+                        //"Press" return
+                        UIManager.KeyboardFocusControl.InvokeKeyDown(SDL_Keycode.SDLK_RETURN, SDL_Keymod.KMOD_NONE);
+                    }
                 }
             }
             else
