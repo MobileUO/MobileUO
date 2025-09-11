@@ -24,7 +24,9 @@ namespace ClassicUO.Game.UI.Gumps
         private readonly AlphaBlendControl _background;
         private readonly NiceButton _buttonPrev,
             _buttonNext,
-            _setlootbag;
+            _setlootbag,
+            // MobileUO: added close button
+            _buttonClose;
         private readonly Item _corpse;
 
         private int _currentPage = 1;
@@ -119,6 +121,22 @@ namespace ClassicUO.Game.UI.Gumps
             Add(_buttonPrev);
             Add(_buttonNext);
 
+            // MobileUO: added close button
+            _buttonClose = new NiceButton(
+                0,
+                0,
+                40,
+                40,
+                ButtonAction.Activate,
+                "X"
+            )
+            {
+                ButtonParameter = 3,
+                IsSelectable = false
+            };
+
+            Add(_buttonClose);
+
             Add(
                 _currentPageLabel = new Label("1", true, 999, align: TEXT_ALIGN_TYPE.TS_CENTER)
                 {
@@ -182,6 +200,11 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 GameActions.Print(World, ResGumps.TargetContainerToGrabItemsInto);
                 World.TargetManager.SetTargeting(CursorTarget.SetGrabBag, 0, TargetType.Neutral);
+            }
+            // MobileUO: added close button
+            else if (buttonID == 3)
+            {
+                Dispose();
             }
             else
             {
@@ -372,6 +395,10 @@ namespace ClassicUO.Game.UI.Gumps
             _setlootbag.Y = Height - 23;
             _currentPageLabel.X = Width / 2 - 5;
             _currentPageLabel.Y = Height - 20;
+
+            // MobileUO: added close button
+            _buttonClose.X = Width - _buttonClose.Width - 3;
+            _buttonClose.Y = 3;
 
             _corpseNameLabel.Text = GetCorpseName();
 
