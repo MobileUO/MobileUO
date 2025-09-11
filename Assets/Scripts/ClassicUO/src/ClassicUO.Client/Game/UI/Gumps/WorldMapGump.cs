@@ -349,6 +349,10 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 Directory.GetFiles(_mapsCachePath, "*.png").ForEach(s => File.Delete(s));
             }, false);
+
+            // MobileUO: added zoom buttons
+            _options["zoom_in"] = new ContextMenuItemEntry("Zoom In (+)", () => OnMouseWheel(MouseEventType.WheelScrollUp));
+            _options["zoom_out"] = new ContextMenuItemEntry("Zoom Out (–)", () => OnMouseWheel(MouseEventType.Down));
         }
 
         public void GoToMarker(int x, int y, bool isManualType)
@@ -510,6 +514,9 @@ namespace ClassicUO.Game.UI.Gumps
 
             ContextMenu.Add(freeView);
 
+            // MobileUO: added zoom buttons
+            ContextMenu.Add(_options["zoom_in"]);
+            ContextMenu.Add(_options["zoom_out"]);
             ContextMenu.Add("", null);
             ContextMenu.Add(_options["show_party_members"]);
             ContextMenu.Add(_options["show_mobiles"]);
