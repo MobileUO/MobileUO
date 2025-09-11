@@ -352,7 +352,7 @@ namespace ClassicUO.Game.UI.Gumps
 
             // MobileUO: added zoom buttons
             _options["zoom_in"] = new ContextMenuItemEntry("Zoom In (+)", () => OnMouseWheel(MouseEventType.WheelScrollUp));
-            _options["zoom_out"] = new ContextMenuItemEntry("Zoom Out (–)", () => OnMouseWheel(MouseEventType.Down));
+            _options["zoom_out"] = new ContextMenuItemEntry("Zoom Out (-)", () => OnMouseWheel(MouseEventType.WheelScrollDown));
         }
 
         public void GoToMarker(int x, int y, bool isManualType)
