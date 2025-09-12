@@ -1195,9 +1195,9 @@ namespace ClassicUO.Game.Scenes
 
         private RenderItem[] _renderItems = new RenderItem[4096];
 
-        private sealed class RenderItemComparerByIndex : IComparer<RenderItem>
+        private sealed class RenderItemDepthThenIndexComparer : IComparer<RenderItem>
         {
-            public static readonly RenderItemComparerByIndex Instance = new RenderItemComparerByIndex();
+            public static readonly RenderItemDepthThenIndexComparer Instance = new RenderItemDepthThenIndexComparer();
 
             public int Compare(RenderItem a, RenderItem b)
             {
@@ -1253,7 +1253,7 @@ namespace ClassicUO.Game.Scenes
             }
 
             // allocation-free in-place sort
-            Array.Sort(_renderItems, 0, n, RenderItemComparerByIndex.Instance);
+            Array.Sort(_renderItems, 0, n, RenderItemDepthThenIndexComparer.Instance);
 
             // draw in sorted order
             int done = 0;
