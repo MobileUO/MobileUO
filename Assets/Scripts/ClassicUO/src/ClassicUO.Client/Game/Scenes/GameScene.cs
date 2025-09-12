@@ -1185,15 +1185,53 @@ namespace ClassicUO.Game.Scenes
             //batcher.End();
         }
 
+        // MobileUO: for depth sorting
+        private struct RenderItem
+        {
+            public float Depth;       
+            public int OriginalIndex; 
+            public GameObject Obj;    
+        }
+
+        private RenderItem[] _renderItems = new RenderItem[4096];
+
+        private sealed class RenderItemDepthThenIndexComparer : IComparer<RenderItem>
+        {
+            public static readonly RenderItemDepthThenIndexComparer Instance = new RenderItemDepthThenIndexComparer();
+
+            public int Compare(RenderItem a, RenderItem b)
+            {
+                // primary: depth (far -> near so near draws last)
+                int c = a.Depth.CompareTo(b.Depth);
+                if (c != 0) 
+                    return c;
+
+                // tie-breaker: preserve input order
+                // earlier index draws earlier; later index draws later (on top)
+                return a.OriginalIndex.CompareTo(b.OriginalIndex);
+            }
+        }
+
         private int DrawRenderList(UltimaBatcher2D batcher, List<GameObject> renderList)
         {
-            int done = 0;
-
             // MobileUO: this is my naive implementation of fixing the depth rendering issue
-            var sortedObjects = new SortedDictionary<float, List<GameObject>>();
-
-            foreach (var obj in renderList)
+            if (_renderItems.Length < renderList.Count)
             {
+                int newCap = _renderItems.Length == 0 ? 4096 : _renderItems.Length * 2;
+
+                if (newCap < renderList.Count) 
+                    newCap = renderList.Count;
+
+                Array.Resize(ref _renderItems, newCap);
+            }
+
+            int n = 0;
+
+            // build flat array; compute depth ONCE per object
+            for (int i = 0; i < renderList.Count; i++)
+            {
+                var obj = renderList[i];
+
                 if (obj.Z <= _maxGroundZ)
                 {
                     float depth = obj.CalculateDepthZ();
@@ -1205,30 +1243,70 @@ namespace ClassicUO.Game.Scenes
                         depth += 1.0f;
                     }
 
-                    if (!sortedObjects.ContainsKey(depth))
+                    _renderItems[n++] = new RenderItem
                     {
-                        sortedObjects[depth] = new List<GameObject>();
-                    }
-
-                    sortedObjects[depth].Add(obj);
+                        Depth = depth,
+                        OriginalIndex = i, // preserve renderList order for ties
+                        Obj = obj
+                    };
                 }
             }
+
+            // allocation-free in-place sort
+            Array.Sort(_renderItems, 0, n, RenderItemDepthThenIndexComparer.Instance);
+
+            // draw in sorted order
+            int done = 0;
+            for (int i = 0; i < n; i++)
+            {
+                var renderItem = _renderItems[i];
+
+                if (renderItem.Obj.Draw(batcher, renderItem.Obj.RealScreenPosition.X, renderItem.Obj.RealScreenPosition.Y, renderItem.Depth))
+                {
+                    ++done;
+                }
+            }
+
+            // MobileUO: previous implementation:
+            //var sortedObjects = new SortedDictionary<float, List<GameObject>>();
+
+            //foreach (var obj in renderList)
+            //{
+            //    if (obj.Z <= _maxGroundZ)
+            //    {
+            //        float depth = obj.CalculateDepthZ();
+
+            //        // MobileUO: give a slight depth bump for mobiles to help with larger mobiles clipping with ground tiles due to the depth sort (e.g. water elementals)
+            //        // Also need to apply to things that should appear on top of mobiles (e.g. spell effects)
+            //        if (obj is Mobile || obj is GameEffect)
+            //        {
+            //            depth += 1.0f;
+            //        }
+
+            //        if (!sortedObjects.ContainsKey(depth))
+            //        {
+            //            sortedObjects[depth] = new List<GameObject>();
+            //        }
+
+            //        sortedObjects[depth].Add(obj);
+            //    }
+            //}
 
             //ushort color = 0x0050; // MobileUO: for testing rendering
 
-            foreach(var sortedObject in sortedObjects)
-            {
-                foreach (var subSortedObject in sortedObject.Value)
-                {
-                    //subSortedObject.Hue = color;
-                    if (subSortedObject.Draw(batcher, subSortedObject.RealScreenPosition.X, subSortedObject.RealScreenPosition.Y, sortedObject.Key))
-                    {
-                        ++done;
-                    }
-                }
+            //foreach(var sortedObject in sortedObjects)
+            //{
+            //    foreach (var subSortedObject in sortedObject.Value)
+            //    {
+            //        //subSortedObject.Hue = color;
+            //        if (subSortedObject.Draw(batcher, subSortedObject.RealScreenPosition.X, subSortedObject.RealScreenPosition.Y, sortedObject.Key))
+            //        {
+            //            ++done;
+            //        }
+            //    }
 
-                //color += 5;
-            }
+            //    //color += 5;
+            //}
 
             // MobileUO: new implementation
             // MobileUO: TODO: attempt to get this to work again
