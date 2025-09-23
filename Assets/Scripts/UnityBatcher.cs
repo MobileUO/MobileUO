@@ -2,6 +2,7 @@
 using ClassicUO.Utility.Logging;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MobileUO.Profiling;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -2216,122 +2217,159 @@ namespace ClassicUO.Renderer
             _batchedMeshVertices.Clear();
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static float Min4(float a, float b, float c, float d)
+            => Mathf.Min(Mathf.Min(a, b), Mathf.Min(c, d));
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static float Max4(float a, float b, float c, float d)
+            => Mathf.Max(Mathf.Max(a, b), Mathf.Max(c, d));
+
         public void Flush()
         {
             if (_batchedVertices.Count == 0)
                 return;
 
-            ApplyStates();
-            ++FlushesDone;
-
-            foreach (var batchedVertex in _batchedVertices)
+            using (UnityProfiler.Auto(UnityProfiler.Mk_Flush))
             {
-                // draw with mesh if UseDrawTexture is off or if flagged to use mesh (draw stretched land or shadows)
-                if (UserPreferences.UseDrawTexture.CurrentValue == (int)PreferenceEnums.UseDrawTexture.Off 
-                    || (UserPreferences.UseDrawTexture.CurrentValue == (int)PreferenceEnums.UseDrawTexture.On && batchedVertex.UseMesh))
+                using (UnityProfiler.Auto(UnityProfiler.Mk_ApplyStates))
                 {
-                    // accumulate for a mesh‐batch
-                    _batchedMeshVertices.Add(batchedVertex);
+                    ApplyStates();
                 }
-                // else use draw texture
-                else
+
+                ++FlushesDone;
+
+                foreach (var batchedVertex in _batchedVertices)
                 {
-                    FlushMeshBatch();
-
-                    var vertex = batchedVertex.Vertex;
-                    var texture = batchedVertex.Texture;
-                    var hue = batchedVertex.Hue;
-
-                    // compute screen dst rect
-                    // Gather the X/Y of all four corners:
-                    float xMin = Mathf.Min(
-                        vertex.Position0.x,
-                        vertex.Position1.x,
-                        vertex.Position2.x,
-                        vertex.Position3.x
-                    );
-                    float xMax = Mathf.Max(
-                        vertex.Position0.x,
-                        vertex.Position1.x,
-                        vertex.Position2.x,
-                        vertex.Position3.x
-                    );
-                    float yMin = Mathf.Min(
-                        vertex.Position0.y,
-                        vertex.Position1.y,
-                        vertex.Position2.y,
-                        vertex.Position3.y
-                    );
-                    float yMax = Mathf.Max(
-                        vertex.Position0.y,
-                        vertex.Position1.y,
-                        vertex.Position2.y,
-                        vertex.Position3.y
-                    );
-
-                    // Snap them to integer pixel coordinates:
-                    int ix0 = Mathf.RoundToInt(xMin);
-                    int iy0 = Mathf.RoundToInt(yMin);
-                    int ix1 = Mathf.RoundToInt(xMax);
-                    int iy1 = Mathf.RoundToInt(yMax);
-
-                    // Build the Rect from min to max:
-                    var dst = Rect.MinMaxRect(ix0, iy0, ix1, iy1);
-
-                    // flip vertically
-                    vertex.TextureCoordinate0.y = 1f - vertex.TextureCoordinate0.y;
-                    vertex.TextureCoordinate1.y = 1f - vertex.TextureCoordinate1.y;
-                    vertex.TextureCoordinate2.y = 1f - vertex.TextureCoordinate2.y;
-                    vertex.TextureCoordinate3.y = 1f - vertex.TextureCoordinate3.y;
-
-                    // compute uv src rect
-                    float u0 = vertex.TextureCoordinate0.x;
-                    float v0 = 1 - vertex.TextureCoordinate3.y;
-                    float u1 = vertex.TextureCoordinate1.x - u0;
-                    float v1 = vertex.TextureCoordinate2.y - vertex.TextureCoordinate0.y;
-                    var src = new Rect(u0, v0, u1, v1);
-
-                    if (CustomEffect is XBREffect xbrEffect)
+                    // draw with mesh if UseDrawTexture is off or if flagged to use mesh (draw stretched land or shadows)
+                    if (UserPreferences.UseDrawTexture.CurrentValue == (int)PreferenceEnums.UseDrawTexture.Off
+                        || (UserPreferences.UseDrawTexture.CurrentValue == (int)PreferenceEnums.UseDrawTexture.On && batchedVertex.UseMesh))
                     {
-                        // when drawing a sub-rect from an atlas, pass the REGION size in pixels
-                        int w = Mathf.Max(1, Mathf.RoundToInt(src.width * texture.UnityTexture.width));
-                        int h = Mathf.Max(1, Mathf.RoundToInt(src.height * texture.UnityTexture.height));
-
-                        // shader expects "textureSize" - put pixels in XY (and optionally 1/pixels in ZW)
-                        xbrMaterial.SetVector(TextureSize, new Vector4(w, h, 1f / w, 1f / h));
-
-                        // keep it consistent with current texture
-                        xbrMaterial.mainTexture = texture.UnityTexture;
-
-                        Graphics.DrawTexture(dst, texture.UnityTexture, src, 0, 0, 0, 0, xbrMaterial);
+                        // accumulate for a mesh‐batch
+                        using (UnityProfiler.Auto(UnityProfiler.Mk_CollectMesh))
+                        {
+                            _batchedMeshVertices.Add(batchedVertex);
+                        }
                     }
+                    // else use draw texture
                     else
                     {
-                        hueMaterial.SetColor(Hue, new Color(hue.x, hue.y, hue.z));
-                        hueMaterial.SetFloat(UvMirrorX, 0);
-                        Graphics.DrawTexture(dst, texture.UnityTexture, src, 0, 0, 0, 0, hueMaterial);
+                        using (UnityProfiler.Auto(UnityProfiler.Mk_DrawTexture))
+                        {
+                            using (UnityProfiler.Auto(UnityProfiler.Mk_FlushMesh))
+                            {
+                                FlushMeshBatch();
+                            }
+
+                            var vertex = batchedVertex.Vertex;
+                            var texture = batchedVertex.Texture;
+                            var hue = batchedVertex.Hue;
+
+                            Rect src, dst;
+
+                            using (UnityProfiler.Auto(UnityProfiler.Mk_ComputeRects))
+                            {
+                                // compute screen dst rect
+                                // Gather the X/Y of all four corners:
+                                //float xMin = Mathf.Min(
+                                //    vertex.Position0.x,
+                                //    vertex.Position1.x,
+                                //    vertex.Position2.x,
+                                //    vertex.Position3.x
+                                //);
+                                //float xMax = Mathf.Max(
+                                //    vertex.Position0.x,
+                                //    vertex.Position1.x,
+                                //    vertex.Position2.x,
+                                //    vertex.Position3.x
+                                //);
+                                //float yMin = Mathf.Min(
+                                //    vertex.Position0.y,
+                                //    vertex.Position1.y,
+                                //    vertex.Position2.y,
+                                //    vertex.Position3.y
+                                //);
+                                //float yMax = Mathf.Max(
+                                //    vertex.Position0.y,
+                                //    vertex.Position1.y,
+                                //    vertex.Position2.y,
+                                //    vertex.Position3.y
+                                //);
+                                float xMin = Min4(vertex.Position0.x, vertex.Position1.x, vertex.Position2.x, vertex.Position3.x);
+                                float xMax = Max4(vertex.Position0.x, vertex.Position1.x, vertex.Position2.x, vertex.Position3.x);
+                                float yMin = Min4(vertex.Position0.y, vertex.Position1.y, vertex.Position2.y, vertex.Position3.y);
+                                float yMax = Max4(vertex.Position0.y, vertex.Position1.y, vertex.Position2.y, vertex.Position3.y);
+
+                                // Snap them to integer pixel coordinates:
+                                int ix0 = Mathf.RoundToInt(xMin);
+                                int iy0 = Mathf.RoundToInt(yMin);
+                                int ix1 = Mathf.RoundToInt(xMax);
+                                int iy1 = Mathf.RoundToInt(yMax);
+
+                                // Build the Rect from min to max:
+                                dst = Rect.MinMaxRect(ix0, iy0, ix1, iy1);
+
+                                // flip vertically
+                                vertex.TextureCoordinate0.y = 1f - vertex.TextureCoordinate0.y;
+                                vertex.TextureCoordinate1.y = 1f - vertex.TextureCoordinate1.y;
+                                vertex.TextureCoordinate2.y = 1f - vertex.TextureCoordinate2.y;
+                                vertex.TextureCoordinate3.y = 1f - vertex.TextureCoordinate3.y;
+
+                                // compute uv src rect
+                                float u0 = vertex.TextureCoordinate0.x;
+                                float v0 = 1 - vertex.TextureCoordinate3.y;
+                                float u1 = vertex.TextureCoordinate1.x - u0;
+                                float v1 = vertex.TextureCoordinate2.y - vertex.TextureCoordinate0.y;
+                                src = new Rect(u0, v0, u1, v1);
+                            }
+
+                            if (CustomEffect is XBREffect xbrEffect)
+                            {
+                                // when drawing a sub-rect from an atlas, pass the REGION size in pixels
+                                int w = Mathf.Max(1, Mathf.RoundToInt(src.width * texture.UnityTexture.width));
+                                int h = Mathf.Max(1, Mathf.RoundToInt(src.height * texture.UnityTexture.height));
+
+                                // shader expects "textureSize" - put pixels in XY (and optionally 1/pixels in ZW)
+                                xbrMaterial.SetVector(TextureSize, new Vector4(w, h, 1f / w, 1f / h));
+
+                                // keep it consistent with current texture
+                                xbrMaterial.mainTexture = texture.UnityTexture;
+
+                                Graphics.DrawTexture(dst, texture.UnityTexture, src, 0, 0, 0, 0, xbrMaterial);
+                            }
+                            else
+                            {
+                                hueMaterial.SetColor(Hue, new Color(hue.x, hue.y, hue.z));
+                                hueMaterial.SetFloat(UvMirrorX, 0);
+                                Graphics.DrawTexture(dst, texture.UnityTexture, src, 0, 0, 0, 0, hueMaterial);
+                            }
+
+                            DrawTextures++;
+                        }
                     }
-
-                    DrawTextures++;
                 }
-            }
 
-            FlushMeshBatch();
-            _batchedVertices.Clear();
+                using (UnityProfiler.Auto(UnityProfiler.Mk_FlushMesh))
+                {
+                    FlushMeshBatch();
+                }
 
-            // Calculate flushes and texture switches per second
-            var now = DateTime.UtcNow;
-            if ((now - _lastSampleTime).TotalSeconds >= 1.0)
-            {
-                FlushesPerSecond = FlushesDone;
-                TextureSwitchesPerSecond = TextureSwitches;
-                DrawTexturesPerSecond = DrawTextures;
-                DrawMeshesPerSecond = DrawMeshes;
-                FlushesDone = 0;
-                TextureSwitches = 0;
-                DrawTextures = 0;
-                DrawMeshes = 0;
-                _lastSampleTime = now;
+                _batchedVertices.Clear();
+
+                // Calculate flushes and texture switches per second
+                var now = DateTime.UtcNow;
+                if ((now - _lastSampleTime).TotalSeconds >= 1.0)
+                {
+                    FlushesPerSecond = FlushesDone;
+                    TextureSwitchesPerSecond = TextureSwitches;
+                    DrawTexturesPerSecond = DrawTextures;
+                    DrawMeshesPerSecond = DrawMeshes;
+                    FlushesDone = 0;
+                    TextureSwitches = 0;
+                    DrawTextures = 0;
+                    DrawMeshes = 0;
+                    _lastSampleTime = now;
+                }
             }
         }
 
