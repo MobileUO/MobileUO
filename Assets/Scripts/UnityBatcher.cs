@@ -2256,12 +2256,9 @@ namespace ClassicUO.Renderer
                     {
                         using (UnityProfiler.Auto(UnityProfiler.Mk_DrawTexture))
                         {
-                            if (_batchedMeshVertices.Count > 0)
+                            using (UnityProfiler.Auto(UnityProfiler.Mk_FlushMesh))
                             {
-                                using (UnityProfiler.Auto(UnityProfiler.Mk_FlushMesh))
-                                {
-                                    FlushMeshBatch();
-                                }
+                                FlushMeshBatch();
                             }
 
                             var vertex = batchedVertex.Vertex;
