@@ -84,5 +84,24 @@ namespace Microsoft.Xna.Framework
             get { return totalRealTime; }
             internal set { totalRealTime = value; }
         }
+
+        public void Set(TimeSpan totalRealTime, TimeSpan elapsedRealTime,
+                        TimeSpan totalGameTime, TimeSpan elapsedGameTime, bool isRunningSlowly = false)
+        {
+            TotalRealTime = totalRealTime;
+            ElapsedRealTime = elapsedRealTime;
+            TotalGameTime = totalGameTime;
+            ElapsedGameTime = elapsedGameTime;
+            IsRunningSlowly = isRunningSlowly;
+        }
+
+        public void Reset()
+        {
+            TotalRealTime = TimeSpan.Zero;
+            ElapsedRealTime = TimeSpan.Zero;
+            TotalGameTime = TimeSpan.Zero;
+            ElapsedGameTime = TimeSpan.Zero;
+            IsRunningSlowly = false;
+        }
     }
 }
