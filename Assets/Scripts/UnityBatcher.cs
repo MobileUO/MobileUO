@@ -2,6 +2,7 @@
 using ClassicUO.Utility.Logging;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MobileUO.Profiling;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -2221,7 +2222,13 @@ namespace ClassicUO.Renderer
             if (_batchedVertices.Count == 0)
                 return;
 
+            using (UnityProfiler.Auto(UnityProfiler.Mk_Flush))
+            {
+                using (UnityProfiler.Auto(UnityProfiler.Mk_ApplyStates))
+                {
             ApplyStates();
+                }
+
             ++FlushesDone;
 
             foreach (var batchedVertex in _batchedVertices)
@@ -2231,17 +2238,32 @@ namespace ClassicUO.Renderer
                     || (UserPreferences.UseDrawTexture.CurrentValue == (int)PreferenceEnums.UseDrawTexture.On && batchedVertex.UseMesh))
                 {
                     // accumulate for a mesh‐batch
+                        using (UnityProfiler.Auto(UnityProfiler.Mk_CollectMesh))
+                        {
                     _batchedMeshVertices.Add(batchedVertex);
                 }
+                    }
                 // else use draw texture
                 else
                 {
+                        using (UnityProfiler.Auto(UnityProfiler.Mk_DrawTexture))
+                        {
+                            if (_batchedMeshVertices.Count > 0)
+                            {
+                                using (UnityProfiler.Auto(UnityProfiler.Mk_FlushMesh))
+                                {
                     FlushMeshBatch();
+                                }
+                            }
 
                     var vertex = batchedVertex.Vertex;
                     var texture = batchedVertex.Texture;
                     var hue = batchedVertex.Hue;
 
+                            Rect src, dst;
+
+                            using (UnityProfiler.Auto(UnityProfiler.Mk_ComputeRects))
+                            {
                     // compute screen dst rect
                     // Gather the X/Y of all four corners:
                     float xMin = Mathf.Min(
@@ -2276,7 +2298,7 @@ namespace ClassicUO.Renderer
                     int iy1 = Mathf.RoundToInt(yMax);
 
                     // Build the Rect from min to max:
-                    var dst = Rect.MinMaxRect(ix0, iy0, ix1, iy1);
+                                dst = Rect.MinMaxRect(ix0, iy0, ix1, iy1);
 
                     // flip vertically
                     vertex.TextureCoordinate0.y = 1f - vertex.TextureCoordinate0.y;
@@ -2289,7 +2311,8 @@ namespace ClassicUO.Renderer
                     float v0 = 1 - vertex.TextureCoordinate3.y;
                     float u1 = vertex.TextureCoordinate1.x - u0;
                     float v1 = vertex.TextureCoordinate2.y - vertex.TextureCoordinate0.y;
-                    var src = new Rect(u0, v0, u1, v1);
+                                src = new Rect(u0, v0, u1, v1);
+                            }
 
                     if (CustomEffect is XBREffect xbrEffect)
                     {
@@ -2315,8 +2338,13 @@ namespace ClassicUO.Renderer
                     DrawTextures++;
                 }
             }
+                }
 
+                using (UnityProfiler.Auto(UnityProfiler.Mk_FlushMesh))
+                {
             FlushMeshBatch();
+                }
+
             _batchedVertices.Clear();
 
             // Calculate flushes and texture switches per second
@@ -2333,6 +2361,7 @@ namespace ClassicUO.Renderer
                 DrawMeshes = 0;
                 _lastSampleTime = now;
             }
+        }
         }
 
         private void DrawRun(Texture2D tex, Vector3 hue, List<PositionNormalTextureColor4> quads)
