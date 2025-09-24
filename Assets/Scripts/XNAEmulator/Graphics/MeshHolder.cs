@@ -21,11 +21,11 @@ namespace Microsoft.Xna.Framework.Graphics
         public readonly Mesh Mesh;
 
         private MeshVertex[] _vertexBuffer = System.Array.Empty<MeshVertex>();
-        private uint[] _indexBuffer = System.Array.Empty<uint>();
+        private ushort[] _indexBuffer = System.Array.Empty<ushort>();
         private int _quadCapacity;
         private readonly Bounds _bounds;
         private readonly VertexAttributeDescriptor[] _vertexLayout;
-        private IndexFormat _indexFormat = IndexFormat.UInt32;
+        private IndexFormat _indexFormat = IndexFormat.UInt16;
 
         public MeshHolder(int quadCount)
         {
@@ -109,19 +109,17 @@ namespace Microsoft.Xna.Framework.Graphics
                 int indexCapacity = quadCount * 6;
 
                 _vertexBuffer = new MeshVertex[vertexCapacity];
-                _indexBuffer = new uint[indexCapacity];
+                _indexBuffer = new ushort[indexCapacity];
 
                 for (int q = 0, v = 0, i = 0; q < quadCount; q++, v += 4, i += 6)
                 {
-                    _indexBuffer[i + 0] = (uint)(v + 0);
-                    _indexBuffer[i + 1] = (uint)(v + 1);
-                    _indexBuffer[i + 2] = (uint)(v + 2);
-                    _indexBuffer[i + 3] = (uint)(v + 1);
-                    _indexBuffer[i + 4] = (uint)(v + 3);
-                    _indexBuffer[i + 5] = (uint)(v + 2);
+                    _indexBuffer[i + 0] = (ushort)(v + 0);
+                    _indexBuffer[i + 1] = (ushort)(v + 1);
+                    _indexBuffer[i + 2] = (ushort)(v + 2);
+                    _indexBuffer[i + 3] = (ushort)(v + 1);
+                    _indexBuffer[i + 4] = (ushort)(v + 3);
+                    _indexBuffer[i + 5] = (ushort)(v + 2);
                 }
-
-                _indexFormat = IndexFormat.UInt32;
 
                 Mesh.SetVertexBufferParams(vertexCapacity, _vertexLayout);
                 Mesh.SetIndexBufferParams(indexCapacity, _indexFormat);
