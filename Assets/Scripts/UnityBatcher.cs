@@ -107,6 +107,7 @@ namespace ClassicUO.Renderer
             xbrMaterial = new Material(UnityEngine.Resources.Load<Shader>("XbrShader"));
 
             _batchedVertices.Capacity = 8192; // ~4351
+            _batchedMeshVertices.Capacity = 256; // < ~35
             _runQuads.Capacity = 256; // ~ 10
         }
 
