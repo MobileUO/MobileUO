@@ -45,6 +45,7 @@ namespace Microsoft.Xna.Framework.Graphics
             EnsureCapacity(Mathf.Max(1, quadCount));
         }
 
+        // TODO: deprecated
         public void Populate(IList<PositionNormalTextureColor4> quads)
         {
             using (UnityProfiler.Auto(UnityProfiler.Mk_MeshPopulate))
@@ -65,10 +66,56 @@ namespace Microsoft.Xna.Framework.Graphics
                 {
                     var quad = quads[q];
 
-                WriteVertex(ref _vertexBuffer[v + 0], quad.Position0, quad.Normal0, quad.TextureCoordinate0);
-                WriteVertex(ref _vertexBuffer[v + 1], quad.Position1, quad.Normal1, quad.TextureCoordinate1);
-                WriteVertex(ref _vertexBuffer[v + 2], quad.Position2, quad.Normal2, quad.TextureCoordinate2);
-                WriteVertex(ref _vertexBuffer[v + 3], quad.Position3, quad.Normal3, quad.TextureCoordinate3);
+                    WriteVertex(ref _vertexBuffer[v + 0], quad.Position0, quad.Normal0, quad.TextureCoordinate0);
+                    WriteVertex(ref _vertexBuffer[v + 1], quad.Position1, quad.Normal1, quad.TextureCoordinate1);
+                    WriteVertex(ref _vertexBuffer[v + 2], quad.Position2, quad.Normal2, quad.TextureCoordinate2);
+                    WriteVertex(ref _vertexBuffer[v + 3], quad.Position3, quad.Normal3, quad.TextureCoordinate3);
+                }
+
+                using (UnityProfiler.Auto(UnityProfiler.Mk_SetVB))
+                {
+                    Mesh.SetVertexBufferData(_vertexBuffer, 0, 0, vertexCount, 0,
+                    MeshUpdateFlags.DontValidateIndices | MeshUpdateFlags.DontRecalculateBounds);
+                }
+
+                using (UnityProfiler.Auto(UnityProfiler.Mk_SetSM))
+                {
+                    var subMesh = new SubMeshDescriptor(0, indexCount, MeshTopology.Triangles)
+                    {
+                        vertexCount = vertexCount
+                    };
+
+                    Mesh.subMeshCount = 1;
+                    Mesh.SetSubMesh(0, subMesh, MeshUpdateFlags.DontRecalculateBounds);
+                }
+
+                Mesh.bounds = _bounds;
+            }
+        }
+
+        public void Populate(PositionNormalTextureColor4[] quads, int start, int count)
+        {
+            using (UnityProfiler.Auto(UnityProfiler.Mk_MeshPopulate))
+            {
+                if (count <= 0)
+                {
+                    Mesh.subMeshCount = 0;
+                    return;
+                }
+
+                EnsureCapacity(count);
+
+                int vertexCount = count * 4;
+                int indexCount = count * 6;
+
+                for (int i = 0, v = 0; i < count; i++, v += 4)
+                {
+                    ref readonly var quad = ref quads[start + i];
+
+                    WriteVertex(ref _vertexBuffer[v + 0], quad.Position0, quad.Normal0, quad.TextureCoordinate0);
+                    WriteVertex(ref _vertexBuffer[v + 1], quad.Position1, quad.Normal1, quad.TextureCoordinate1);
+                    WriteVertex(ref _vertexBuffer[v + 2], quad.Position2, quad.Normal2, quad.TextureCoordinate2);
+                    WriteVertex(ref _vertexBuffer[v + 3], quad.Position3, quad.Normal3, quad.TextureCoordinate3);
                 }
 
                 using (UnityProfiler.Auto(UnityProfiler.Mk_SetVB))
