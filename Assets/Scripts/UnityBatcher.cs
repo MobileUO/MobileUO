@@ -1947,7 +1947,7 @@ namespace ClassicUO.Renderer
             float depth,
             byte effects,
             bool useMesh = false
-            )
+        )
         {
             EnsureSize();
 
