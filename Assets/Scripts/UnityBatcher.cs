@@ -353,7 +353,7 @@ namespace ClassicUO.Renderer
 
                 vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
             
-                FinalizeQuad(ref vertex);
+                FinalizeVertex(ref vertex);
                 PushSprite(texture);
             }
 
@@ -421,7 +421,7 @@ namespace ClassicUO.Renderer
 
             vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
 
-            FinalizeQuad(ref vertex);
+            FinalizeVertex(ref vertex);
             PushSprite(texture);
         }
 
@@ -530,7 +530,7 @@ namespace ClassicUO.Renderer
 
             vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
 
-            FinalizeQuad(ref vertex, true);
+            FinalizeVertex(ref vertex, true);
             PushSprite(texture);
 
             return true;
@@ -640,7 +640,7 @@ namespace ClassicUO.Renderer
 
             vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
 
-            FinalizeQuad(ref vertex);
+            FinalizeVertex(ref vertex);
             PushSprite(texture);
         }
 
@@ -746,7 +746,7 @@ namespace ClassicUO.Renderer
 
             vertex.Hue0.y = vertex.Hue1.y = vertex.Hue2.y = vertex.Hue3.y = ShaderHueTranslator.SHADER_SHADOW;
 
-            FinalizeQuad(ref vertex);
+            FinalizeVertex(ref vertex);
             PushSprite(texture);
         }
 
@@ -835,13 +835,13 @@ namespace ClassicUO.Renderer
             vertex.Hue0.z = vertex.Hue1.z = vertex.Hue2.z = vertex.Hue3.z = vertex.Hue0.x = vertex.Hue1.x = vertex.Hue2.x = vertex.Hue3.x = 0;
             vertex.Hue0.y = vertex.Hue1.y = vertex.Hue2.y = vertex.Hue3.y = ShaderHueTranslator.SHADER_SHADOW;
 
-            FinalizeQuad(ref vertex, true);
+            FinalizeVertex(ref vertex, true);
             PushSprite(texture);
         }
 
         private readonly List<VertexData> _batchedVertices = new List<VertexData>();
 
-        private void FinalizeQuad(ref PositionNormalTextureColor4 vertex, bool useMesh = false)
+        private void FinalizeVertex(ref PositionNormalTextureColor4 vertex, bool useMesh = false)
         {
             // TODO: figure out where NaNs are coming from
             if (float.IsNaN(vertex.Position0.x) || float.IsNaN(vertex.Position0.y))
@@ -968,7 +968,7 @@ namespace ClassicUO.Renderer
 
                 vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
 
-                FinalizeQuad(ref vertex);
+                FinalizeVertex(ref vertex);
                 PushSprite(texture);
             }
 
@@ -1033,7 +1033,7 @@ namespace ClassicUO.Renderer
 
                 vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
 
-                FinalizeQuad(ref vertex);
+                FinalizeVertex(ref vertex);
                 PushSprite(texture);
             }
 
@@ -1098,7 +1098,7 @@ namespace ClassicUO.Renderer
 
                 vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
 
-                FinalizeQuad(ref vertex);
+                FinalizeVertex(ref vertex);
                 PushSprite(texture);
             }
         }
@@ -1158,7 +1158,7 @@ namespace ClassicUO.Renderer
 
                 vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
                 
-                FinalizeQuad(ref vertex);
+                FinalizeVertex(ref vertex);
                 PushSprite(texture);
             }
 
@@ -1236,7 +1236,7 @@ namespace ClassicUO.Renderer
                 vertex.TextureCoordinate3.z = 0;
                 vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
                 
-                FinalizeQuad(ref vertex);
+                FinalizeVertex(ref vertex);
                 PushSprite(texture);
             }
 
@@ -1372,7 +1372,7 @@ namespace ClassicUO.Renderer
             vertex.TextureCoordinate3.z = 0;
             vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
 
-            FinalizeQuad(ref vertex);
+            FinalizeVertex(ref vertex);
             PushSprite(texture);
 
             return true;
@@ -1449,7 +1449,7 @@ namespace ClassicUO.Renderer
 
                 vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
                 
-                FinalizeQuad(ref vertex);
+                FinalizeVertex(ref vertex);
                 PushSprite(texture);
             }
 
@@ -1608,7 +1608,7 @@ namespace ClassicUO.Renderer
 
             vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = XnaVector3.Zero;
 
-            FinalizeQuad(ref vertex);
+            FinalizeVertex(ref vertex);
             PushSprite(texture);
         }
 
@@ -1947,7 +1947,7 @@ namespace ClassicUO.Renderer
             float depth,
             byte effects,
             bool useMesh = false
-        )
+            )
         {
             EnsureSize();
 
@@ -1964,7 +1964,7 @@ namespace ClassicUO.Renderer
                 texture.IsFromTextureAtlas
             );
 
-            FinalizeQuad(ref _vertexInfo[_numSprites], useMesh);
+            FinalizeVertex(ref _vertexInfo[_numSprites], useMesh);
 
             PushSprite(texture);
         }
