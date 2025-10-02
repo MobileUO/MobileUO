@@ -796,9 +796,13 @@ namespace ClassicUO.Game.GameObjects
 
                         for (int i = 0; i < count; ++i)
                         {
+                            if(rect.Height <= 0)
+                            {
+                                break;
+                            }
+
                             // MobileUO: A way to visually see the bands:
                             //hueVec.X = i * 10f + 10f;
-
                             batcher.Draw(
                                 spriteInfo.Texture,
                                 pos,
