@@ -843,13 +843,6 @@ namespace ClassicUO.Renderer
 
         private void FinalizeVertex(ref PositionNormalTextureColor4 vertex, bool useMesh = false)
         {
-            // TODO: figure out where NaNs are coming from
-            if (float.IsNaN(vertex.Position0.x) || float.IsNaN(vertex.Position0.y))
-            {
-                //Debug.LogError($"Bad SpriteVertex for tex {texture.UnityTexture.name} @ {vertex.Position0}");
-                return; // skip this sprite entirely until we fix the math
-            }
-
             //vertex.Position0 *= scale;
             //vertex.Position1 *= scale;
             //vertex.Position2 *= scale;
@@ -2345,10 +2338,6 @@ namespace ClassicUO.Renderer
                     Texture2D texture = _textureInfo[arrayOffset + i];
                     PositionNormalTextureColor4 vertex = _vertexInfo[arrayOffset + i];
                     Vector3 hue = vertex.Hue0;
-
-                    // TODO: let's figure out why we have NaNs and fix the root issue
-                    if (float.IsNaN(vertex.Position0.x) || float.IsNaN(vertex.Position0.y))
-                        continue;
 
                     // draw with mesh if UseDrawTexture is off or if flagged to use mesh (draw stretched land or shadows)
                     if (UserPreferences.UseDrawTexture.CurrentValue == (int)PreferenceEnums.UseDrawTexture.Off
