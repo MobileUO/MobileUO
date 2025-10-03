@@ -124,7 +124,8 @@ namespace ClassicUO.Game.UI.Gumps
         private Checkbox _showHouseContent;
         private Checkbox _showInfoBar;
         private Checkbox _ignoreAllianceMessages;
-        private Checkbox _ignoreGuildMessages, _useAlternateJournal;
+        // MobileUO: added option to allow large chat box to be easier to click on
+        private Checkbox _ignoreGuildMessages, _useAlternateJournal, _useLargeSystemChatTextBox;
 
         // general
         private HSliderBar _sliderFPS, _circleOfTranspRadius;
@@ -2530,6 +2531,18 @@ namespace ClassicUO.Game.UI.Gumps
                 startY
             );
 
+            // MobileUO: added option to allow large chat box to be easier to click on
+            startY += _useAlternateJournal.Height + 2;
+
+            _useLargeSystemChatTextBox = AddCheckBox
+            (
+                rightArea,
+                "Use large system chat text box",
+                _currentProfile.UseLargeSystemChatTextBox,
+                startX,
+                startY
+            );
+
             startY += 35;
 
             _randomizeColorsButton = new NiceButton
@@ -3678,6 +3691,8 @@ namespace ClassicUO.Game.UI.Gumps
                     _ignoreGuildMessages.IsChecked = false;
                     _ignoreAllianceMessages.IsChecked = false;
                     _useAlternateJournal.IsChecked = false;
+                    // MobileUO: added option to allow large chat box to be easier to click on
+                    _useLargeSystemChatTextBox.IsChecked = false;
 
                     break;
 
@@ -4050,6 +4065,8 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.IgnoreGuildMessages = _ignoreGuildMessages.IsChecked;
             _currentProfile.IgnoreAllianceMessages = _ignoreAllianceMessages.IsChecked;
             _currentProfile.UseAlternateJournal = _useAlternateJournal.IsChecked;
+            // MobileUO: added option to allow large chat box to be easier to click on
+            _currentProfile.UseLargeSystemChatTextBox = _useLargeSystemChatTextBox.IsChecked;
 
             // fonts
             _currentProfile.ForceUnicodeJournal = _forceUnicodeJournal.IsChecked;
