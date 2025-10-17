@@ -101,23 +101,24 @@ namespace ClassicUO.Game
                 {
                     ushort id = _cursorData[i, j];
 
-                    var surface = Client.Game.UO.Arts.CreateCursorSurfacePtr(
-                        id,
-                        (ushort)(i == 2 ? 0x0033 : 0),
-                        out int hotX,
-                        out int hotY
-                    );
+                    // MobileUO: TODO: do we need to implement this?
+                    //var surface = Client.Game.UO.Arts.CreateCursorSurfacePtr(
+                    //    id,
+                    //    (ushort)(i == 2 ? 0x0033 : 0),
+                    //    out int hotX,
+                    //    out int hotY
+                    //);
 
-                    if (surface != IntPtr.Zero)
-                    {
-                        if (hotX != 0 || hotY != 0)
-                        {
-                            _cursorOffset[0, j] = hotX;
-                            _cursorOffset[1, j] = hotY;
-                        }
+                    //if (surface != IntPtr.Zero)
+                    //{
+                    //    if (hotX != 0 || hotY != 0)
+                    //    {
+                    //        _cursorOffset[0, j] = hotX;
+                    //        _cursorOffset[1, j] = hotY;
+                    //    }
 
-                        _cursors_ptr[i, j] = SDL.SDL_CreateColorCursor(surface, hotX, hotY);
-                    }
+                    //    _cursors_ptr[i, j] = SDL.SDL_CreateColorCursor(surface, hotX, hotY);
+                    //}
                 }
             }
         }
