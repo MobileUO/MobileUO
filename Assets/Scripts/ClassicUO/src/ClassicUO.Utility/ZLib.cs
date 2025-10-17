@@ -14,21 +14,8 @@ namespace ClassicUO.Utility
 
         static ZLib()
         {
-            if (Environment.Is64BitProcess)
-            {
-                if(PlatformHelper.IsWindows)
-                {
-                    _compressor = new Compressor64();
-                }
-                else
-                {
-                    _compressor = new CompressorUnix64();
-                }
-            }
-            else
-            {
-                _compressor = new ManagedUniversal();
-            }
+            // MobileUO: removed switch (SDL2.SDL.SDL_GetPlatform())
+            _compressor = new ManagedUniversal();
         }
 
         public static ZLibError Decompress(byte[] source, int offset, byte[] dest, int length)
