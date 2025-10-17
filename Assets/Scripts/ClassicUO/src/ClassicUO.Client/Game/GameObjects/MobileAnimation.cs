@@ -1,6 +1,5 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
-using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using ClassicUO.Game.Data;
@@ -10,7 +9,7 @@ using ClassicUO.Renderer.Animations;
 
 namespace ClassicUO.Game.GameObjects
 {
-    internal partial class Mobile
+    public partial class Mobile
     {
         private static readonly ushort[] HANDS_BASE_ANIMID =
         {
@@ -59,11 +58,11 @@ namespace ClassicUO.Game.GameObjects
             {
                 case 0x0192:
                 case 0x0193:
-                {
-                    g -= 2;
+                    {
+                        g -= 2;
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 0x02B6:
                     g = 667;
@@ -96,7 +95,7 @@ namespace ClassicUO.Game.GameObjects
             Animations animations,
             ushort graphic,
             Mobile mobile,
-            AnimationFlags  flags,
+            AnimationFlags flags,
             bool isrun,
             bool iswalking,
             ref byte result
@@ -195,7 +194,7 @@ namespace ClassicUO.Game.GameObjects
             }
         }
 
-        private static void LABEL_222(AnimationFlags  flags, ref ushort v13)
+        private static void LABEL_222(AnimationFlags flags, ref ushort v13)
         {
             if ((flags & AnimationFlags.CalculateOffsetLowGroupExtended) != 0)
             {
@@ -337,7 +336,7 @@ namespace ClassicUO.Game.GameObjects
             //    v13 = 0;
         }
 
-        private static void LABEL_190(AnimationFlags  flags, ref ushort v13)
+        private static void LABEL_190(AnimationFlags flags, ref ushort v13)
         {
             if ((flags & AnimationFlags.Unknown80) != 0 && v13 == 4)
             {
@@ -1128,17 +1127,17 @@ namespace ClassicUO.Game.GameObjects
                     break;
 
                 default:
-                {
-                    Item hand2 = mobile.FindItemByLayer(Layer.TwoHanded);
-
-                    if (!isWalking)
                     {
-                        if (result == 0xFF)
+                        Item hand2 = mobile.FindItemByLayer(Layer.TwoHanded);
+
+                        if (!isWalking)
                         {
-                            bool haveLightAtHand2 =
-                                hand2 != null
-                                && hand2.ItemData.IsLight
-                                && hand2.ItemData.AnimID == graphic;
+                            if (result == 0xFF)
+                            {
+                                bool haveLightAtHand2 =
+                                    hand2 != null
+                                    && hand2.ItemData.IsLight
+                                    && hand2.ItemData.AnimID == graphic;
 
                             if (mobile.IsMounted)
                             {
@@ -1189,24 +1188,24 @@ namespace ClassicUO.Game.GameObjects
                             {
                                 // TODO: UOP EQUIPMENT ?
 
-                                result = 2;
-                            }
-                            else
-                            {
-                                unsafe
+                                    result = 2;
+                                }
+                                else
                                 {
-                                    ushort* handAnimIDs = stackalloc ushort[2];
-                                    Item hand1 = mobile.FindItemByLayer(Layer.OneHanded);
-
-                                    if (hand1 != null)
+                                    unsafe
                                     {
-                                        handAnimIDs[0] = hand1.ItemData.AnimID;
-                                    }
+                                        ushort* handAnimIDs = stackalloc ushort[2];
+                                        Item hand1 = mobile.FindItemByLayer(Layer.OneHanded);
 
-                                    if (hand2 != null)
-                                    {
-                                        handAnimIDs[1] = hand2.ItemData.AnimID;
-                                    }
+                                        if (hand1 != null)
+                                        {
+                                            handAnimIDs[0] = hand1.ItemData.AnimID;
+                                        }
+
+                                        if (hand2 != null)
+                                        {
+                                            handAnimIDs[1] = hand2.ItemData.AnimID;
+                                        }
 
                                     if (hand1 == null)
                                     {
@@ -1228,60 +1227,60 @@ namespace ClassicUO.Game.GameObjects
                                                 result = 7;
                                             }
 
-                                            for (int i = 0; i < 2; i++)
-                                            {
-                                                if (
-                                                    handAnimIDs[i] >= 0x0263
-                                                    && handAnimIDs[i] <= 0x028B
-                                                )
+                                                for (int i = 0; i < 2; i++)
                                                 {
-                                                    for (
-                                                        int k = 0;
-                                                        k < HANDS_BASE_ANIMID.Length;
-                                                        k++
+                                                    if (
+                                                        handAnimIDs[i] >= 0x0263
+                                                        && handAnimIDs[i] <= 0x028B
                                                     )
                                                     {
-                                                        if (handAnimIDs[i] == HANDS_BASE_ANIMID[k])
+                                                        for (
+                                                            int k = 0;
+                                                            k < HANDS_BASE_ANIMID.Length;
+                                                            k++
+                                                        )
                                                         {
-                                                            result = 8;
-                                                            i = 2;
+                                                            if (handAnimIDs[i] == HANDS_BASE_ANIMID[k])
+                                                            {
+                                                                result = 8;
+                                                                i = 2;
 
-                                                            break;
+                                                                break;
+                                                            }
                                                         }
                                                     }
                                                 }
                                             }
-                                        }
-                                        else if (mobile.IsGargoyle && mobile.IsFlying)
-                                        {
-                                            result = 64;
+                                            else if (mobile.IsGargoyle && mobile.IsFlying)
+                                            {
+                                                result = 64;
+                                            }
+                                            else
+                                            {
+                                                result = 7;
+                                            }
                                         }
                                         else
                                         {
                                             result = 7;
                                         }
                                     }
-                                    else
-                                    {
-                                        result = 7;
-                                    }
                                 }
                             }
                         }
-                    }
-                    else if (mobile.IsMounted)
-                    {
-                        if (isRun)
+                        else if (mobile.IsMounted)
                         {
-                            result = 24;
+                            if (isRun)
+                            {
+                                result = 24;
+                            }
+                            else
+                            {
+                                result = 23;
+                            }
                         }
-                        else
-                        {
-                            result = 23;
-                        }
-                    }
-                    //else if (EquippedGraphic0x3E96)
-                    //{
+                        //else if (EquippedGraphic0x3E96)
+                        //{
 
                     //}
                     else if (isRun || !mobile.InWarMode || mobile.IsDead)
@@ -1358,81 +1357,81 @@ namespace ClassicUO.Game.GameObjects
                             }
                         }
 
-                        if (hand2 != null)
-                        {
-                            ushort hand2Graphic = hand2.ItemData.AnimID;
-
-                            if (hand2Graphic < 0x0240 || hand2Graphic > 0x03E1)
+                            if (hand2 != null)
                             {
-                                if (mobile.IsGargoyle && mobile.IsFlying)
+                                ushort hand2Graphic = hand2.ItemData.AnimID;
+
+                                if (hand2Graphic < 0x0240 || hand2Graphic > 0x03E1)
                                 {
-                                    if (isRun)
+                                    if (mobile.IsGargoyle && mobile.IsFlying)
                                     {
-                                        result = 63;
+                                        if (isRun)
+                                        {
+                                            result = 63;
+                                        }
+                                        else
+                                        {
+                                            result = 62;
+                                        }
                                     }
                                     else
                                     {
-                                        result = 62;
+                                        if (isRun)
+                                        {
+                                            result = 3;
+                                        }
+                                        else
+                                        {
+                                            result = 1;
+                                        }
                                     }
                                 }
                                 else
                                 {
-                                    if (isRun)
+                                    for (int i = 0; i < HAND2_BASE_ANIMID.Length; i++)
                                     {
-                                        result = 3;
-                                    }
-                                    else
-                                    {
-                                        result = 1;
-                                    }
-                                }
-                            }
-                            else
-                            {
-                                for (int i = 0; i < HAND2_BASE_ANIMID.Length; i++)
-                                {
-                                    if (HAND2_BASE_ANIMID[i] == hand2Graphic)
-                                    {
-                                        if (mobile.IsGargoyle && mobile.IsFlying)
+                                        if (HAND2_BASE_ANIMID[i] == hand2Graphic)
                                         {
-                                            if (isRun)
+                                            if (mobile.IsGargoyle && mobile.IsFlying)
                                             {
-                                                result = 63;
+                                                if (isRun)
+                                                {
+                                                    result = 63;
+                                                }
+                                                else
+                                                {
+                                                    result = 62;
+                                                }
                                             }
                                             else
                                             {
-                                                result = 62;
+                                                if (isRun)
+                                                {
+                                                    result = 3;
+                                                }
+                                                else
+                                                {
+                                                    result = 1;
+                                                }
                                             }
-                                        }
-                                        else
-                                        {
-                                            if (isRun)
-                                            {
-                                                result = 3;
-                                            }
-                                            else
-                                            {
-                                                result = 1;
-                                            }
-                                        }
 
-                                        break;
+                                            break;
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
-                    else if (mobile.IsGargoyle && mobile.IsFlying)
-                    {
-                        result = 62;
-                    }
-                    else
-                    {
-                        result = 15;
-                    }
+                        else if (mobile.IsGargoyle && mobile.IsFlying)
+                        {
+                            result = 62;
+                        }
+                        else
+                        {
+                            result = 15;
+                        }
 
-                    break;
-                }
+                        break;
+                    }
             }
 
             return result;

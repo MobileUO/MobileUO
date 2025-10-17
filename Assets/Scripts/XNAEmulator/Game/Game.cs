@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using Microsoft.Xna.Framework.Graphics;
-using SDL2;
+using SDL3;
 
 namespace Microsoft.Xna.Framework
 {

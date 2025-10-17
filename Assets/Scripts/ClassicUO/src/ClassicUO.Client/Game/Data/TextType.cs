@@ -2,7 +2,7 @@
 
 namespace ClassicUO.Game.Data
 {
-    internal enum TextType
+    public enum TextType
     {
         CLIENT,
         SYSTEM,

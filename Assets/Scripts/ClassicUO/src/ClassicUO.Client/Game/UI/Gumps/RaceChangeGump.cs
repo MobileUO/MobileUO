@@ -11,7 +11,7 @@ using System.Collections.Generic;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class RaceChangeGump : Gump
+    public class RaceChangeGump : Gump
     {
         private bool isFemale { get; } = false;
         private RaceType selectedRace { get; } = RaceType.HUMAN;
@@ -438,7 +438,7 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 if (!isFemale && selectedRace != RaceType.ELF) //Has beard
                 {
-                    NetClient.Socket.Send_ChangeRaceRequest(
+                    AsyncNetClient.Socket.Send_ChangeRaceRequest(
                         CurrentColorOption[Layer.Invalid].Item2,
                         (ushort)CharacterCreationValues.GetHairComboContent(isFemale, selectedRace).GetGraphic(CurrentOption[Layer.Hair]),
                         CurrentColorOption[Layer.Hair].Item2,
@@ -448,7 +448,7 @@ namespace ClassicUO.Game.UI.Gumps
                 }
                 else //No beard
                 {
-                    NetClient.Socket.Send_ChangeRaceRequest(
+                    AsyncNetClient.Socket.Send_ChangeRaceRequest(
                         CurrentColorOption[Layer.Invalid].Item2,
                         (ushort)CharacterCreationValues.GetHairComboContent(isFemale, selectedRace).GetGraphic(CurrentOption[Layer.Hair]),
                         CurrentColorOption[Layer.Hair].Item2,

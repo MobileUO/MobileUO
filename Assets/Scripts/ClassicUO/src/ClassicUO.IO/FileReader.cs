@@ -87,7 +87,8 @@ namespace ClassicUO.IO
             huesBlock.TableStart = ReadUInt16();
             huesBlock.TableEnd = ReadUInt16();
             var buf = new byte[20];
-            /*huesBlock.Name =*/ Read(buf);
+            /*huesBlock.Name =*/
+            Read(buf);
 
             return huesBlock;
         }

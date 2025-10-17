@@ -12,7 +12,7 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class ChatGump : Gump
+    public class ChatGump : Gump
     {
         private ChannelCreationBox _channelCreationBox;
 
@@ -219,13 +219,13 @@ namespace ClassicUO.Game.UI.Gumps
                 case 0: // join
                     if (!string.IsNullOrEmpty(_selectedChannelText))
                     {
-                        NetClient.Socket.Send_ChatJoinCommand(_selectedChannelText);
+                        AsyncNetClient.Socket.Send_ChatJoinCommand(_selectedChannelText);
                     }
 
                     break;
 
                 case 1: // leave
-                    NetClient.Socket.Send_ChatLeaveChannelCommand();
+                    AsyncNetClient.Socket.Send_ChatLeaveChannelCommand();
 
                     break;
 
@@ -413,7 +413,7 @@ namespace ClassicUO.Game.UI.Gumps
                 }
                 else if (buttonID == 1) // ok
                 {
-                    NetClient.Socket.Send_ChatCreateChannelCommand(_textBox.Text);
+                    AsyncNetClient.Socket.Send_ChatCreateChannelCommand(_textBox.Text);
                 }
 
                 Dispose();

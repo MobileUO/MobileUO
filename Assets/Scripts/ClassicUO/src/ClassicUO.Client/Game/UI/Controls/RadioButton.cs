@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace ClassicUO.Game.UI.Controls
 {
-    internal class RadioButton : Checkbox
+    public class RadioButton : Checkbox
     {
         public RadioButton(int group, List<string> parts, string[] lines) : base(parts, lines)
         {

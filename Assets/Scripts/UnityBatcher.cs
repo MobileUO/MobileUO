@@ -1,5 +1,6 @@
 ﻿using ClassicUO.Renderer.Effects;
 using ClassicUO.Utility.Logging;
+using FontStashSharp.Interfaces;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MobileUO.Profiling;
@@ -25,7 +26,7 @@ using XnaVector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace ClassicUO.Renderer
 {
-    internal sealed class UltimaBatcher2D : IDisposable
+    public sealed class UltimaBatcher2D : IDisposable, IFontStashRenderer
     {
         private static readonly float[] _cornerOffsetX = new float[] { 0.0f, 1.0f, 0.0f, 1.0f };
         private static readonly float[] _cornerOffsetY = new float[] { 0.0f, 0.0f, 1.0f, 1.0f };
@@ -141,6 +142,103 @@ namespace ClassicUO.Renderer
             // MobileUO: pass Brightlight value to shader
             hueMaterial.SetFloat(Brightlight, f);
             _basicUOEffect.Brighlight.SetValue(f);
+        }
+
+        // For IFontStashRenderer
+        //public void Draw(Texture2D texture, XnaVector2 pos, Rectangle? src, Microsoft.Xna.Framework.Color color, float rotation, XnaVector2 scale, float depth)
+        //{
+        //    throw new NotImplementedException();
+        //}
+        public void Draw(Texture2D texture, XnaVector2 position, Rectangle? sourceRectangle, Microsoft.Xna.Framework.Color color, float rotation, XnaVector2 scale, float depth)
+        {
+            Vector3 hueVector = new Vector3(0, ShaderHueTranslator.SHADER_TEXT_HUE, MathHelper.Clamp(color.A / 255f, 0f, 1f));
+
+            float sourceX, sourceY, sourceW, sourceH;
+            if (sourceRectangle.HasValue)
+            {
+                sourceX = sourceRectangle.Value.X / (float)texture.Width;
+                sourceY = sourceRectangle.Value.Y / (float)texture.Height;
+                sourceW = Math.Sign(sourceRectangle.Value.Width) * Math.Max(Math.Abs(sourceRectangle.Value.Width), Utility.MathHelper.MachineEpsilonFloat) / (float)texture.Width;
+                sourceH = Math.Sign(sourceRectangle.Value.Height) * Math.Max(Math.Abs(sourceRectangle.Value.Height), Utility.MathHelper.MachineEpsilonFloat) / (float)texture.Height;
+                scale.X *= sourceRectangle.Value.Width;
+                scale.Y *= sourceRectangle.Value.Height;
+            }
+            else
+            {
+                sourceX = 0.0f;
+                sourceY = 0.0f;
+                sourceW = 1.0f;
+                sourceH = 1.0f;
+                scale.X *= texture.Width;
+                scale.Y *= texture.Height;
+            }
+
+            EnsureSize();
+
+            ref var sprite = ref _vertexInfo[_numSprites];
+
+            var rotationSin = (float)Math.Sin(rotation);
+            var rotationCos = (float)Math.Cos(rotation);
+
+            sprite.Position0.x = position.X;
+            sprite.Position0.y = position.Y;
+            sprite.Position0.z = depth;
+
+            sprite.Position1.x = (rotationCos * scale.X) + position.Y;
+            sprite.Position1.y = (rotationSin * scale.X) + position.Y;
+            sprite.Position1.z = depth;
+
+            sprite.Position2.x = (-rotationSin * scale.Y) + position.X;
+            sprite.Position2.y = (rotationCos * scale.Y) + position.Y;
+            sprite.Position2.z = depth;
+
+            sprite.Position3.x = ((-rotationSin * scale.Y) + (rotationCos * scale.X) + position.X);
+            sprite.Position3.y = ((rotationCos * scale.Y) + (rotationSin * scale.X) + position.Y);
+            sprite.Position3.z = depth;
+
+            sprite.TextureCoordinate0.x = (_cornerOffsetX[0] * sourceW) + sourceX;
+            sprite.TextureCoordinate0.y = (_cornerOffsetY[0] * sourceH) + sourceY;
+            sprite.TextureCoordinate0.z = 0;
+
+            sprite.TextureCoordinate1.x = (_cornerOffsetX[1] * sourceW) + sourceX;
+            sprite.TextureCoordinate1.y = (_cornerOffsetY[1] * sourceH) + sourceY;
+            sprite.TextureCoordinate1.z = 0;
+
+            sprite.TextureCoordinate2.x = (_cornerOffsetX[2] * sourceW) + sourceX;
+            sprite.TextureCoordinate2.y = (_cornerOffsetY[2] * sourceH) + sourceY;
+            sprite.TextureCoordinate2.z = 0;
+
+            sprite.TextureCoordinate3.x = (_cornerOffsetX[3] * sourceW) + sourceX;
+            sprite.TextureCoordinate3.y = (_cornerOffsetY[3] * sourceH) + sourceY;
+            sprite.TextureCoordinate3.z = 0;
+
+            sprite.Hue0 = hueVector;
+            sprite.Hue1 = hueVector;
+            sprite.Hue2 = hueVector;
+            sprite.Hue3 = hueVector;
+
+            var r = color.R / 255.0f;
+            var g = color.G / 255.0f;
+            var b = color.B / 255.0f;
+
+            sprite.Normal0.x = r;
+            sprite.Normal0.y = g;
+            sprite.Normal0.z = b;
+
+            sprite.Normal1.x = r;
+            sprite.Normal1.y = g;
+            sprite.Normal1.z = b;
+
+            sprite.Normal2.x = r;
+            sprite.Normal2.y = g;
+            sprite.Normal2.z = b;
+
+            sprite.Normal3.x = r;
+            sprite.Normal3.y = g;
+            sprite.Normal3.z = b;
+
+            _textureInfo[_numSprites] = texture;
+            ++_numSprites;
         }
 
         public void DrawString(SpriteFont spriteFont, ReadOnlySpan<char> text, int x, int y, XnaVector3 color)

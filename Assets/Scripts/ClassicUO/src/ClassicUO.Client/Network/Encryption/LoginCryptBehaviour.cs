@@ -4,7 +4,7 @@ using System;
 
 namespace ClassicUO.Network.Encryption
 {
-    internal sealed class LoginCryptBehaviour
+    public sealed class LoginCryptBehaviour
     {
         private uint _k1, _k2, _k3;
         private readonly uint[] _key = new uint[2];

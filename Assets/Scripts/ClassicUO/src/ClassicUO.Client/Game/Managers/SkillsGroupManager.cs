@@ -1,20 +1,20 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
+
+using ClassicUO.Assets;
+using ClassicUO.Configuration;
+using ClassicUO.Game.UI.Gumps;
+using ClassicUO.Resources;
+using ClassicUO.Utility.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Xml;
-using ClassicUO.Configuration;
-using ClassicUO.Game.UI.Gumps;
-using ClassicUO.IO;
-using ClassicUO.Assets;
-using ClassicUO.Resources;
-using ClassicUO.Utility.Logging;
 
 namespace ClassicUO.Game.Managers
 {
-    internal sealed class SkillsGroup
+    public sealed class SkillsGroup
     {
         private readonly byte[] _list = new byte[60];
 
@@ -135,6 +135,7 @@ namespace ClassicUO.Game.Managers
         {
             xml.WriteStartElement("group");
             xml.WriteAttributeString("name", Name);
+            xml.WriteAttributeString("isMaximized", IsMaximized.ToString());
             xml.WriteStartElement("skillids");
 
             for (int i = 0; i < Count; i++)
@@ -154,8 +155,18 @@ namespace ClassicUO.Game.Managers
         }
     }
 
-    internal sealed class SkillsGroupManager
+    public sealed class SkillsGroupManager
     {
+        private bool _isActive;
+        public bool IsActive
+        {
+            get { return _isActive; }
+            set
+            {
+                _isActive = value;
+            }
+        }
+
         private readonly World _world;
 
         public SkillsGroupManager(World world) => _world = world;
@@ -222,14 +233,18 @@ namespace ClassicUO.Game.Managers
                 return;
             }
 
-            XmlElement root = doc["skillsgroups"];
 
+
+            XmlElement root = doc["skillsgroups"];
             if (root != null)
             {
+                Boolean.TryParse(root.GetAttribute("isActive"), out _isActive);
                 foreach (XmlElement xml in root.GetElementsByTagName("group"))
                 {
                     SkillsGroup g = new SkillsGroup();
                     g.Name = xml.GetAttribute("name");
+
+                    Boolean.TryParse(xml.GetAttribute("isMaximized"), out g.IsMaximized);
 
                     XmlElement xmlIdsRoot = xml["skillids"];
 
@@ -261,6 +276,7 @@ namespace ClassicUO.Game.Managers
             {
                 xml.WriteStartDocument(true);
                 xml.WriteStartElement("skillsgroups");
+                xml.WriteAttributeString("isActive", IsActive.ToString());
 
                 foreach (SkillsGroup k in Groups)
                 {
@@ -500,14 +516,14 @@ namespace ClassicUO.Game.Managers
                         {
                             while ((strbuild = bin.ReadInt16()) != 0)
                             {
-                                sb.Append((char) strbuild);
+                                sb.Append((char)strbuild);
                             }
                         }
                         else
                         {
                             while ((strbuild = bin.ReadByte()) != 0)
                             {
-                                sb.Append((char) strbuild);
+                                sb.Append((char)strbuild);
                             }
                         }
 

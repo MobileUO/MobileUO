@@ -99,7 +99,17 @@ namespace Microsoft.Xna.Framework.Graphics
             set { y = value; }
         }
 
-        public Rectangle Bounds => new Rectangle(x,y,width,height);
+        public Rectangle Bounds
+        {
+            get => new Rectangle(x, y, width, height);
+            set
+            {
+                x = value.X;
+                y = value.Y;
+                width = value.Width;
+                height = value.Height;
+            }
+        }
 
         #endregion Properties
 

@@ -17,7 +17,7 @@ using ClassicUO.Utility.Logging;
 
 namespace ClassicUO.Game.UI.Gumps.CharCreation
 {
-    internal class CreateCharAppearanceGump : Gump
+    public class CreateCharAppearanceGump : Gump
     {
         struct CharacterInfo
         {

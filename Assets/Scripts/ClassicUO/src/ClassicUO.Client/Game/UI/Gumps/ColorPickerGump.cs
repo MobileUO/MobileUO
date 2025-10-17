@@ -1,12 +1,15 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
 using System;
+using ClassicUO.Game.Data;
+using ClassicUO.Game.GameObjects;
+using ClassicUO.Game.Managers;
 using ClassicUO.Game.UI.Controls;
 using ClassicUO.Network;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class ColorPickerGump : Gump
+    public class ColorPickerGump : Gump
     {
         private const int SLIDER_MIN = 0;
         private const int SLIDER_MAX = 4;
@@ -25,6 +28,16 @@ namespace ClassicUO.Game.UI.Gumps
             X = x;
             Y = y;
             Add(new GumpPic(0, 0, 0x0906, 0));
+
+            Add
+            (
+                new Button(1, 0x5669, 0x566B, 0x566A)
+                {
+                    X = 212,
+                    Y = 33,
+                    ButtonAction = ButtonAction.Activate
+                }
+            );
 
             Add
             (
@@ -58,7 +71,7 @@ namespace ClassicUO.Game.UI.Gumps
             (
                 _dyeTybeImage = new StaticPic(0x0FAB, 0)
                 {
-                    X = 200, Y = 58
+                    X = 200, Y = 78
                 }
             );
 
@@ -76,13 +89,47 @@ namespace ClassicUO.Game.UI.Gumps
 
                     if (LocalSerial != 0)
                     {
-                        NetClient.Socket.Send_DyeDataResponse(LocalSerial, _graphic, _box.SelectedHue);
+                        AsyncNetClient.Socket.Send_DyeDataResponse(LocalSerial, _graphic, _box.SelectedHue);
                     }
 
                     _okClicked?.Invoke(_box.SelectedHue);
                     Dispose();
 
                     break;
+
+                case 1:
+                    // color picker
+                    if (World.TargetManager.IsTargeting)
+                    {
+                        World.TargetManager.CancelTarget();
+                    }
+
+                    World.TargetManager.SetTargeting(EntityTargeted);
+                    break;
+            }
+        }
+
+        private void EntityTargeted(object obj)
+        {
+            if (obj is Entity entity)
+            {
+                _box.SelectedHue = entity.Hue;
+
+                // If the hue is not valid (rejected by the setter), send a message to the user
+                if (_box.SelectedHue != entity.Hue)
+                {
+                    string badHueMessage = Client.Game.UO.FileManager.Clilocs.GetString(1042295);
+
+                    World.MessageManager.HandleMessage(
+                        entity,
+                        badHueMessage,
+                        "System",
+                        0,
+                        MessageType.Regular,
+                        3,
+                        TextType.SYSTEM
+                    );
+                }
             }
         }
     }

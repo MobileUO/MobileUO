@@ -11,7 +11,7 @@ using ClassicUO.Utility.Logging;
 
 namespace ClassicUO.Game.Managers
 {
-    internal sealed class IgnoreManager
+    public sealed class IgnoreManager
     {
         private readonly World _world;
 

@@ -5,7 +5,6 @@ using ClassicUO.Utility;
 using System;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace ClassicUO.Assets
 {
@@ -36,10 +35,10 @@ namespace ClassicUO.Assets
             int static_group = isold ? Marshal.SizeOf<StaticGroupOld>() : Marshal.SizeOf<StaticGroupNew>();
             int staticscount = (int) ((tileData.Length - LAND_SIZE * land_group) / static_group);
 
-            if (staticscount > 2048)
-            {
-                staticscount = 2048;
-            }
+            // if (staticscount > 2048)
+            // {
+            //     staticscount = 2048;
+            // }
 
             tileData.Seek(0, System.IO.SeekOrigin.Begin);
 
@@ -346,6 +345,14 @@ namespace ClassicUO.Assets
         public bool IsWeapon => (Flags & TileFlag.Weapon) != 0;
         public bool IsMultiMovable => (Flags & TileFlag.MultiMovable) != 0;
         public bool IsWindow => (Flags & TileFlag.Window) != 0;
+
+        public void SetImpassable(bool value)
+        {
+            if (value)
+                Flags |= TileFlag.Impassable;
+            else
+                Flags &= ~TileFlag.Impassable;
+        }
     }
 
     // old

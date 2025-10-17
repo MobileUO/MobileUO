@@ -8,9 +8,10 @@ using System;
 
 namespace ClassicUO.Game.UI.Controls
 {
-    internal class Line : Control
+    public class Line : Control
     {
         private readonly Texture2D _texture;
+        private Vector3 _hueVector;
 
         public Line(int x, int y, int w, int h, uint color)
         {
@@ -20,12 +21,17 @@ namespace ClassicUO.Game.UI.Controls
             Height = h;
 
             _texture = SolidColorTextureCache.GetTexture(new Color { PackedValue = color });
+            _hueVector = ShaderHueTranslator.GetHueVector(0, false, Alpha);
+        }
+
+        public override void AlphaChanged(float oldValue, float newValue)
+        {
+            base.AlphaChanged(oldValue, newValue);
+            _hueVector = ShaderHueTranslator.GetHueVector(0, false, Alpha);
         }
 
         public override bool Draw(UltimaBatcher2D batcher, int x, int y)
         {
-            Vector3 hueVector = ShaderHueTranslator.GetHueVector(0, false, Alpha);
-
             batcher.Draw
             (
                 _texture,
@@ -36,7 +42,7 @@ namespace ClassicUO.Game.UI.Controls
                     Width,
                     Height
                 ),
-                hueVector
+                _hueVector
             );
 
             return true;

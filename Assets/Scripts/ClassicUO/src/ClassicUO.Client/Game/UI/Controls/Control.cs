@@ -9,23 +9,21 @@ using ClassicUO.Renderer;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
-using SDL2;
+using SDL3;
 using Keyboard = ClassicUO.Input.Keyboard;
-using Mouse = ClassicUO.Input.Mouse;
 
 namespace ClassicUO.Game.UI.Controls
 {
-    internal abstract class Control
+    public abstract class Control
     {
         internal static int _StepsDone = 1;
         internal static int _StepChanger = 1;
 
-        private bool _acceptKeyboardInput, _acceptMouseInput;
-        private int _activePage;
+        private bool _acceptKeyboardInput;
         private Rectangle _bounds;
-        private bool _handlesKeyboardFocus;
         private Point _offset;
         private Control _parent;
+        private float alpha = 1.0f;
 
         // MobileUO: added variables
         protected const int MOBILE_CLOSE_BUTTON_ID = -9999;
@@ -50,6 +48,16 @@ namespace ClassicUO.Game.UI.Controls
         public uint LocalSerial { get; set; }
 
         public bool IsFromServer { get; set; }
+
+        /// <summary>
+        /// This is not implemented in all controls, this is for use in custom control's that want to have a scale setting
+        /// </summary>
+        public double Scale { get; set; } = 1.0f;
+
+        /// <summary>
+        /// This is intended for scaling mouse positions and other non-visual uses
+        /// </summary>
+        public double InternalScale { get; set; } = 1.0f;
 
         public int Page { get; set; }
 
@@ -88,7 +96,15 @@ namespace ClassicUO.Game.UI.Controls
 
         public bool IsFocused { get; set; }
 
-        public float Alpha { get; set; } = 1.0f;
+        public float Alpha
+        {
+            get => alpha; set
+            {
+                float old = alpha;
+                alpha = value;
+                AlphaChanged(old, value);
+            }
+        }
 
         public List<Control> Children { get; }
 
@@ -104,10 +120,15 @@ namespace ClassicUO.Game.UI.Controls
             set => _acceptKeyboardInput = value;
         }
 
+        // MobileUO: Unity doesn't support field keyword
+        private bool _acceptMouseInput = true;
+
         public virtual bool AcceptMouseInput
         {
-            get => IsEnabled && !IsDisposed && _acceptMouseInput && IsVisible;
+            get => IsEnabled && !IsDisposed && IsVisible && _acceptMouseInput;
             set => _acceptMouseInput = value;
+            //get => IsEnabled && !IsDisposed && field && IsVisible;
+            //set;
         }
 
         public ref int X => ref _bounds.X;
@@ -171,38 +192,64 @@ namespace ClassicUO.Game.UI.Controls
         public bool IsModal { get; set; }
         public bool ModalClickOutsideAreaClosesThisControl { get; set; }
 
+        // MobileUO: Unity doesn't support field keyword
+        private bool _handlesKeyboardFocus;
 
         public virtual bool HandlesKeyboardFocus
         {
             get
             {
                 if (!IsEnabled || IsDisposed || !IsVisible)
-                {
                     return false;
-                }
 
                 if (_handlesKeyboardFocus)
-                {
                     return true;
-                }
 
                 if (Children == null)
-                {
                     return false;
-                }
 
-                foreach (Control c in Children)
+                // Avoid LINQ here to keep GC down in hot paths
+                foreach (var c in Children)
                 {
-                    if (c.HandlesKeyboardFocus)
-                    {
+                    if (c != null && c.HandlesKeyboardFocus)
                         return true;
-                    }
                 }
 
                 return false;
             }
             set => _handlesKeyboardFocus = value;
+            //get
+            //{
+            //    if (!IsEnabled || IsDisposed || !IsVisible)
+            //    {
+            //        return false;
+            //    }
+
+            //    if (field)
+            //    {
+            //        return true;
+            //    }
+
+            //    if (Children == null)
+            //    {
+            //        return false;
+            //    }
+
+            //    foreach (Control c in Children)
+            //    {
+            //        if (c.HandlesKeyboardFocus)
+            //        {
+            //            return true;
+            //        }
+            //    }
+
+            //    return false;
+            //}
+            //set;
         }
+
+        // MobileUO: Unity doesn't support field keyword
+        private int _activePage;
 
         public int ActivePage
         {
@@ -213,6 +260,20 @@ namespace ClassicUO.Game.UI.Controls
 
                 OnPageChanged();
             }
+            //get;
+            //set
+            //{
+            //    field = value;
+
+            //    OnPageChanged();
+            //}
+        }
+
+        public void SetDisposed(bool status){
+            if(status)
+                Dispose();
+            else
+                IsDisposed = false;
         }
 
         public bool WantUpdateSize { get; set; } = true;
@@ -220,6 +281,87 @@ namespace ClassicUO.Game.UI.Controls
         public bool AllowedToDraw { get; set; }
 
         public int TooltipMaxLength { get; private set; }
+
+        /// <summary>
+        /// Used in python API
+        /// </summary>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        /// <param name="w"></param>
+        /// <param name="h"></param>
+        public Control SetRect(int x, int y, int w, int h)
+        {
+            X = x;
+            Y = y;
+            SetWidth(w);
+            SetHeight(h);
+
+            return this;
+        }
+
+        /// <summary>
+        /// Used in python API
+        /// </summary>
+        /// <param name="width"></param>
+        public Control SetWidth(int width){
+            Width = width < 0 ? 0 : width;
+            return this;
+        }
+
+        /// <summary>
+        /// Used in python API
+        /// </summary>
+        /// <param name="height"></param>
+        public Control SetHeight(int height){
+            Height = height < 0 ? 0 : height;
+
+            return this;
+        }
+
+        /// <summary>
+        /// Used in python API
+        /// </summary>
+        /// <param name="x"></param>
+        public Control SetX(int x){
+            X = x;
+
+            return this;
+        }
+
+        /// <summary>
+        /// Used in python API
+        /// </summary>
+        /// <param name="y"></param>
+        public Control SetY(int y){
+            Y = y;
+
+            return this;
+        }
+
+        /// <summary>
+        /// Use int python API
+        /// </summary>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        public Control SetPos(int x, int y)
+        {
+            X = x;
+            Y = y;
+
+            return this;
+        }
+
+        /// <summary>
+        /// Used in python API
+        /// </summary>
+        /// <returns>int</returns>
+        public int GetX() => X;
+
+        /// <summary>
+        /// Used in python API
+        /// </summary>
+        /// <returns>int</returns>
+        public int GetY() => Y;
 
         public void UpdateOffset(int x, int y)
         {
@@ -235,8 +377,6 @@ namespace ClassicUO.Game.UI.Controls
             }
         }
 
-
-
         public virtual bool Draw(UltimaBatcher2D batcher, int x, int y)
         {
             if (IsDisposed)
@@ -244,9 +384,14 @@ namespace ClassicUO.Game.UI.Controls
                 return false;
             }
 
-            foreach (Control c in Children)
+            for (int i = 0; i < Children.Count; i++)
             {
-                if (c.Page == 0 || c.Page == ActivePage)
+                if (Children.Count <= i)
+                    break;
+
+                Control c = Children[i];
+
+                if (c != null && (c.Page == 0 || c.Page == ActivePage))
                 {
                     if (c.IsVisible)
                     {
@@ -260,64 +405,160 @@ namespace ClassicUO.Game.UI.Controls
             return true;
         }
 
+        /// <summary>
+        /// Update is called as often as possible.
+        /// </summary>
         public virtual void Update()
         {
-            if (IsDisposed)
-            {
+            if (IsDisposed || Children.Count == 0)
                 return;
-            }
 
-            if (Children.Count != 0)
+            int w = 0, h = 0, count = Children.Count;
+
+            for (int i = 0; i < count; i++)
             {
-                //InitializeControls();
-                int w = 0, h = 0;
+                if (i >= Children.Count)
+                    break;
 
-                for (int i = 0; i < Children.Count; i++)
+                Control c = Children[i];
+
+                if (c == null || c.IsDisposed)
+                    continue;
+
+                c.Update();
+
+                if (WantUpdateSize)
                 {
-                    Control c = Children[i];
-
-                    if (c.IsDisposed)
+                    if ((c.Page == 0 || c.Page == ActivePage) && c.IsVisible)
                     {
-                        OnChildRemoved();
-                        Children.RemoveAt(i--);
-
-                        continue;
-                    }
-
-                    c.Update();
-
-                    if (WantUpdateSize)
-                    {
-                        if ((c.Page == 0 || c.Page == ActivePage) && c.IsVisible)
+                        if (w < c.Bounds.Right)
                         {
-                            if (w < c.Bounds.Right)
-                            {
-                                w = c.Bounds.Right;
-                            }
+                            w = c.Bounds.Right;
+                        }
 
-                            if (h < c.Bounds.Bottom)
-                            {
-                                h = c.Bounds.Bottom;
-                            }
+                        if (h < c.Bounds.Bottom)
+                        {
+                            h = c.Bounds.Bottom;
                         }
                     }
                 }
+            }
 
-                if (WantUpdateSize && IsVisible)
+            if (WantUpdateSize && IsVisible)
+            {
+                if (w != Width)
                 {
-                    if (w != Width)
+                    Width = w;
+                }
+
+                if (h != Height)
+                {
+                    Height = h;
+                }
+
+                WantUpdateSize = false;
+            }
+        }
+
+        /// <summary>
+        /// Intended for any ui changes that only need to occur just before drawing to the screen.
+        /// </summary>
+        public virtual void PreDraw()
+        {
+            if (IsDisposed) return;
+
+            if (Children.Count == 0) return;
+
+            int count = Children.Count;
+
+            for (int i = 0; i < count; i++)
+            {
+                if (i >= Children.Count)
+                    continue;
+
+                Control c = Children[i];
+
+                if (c == null || c.IsDisposed)
+                    continue;
+
+                c.PreDraw();
+            }
+
+            CleanUpDisposedChildren();
+        }
+
+        /// <summary>
+        /// Scale the width and height of this control. Width/Height * Scale
+        /// </summary>
+        /// <param name="scale"></param>
+        /// <returns>This control</returns>
+        public virtual Control ScaleWidthAndHeight(double scale)
+        {
+            if (scale != 1f)
+            {
+                Width = (int)(Width * scale);
+                Height = (int)(Height * scale);
+            }
+            return this;
+        }
+
+        /// <summary>
+        /// Scale the x/y position of this control. x/y * Scale
+        /// </summary>
+        /// <param name="scale"></param>
+        /// <returns>This control</returns>
+        public virtual Control ScaleXAndY(double scale)
+        {
+            if (scale != 1f)
+            {
+                X = (int)(X * scale);
+                Y = (int)(Y * scale);
+            }
+            return this;
+        }
+
+        /// <summary>
+        /// Set the internal scale used for mouse interactions or other non visual scaling
+        /// </summary>
+        /// <param name="scale"></param>
+        /// <returns>This control</returns>
+        public virtual Control SetInternalScale(double scale)
+        {
+            InternalScale = scale;
+            return this;
+        }
+
+        public void ForceSizeUpdate(bool onlyIfLarger = true)
+        {
+            int h = onlyIfLarger ? Height : 0, w = onlyIfLarger ? Width : 0;
+            for (int i = 0; i < Children.Count; i++)
+            {
+                Control c = Children[i];
+                if ((c.Page == 0 || c.Page == ActivePage) && c.IsVisible && !c.IsDisposed)
+                {
+                    if (w < c.Bounds.Right)
                     {
-                        Width = w;
+                        w = c.Bounds.Right;
                     }
 
-                    if (h != Height)
+                    if (h < c.Bounds.Bottom)
                     {
-                        Height = h;
+                        h = c.Bounds.Bottom;
                     }
-
-                    WantUpdateSize = false;
                 }
             }
+
+            if (w != Width)
+            {
+                Width = w;
+            }
+
+            if (h != Height)
+            {
+                Height = h;
+            }
+
+            WantUpdateSize = false;
         }
 
         public virtual void OnPageChanged()
@@ -326,6 +567,18 @@ namespace ClassicUO.Game.UI.Controls
             if (ServerSerial != 0)
             {
                 WantUpdateSize = true;
+            }
+        }
+
+        private void CleanUpDisposedChildren()
+        {
+            for (int i = Children.Count - 1; i >= 0; i--)
+            {
+                if (Children[i]?.IsDisposed == true)
+                {
+                    OnChildRemoved();
+                    Children.RemoveAt(i);
+                }
             }
         }
 
@@ -388,9 +641,11 @@ namespace ClassicUO.Game.UI.Controls
 
         internal event EventHandler<MouseDoubleClickEventArgs> MouseDoubleClick;
 
-        internal event EventHandler FocusEnter, FocusLost;
+        internal event EventHandler FocusEnter, FocusLost, Disposed;
 
         internal event EventHandler<KeyboardEventArgs> KeyDown, KeyUp;
+
+        internal event EventHandler<SDL.SDL_GamepadButton> ControllerButtonUp, ControllerButtonDown;
 
 
         public void HitTest(int x, int y, ref Control res)
@@ -420,6 +675,8 @@ namespace ClassicUO.Game.UI.Controls
                     {
                         Control c = Children[i];
 
+                        if(c == null) continue;
+
                         if (c.Page == 0 || c.Page == ActivePage)
                         {
                             c.HitTest(x, y, ref res);
@@ -437,6 +694,13 @@ namespace ClassicUO.Game.UI.Controls
         public virtual void OnHitTestSuccess(int x, int y, ref Control res)
         {
         }
+
+        /// <summary>
+        /// Invoked when alpha is changed on a control
+        /// </summary>
+        /// <param name="oldValue"></param>
+        /// <param name="newValue"></param>
+        public virtual void AlphaChanged(float oldValue, float newValue) { }
 
         public Control GetFirstControlAcceptKeyboardInput()
         {
@@ -471,7 +735,7 @@ namespace ClassicUO.Game.UI.Controls
 
             return c;
         }
-        
+
         public void Insert(int index, Control c, int page = 0)
         {
             c.Page = 0;
@@ -616,6 +880,10 @@ namespace ClassicUO.Game.UI.Controls
             KeyUp?.Raise(arg);
         }
 
+        public void InvokeControllerButtonUp(SDL.SDL_GamepadButton button) { OnControllerButtonUp(button); ControllerButtonUp?.Raise(button); }
+
+        public void InvokeControllerButtonDown(SDL.SDL_GamepadButton button) { OnControllerButtonDown(button); ControllerButtonDown?.Raise(button); }
+
         public void InvokeMouseWheel(MouseEventType delta)
         {
             OnMouseWheel(delta);
@@ -706,6 +974,10 @@ namespace ClassicUO.Game.UI.Controls
         {
             Parent?.OnKeyUp(key, mod);
         }
+
+        protected virtual void OnControllerButtonUp(SDL.SDL_GamepadButton button) { }
+
+        protected virtual void OnControllerButtonDown(SDL.SDL_GamepadButton button) { }
 
         public virtual bool Contains(int x, int y)
         {
@@ -829,14 +1101,21 @@ namespace ClassicUO.Game.UI.Controls
             {
                 foreach (Control c in Children)
                 {
-                    c.Dispose();
+                    c?.Dispose();
                 }
 
                 Children.Clear();
             }
 
             IsDisposed = true;
+            AfterDispose();
+            Disposed?.Invoke(null, null);
         }
+
+        /// <summary>
+        /// Called after the control has been disposed.
+        /// </summary>
+        public virtual void AfterDispose() { }
 
         // MobileUO: added function
         public bool IsMobileCloseButton()

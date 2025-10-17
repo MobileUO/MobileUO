@@ -4,7 +4,7 @@ using ClassicUO.Game.UI.Controls;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal sealed class MacroGump : Gump
+    public sealed class MacroGump : Gump
     {
         public MacroGump(World world, string name) : base(world, 0, 0)
         {
@@ -14,7 +14,7 @@ namespace ClassicUO.Game.UI.Gumps
 
             AlphaBlendControl macroGumpBackground = new AlphaBlendControl
             {
-                Width = 260,
+                Width = 360,
                 Height = 200,
                 X = camera.Bounds.Width / 2 - 125,
                 Y = 150,

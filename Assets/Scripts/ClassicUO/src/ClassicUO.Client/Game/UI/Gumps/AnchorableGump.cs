@@ -3,21 +3,21 @@
 using ClassicUO.Configuration;
 using ClassicUO.Game.Managers;
 using ClassicUO.Input;
-using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal enum ANCHOR_TYPE
+    public enum ANCHOR_TYPE
     {
         NONE,
         SPELL,
-        HEALTHBAR
+        HEALTHBAR,
+        DISABLED
     }
 
-    internal abstract class AnchorableGump : Gump
+    public abstract class AnchorableGump : Gump
     {
         private AnchorableGump _anchorCandidate;
 
@@ -29,7 +29,7 @@ namespace ClassicUO.Game.UI.Gumps
 
         protected AnchorableGump(World world, uint local, uint server) : base(world, local, server) { }
 
-        public ANCHOR_TYPE AnchorType { get; protected set; }
+        public ANCHOR_TYPE AnchorType { get; set; }
         public virtual int GroupMatrixWidth { get; protected set; }
         public virtual int GroupMatrixHeight { get; protected set; }
         public int WidthMultiplier { get; protected set; } = 1;
@@ -66,7 +66,7 @@ namespace ClassicUO.Game.UI.Gumps
 
         protected override void OnMouseOver(int x, int y)
         {
-            if (!IsDisposed && UIManager.IsDragging && UIManager.DraggingControl == this)
+            if (!IsDisposed && UIManager.IsDragging && UIManager.DraggingControl == this && AnchorType != ANCHOR_TYPE.DISABLED)
             {
                 _anchorCandidate = UIManager.AnchorManager.GetAnchorableControlUnder(this);
             }

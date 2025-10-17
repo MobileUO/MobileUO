@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: BSD-2-Clause
+// SPDX-License-Identifier: BSD-2-Clause
 
 namespace ClassicUO.Game
 {
@@ -7,11 +7,13 @@ namespace ClassicUO.Game
         public const string WIKI_LINK = "https://github.com/ClassicUO/ClassicUO/wiki";
 
         public const int MIN_FPS = 12;
-        public const int MAX_FPS = 250;
+        public const int MAX_FPS = 1000;
         public const int LOGIN_SCREEN_FPS = 60;
 
         public const int CHARACTER_ANIMATION_DELAY = 80;
         public const int ITEM_EFFECT_ANIMATION_DELAY = 50;
+
+        public const int ALLOWED_Z_DIFFERENCE = 10;
 
         public const int MAX_STEP_COUNT = 5;
         public const int TURN_DELAY = 100; // original client 12.5 fps = 80ms delay. Edit --> it causes throttling
@@ -68,12 +70,12 @@ namespace ClassicUO.Game
         public const ushort TREE_REPLACE_GRAPHIC = 0x0E59;
 
         public const int MIN_CIRCLE_OF_TRANSPARENCY_RADIUS = 50;
-        public const int MAX_CIRCLE_OF_TRANSPARENCY_RADIUS = 200;
+        public const int MAX_CIRCLE_OF_TRANSPARENCY_RADIUS = 1000;
 
         public const int MAX_ABILITIES_COUNT = 32;
 
         public const int DRAG_ITEMS_DISTANCE = 3;
-        public const int MIN_GUMP_DRAG_DISTANCE = 0;
+        public const int MIN_GUMP_DRAG_DISTANCE = 5;
         public const int MIN_PICKUP_DRAG_DISTANCE_PIXELS = 5;
 
         public const int MIN_VIEW_RANGE = 5;
@@ -86,7 +88,7 @@ namespace ClassicUO.Game
 
         public const ushort HIGHLIGHT_CURRENT_OBJECT_HUE = 0x014;
 
-        public const int MAX_JOURNAL_HISTORY_COUNT = 100;
+        public const int MAX_JOURNAL_HISTORY_COUNT = 1000;
 
         // MobileUO: keep for Assistant
         public const uint JOURNAL_LOCALSERIAL = 0xFFFFFFE1;

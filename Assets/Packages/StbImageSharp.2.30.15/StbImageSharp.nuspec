@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+  <metadata>
+    <id>StbImageSharp</id>
+    <version>2.30.15</version>
+    <authors>StbImageSharpTeam</authors>
+    <projectUrl>https://github.com/StbSharp/StbImageSharp</projectUrl>
+    <description>C# port of the stb_image.h</description>
+    <dependencies>
+      <group targetFramework=".NETFramework4.7.1" />
+      <group targetFramework=".NETStandard2.0" />
+    </dependencies>
+  </metadata>
+</package>

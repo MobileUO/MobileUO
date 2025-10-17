@@ -4,20 +4,22 @@ using System;
 
 namespace ClassicUO.Network
 {
-    sealed class NetStatistics
+    // MobileUO: primary constructors not available in Unity
+
+    public sealed class NetStatistics//(AsyncNetClient socket)
     {
-        private readonly NetClient _socket;
+        private AsyncNetClient socket;
+
+        public NetStatistics(AsyncNetClient socket)
+        {
+            this.socket = socket ?? throw new ArgumentNullException(nameof(socket));
+        }
+
         private uint _lastTotalBytesReceived, _lastTotalBytesSent, _lastTotalPacketsReceived, _lastTotalPacketsSent;
         private byte _pingIdx;
 
         private readonly uint[] _pings = new uint[5];
         private uint _startTickValue, _statisticsTimer;
-
-
-        public NetStatistics(NetClient socket)
-        {
-            _socket = socket;
-        }
 
 
         public DateTime ConnectedFrom { get; set; }
@@ -37,6 +39,8 @@ namespace ClassicUO.Network
         public uint DeltaPacketsReceived { get; private set; }
 
         public uint DeltaPacketsSent { get; private set; }
+
+        public uint LastPingReceived { get; private set; } = Time.Ticks;
 
         public uint Ping
         {
@@ -66,18 +70,22 @@ namespace ClassicUO.Network
         public void PingReceived(byte idx)
         {
             _pings[idx % _pings.Length] = Time.Ticks - _startTickValue;
+            LastPingReceived = Time.Ticks;
         }
 
         public void SendPing()
         {
-            if (!_socket.IsConnected)
+            if (socket != null)
             {
-                return;
-            }
+                 if (!socket.IsConnected)
+                 {
+                     return;
+                 }
 
-            _startTickValue = Time.Ticks;
-            _socket.Send_Ping(_pingIdx);
-            _pingIdx = (byte)((_pingIdx + 1) % _pings.Length);
+                 _startTickValue = Time.Ticks;
+                 socket.Send_Ping(_pingIdx);
+                 _pingIdx = (byte)((_pingIdx + 1) % _pings.Length);
+            }
         }
 
         public void Reset()

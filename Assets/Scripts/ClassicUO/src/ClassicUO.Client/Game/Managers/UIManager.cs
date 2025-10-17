@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
-using System;
-using System.Collections.Generic;
+
 using ClassicUO.Configuration;
 using ClassicUO.Game.Scenes;
 using ClassicUO.Game.UI.Controls;
@@ -9,6 +8,9 @@ using ClassicUO.Game.UI.Gumps;
 using ClassicUO.Input;
 using ClassicUO.Renderer;
 using Microsoft.Xna.Framework;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace ClassicUO.Game.Managers
 {
@@ -24,6 +26,7 @@ namespace ClassicUO.Game.Managers
         private static Control _keyboardFocusControl, _lastFocus;
         private static bool _needSort;
 
+        public static World World { get; set; }
 
         public static float ContainerScale { get; set; } = 1f;
 
@@ -34,6 +37,8 @@ namespace ClassicUO.Game.Managers
         public static Control MouseOverControl { get; private set; }
 
         public static bool IsModalOpen { get; private set; }
+
+        public static bool InGame;
 
         public static bool IsMouseOverWorld
         {
@@ -82,6 +87,25 @@ namespace ClassicUO.Game.Managers
 
         public static ContextMenuShowMenu ContextMenu { get; private set; }
 
+        public static bool UpdateTimerEnabled
+        {
+            get => updateTimerEnabled; set
+            {
+                updateTimerEnabled = value;
+                if (value)
+                {
+                    UpdateTimerTotalTime = new Dictionary<Type, double>();
+                    UpdateTimerCount = new Dictionary<Type, int>();
+                    updateTimer = Stopwatch.StartNew();
+                }
+            }
+        }
+
+        public static Dictionary<Type, double> UpdateTimerTotalTime;
+        public static Dictionary<Type, int> UpdateTimerCount;
+        private static bool updateTimerEnabled;
+        private static Stopwatch updateTimer;
+
         public static void ShowGamePopup(PopupMenuGump popup)
         {
             PopupMenu?.Dispose();
@@ -98,9 +122,9 @@ namespace ClassicUO.Game.Managers
 
         public static bool IsModalControlOpen()
         {
-            foreach (Gump control in Gumps)
+            for (LinkedListNode<Gump> last = Gumps.Last; last != null; last = last.Previous)
             {
-                if (control.IsModal)
+                if (last.Value.IsModal)
                 {
                     return true;
                 }
@@ -114,11 +138,11 @@ namespace ClassicUO.Game.Managers
         {
             HandleMouseInput();
 
-            if (_mouseDownControls[(int) MouseButtonType.Left] != null)
+            if (_mouseDownControls[(int)MouseButtonType.Left] != null)
             {
                 if (ProfileManager.CurrentProfile == null || !ProfileManager.CurrentProfile.HoldAltToMoveGumps || Keyboard.Alt)
                 {
-                    AttemptDragControl(_mouseDownControls[(int) MouseButtonType.Left], true);
+                    AttemptDragControl(_mouseDownControls[(int)MouseButtonType.Left], true);
                 }
             }
 
@@ -152,7 +176,7 @@ namespace ClassicUO.Game.Managers
                     _keyboardFocusControl = MouseOverControl;
                 }
 
-                _mouseDownControls[(int) button] = MouseOverControl;
+                _mouseDownControls[(int)button] = MouseOverControl;
             }
             else
             {
@@ -178,7 +202,7 @@ namespace ClassicUO.Game.Managers
             EndDragControl(Mouse.Position);
             HandleMouseInput();
 
-            int index = (int) button;
+            int index = (int)button;
 
             if (MouseOverControl != null)
             {
@@ -243,7 +267,7 @@ namespace ClassicUO.Game.Managers
 
         public static Control LastControlMouseDown(MouseButtonType button)
         {
-            return _mouseDownControls[(int) button];
+            return _mouseDownControls[(int)button];
         }
 
         public static void SavePosition(uint serverSerial, Point point)
@@ -320,6 +344,21 @@ namespace ClassicUO.Game.Managers
             return null;
         }
 
+        public static Gump GetGumpServer(uint serial)
+        {
+            for (LinkedListNode<Gump> last = Gumps.Last; last != null; last = last.Previous)
+            {
+                Control c = last.Value;
+
+                if (!c.IsDisposed && c.ServerSerial == serial)
+                {
+                    return c as Gump;
+                }
+            }
+
+            return null;
+        }
+
         public static TradingGump GetTradingGump(uint serial)
         {
             for (LinkedListNode<Gump> g = Gumps.Last; g != null; g = g.Previous)
@@ -344,9 +383,25 @@ namespace ClassicUO.Game.Managers
                 LinkedListNode<Gump> next = first.Next;
 
                 Control g = first.Value;
+                if (updateTimerEnabled)
+                {
+                    updateTimer.Restart();
+                    g.Update();
+                    updateTimer.Stop();
 
-                g.Update();
+                    if (!UpdateTimerTotalTime.ContainsKey(g.GetType()))
+                    {
+                        UpdateTimerTotalTime[g.GetType()] = 0;
+                        UpdateTimerCount[g.GetType()] = 0;
+                    }
 
+                    UpdateTimerTotalTime[g.GetType()] += updateTimer.Elapsed.TotalMilliseconds;
+                    UpdateTimerCount[g.GetType()]++;
+                }
+                else
+                {
+                    g.Update();
+                }
                 if (g.IsDisposed)
                 {
                     Gumps.Remove(first);
@@ -359,15 +414,40 @@ namespace ClassicUO.Game.Managers
             HandleMouseInput();
         }
 
-        public static void Draw(UltimaBatcher2D batcher)
+        public static void PreDraw()
         {
             SortControlsByInfo();
 
-            batcher.Begin();
+            LinkedListNode<Gump> first = Gumps.First;
+
+            while (first != null)
+            {
+                LinkedListNode<Gump> next = first.Next;
+
+                Gump g = first.Value;
+
+                g.PreDraw();
+
+                if (g.IsDisposed)
+                {
+                    Gumps.Remove(first);
+                }
+
+                first = next;
+            }
+        }
+
+        public static void Draw(UltimaBatcher2D batcher)
+        {
+            SortControlsByInfo();
+            if (InGame && ProfileManager.CurrentProfile.GlobalScaling)
+                batcher.Begin(null, Matrix.CreateScale(ProfileManager.CurrentProfile.GlobalScale));
+            else
+                batcher.Begin();
 
             for (LinkedListNode<Gump> last = Gumps.Last; last != null; last = last.Previous)
             {
-                Control g = last.Value;
+                Gump g = last.Value;
                 g.Draw(batcher, g.X, g.Y);
             }
 
@@ -433,7 +513,7 @@ namespace ClassicUO.Game.Managers
 
             if (_keyboardFocusControl == null)
             {
-                if (SystemChat != null && !SystemChat.IsDisposed)
+                if (SystemChat is { IsDisposed: false })
                 {
                     _keyboardFocusControl = SystemChat.TextBoxControl;
                     _keyboardFocusControl.OnFocusEnter();
@@ -645,10 +725,10 @@ namespace ClassicUO.Game.Managers
                     // MobileUO: don't change this or dragging gumps goes wrong
                     _dragOrigin = Mouse.Position;
 
-                     for (int i = 0; i < (int) MouseButtonType.Size; i++)
-                     {
+                    for (int i = 0; i < (int)MouseButtonType.Size; i++)
+                    {
                         _mouseDownControls[i] = null;
-                     }
+                    }
                 }
 
                 Point delta = Mouse.Position - _dragOrigin;

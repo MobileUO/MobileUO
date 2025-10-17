@@ -84,7 +84,7 @@ namespace ClassicUO.Renderer
             {
                 while (!_packer.PackRect(width, height, out pr))
                 {
-                    CreateNewTexture2D(width, height);
+                        CreateNewTexture2D(width, height);
                     index = _textureList.Count - 1;
                 }
             }

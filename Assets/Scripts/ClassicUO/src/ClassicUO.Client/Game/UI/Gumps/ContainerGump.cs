@@ -16,7 +16,7 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class ContainerGump : TextContainerGump
+    public class ContainerGump : TextContainerGump
     {
         private long _corpseEyeTicks;
         private ContainerData _data;
@@ -24,8 +24,11 @@ namespace ClassicUO.Game.UI.Gumps
         private GumpPic _eyeGumpPic;
         private GumpPicContainer _gumpPicContainer;
         private readonly bool _hideIfEmpty;
+        private readonly bool showGridToggle = false;
         private HitBox _hitBox;
         private bool _isMinimized;
+        private NiceButton returnToGridView;
+        private bool firstItemsLoaded = false;
 
         internal const int CORPSES_GUMP = 0x0009;
 
@@ -109,6 +112,11 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 Client.Game.Audio.PlaySound(_data.OpenSound);
             }
+        }
+
+        public ContainerGump(World world, uint serial, ushort gumpid, bool playsound, bool showGridToggle) : this(world, serial, gumpid, playsound)
+        {
+            this.showGridToggle = showGridToggle;
         }
 
         public ushort Graphic { get; }
@@ -198,6 +206,24 @@ namespace ClassicUO.Game.UI.Gumps
 
             Width = _gumpPicContainer.Width = (int)(_gumpPicContainer.Width * scale);
             Height = _gumpPicContainer.Height = (int)(_gumpPicContainer.Height * scale);
+
+            if (showGridToggle)
+            {
+                returnToGridView = new NiceButton(0, 0, 20, 20, ButtonAction.Activate, "#") { IsSelectable = false };
+                returnToGridView.SetTooltip("Return to grid container view");
+                returnToGridView.MouseUp += (s, e) =>
+                {
+                    if (e.Button == MouseButtonType.Left)
+                    {
+                        UIManager.GetGump<GridContainer>(LocalSerial)?.Dispose();
+                        GridContainer c;
+                        UIManager.Add(c = new GridContainer(World, LocalSerial, Graphic, true));
+                        Dispose();
+                    }
+                };
+
+                Add(returnToGridView);
+            }
         }
 
         private void HitBoxOnMouseUp(object sender, MouseEventArgs e)
@@ -312,13 +338,13 @@ namespace ClassicUO.Game.UI.Gumps
                                     case 0x238C:
                                     case 0x23A0:
                                     case 0x2D50:
-                                    {
-                                        dropcontainer = target.Serial;
-                                        x = target.X;
-                                        y = target.Y;
+                                        {
+                                            dropcontainer = target.Serial;
+                                            x = target.X;
+                                            y = target.Y;
 
-                                        break;
-                                    }
+                                            break;
+                                        }
                                 }
                             }
                         }
@@ -476,7 +502,6 @@ namespace ClassicUO.Game.UI.Gumps
             if (item == null || item.IsDestroyed)
             {
                 Dispose();
-
                 return;
             }
 
@@ -514,6 +539,12 @@ namespace ClassicUO.Game.UI.Gumps
             base.Save(writer);
             writer.WriteAttributeString("graphic", Graphic.ToString());
             writer.WriteAttributeString("isminimized", IsMinimized.ToString());
+
+            var item = World.Items.Get(LocalSerial);
+            if (item is not null)
+            {
+                writer.WriteAttributeString("parent", item.Container.ToString());
+            }
         }
 
         public override void Restore(XmlElement xml)
@@ -609,6 +640,11 @@ namespace ClassicUO.Game.UI.Gumps
                 itemControl.Y = (int)(((short)item.Y - (IsChessboard ? 20 : 0)) * scale);
 
                 Add(itemControl);
+            }
+
+            if (!firstItemsLoaded)
+            {
+                firstItemsLoaded = true;
             }
         }
 

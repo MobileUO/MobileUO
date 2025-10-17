@@ -5,7 +5,7 @@ using ClassicUO.Utility.Logging;
 
 namespace ClassicUO.Network
 {
-    internal sealed class PacketsTable
+    public sealed class PacketsTable
     {
         // MobileUO: added static instance of PacketsTable
         // MobileUO: TODO: remove once old packet classes are removed

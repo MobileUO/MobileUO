@@ -5,7 +5,7 @@ using ClassicUO.Assets;
 
 namespace ClassicUO.Game.Data
 {
-    internal class CharacterCreationValues
+    public class CharacterCreationValues
     {
         private static readonly ushort[] HumanSkinTone =
         {
@@ -213,7 +213,7 @@ namespace ClassicUO.Game.Data
             );
         }
 
-        internal class ComboContent
+        public class ComboContent
         {
             private readonly int[] _ids;
 

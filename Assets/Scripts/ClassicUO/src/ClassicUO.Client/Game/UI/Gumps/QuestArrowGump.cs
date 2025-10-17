@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: BSD-2-Clause
+// SPDX-License-Identifier: BSD-2-Clause
 
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
@@ -9,7 +9,7 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class QuestArrowGump : Gump
+    public class QuestArrowGump : Gump
     {
         private GumpPic _arrow;
         private Direction _direction;
@@ -179,6 +179,8 @@ namespace ClassicUO.Game.UI.Gumps
 
         protected override void OnMouseUp(int x, int y, MouseButtonType button)
         {
+            if (CanCloseWithRightClick) return; //This is set to true in Python API, we can ignore server-side stuff
+
             bool leftClick = button == MouseButtonType.Left;
             bool rightClick = button == MouseButtonType.Right;
 

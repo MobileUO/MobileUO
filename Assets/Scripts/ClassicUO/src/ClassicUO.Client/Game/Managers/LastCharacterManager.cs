@@ -36,7 +36,14 @@ namespace ClassicUO.Game.Managers
                 ConfigurationResolver.Save(LastCharacters, _lastCharacterFile, LastCharacterJsonContext.Default.ListLastCharacterInfo);
             }
 
-            LastCharacters = ConfigurationResolver.Load<List<LastCharacterInfo>>(_lastCharacterFile, LastCharacterJsonContext.Default.ListLastCharacterInfo);
+            try
+            {
+                LastCharacters = ConfigurationResolver.Load<List<LastCharacterInfo>>(_lastCharacterFile, LastCharacterJsonContext.Default.ListLastCharacterInfo);
+            }
+            catch (Exception e)
+            {
+                Log.Error(e.ToString());
+            }
 
             // safety check
             if (LastCharacters == null)

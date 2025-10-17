@@ -5,7 +5,7 @@ using ClassicUO.Utility;
 
 namespace ClassicUO.Game.GameObjects
 {
-    internal sealed class FixedEffect : GameEffect
+    public sealed class FixedEffect : GameEffect
     {
         public FixedEffect(World world, EffectManager manager, ushort graphic, ushort hue, int duration, byte speed)
             : base(world, manager, graphic, hue, duration, speed)

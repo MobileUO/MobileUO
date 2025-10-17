@@ -1,9 +1,10 @@
 using System;
 using ClassicUO.Assets;
 using ClassicUO.Utility;
+using ClassicUO.Utility.Logging;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using SDL2;
+using SDL3;
 
 namespace ClassicUO.Renderer.Arts
 {
@@ -42,7 +43,24 @@ namespace ClassicUO.Renderer.Arts
 
             if (spriteInfo.Texture == null)
             {
-                var artInfo = _artLoader.GetArt(idx);
+                ArtInfo artInfo = PNGLoader.Instance.LoadArtTexture(idx);
+                bool loadedFromPNG = artInfo.Pixels != null && !artInfo.Pixels.IsEmpty;
+
+                if (artInfo.Pixels.IsEmpty)
+                {
+                    artInfo = _artLoader.GetArt(idx);
+                }
+
+                if (artInfo.Pixels.IsEmpty && idx > 0)
+                {
+                    // Trying to load a texture that does not exist in the client MULs
+                    // Degrading gracefully and only crash if not even the fallback ItemID exists
+                    Log.Error(
+                        $"Texture not found for sprite: idx: {idx}; itemid: {(idx > 0x4000 ? idx - 0x4000 : '-')}"
+                    );
+                    return ref Get(0); // ItemID of "UNUSED" placeholder
+                }
+
                 if (!artInfo.Pixels.IsEmpty)
                 {
                     spriteInfo.Texture = _atlas.AddSprite(
@@ -51,6 +69,12 @@ namespace ClassicUO.Renderer.Arts
                         artInfo.Height,
                         out spriteInfo.UV
                     );
+
+                    // Clear the pixel cache from PNG Loader since it's now in the atlas
+                    if (loadedFromPNG)
+                    {
+                        PNGLoader.Instance.ClearArtPixelCache(idx);
+                    }
 
                     if (idx > 0x4000)
                     {
@@ -107,15 +131,17 @@ namespace ClassicUO.Renderer.Arts
 
             fixed (uint* ptr = artInfo.Pixels)
             {
-                SDL.SDL_Surface* surface = (SDL.SDL_Surface*)
-                    SDL.SDL_CreateRGBSurfaceWithFormatFrom(
-                        (IntPtr)ptr,
-                        artInfo.Width,
-                        artInfo.Height,
-                        32,
-                        4 * artInfo.Width,
-                        SDL.SDL_PIXELFORMAT_ABGR8888
-                    );
+                SDL.SDL_Surface* surface = (SDL.SDL_Surface*)SDL.SDL_CreateSurfaceFrom(artInfo.Width, artInfo.Height, SDL.SDL_PixelFormat.SDL_PIXELFORMAT_ABGR8888, (IntPtr)ptr, 4 * artInfo.Width);
+                // SDL2:
+                // SDL.SDL_Surface* surface = (SDL.SDL_Surface*)
+                //     SDL.SDL_CreateRGBSurfaceWithFormatFrom(
+                //         (IntPtr)ptr,
+                //         artInfo.Width,
+                //         artInfo.Height,
+                //         32,
+                //         4 * artInfo.Width,
+                //         SDL.SDL_PIXELFORMAT_ABGR8888
+                //     );
 
                 int stride = surface->pitch >> 2;
                 uint* pixels_ptr = (uint*)surface->pixels;
@@ -159,12 +185,14 @@ namespace ClassicUO.Renderer.Arts
                             {
                                 c.PackedValue = *pixels_ptr;
                                 *pixels_ptr =
-                                    HuesHelper.Color16To32(
-                                        _huesLoader.GetColor16(
-                                            HuesHelper.ColorToHue(c),
-                                            customHue
-                                        )
-                                    ) | 0xFF_00_00_00;
+                                    _huesLoader.ApplyHueRgba8888(HuesHelper.Color32To16(*pixels_ptr), customHue);
+
+                                     /*HuesHelper.Color16To32(
+                                         _huesLoader.GetColor16(
+                                             HuesHelper.ColorToHue(c),
+                                             customHue
+                                         )
+                                     ) | 0xFF_00_00_00;*/
                             }
                         }
 

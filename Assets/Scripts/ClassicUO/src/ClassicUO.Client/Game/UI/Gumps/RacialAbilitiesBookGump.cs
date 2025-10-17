@@ -11,7 +11,7 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class RacialAbilitiesBookGump : Gump
+    public class RacialAbilitiesBookGump : Gump
     {
         private static readonly string[] _humanNames = { "Strong Back", "Tough", "Workhorse", "Jack of All Trades" };
         private static readonly string[] _elfNames =
@@ -192,7 +192,7 @@ namespace ClassicUO.Game.UI.Gumps
                     {
                         if ((ushort) ((GumpPic) sender).LocalSerial == 0x5DDA && World.Player.Race == RaceType.GARGOYLE)
                         {
-                            NetClient.Socket.Send_ToggleGargoyleFlying();
+                            AsyncNetClient.Socket.Send_ToggleGargoyleFlying();
                             e.Result = true;
                         }
                     };

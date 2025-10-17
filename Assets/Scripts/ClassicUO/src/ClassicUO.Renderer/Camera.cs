@@ -82,7 +82,7 @@ namespace ClassicUO.Renderer
                 _updateMatrixes = true;
             }
 
-            _timeDelta= timeDelta;
+            _timeDelta = timeDelta;
             _mousePos = mousePos;
 
             UpdateMatrices();
@@ -125,8 +125,8 @@ namespace ClassicUO.Renderer
         {
             float x = position.X * matrix.M11 + position.Y * matrix.M21 + matrix.M41;
             float y = position.X * matrix.M12 + position.Y * matrix.M22 + matrix.M42;
-            result.X = (int) x;
-            result.Y = (int) y;
+            result.X = (int)x;
+            result.Y = (int)y;
         }
 
         public Point MouseToWorldPosition()

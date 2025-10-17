@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
+
 using System;
 using System.Collections.Generic;
 using ClassicUO.Configuration;
@@ -7,17 +8,17 @@ using ClassicUO.Game.Data;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.Scenes;
 using ClassicUO.IO;
-using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MathHelper = ClassicUO.Utility.MathHelper;
+using ClassicUO.Assets;
 // MobileUO: added import
 using ClassicUO.Game.UI.Controls;
 
 namespace ClassicUO.Game.GameObjects
 {
-    internal partial class Item
+    public partial class Item
     {
         private static EquipConvData? _equipConvData;
 
@@ -29,7 +30,7 @@ namespace ClassicUO.Game.GameObjects
             }
 
             if (
-                ItemData.IsLight
+                _isLight
                 || DisplayedGraphic >= 0x3E02 && DisplayedGraphic <= 0x3E0B
                 || DisplayedGraphic >= 0x3914 && DisplayedGraphic <= 0x3929
             )
@@ -59,6 +60,20 @@ namespace ClassicUO.Game.GameObjects
             ushort hue = Hue;
             ushort graphic = DisplayedGraphic;
             bool partial = ItemData.IsPartialHue;
+            if (ProfileManager.CurrentProfile.AutoAvoidObstacules) {
+                if  (StaticFilters.isHumanAndMonster(graphic))
+                {
+                    if (StaticFilters.IsOutStamina(World))
+                    {
+                        Client.Game.UO.FileManager.TileData.StaticData[Graphic].SetImpassable(true);
+                    }
+                    else
+                    {
+                        Client.Game.UO.FileManager.TileData.StaticData[Graphic].SetImpassable(false);
+                    }
+
+                }
+            }
 
             if (OnGround)
             {
@@ -155,6 +170,8 @@ namespace ClassicUO.Game.GameObjects
             return true;
         }
 
+
+
         private bool DrawCorpse(
             UltimaBatcher2D batcher,
             int posX,
@@ -187,17 +204,7 @@ namespace ClassicUO.Game.GameObjects
                 UsedLayer
             );
 
-            bool ishuman =
-                MathHelper.InRange(Amount, 0x0190, 0x0193)
-                || MathHelper.InRange(Amount, 0x00B7, 0x00BA)
-                || MathHelper.InRange(Amount, 0x025D, 0x0260)
-                || MathHelper.InRange(Amount, 0x029A, 0x029B)
-                || MathHelper.InRange(Amount, 0x02B6, 0x02B7)
-                || Amount == 0x03DB
-                || Amount == 0x03DF
-                || Amount == 0x03E2
-                || Amount == 0x02E8
-                || Amount == 0x02E9;
+            bool ishuman = IsHumanCorpse;
 
             DrawLayer(
                 batcher,
@@ -385,10 +392,7 @@ namespace ClassicUO.Game.GameObjects
                 }
                 else
                 {
-                    if (
-                        ProfileManager.CurrentProfile.GridLootType > 0
-                        && SelectedObject.CorpseObject == owner
-                    )
+                    if ((ProfileManager.CurrentProfile.GridLootType > 0 || ProfileManager.CurrentProfile.UseGridLayoutContainerGumps) && SelectedObject.CorpseObject == owner)
                     {
                         color = 0x0034;
                     }
@@ -624,7 +628,8 @@ namespace ClassicUO.Game.GameObjects
                         IsCorpse
                     );
 
-                    if (frames.IsEmpty)
+                    //IsEmpty should already check length == 0, however we were somehow getting zero length frames still, adding a .Length == 0 fixed it.
+                    if (frames.IsEmpty || frames.Length == 0)
                     {
                         continue;
                     }

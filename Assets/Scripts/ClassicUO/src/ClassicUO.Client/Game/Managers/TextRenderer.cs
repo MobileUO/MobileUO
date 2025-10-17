@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
-using System.Collections.Generic;
 using ClassicUO.Configuration;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Input;
 using ClassicUO.Renderer;
 using Microsoft.Xna.Framework;
+using System.Collections.Generic;
 
 namespace ClassicUO.Game.Managers
 {
-    internal class TextRenderer : TextObject
+    public class TextRenderer : TextObject
     {
         private readonly List<Rectangle> _bounds = new List<Rectangle>();
 
@@ -40,12 +40,12 @@ namespace ClassicUO.Game.Managers
 
             for (TextObject o = DrawPointer; o != null; o = o.DLeft)
             {
-                if (o.IsDestroyed || o.RenderedText == null || o.RenderedText.IsDestroyed || o.RenderedText.Texture == null || o.Time < ClassicUO.Time.Ticks)
+                if (o.IsDestroyed || o.TextBox == null || o.TextBox.IsDisposed || o.Time < ClassicUO.Time.Ticks)
                 {
                     continue;
                 }
 
-                ushort hue = 0;
+                //ushort hue = 0;
 
                 float alpha = o.Alpha / 255f;
 
@@ -60,16 +60,16 @@ namespace ClassicUO.Game.Managers
                 int x = o.RealScreenPosition.X;
                 int y = o.RealScreenPosition.Y;
 
-                if (o.RenderedText.PixelCheck(mouseX - x - startX, mouseY - y - startY))
+                if (o.TextBox.PixelCheck(mouseX - x - startX, mouseY - y - startY))
                 {
                     SelectedObject.Object = o;
                 }
-
+                bool highlight = false;
                 if (!isGump)
                 {
                     if (o.Owner is Entity && SelectedObject.Object == o)
                     {
-                        hue = 0x0035;
+                        highlight = true;
                     }
                 }
                 else
@@ -77,15 +77,22 @@ namespace ClassicUO.Game.Managers
                     x += startX;
                     y += startY;
                 }
-
-                o.RenderedText.Draw
-                (
-                    batcher,
-                    x,
-                    y,
-                    alpha,
-                    hue
-                );
+                o.TextBox.Alpha = alpha;
+                if (highlight)
+                    o.TextBox.Draw
+                    (
+                        batcher,
+                        x,
+                        y,
+                        Color.Yellow
+                    );
+                else
+                    o.TextBox.Draw
+                    (
+                        batcher,
+                        x,
+                        y
+                    );
             }
         }
 
@@ -125,7 +132,7 @@ namespace ClassicUO.Game.Managers
                 {
                     TextObject t = DrawPointer;
 
-                    if (t.Time >= ClassicUO.Time.Ticks && t.RenderedText != null && !t.RenderedText.IsDestroyed)
+                    if (t.Time >= ClassicUO.Time.Ticks && t.TextBox != null && !t.TextBox.IsDisposed)
                     {
                         if (t.Owner != null)
                         {
@@ -146,7 +153,7 @@ namespace ClassicUO.Game.Managers
         {
             if (ProfileManager.CurrentProfile != null && ProfileManager.CurrentProfile.TextFading)
             {
-                int delta = (int) (msg.Time - ClassicUO.Time.Ticks);
+                int delta = (int)(msg.Time - ClassicUO.Time.Ticks);
 
                 if (delta >= 0 && delta <= 1000)
                 {
@@ -165,7 +172,7 @@ namespace ClassicUO.Game.Managers
 
                     if (!msg.IsTransparent || delta <= 0x7F)
                     {
-                        msg.Alpha = (byte) delta;
+                        msg.Alpha = (byte)delta;
                     }
 
                     msg.IsTransparent = true;
@@ -181,8 +188,8 @@ namespace ClassicUO.Game.Managers
             {
                 X = msg.RealScreenPosition.X,
                 Y = msg.RealScreenPosition.Y,
-                Width = msg.RenderedText.Width,
-                Height = msg.RenderedText.Height
+                Width = msg.TextBox.Width,
+                Height = msg.TextBox.Height
             };
 
             for (int i = 0; i < _bounds.Count; i++)

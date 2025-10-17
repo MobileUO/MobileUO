@@ -3,7 +3,7 @@ using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
-using SDL2;
+using SDL3;
 using StbTextEditSharp;
 using System;
 using System.Collections.Generic;

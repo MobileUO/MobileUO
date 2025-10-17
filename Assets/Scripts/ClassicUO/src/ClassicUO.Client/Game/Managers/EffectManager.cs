@@ -7,7 +7,7 @@ using ClassicUO.Utility.Logging;
 
 namespace ClassicUO.Game.Managers
 {
-    internal sealed class EffectManager : LinkedObject
+    public sealed class EffectManager : LinkedObject
     {
         private readonly World _world;
 

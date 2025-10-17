@@ -4,19 +4,19 @@ using System;
 using ClassicUO.Configuration;
 using ClassicUO.Game.UI.Controls;
 using ClassicUO.Assets;
-using SDL2;
+using SDL3;
 
 namespace ClassicUO.Game.UI.Gumps.Login
 {
     [Flags]
-    internal enum LoginButtons
+    public enum LoginButtons
     {
         None = 1,
         OK = 2,
         Cancel = 4
     }
 
-    internal class LoadingGump : Gump
+    public class LoadingGump : Gump
     {
         private readonly Action<int> _buttonClick;
         private readonly Label _label;

@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: BSD-2-Clause
+// SPDX-License-Identifier: BSD-2-Clause
 
 using ClassicUO.IO;
 using ClassicUO.Utility;
@@ -297,7 +297,7 @@ namespace ClassicUO.Assets
             {
                 _staDifl[i]?.Dispose();
                 _staDifl[i] = null;
-            } 
+            }
             //_instance = null;
         }
 

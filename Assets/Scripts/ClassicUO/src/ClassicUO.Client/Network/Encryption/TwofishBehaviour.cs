@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 
 namespace ClassicUO.Network.Encryption
 {
-    enum CipherMode
+    public enum CipherMode
     {
         CBC = 1,
         ECB,
@@ -15,7 +15,7 @@ namespace ClassicUO.Network.Encryption
         CTS
     }
 
-    internal class TwofishEncryption : TwofishBase
+    public class TwofishEncryption : TwofishBase
     {
 
 
@@ -238,7 +238,7 @@ namespace ClassicUO.Network.Encryption
     /// <summary>
     ///     Summary description for TwofishBase.
     /// </summary>
-    internal class TwofishBase
+    public class TwofishBase
     {
         public enum EncryptionDirection
         {

@@ -7,7 +7,7 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class SplitMenuGump : Gump
+    public class SplitMenuGump : Gump
     {
         private bool _firstChange;
         private int _lastValue;

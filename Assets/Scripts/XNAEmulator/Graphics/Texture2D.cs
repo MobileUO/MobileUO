@@ -89,6 +89,66 @@ namespace Microsoft.Xna.Framework.Graphics
             UnityMainThreadDispatcher.Dispatch(SetDataBytes);
         }
 
+        public void SetData<T>(
+            int level,
+            Rectangle? rect,
+            T[] data,
+            int startIndex,
+            int elementCount
+        ) where T : struct
+        {
+            // MobileUO: TODO: might need to implement this?
+            //if (data == null)
+            //{
+            //    throw new ArgumentNullException("data");
+            //}
+            //if (startIndex < 0)
+            //{
+            //    throw new ArgumentOutOfRangeException("startIndex");
+            //}
+            //if (data.Length < (elementCount + startIndex))
+            //{
+            //    throw new ArgumentOutOfRangeException("elementCount");
+            //}
+
+            //int x, y, w, h;
+            //if (rect.HasValue)
+            //{
+            //    x = rect.Value.X;
+            //    y = rect.Value.Y;
+            //    w = rect.Value.Width;
+            //    h = rect.Value.Height;
+            //}
+            //else
+            //{
+            //    x = 0;
+            //    y = 0;
+            //    w = Math.Max(Width >> level, 1);
+            //    h = Math.Max(Height >> level, 1);
+            //}
+            //int elementSize = MarshalHelper.SizeOf<T>();
+            //int requiredBytes = (w * h * GetFormatSizeEXT(Format)) / GetBlockSizeSquaredEXT(Format);
+            //int availableBytes = elementCount * elementSize;
+            //if (requiredBytes > availableBytes)
+            //{
+            //    throw new ArgumentOutOfRangeException("rect", "The region you are trying to upload is larger than the amount of data you provided.");
+            //}
+
+            //GCHandle handle = GCHandle.Alloc(data, GCHandleType.Pinned);
+            //FNA3D.FNA3D_SetTextureData2D(
+            //    GraphicsDevice.GLDevice,
+            //    texture,
+            //    x,
+            //    y,
+            //    w,
+            //    h,
+            //    level,
+            //    handle.AddrOfPinnedObject() + startIndex * elementSize,
+            //    elementCount * elementSize
+            //);
+            //handle.Free();
+        }
+
         private void SetDataBytes()
         {
             try
@@ -355,6 +415,17 @@ namespace Microsoft.Xna.Framework.Graphics
         public void GetData<T>(T[] data, int startIndex, int elementCount) where T : struct
         {
             GetData(0, null, data, startIndex, elementCount);
+        }
+
+        public void GetData<T>(T[] data) where T : struct
+        {
+            GetData(
+                0,
+                null,
+                data,
+                0,
+                data.Length
+            );
         }
 
         public void GetData<T>(int level, Rectangle? rect, T[] data, int startIndex, int elementCount) where T : struct

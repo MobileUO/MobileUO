@@ -1,14 +1,17 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
-using ClassicUO.Assets;
 using ClassicUO.Configuration;
+using ClassicUO.Game.Data;
+using ClassicUO.Game.Managers;
+using ClassicUO.Game.UI.Controls;
+using ClassicUO.Game.UI.Gumps;
 using ClassicUO.Renderer;
 using ClassicUO.Utility.Collections;
 using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.GameObjects
 {
-    internal class TextContainer : LinkedObject
+    public class TextContainer : LinkedObject
     {
         public int Size,
             MaxSize = 5;
@@ -47,7 +50,9 @@ namespace ClassicUO.Game.GameObjects
         }
     }
 
-    internal class OverheadDamage
+
+
+    public class OverheadDamage
     {
         private const int DAMAGE_Y_MOVING_TIME = 25;
         private readonly Deque<TextObject> _messages;
@@ -65,28 +70,41 @@ namespace ClassicUO.Game.GameObjects
         public bool IsDestroyed { get; private set; }
         public bool IsEmpty => _messages.Count == 0;
 
+
         public void SetParent(GameObject parent)
         {
             Parent = parent;
         }
 
+
         public void Add(int damage)
         {
-            Parent?.AddDamage(damage);
+            Parent.AddDamage(damage);
 
             TextObject text_obj = TextObject.Create(_world);
 
-            string dmgString = damage.ToString();
+            ushort hue = ProfileManager.CurrentProfile == null ? (ushort)0x0021 : ProfileManager.CurrentProfile.DamageHueOther;
+            string name = string.Empty;
+            if (ReferenceEquals(Parent, _world.Player))
+                hue = ProfileManager.CurrentProfile == null ? (ushort)0x0034 : ProfileManager.CurrentProfile.DamageHueSelf;
+            else if (Parent is Mobile)
+            {
+                Mobile _parent = (Mobile)Parent;
+                name = _parent.Name;
+                if (_parent.IsRenamable && _parent.NotorietyFlag != NotorietyFlag.Invulnerable && _parent.NotorietyFlag != NotorietyFlag.Enemy)
+                    hue = ProfileManager.CurrentProfile == null ? (ushort)0x0033 : ProfileManager.CurrentProfile.DamageHuePet;
+                else if (_parent.NotorietyFlag == NotorietyFlag.Ally)
+                    hue = ProfileManager.CurrentProfile == null ? (ushort)0x0030 : ProfileManager.CurrentProfile.DamageHueAlly;
 
-            if (ProfileManager.CurrentProfile.ShowDPSWithDamageNumbers && Parent != null)
-                dmgString += $" (DPS: {Parent.GetCurrentDPS()})";
+                if (_parent.Serial == _world.TargetManager.LastAttack)
+                    hue = ProfileManager.CurrentProfile == null ? (ushort)0x1F : ProfileManager.CurrentProfile.DamageHueLastAttck;
+            }
+            string dps = ProfileManager.CurrentProfile.ShowDPS ? $" (DPS: {Parent.GetCurrentDPS()})" : string.Empty;
 
-            text_obj.RenderedText = RenderedText.Create(
-                dmgString,
-                (ushort)(ReferenceEquals(Parent, _world.Player) ? 0x0034 : 0x0021),
-                3,
-                false
-            );
+            
+            text_obj.TextBox = TextBox.GetOne(damage.ToString() + dps, ProfileManager.CurrentProfile.OverheadChatFont, ProfileManager.CurrentProfile.OverheadChatFontSize, hue, TextBox.RTLOptions.DefaultCenterStroked(ProfileManager.CurrentProfile.OverheadChatWidth).MouseInput(!ProfileManager.CurrentProfile.DisableMouseInteractionOverheadText));
+
+            _world.Journal.Add(damage.ToString() + dps, hue, name, TextType.CLIENT, messageType: MessageType.Damage);
 
             text_obj.Time = Time.Ticks + 1500;
 
@@ -121,17 +139,17 @@ namespace ClassicUO.Game.GameObjects
 
                 if (delta <= 0)
                 {
-                    _rectangle.Height -= c.RenderedText?.Height ?? 0;
+                    _rectangle.Height -= c.TextBox?.Height ?? 0;
                     c.Destroy();
                     _messages.RemoveAt(i--);
                 }
                 //else if (delta < 250)
                 //    c.Alpha = 1f - delta / 250;
-                else if (c.RenderedText != null)
+                else if (c.TextBox != null)
                 {
-                    if (_rectangle.Width < c.RenderedText.Width)
+                    if (_rectangle.Width < c.TextBox.Width)
                     {
-                        _rectangle.Width = c.RenderedText.Width;
+                        _rectangle.Width = c.TextBox.Width;
                     }
                 }
             }
@@ -144,7 +162,7 @@ namespace ClassicUO.Game.GameObjects
                 return;
             }
 
-            int offY = 0;
+            int offY = -NameOverheadGump.CurrentHeight;
 
             Point p = new Point();
 
@@ -216,16 +234,15 @@ namespace ClassicUO.Game.GameObjects
 
             foreach (TextObject item in _messages)
             {
-                if (item.IsDestroyed || item.RenderedText == null || item.RenderedText.IsDestroyed)
+                if (item.IsDestroyed || item.TextBox == null || item.TextBox.IsDisposed)
                 {
                     continue;
                 }
 
-                item.X = p.X - (item.RenderedText.Width >> 1);
-                item.Y = p.Y - offY - item.RenderedText.Height - item.OffsetY;
-
-                item.RenderedText.Draw(batcher, item.X, item.Y, item.Alpha / 255f);
-                offY += item.RenderedText.Height;
+                item.X = p.X - (item.TextBox.Width >> 1);
+                item.Y = p.Y - offY - item.TextBox.Height - item.OffsetY;
+                item.TextBox.Draw(batcher, item.X, item.Y);
+                offY += item.TextBox.Height;
             }
         }
 

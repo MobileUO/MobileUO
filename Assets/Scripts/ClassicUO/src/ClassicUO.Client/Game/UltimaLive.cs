@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: BSD-2-Clause
+// SPDX-License-Identifier: BSD-2-Clause
 
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.Managers;
@@ -14,7 +14,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Runtime.InteropServices;
 
 namespace ClassicUO.Game
 {
@@ -41,8 +40,8 @@ namespace ClassicUO.Game
         //       values in index 2 and 3 is for the wrap size of map (virtual size), x and y
         private ushort[,] MapSizeWrapSize;
         public static bool UltimaLiveActive => _UL != null && !string.IsNullOrEmpty(_UL.ShardName);
-        protected string RealShardName;
-        protected string ShardName;
+        public string RealShardName;
+        public string ShardName;
 
         public static void Enable()
         {
@@ -164,7 +163,7 @@ namespace ClassicUO.Game
                         }
                     }
 
-                    NetClient.Socket.Send_UOLive_HashResponse((uint) block, (byte) mapId, checkSumsToBeSent.AsSpan(0, CRC_LENGTH));
+                    AsyncNetClient.Socket.Send_UOLive_HashResponse((uint) block, (byte) mapId, checkSumsToBeSent.AsSpan(0, CRC_LENGTH));
 
                     break;
                 }
@@ -303,7 +302,7 @@ namespace ClassicUO.Game
 
                             mapChunk.Clear();
                             _UL._ULMap.ReloadBlock(mapId, block);
-                            mapChunk.Load(mapId);
+                            mapChunk.Load(mapId, true);
 
                             //linkedList?.AddLast(c.Node);
 
@@ -523,7 +522,7 @@ namespace ClassicUO.Game
                         }
 
                         mapChunk.Clear();
-                        mapChunk.Load(mapId);
+                        mapChunk.Load(mapId, true);
 
                         foreach (GameObject obj in gameObjects)
                         {

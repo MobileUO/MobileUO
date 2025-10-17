@@ -73,7 +73,7 @@ namespace ClassicUO.Game.UI.Controls
 
         /*private void NiceButtonStbText_KeyDown(object sender, KeyboardEventArgs e)
         {
-            if(e.Key == SDL2.SDL.SDL_Keycode.SDLK_RETURN || e.Key == SDL2.SDL.SDL_Keycode.SDLK_KP_ENTER)
+            if(e.Key == SDL3.SDL.SDL_Keycode.SDLK_RETURN || e.Key == SDL3.SDL.SDL_Keycode.SDLK_KP_ENTER)
             {
                 foreach(StbTextBox stb in TextBoxes)
                 {

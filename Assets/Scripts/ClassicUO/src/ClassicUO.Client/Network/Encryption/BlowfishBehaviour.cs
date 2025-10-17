@@ -4,7 +4,7 @@ using System;
 
 namespace ClassicUO.Network.Encryption
 {
-    internal sealed unsafe class BlowfishEncryption
+    public sealed unsafe class BlowfishEncryption
     {
         private readonly byte[] _seed = new byte[Crypt_Constants.CRYPT_GAME_SEED_LENGTH];
         private int _table_index, _block_pos, _stream_pos;

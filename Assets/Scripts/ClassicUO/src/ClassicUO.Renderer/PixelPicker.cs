@@ -11,20 +11,29 @@ namespace ClassicUO.Renderer
         readonly List<byte> m_Data = new List<byte>(InitialDataCount); // list<t> access is 10% slower than t[].
 
         // MobileUO: added PixelCheck
-        public bool Get(ulong textureID, int x, int y, int extraRange = 0, bool pixelCheck = true)
+        public bool Get(ulong textureID, int x, int y, int extraRange = 0, bool pixelCheck = true, double scale = 1f)
         {
             int index;
             if (!m_IDs.TryGetValue(textureID, out index))
             {
                 return false;
             }
+
+            if (scale != 1f)
+            {
+                x = (int)(x / scale);
+                y = (int)(y / scale);
+            }
+
             int width = ReadIntegerFromData(ref index);
+
+
             if (x < 0 || x >= width)
             {
                 return false;
             }
-            int height = ReadIntegerFromData(ref index);
-            if (y < 0 || y >= height)
+
+            if (y < 0 || y >= ReadIntegerFromData(ref index))
             {
                 return false;
             }

@@ -6,7 +6,7 @@ using ClassicUO.Game.UI.Gumps;
 
 namespace ClassicUO.Game.UI.Controls
 {
-    internal class InfoBarBuilderControl : Control
+    public class InfoBarBuilderControl : Control
     {
         private readonly StbTextBox infoLabel;
         private readonly ClickableColorBox labelColor;

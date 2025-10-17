@@ -15,7 +15,7 @@ using ClassicUO.Utility.Collections;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class JournalGump : Gump
+    public class JournalGump : Gump
     {
         private const int _diffY = 22;
         private readonly ExpandableScroll _background;
@@ -197,7 +197,7 @@ namespace ClassicUO.Game.UI.Gumps
             }
 
             InitializeJournalEntries();
-            World.Journal.EntryAdded += AddJournalEntry;
+            EventSink.JournalEntryAdded += AddJournalEntry;
         }
 
         public override GumpType GumpType => GumpType.Journal;
@@ -247,7 +247,7 @@ namespace ClassicUO.Game.UI.Gumps
 
         public override void Dispose()
         {
-            World.Journal.EntryAdded -= AddJournalEntry;
+            EventSink.JournalEntryAdded -= AddJournalEntry;
             base.Dispose();
         }
 
@@ -266,17 +266,18 @@ namespace ClassicUO.Game.UI.Gumps
 
         private void AddJournalEntry(object sender, JournalEntry entry)
         {
-            var usrSend = entry.Name != string.Empty ? $"{entry.Name}" : string.Empty;
-
             // Check if ignored person
-            if (!string.IsNullOrEmpty(usrSend) && World.IgnoreManager.IgnoredCharsList.Contains(usrSend))
+            if (!string.IsNullOrEmpty(entry.Name) && World.IgnoreManager.IgnoredCharsList.Contains(entry.Name))
                 return;
 
-            string text = $"{usrSend}: {entry.Text}";
-
-            if (string.IsNullOrEmpty(usrSend))
+            string text;
+            if (string.IsNullOrEmpty(entry.Name))
             {
                 text = entry.Text;
+            }
+            else
+            {
+                text = $"{entry.Name}: {entry.Text}";
             }
 
             _journalEntries.AddEntry

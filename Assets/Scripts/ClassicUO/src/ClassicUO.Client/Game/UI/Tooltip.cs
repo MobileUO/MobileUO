@@ -1,27 +1,32 @@
-﻿// SPDX-License-Identifier: BSD-2-Clause
+// SPDX-License-Identifier: BSD-2-Clause
 
-using System;
-using System.Text;
+using ClassicUO.Assets;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
 using ClassicUO.Game.GameObjects;
-using ClassicUO.Assets;
+using ClassicUO.Game.UI.Controls;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
+using ClassicUO.Utility.Logging;
 using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI
 {
-    internal class Tooltip
+    public class Tooltip
     {
         private uint _hash;
         private uint _lastHoverTime;
-        private int _maxWidth;
-        private RenderedText _renderedText;
+        private TextBox _textBox;
         private string _textHTML;
         private readonly World _world;
 
         public Tooltip(World world) => _world = world;
+        private bool _dirty = false;
+
+        public static bool IsEnabled = false;
+
+        public static int X, Y;
+        public static int Width, Height;
 
         public string Text { get; protected set; }
 
@@ -47,15 +52,12 @@ namespace ClassicUO.Game.UI
                 return false;
             }
 
-
-            byte font = 1;
             float alpha = 0.7f;
             ushort hue = 0xFFFF;
             float zoom = 1;
 
             if (ProfileManager.CurrentProfile != null)
             {
-                font = ProfileManager.CurrentProfile.TooltipFont;
                 alpha = ProfileManager.CurrentProfile.TooltipBackgroundOpacity / 100f;
 
                 if (float.IsNaN(alpha))
@@ -67,72 +69,66 @@ namespace ClassicUO.Game.UI
                 zoom = ProfileManager.CurrentProfile.TooltipDisplayZoom / 100f;
             }
 
-            Client.Game.UO.FileManager.Fonts.SetUseHTML(true);
-            Client.Game.UO.FileManager.Fonts.RecalculateWidthByInfo = true;
 
-            if (_renderedText == null)
+            if (_textBox == null || _dirty)
             {
-                _renderedText = RenderedText.Create
-                (
-                    null,
-                    font: font,
-                    isunicode: true,
-                    style: FontStyle.BlackBorder,
-                    cell: 5,
-                    isHTML: true,
-                    align: TEXT_ALIGN_TYPE.TS_CENTER,
-                    recalculateWidthByInfo: true,
-                    hue: hue
-                );
-            }
-
-            if (_renderedText.Text != Text)
-            {
-                if (_maxWidth == 0)
+                FontStashSharp.RichText.TextHorizontalAlignment align = FontStashSharp.RichText.TextHorizontalAlignment.Center;
+                if (ProfileManager.CurrentProfile != null)
                 {
-                    int width = Client.Game.UO.FileManager.Fonts.GetWidthUnicode(font, Text);
+                    if (ProfileManager.CurrentProfile.LeftAlignToolTips)
+                        align = FontStashSharp.RichText.TextHorizontalAlignment.Left;
+                    if (SerialHelper.IsMobile(Serial) && ProfileManager.CurrentProfile.ForceCenterAlignTooltipMobiles)
+                        align = FontStashSharp.RichText.TextHorizontalAlignment.Center;
+                }
 
-                    if (width > 600)
+                string finalString = _textHTML;
+                if (SerialHelper.IsItem(Serial))
+                {
+                    finalString = Managers.ToolTipOverrideData.ProcessTooltipText(_world, Serial);
+                    finalString ??= _textHTML;
+                }
+
+                if (string.IsNullOrEmpty(finalString) && !string.IsNullOrEmpty(_textHTML)) //Fix for vendor search
+                    finalString = Managers.ToolTipOverrideData.ProcessTooltipText(_textHTML);
+
+                if (_textBox == null || _textBox.IsDisposed)
+                {
+                    string font = TrueTypeLoader.EMBEDDED_FONT;
+                    int fontSize = 15;
+
+                    if (ProfileManager.CurrentProfile != null)
                     {
-                        width = 600;
+                        font = ProfileManager.CurrentProfile.SelectedToolTipFont;
+                        fontSize = ProfileManager.CurrentProfile.SelectedToolTipFontSize;
                     }
+                    TextBox.RTLOptions tooltipOptions = new() { Align = align, StrokeEffect = true };
+                    _textBox = TextBox.GetOne(TextBox.ConvertHtmlToFontStashSharpCommand(finalString).Trim(), font, fontSize, hue, tooltipOptions);
 
-                    width = Client.Game.UO.FileManager.Fonts.GetWidthExUnicode
-                    (
-                        font,
-                        Text,
-                        width,
-                        TEXT_ALIGN_TYPE.TS_CENTER,
-                        (ushort) FontStyle.BlackBorder
-                    );
-
-                    if (width > 600)
-                    {
-                        width = 600;
-                    }
-
-                    _renderedText.MaxWidth = width;
+                    //_textBox.Width = _textBox.MeasuredSize.X + 10;
                 }
                 else
                 {
-                    _renderedText.MaxWidth = _maxWidth;
+                    _textBox.Text = TextBox.ConvertHtmlToFontStashSharpCommand(finalString).Trim();
+                    _textBox.Update(); //For recreating the text to check size below
                 }
 
-                _renderedText.Font = font;
-                _renderedText.Hue = hue;
-                _renderedText.Text = _textHTML;
+                if (_textBox.Width > 600)
+                {
+                    _textBox.Width = 600;
+                    _textBox.Update();
+                }
+
+                IsEnabled = true;
             }
 
-            Client.Game.UO.FileManager.Fonts.RecalculateWidthByInfo = false;
-            Client.Game.UO.FileManager.Fonts.SetUseHTML(false);
-
-            if (_renderedText.Texture == null || _renderedText.Texture.IsDisposed)
+            if (_textBox == null || _textBox.IsDisposed)
             {
+                Log.Warn("Textbox should not be null/disposed, but it is.");
                 return false;
             }
 
-            int z_width = _renderedText.Width + 8;
-            int z_height = _renderedText.Height + 8;
+            int z_width = _textBox.Width + 8;
+            int z_height = _textBox.Height + 8;
 
             if (x < 0)
             {
@@ -152,12 +148,19 @@ namespace ClassicUO.Game.UI
                 y = Client.Game.Window.ClientBounds.Height - z_height;
             }
 
+            X = x - 4;
+            Y = y - 2;
+            Width = (int)(z_width * zoom) + 1;
+            Height = (int)(z_height * zoom) + 1;
 
-            Vector3 hue_vec = ShaderHueTranslator.GetHueVector(0, false, alpha);
+            Vector3 hue_vec = ShaderHueTranslator.GetHueVector(1, false, alpha);
+
+            if (ProfileManager.CurrentProfile != null)
+                hue_vec.X = ProfileManager.CurrentProfile.ToolTipBGHue;
 
             batcher.Draw
             (
-                SolidColorTextureCache.GetTexture(Color.Black),
+                SolidColorTextureCache.GetTexture(Color.White),
                 new Rectangle
                 (
                     x - 4,
@@ -168,30 +171,19 @@ namespace ClassicUO.Game.UI
                 hue_vec
             );
 
+            hue_vec = ShaderHueTranslator.GetHueVector(0, false, alpha);
 
             batcher.DrawRectangle
             (
                 SolidColorTextureCache.GetTexture(Color.Gray),
                 x - 4,
                 y - 2,
-                (int) (z_width * zoom),
-                (int) (z_height * zoom),
+                (int)(z_width * zoom),
+                (int)(z_height * zoom),
                 hue_vec
             );
 
-            batcher.Draw
-            (
-                _renderedText.Texture,
-                new Rectangle
-                (
-                    x + 3,
-                    y + 3,
-                    (int)(_renderedText.Texture.Width * zoom),
-                    (int)(_renderedText.Texture.Height * zoom)
-                ),
-                null,
-                Vector3.UnitZ
-            );
+            _textBox.Draw(batcher, x, y);
 
             return true;
         }
@@ -201,7 +193,9 @@ namespace ClassicUO.Game.UI
             Serial = 0;
             _hash = 0;
             _textHTML = Text = null;
-            _maxWidth = 0;
+            _textBox?.Dispose();
+            _textBox = null;
+            IsEnabled = false;
         }
 
         public void SetGameObject(uint serial)
@@ -212,12 +206,14 @@ namespace ClassicUO.Game.UI
 
                 if (Serial == 0 || Serial != serial || _world.OPL.TryGetRevision(Serial, out uint revision) && _world.OPL.TryGetRevision(serial, out revision2) && revision != revision2)
                 {
-                    _maxWidth = 0;
                     Serial = serial;
                     _hash = revision2;
                     Text = ReadProperties(serial, out _textHTML);
+                    _textBox?.Dispose();
+                    _textBox = null;
+                    _dirty = true;
 
-                    _lastHoverTime = (uint) (Time.Ticks + (ProfileManager.CurrentProfile != null ? ProfileManager.CurrentProfile.TooltipDelayBeforeDisplay : 250));
+                    _lastHoverTime = (uint)(Time.Ticks + (ProfileManager.CurrentProfile != null ? ProfileManager.CurrentProfile.TooltipDelayBeforeDisplay : 250));
                 }
             }
         }
@@ -289,14 +285,18 @@ namespace ClassicUO.Game.UI
                 return;
             }
 
-            //if (Text != text)
-            {
-                _maxWidth = maxWidth;
-                Serial = 0;
-                Text = _textHTML = text;
+            Serial = 0;
 
-                _lastHoverTime = (uint) (Time.Ticks + (ProfileManager.CurrentProfile != null ? ProfileManager.CurrentProfile.TooltipDelayBeforeDisplay : 250));
-            }
+            Text = _textHTML = text;
+
+            _dirty = true;
+
+
+            _textBox?.Dispose();
+            _textBox = null;
+
+            _lastHoverTime = (uint)(Time.Ticks + (ProfileManager.CurrentProfile != null ? ProfileManager.CurrentProfile.TooltipDelayBeforeDisplay : 250));
+
         }
     }
 }

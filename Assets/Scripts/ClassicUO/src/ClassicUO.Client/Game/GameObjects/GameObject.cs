@@ -1,19 +1,18 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
-using System;
-using System.Runtime.CompilerServices;
+using ClassicUO.Assets;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.Map;
-using ClassicUO.Assets;
-using ClassicUO.Renderer;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
+using System;
+using System.Runtime.CompilerServices;
 
 namespace ClassicUO.Game.GameObjects
 {
-    internal abstract class BaseGameObject : LinkedObject
+    public abstract class BaseGameObject : LinkedObject
     {
         protected BaseGameObject(World world) => World = world;
 
@@ -22,14 +21,24 @@ namespace ClassicUO.Game.GameObjects
         public World World { get; }
     }
 
-    internal abstract partial class GameObject : BaseGameObject
+    public abstract partial class GameObject : BaseGameObject
     {
         protected GameObject(World world) : base(world) { }
 
         public bool IsDestroyed { get; protected set; }
         public bool IsPositionChanged { get; protected set; }
         public TextContainer TextContainer { get; private set; }
+
         private AverageOverTime _averageOverTime;
+        protected Profile _profile = ProfileManager.CurrentProfile;
+
+        public bool HasLineOfSightFrom(GameObject observer = null)
+        {
+            observer ??= World.Player;
+            if (observer == null)
+                return false;
+            return LineOfSightHelper.IsVisible(observer, this);
+        }
 
         public int Distance
         {
@@ -70,8 +79,29 @@ namespace ClassicUO.Game.GameObjects
 
         // FIXME: remove it
         public sbyte FoliageIndex = -1;
-        public ushort Graphic;
-        public ushort Hue;
+        public ushort OriginalGraphic => originalGraphic == 0 ? Graphic : originalGraphic;
+        public void ResetOriginalGraphic() => originalGraphic = 0;
+        public ushort Graphic
+        {
+            get => graphic; set
+            {
+                if (originalGraphic == 0)
+                    originalGraphic = value;
+                GraphicsReplacement.Replace(originalGraphic, ref value, ref hue);
+                Hue = hue; //Workaround for making sure hues are replaced as-well
+                graphic = value;
+                OnGraphicSet(graphic);
+            }
+        }
+        public ushort Hue
+        {
+            get => hue;
+            set
+            {
+                GraphicsReplacement.ReplaceHue(OriginalGraphic, ref value);
+                hue = value;
+            }
+        }
         public Vector3 Offset;
         public short PriorityZ;
         public GameObject TNext;
@@ -79,6 +109,10 @@ namespace ClassicUO.Game.GameObjects
         public ushort X,
             Y;
         public sbyte Z;
+        public GameObject RenderListNext;
+        private ushort graphic, originalGraphic, hue;
+
+        public virtual void OnGraphicSet(ushort newGraphic) { }
 
         public void AddDamage(int damage)
         {
@@ -88,10 +122,6 @@ namespace ClassicUO.Game.GameObjects
         }
         public double GetCurrentDPS()
         {
-            if (_averageOverTime == null)
-            {
-                return 0;
-            }
             return Math.Round(_averageOverTime.LastAveragePerSecond, 1);
         }
 
@@ -102,6 +132,13 @@ namespace ClassicUO.Game.GameObjects
                 RealScreenPosition.X + Offset.X,
                 RealScreenPosition.Y + (Offset.Y - Offset.Z)
             );
+        }
+
+        public int DistanceFrom(Vector2 pos)
+        {
+            if (pos == null) { return int.MaxValue; }
+
+            return Math.Max(Math.Abs(X - (int)pos.X), Math.Abs(Y - (int)pos.Y));
         }
 
         public void AddToTile()
@@ -213,7 +250,7 @@ namespace ClassicUO.Game.GameObjects
 
             for (; last != null; last = (TextObject)last.Previous)
             {
-                if (last.RenderedText != null && !last.RenderedText.IsDestroyed)
+                if (last.TextBox != null && !last.TextBox.IsDisposed)
                 {
                     if (offY == 0 && last.Time < Time.Ticks)
                     {
@@ -221,9 +258,9 @@ namespace ClassicUO.Game.GameObjects
                     }
 
                     last.OffsetY = offY;
-                    offY += last.RenderedText.Height;
+                    offY += last.TextBox.Height;
 
-                    last.RealScreenPosition.X = p.X - (last.RenderedText.Width >> 1);
+                    last.RealScreenPosition.X = p.X - (last.TextBox.Width >> 1);
                     last.RealScreenPosition.Y = p.Y - offY;
                 }
             }
@@ -257,18 +294,13 @@ namespace ClassicUO.Game.GameObjects
                 item = (TextObject)item.Next
             )
             {
-                if (
-                    item.RenderedText == null
-                    || item.RenderedText.IsDestroyed
-                    || item.RenderedText.Texture == null
-                    || item.Time < Time.Ticks
-                )
+                if (item.TextBox == null || item.TextBox.IsDisposed || item.Time < Time.Ticks)
                 {
                     continue;
                 }
 
                 int startX = item.RealScreenPosition.X;
-                int endX = startX + item.RenderedText.Width;
+                int endX = startX + item.TextBox.Width;
 
                 if (startX < minX)
                 {
@@ -282,7 +314,7 @@ namespace ClassicUO.Game.GameObjects
 
                 int startY = item.RealScreenPosition.Y;
                 // MobileUO: fixed viewport boundary condition check
-                int endY = startY + item.RenderedText.Height;
+                int endY = startY + item.TextBox.Height;
 
                 if (startY < minY && offsetY == 0)
                 {
@@ -380,6 +412,7 @@ namespace ClassicUO.Game.GameObjects
             Offset = Vector3.Zero;
             RealScreenPosition = Point.Zero;
             IsFlipped = false;
+            originalGraphic = 0;
             Graphic = 0;
             ObjectHandlesStatus = ObjectHandlesStatus.NONE;
             FrameInfo = Rectangle.Empty;

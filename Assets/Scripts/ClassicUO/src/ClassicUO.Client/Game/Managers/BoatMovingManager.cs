@@ -9,7 +9,7 @@ using ClassicUO.Utility.Collections;
 
 namespace ClassicUO.Game.Managers
 {
-    internal sealed class BoatMovingManager
+    public sealed class BoatMovingManager
     {
         private const int SLOW_INTERVAL = 1000;
         private const int NORMAL_INTERVAL = 500;
@@ -46,7 +46,7 @@ namespace ClassicUO.Game.Managers
 
         public void MoveRequest(Direction direciton, byte speed)
         {
-            NetClient.Socket.Send_MultiBoatMoveRequest(_world.Player, direciton, speed);
+            AsyncNetClient.Socket.Send_MultiBoatMoveRequest(_world.Player, direciton, speed);
             _timePacket = Time.Ticks;
         }
 

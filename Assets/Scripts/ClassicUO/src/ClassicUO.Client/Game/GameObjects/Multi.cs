@@ -1,14 +1,12 @@
-﻿// SPDX-License-Identifier: BSD-2-Clause
+// SPDX-License-Identifier: BSD-2-Clause
 
 using ClassicUO.Game.Data;
 using ClassicUO.Game.Managers;
 using ClassicUO.Assets;
-using ClassicUO.Utility;
-using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.GameObjects
 {
-    internal sealed partial class Multi : GameObject
+    public sealed partial class Multi : GameObject
     {
         //private static readonly QueuedPool<Multi> _pool = new QueuedPool<Multi>
         //(
@@ -39,6 +37,8 @@ namespace ClassicUO.Game.GameObjects
         public int MultiOffsetZ;
         public bool IsMovable;
         public CUSTOM_HOUSE_MULTI_OBJECT_FLAGS State = 0;
+        public bool ForceTransparentHouse;
+        public static byte ForcedTransparency = 40;
 
 
         public Multi(World world) : base(world) { }

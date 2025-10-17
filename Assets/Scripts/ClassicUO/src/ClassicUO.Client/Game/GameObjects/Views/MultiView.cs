@@ -10,7 +10,7 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.GameObjects
 {
-    internal partial class Multi
+    public partial class Multi
     {
         private int _canBeTransparent;
         public bool IsHousePreview;
@@ -37,6 +37,9 @@ namespace ClassicUO.Game.GameObjects
             {
                 return false;
             }
+
+            if (ForceTransparentHouse)
+                AlphaHue = ForcedTransparency;
 
             ushort hue = Hue;
 

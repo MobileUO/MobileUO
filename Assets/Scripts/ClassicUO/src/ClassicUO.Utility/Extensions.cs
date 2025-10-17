@@ -136,43 +136,43 @@ namespace ClassicUO.Utility
             return inrect;
         }
 
-        
-// MobileUO: NOTE: Commented out because ZipArchive is not available in Unity's .NET version, it seems, and also not needed
+
+        // MobileUO: NOTE: Commented out because ZipArchive is not available in Unity's .NET version, it seems, and also not needed
         //NOTE: since this is only used by the Updater class
-//#if NETFRAMEWORK
-//        public static void ExtractToDirectory(this ZipArchive archive, string destinationDirectoryName, bool overwrite)
-//        {
-//            if (!overwrite)
-//            {
-//                archive.ExtractToDirectory(destinationDirectoryName);
+        //#if NETFRAMEWORK
+        //        public static void ExtractToDirectory(this ZipArchive archive, string destinationDirectoryName, bool overwrite)
+        //        {
+        //            if (!overwrite)
+        //            {
+        //                archive.ExtractToDirectory(destinationDirectoryName);
 
-//                return;
-//            }
+        //                return;
+        //            }
 
-//            DirectoryInfo di = Directory.CreateDirectory(destinationDirectoryName);
-//            string destinationDirectoryFullPath = di.FullName;
+        //            DirectoryInfo di = Directory.CreateDirectory(destinationDirectoryName);
+        //            string destinationDirectoryFullPath = di.FullName;
 
-//            foreach (ZipArchiveEntry file in archive.Entries)
-//            {
-//                string completeFileName = Path.GetFullPath(Path.Combine(destinationDirectoryFullPath, file.FullName));
+        //            foreach (ZipArchiveEntry file in archive.Entries)
+        //            {
+        //                string completeFileName = Path.GetFullPath(Path.Combine(destinationDirectoryFullPath, file.FullName));
 
-//                if (!completeFileName.StartsWith(destinationDirectoryFullPath, StringComparison.OrdinalIgnoreCase))
-//                {
-//                    throw new IOException("Trying to extract file outside of destination directory. See this link for more info: https://snyk.io/research/zip-slip-vulnerability");
-//                }
+        //                if (!completeFileName.StartsWith(destinationDirectoryFullPath, StringComparison.OrdinalIgnoreCase))
+        //                {
+        //                    throw new IOException("Trying to extract file outside of destination directory. See this link for more info: https://snyk.io/research/zip-slip-vulnerability");
+        //                }
 
-//                // Assuming Empty for Directory
-//                if (file.Name == "")
-//                {
-//                    Directory.CreateDirectory(Path.GetDirectoryName(completeFileName));
+        //                // Assuming Empty for Directory
+        //                if (file.Name == "")
+        //                {
+        //                    Directory.CreateDirectory(Path.GetDirectoryName(completeFileName));
 
-//                    continue;
-//                }
+        //                    continue;
+        //                }
 
-//                file.ExtractToFile(completeFileName, true);
-//            }
-//        }
-//#endif
+        //                file.ExtractToFile(completeFileName, true);
+        //            }
+        //        }
+        //#endif
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string ToHex(this uint serial)
@@ -190,6 +190,75 @@ namespace ClassicUO.Utility
         public static string ToHex(this byte b)
         {
             return $"0x{b:X2}";
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static string ToHtmlHex(this Color color)
+        {
+            return $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Color FromHtmlHex(this string hex)
+        {
+            if (hex.StartsWith("#")) hex = hex.Substring(1);
+            if (hex.Length != 6) return Color.White;
+
+            int value = Convert.ToInt32(hex, 16);
+            return new Color((value >> 16) & 0xFF, (value >> 8) & 0xFF, value & 0xFF);
+        }
+
+        /// <summary>
+        /// Gets all character profile directories from the profiles path structure.
+        /// Structure: ProfilesPath/Account/Server/Character
+        /// </summary>
+        /// <param name="profilesPath">Root profiles path</param>
+        /// <returns>Dictionary mapping character names to their directory paths</returns>
+        public static Dictionary<string, string> GetAllCharacterPaths(string profilesPath)
+        {
+            var characterPaths = new Dictionary<string, string>();
+
+            if (string.IsNullOrEmpty(profilesPath) || !Directory.Exists(profilesPath))
+                return characterPaths;
+
+            try
+            {
+                string[] allAccounts = Directory.GetDirectories(profilesPath);
+
+                foreach (string account in allAccounts)
+                {
+                    string[] allServers = Directory.GetDirectories(account);
+
+                    foreach (string server in allServers)
+                    {
+                        string[] allCharacters = Directory.GetDirectories(server);
+
+                        foreach (string characterPath in allCharacters)
+                        {
+                            string characterName = Path.GetFileName(characterPath);
+
+                            // Use the character name as key, but handle potential duplicates
+                            // by appending server/account info if needed
+                            string key = characterName;
+                            int counter = 1;
+                            while (characterPaths.ContainsKey(key))
+                            {
+                                key = $"{characterName}_{counter}";
+                                counter++;
+                            }
+
+                            characterPaths[key] = characterPath;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't throw to avoid breaking calling code
+                Log.Error($"Error scanning character profiles: {ex.Message}");
+            }
+
+            return characterPaths;
         }
     }
 }

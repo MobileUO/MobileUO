@@ -5,11 +5,11 @@ using ClassicUO.Input;
 using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
-using SDL2;
+using SDL3;
 
 namespace ClassicUO.Game.UI.Controls
 {
-    internal class HotkeyBox : Control
+    public class HotkeyBox : Control
     {
         private bool _actived;
         private readonly Button _buttonOK, _buttonCancel;
@@ -85,6 +85,7 @@ namespace ClassicUO.Game.UI.Controls
         }
 
         public SDL.SDL_Keycode Key { get; private set; }
+        public SDL.SDL_GamepadButton[] Buttons { get; private set; }
         public MouseButtonType MouseButton { get; private set; }
         public bool WheelScroll { get; private set; }
         public bool WheelUp { get; private set; }
@@ -113,6 +114,14 @@ namespace ClassicUO.Game.UI.Controls
         public event EventHandler HotkeyChanged, HotkeyCancelled;
 
 
+        protected override void OnControllerButtonDown(SDL.SDL_GamepadButton button)
+        {
+            if(IsActive)
+            {
+                SetButtons(Controller.PressedButtons());
+            }
+        }
+
         protected override void OnKeyDown(SDL.SDL_Keycode key, SDL.SDL_Keymod mod)
         {
             if (IsActive)
@@ -121,9 +130,16 @@ namespace ClassicUO.Game.UI.Controls
             }
         }
 
+        public void SetButtons(SDL.SDL_GamepadButton[] buttons)
+        {
+            ResetBinding();
+            Buttons = buttons;
+            _label.Text = Controller.GetButtonNames(buttons);
+        }
+
         public void SetKey(SDL.SDL_Keycode key, SDL.SDL_Keymod mod)
         {
-            if (key == SDL.SDL_Keycode.SDLK_UNKNOWN && mod == SDL.SDL_Keymod.KMOD_NONE)
+            if (key == SDL.SDL_Keycode.SDLK_UNKNOWN && mod == SDL.SDL_Keymod.SDL_KMOD_NONE)
             {
                 ResetBinding();
 
@@ -149,21 +165,21 @@ namespace ClassicUO.Game.UI.Controls
         {
             if (button == MouseButtonType.Middle || button == MouseButtonType.XButton1 || button == MouseButtonType.XButton2)
             {
-                SDL.SDL_Keymod mod = SDL.SDL_Keymod.KMOD_NONE;
+                SDL.SDL_Keymod mod = SDL.SDL_Keymod.SDL_KMOD_NONE;
 
                 if (Keyboard.Alt)
                 {
-                    mod |= SDL.SDL_Keymod.KMOD_ALT;
+                    mod |= SDL.SDL_Keymod.SDL_KMOD_ALT;
                 }
 
                 if (Keyboard.Shift)
                 {
-                    mod |= SDL.SDL_Keymod.KMOD_SHIFT;
+                    mod |= SDL.SDL_Keymod.SDL_KMOD_SHIFT;
                 }
 
                 if (Keyboard.Ctrl)
                 {
-                    mod |= SDL.SDL_Keymod.KMOD_CTRL;
+                    mod |= SDL.SDL_Keymod.SDL_KMOD_CTRL;
                 }
 
                 SetMouseButton(button, mod);
@@ -186,21 +202,21 @@ namespace ClassicUO.Game.UI.Controls
 
         protected override void OnMouseWheel(MouseEventType delta)
         {
-            SDL.SDL_Keymod mod = SDL.SDL_Keymod.KMOD_NONE;
+            SDL.SDL_Keymod mod = SDL.SDL_Keymod.SDL_KMOD_NONE;
 
             if (Keyboard.Alt)
             {
-                mod |= SDL.SDL_Keymod.KMOD_ALT;
+                mod |= SDL.SDL_Keymod.SDL_KMOD_ALT;
             }
 
             if (Keyboard.Shift)
             {
-                mod |= SDL.SDL_Keymod.KMOD_SHIFT;
+                mod |= SDL.SDL_Keymod.SDL_KMOD_SHIFT;
             }
 
             if (Keyboard.Ctrl)
             {
-                mod |= SDL.SDL_Keymod.KMOD_CTRL;
+                mod |= SDL.SDL_Keymod.SDL_KMOD_CTRL;
             }
 
             if (delta == MouseEventType.WheelScrollUp)
@@ -235,6 +251,7 @@ namespace ClassicUO.Game.UI.Controls
             WheelScroll = false;
             Mod = 0;
             _label.Text = string.Empty;
+            Buttons = null;
         }
 
         private void LabelOnMouseUp(object sender, MouseEventArgs e)
@@ -259,7 +276,7 @@ namespace ClassicUO.Game.UI.Controls
                     HotkeyCancelled.Raise(this);
 
                     Key = SDL.SDL_Keycode.SDLK_UNKNOWN;
-                    Mod = SDL.SDL_Keymod.KMOD_NONE;
+                    Mod = SDL.SDL_Keymod.SDL_KMOD_NONE;
 
                     break;
             }

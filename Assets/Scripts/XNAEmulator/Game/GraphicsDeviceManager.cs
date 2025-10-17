@@ -18,6 +18,13 @@ namespace Microsoft.Xna.Framework
             }
         }
 
+        #region Public Static Fields
+
+        public static readonly int DefaultBackBufferWidth = 800;
+        public static readonly int DefaultBackBufferHeight = 480;
+
+        #endregion
+
         public int PreferredBackBufferHeight { get; internal set; }
         public int PreferredBackBufferWidth { get; internal set; }
         public bool IsFullScreen { get; internal set; }

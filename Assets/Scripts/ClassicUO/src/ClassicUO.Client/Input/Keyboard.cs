@@ -1,69 +1,108 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
-using SDL2;
+using System;
+using System.Collections.Generic;
+using SDL3;
 
 namespace ClassicUO.Input
 {
     internal static class Keyboard
     {
-        private static SDL.SDL_Keycode _code;
-
-
-        public static SDL.SDL_Keymod IgnoreKeyMod { get; } = SDL.SDL_Keymod.KMOD_CAPS | SDL.SDL_Keymod.KMOD_NUM | SDL.SDL_Keymod.KMOD_MODE | SDL.SDL_Keymod.KMOD_RESERVED;
+        public static SDL.SDL_Keymod IgnoreKeyMod = SDL.SDL_Keymod.SDL_KMOD_CAPS | SDL.SDL_Keymod.SDL_KMOD_NUM | SDL.SDL_Keymod.SDL_KMOD_MODE;
 
         // MobileUO: removed private setters
         public static bool Alt { get; set; }
         public static bool Shift { get; set; }
         public static bool Ctrl { get; set; }
+        public static event Action<string> KeyDownEvent;
+        public static event Action<string> KeyUpEvent;
 
+        public static string NormalizeKeyString(string input)
+        {
+            if (string.IsNullOrWhiteSpace(input))
+                return string.Empty;
 
-        //public static bool IsKeyPressed(SDL.SDL_Keycode code)
-        //{
-        //    return code != SDL.SDL_Keycode.SDLK_UNKNOWN && _code == code;
-        //}
+            var parts = input.ToUpperInvariant().Replace(" ", "").Split('+');
+            bool ctrl = false, shift = false, alt = false;
+            string key = null;
 
-        //public static bool IsModPressed(SDL.SDL_Keymod mod, SDL.SDL_Keymod tocheck)
-        //{
-        //    mod ^= mod & IgnoreKeyMod;
+            foreach (var p in parts)
+            {
+                if (string.IsNullOrEmpty(p))
+                    continue;
 
-        //    return tocheck == mod || mod != SDL.SDL_Keymod.KMOD_NONE && (mod & tocheck) != 0;
-        //}
+                if (p == "CTRL") ctrl = true;
+                else if (p == "SHIFT") shift = true;
+                else if (p == "ALT") alt = true;
+                else key = p.StartsWith("SDLK_") ? p : "SDLK_" + p;
+            }
+
+            List<string> normalized = new();
+            if (ctrl) normalized.Add("CTRL");
+            if (shift) normalized.Add("SHIFT");
+            if (alt) normalized.Add("ALT");
+            if (key != null) normalized.Add(key);
+
+            return string.Join("+", normalized);
+        }
+
+        public static bool IgnoreBareModifierKey(SDL.SDL_KeyboardEvent e)
+        {
+            var keycode = (SDL.SDL_Keycode)e.key;
+            return keycode is SDL.SDL_Keycode.SDLK_LSHIFT
+                        or SDL.SDL_Keycode.SDLK_RSHIFT
+                        or SDL.SDL_Keycode.SDLK_LCTRL
+                        or SDL.SDL_Keycode.SDLK_RCTRL
+                        or SDL.SDL_Keycode.SDLK_LALT
+                        or SDL.SDL_Keycode.SDLK_RALT;
+        }
+
+        public static string BuildHotKeyString(SDL.SDL_KeyboardEvent e)
+        {
+            List<string> parts = new();
+            if (Ctrl) parts.Add("CTRL");
+            if (Shift) parts.Add("SHIFT");
+            if (Alt) parts.Add("ALT");
+
+            string keyName = ((SDL.SDL_Keycode)e.key).ToString().ToUpperInvariant();
+            parts.Add(keyName);
+
+            return string.Join("+", parts);
+        }
 
         public static void OnKeyUp(SDL.SDL_KeyboardEvent e)
         {
-            SDL.SDL_Keymod mod = e.keysym.mod & ~IgnoreKeyMod;
-
-            if ((mod & (SDL.SDL_Keymod.KMOD_RALT | SDL.SDL_Keymod.KMOD_LCTRL)) == (SDL.SDL_Keymod.KMOD_RALT | SDL.SDL_Keymod.KMOD_LCTRL))
-            {
-                e.keysym.sym = SDL.SDL_Keycode.SDLK_UNKNOWN;
-                e.keysym.mod = SDL.SDL_Keymod.KMOD_NONE;
-            }
-
-            Shift = (e.keysym.mod & SDL.SDL_Keymod.KMOD_SHIFT) != SDL.SDL_Keymod.KMOD_NONE;
-            Alt = (e.keysym.mod & SDL.SDL_Keymod.KMOD_ALT) != SDL.SDL_Keymod.KMOD_NONE;
-            Ctrl = (e.keysym.mod & SDL.SDL_Keymod.KMOD_CTRL) != SDL.SDL_Keymod.KMOD_NONE;
-
-            _code = SDL.SDL_Keycode.SDLK_UNKNOWN;
+            OnKeyEvent(e, KeyUpEvent);
         }
 
         public static void OnKeyDown(SDL.SDL_KeyboardEvent e)
         {
-            SDL.SDL_Keymod mod = e.keysym.mod & ~IgnoreKeyMod;
+            OnKeyEvent(e, KeyDownEvent);
+        }
 
-            if ((mod & (SDL.SDL_Keymod.KMOD_RALT | SDL.SDL_Keymod.KMOD_LCTRL)) == (SDL.SDL_Keymod.KMOD_RALT | SDL.SDL_Keymod.KMOD_LCTRL))
+        private static void OnKeyEvent(SDL.SDL_KeyboardEvent e, Action<string> keyboardEvent)
+        {
+            UpdateModifiers(e.mod);
+            if (IgnoreBareModifierKey(e) || keyboardEvent == null)
+                return;
+
+            string hotkey = BuildHotKeyString(e);
+            keyboardEvent?.Invoke(hotkey);
+        }
+
+        private static void UpdateModifiers(SDL.SDL_Keymod e)
+        {
+            SDL.SDL_Keymod mod = e & ~IgnoreKeyMod;
+            SDL.SDL_Keymod filtered = mod;
+
+            if ((mod & (SDL.SDL_Keymod.SDL_KMOD_RALT | SDL.SDL_Keymod.SDL_KMOD_LCTRL)) == (SDL.SDL_Keymod.SDL_KMOD_RALT | SDL.SDL_Keymod.SDL_KMOD_LCTRL))
             {
-                e.keysym.sym = SDL.SDL_Keycode.SDLK_UNKNOWN;
-                e.keysym.mod = SDL.SDL_Keymod.KMOD_NONE;
+                filtered = SDL.SDL_Keymod.SDL_KMOD_NONE;
             }
 
-            Shift = (e.keysym.mod & SDL.SDL_Keymod.KMOD_SHIFT) != SDL.SDL_Keymod.KMOD_NONE;
-            Alt = (e.keysym.mod & SDL.SDL_Keymod.KMOD_ALT) != SDL.SDL_Keymod.KMOD_NONE;
-            Ctrl = (e.keysym.mod & SDL.SDL_Keymod.KMOD_CTRL) != SDL.SDL_Keymod.KMOD_NONE;
-
-            if (e.keysym.sym != SDL.SDL_Keycode.SDLK_UNKNOWN)
-            {
-                _code = e.keysym.sym;
-            }
+            Shift = (filtered & SDL.SDL_Keymod.SDL_KMOD_SHIFT) != SDL.SDL_Keymod.SDL_KMOD_NONE;
+            Alt = (filtered & SDL.SDL_Keymod.SDL_KMOD_ALT) != SDL.SDL_Keymod.SDL_KMOD_NONE;
+            Ctrl = (filtered & SDL.SDL_Keymod.SDL_KMOD_CTRL) != SDL.SDL_Keymod.SDL_KMOD_NONE;
         }
     }
 }

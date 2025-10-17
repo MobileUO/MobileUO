@@ -5,16 +5,15 @@ using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.UI.Gumps;
-using ClassicUO.Assets;
 using ClassicUO.Resources;
 using ClassicUO.Utility;
 using ClassicUO.Utility.Collections;
 using Microsoft.Xna.Framework;
-using ClassicUO.Game.Scenes;
+using ClassicUO.Assets;
 
 namespace ClassicUO.Game.GameObjects
 {
-    internal partial class Mobile : Entity
+    public partial class Mobile : Entity
     {
         //private static readonly QueuedPool<Mobile> _pool = new QueuedPool<Mobile>(
         //    Constants.PREDICTABLE_CHUNKS,
@@ -144,29 +143,19 @@ namespace ClassicUO.Game.GameObjects
             set { }
         }
 
-        public bool IsHuman =>
-            Graphic >= 0x0190 && Graphic <= 0x0193
-            || Graphic >= 0x00B7 && Graphic <= 0x00BA
-            || Graphic >= 0x025D && Graphic <= 0x0260
-            || Graphic == 0x029A
-            || Graphic == 0x029B
-            || Graphic == 0x02B6
-            || Graphic == 0x02B7
-            || Graphic == 0x03DB
-            || Graphic == 0x03DF
-            || Graphic == 0x03E2
-            || Graphic == 0x02E8
-            || Graphic == 0x02E9
-            || Graphic == 0x04E5;
-
-        public bool IsGargoyle =>
-            Client.Game.UO.Version >= ClientVersion.CV_7000 && Graphic == 0x029A || Graphic == 0x029B;
+        public Item Mount { get; set; }
+        public bool IsHuman { get; private set; }
+        public bool IsGargoyle { get; private set; }
+        /// <summary>
+        /// This is only set for the main player character. This is not an indicator for other players.
+        /// </summary>
+        public bool IsPlayer;
 
         public bool IsMounted
         {
             get
             {
-                Item it = FindItemByLayer(Layer.Mount);
+                Item it = Mount;
 
                 if (it != null && !IsDrivingBoat && it.GetGraphicForAnimation() != 0xFFFF)
                 {
@@ -177,17 +166,26 @@ namespace ClassicUO.Game.GameObjects
             }
         }
 
+        public bool InParty { get; set; }
+
         public bool IsDrivingBoat
         {
             get
             {
-                Item it = FindItemByLayer(Layer.Mount);
+                Item it = Mount;
 
                 return it != null && it.Graphic == 0x3E96;
             }
         }
 
-        protected virtual bool IsWalking => LastStepTime > Time.Ticks - Constants.WALKING_DELAY;
+        public virtual bool IsWalking => LastStepTime > Time.Ticks - Constants.WALKING_DELAY;
+
+        #region Python API accessors - Added for Python API
+        public bool IsAttackable => (Flags & Flags.YellowBar) == 0;
+        public int HitsDiff => HitsMax - Hits;
+        public int StamDiff => StaminaMax - Stamina;
+        public int ManaDiff => ManaMax - Mana;
+        #endregion
 
         public byte AnimationFrameCount;
         public bool AnimationFromServer;
@@ -211,6 +209,13 @@ namespace ClassicUO.Game.GameObjects
             mobile.Serial = serial;
 
             return mobile;
+        }
+
+        public override void OnGraphicSet(ushort newGraphic)
+        {
+            base.OnGraphicSet(newGraphic);
+            IsHuman = HumanGraphicCheck();
+            IsGargoyle = GargoyleGraphicCheck();
         }
 
         public Item GetSecureTradeBox()
@@ -923,7 +928,7 @@ namespace ClassicUO.Game.GameObjects
                 return;
             }
 
-            int offY = 0;
+            int offY = NameOverheadGump.CurrentHeight;
 
             bool health = ProfileManager.CurrentProfile.ShowMobilesHP;
             int alwaysHP = ProfileManager.CurrentProfile.MobileHPShowWhen;
@@ -977,7 +982,7 @@ namespace ClassicUO.Game.GameObjects
 
             for (; last != null; last = (TextObject)last.Previous)
             {
-                if (last.RenderedText != null && !last.RenderedText.IsDestroyed)
+                if (last.TextBox != null && !last.TextBox.IsDisposed)
                 {
                     if (offY == 0 && last.Time < Time.Ticks)
                     {
@@ -985,9 +990,9 @@ namespace ClassicUO.Game.GameObjects
                     }
 
                     last.OffsetY = offY;
-                    offY += last.RenderedText.Height;
+                    offY += last.TextBox.Height;
 
-                    last.RealScreenPosition.X = p.X - (last.RenderedText.Width >> 1);
+                    last.RealScreenPosition.X = p.X - (last.TextBox.Width >> 1);
                     last.RealScreenPosition.Y = p.Y - offY;
                 }
             }
@@ -1001,55 +1006,74 @@ namespace ClassicUO.Game.GameObjects
             {
                 case 0x0190:
                 case 0x0192:
-                {
-                    IsFemale = false;
-                    Race = RaceType.HUMAN;
+                    {
+                        IsFemale = false;
+                        Race = RaceType.HUMAN;
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 0x0191:
                 case 0x0193:
-                {
-                    IsFemale = true;
-                    Race = RaceType.HUMAN;
+                    {
+                        IsFemale = true;
+                        Race = RaceType.HUMAN;
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 0x025D:
-                {
-                    IsFemale = false;
-                    Race = RaceType.ELF;
+                    {
+                        IsFemale = false;
+                        Race = RaceType.ELF;
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 0x025E:
-                {
-                    IsFemale = true;
-                    Race = RaceType.ELF;
+                    {
+                        IsFemale = true;
+                        Race = RaceType.ELF;
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 0x029A:
-                {
-                    IsFemale = false;
-                    Race = RaceType.GARGOYLE;
+                    {
+                        IsFemale = false;
+                        Race = RaceType.GARGOYLE;
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 0x029B:
-                {
-                    IsFemale = true;
-                    Race = RaceType.GARGOYLE;
+                    {
+                        IsFemale = true;
+                        Race = RaceType.GARGOYLE;
 
-                    break;
-                }
+                        break;
+                    }
             }
         }
+
+        private bool HumanGraphicCheck() =>
+            Graphic >= 0x0190 && Graphic <= 0x0193
+            || Graphic >= 0x00B7 && Graphic <= 0x00BA
+            || Graphic >= 0x025D && Graphic <= 0x0260
+            || Graphic == 0x029A
+            || Graphic == 0x029B
+            || Graphic == 0x02B6
+            || Graphic == 0x02B7
+            || Graphic == 0x03DB
+            || Graphic == 0x03DF
+            || Graphic == 0x03E2
+            || Graphic == 0x02E8
+            || Graphic == 0x02E9
+            || Graphic == 0x04E5;
+
+        private bool GargoyleGraphicCheck() =>
+            Client.Game.UO.Version >= ClientVersion.CV_7000
+            && (Graphic == 666 || Graphic == 667 || Graphic == 0x02B7 || Graphic == 0x02B6);
 
         public override void Destroy()
         {
@@ -1062,12 +1086,13 @@ namespace ClassicUO.Game.GameObjects
             if (!(this is PlayerMobile))
             {
                 UIManager.GetGump<PaperDollGump>(serial)?.Dispose();
+                UIManager.GetGump<ModernPaperdoll>(serial)?.Dispose();
 
                 //_pool.ReturnOne(this);
             }
         }
 
-        internal struct Step
+        public struct Step
         {
             public int X,
                 Y;

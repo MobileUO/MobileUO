@@ -1,13 +1,11 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
 using ClassicUO.Game.UI.Controls;
-using ClassicUO.Input;
 using ClassicUO.Network;
-using ClassicUO.Utility.Collections;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class TipNoticeGump : Gump
+    public class TipNoticeGump : Gump
     {
         private readonly ExpandableScroll _background;
         private readonly ScrollArea _scrollArea;
@@ -68,13 +66,13 @@ namespace ClassicUO.Game.UI.Gumps
             switch (buttonID)
             {
                 case 1: // prev
-                    NetClient.Socket.Send_TipRequest((ushort)LocalSerial, 0);
+                    AsyncNetClient.Socket.Send_TipRequest((ushort)LocalSerial, 0);
                     Dispose();
 
                     break;
 
                 case 2: // next
-                    NetClient.Socket.Send_TipRequest((ushort)LocalSerial, 1);
+                    AsyncNetClient.Socket.Send_TipRequest((ushort)LocalSerial, 1);
 
                     Dispose();
 

@@ -16,17 +16,20 @@ using ClassicUO.Game.Scenes;
 using ClassicUO.Utility.Logging;
 using ClassicUO.Assets;
 using ClassicUO.Network;
+using ClassicUO.Game.UI;
 
 namespace ClassicUO.Game
 {
-    internal sealed class World
+    public sealed class World
     {
+        public static World Instance { get; private set; }
         private readonly EffectManager _effectManager;
         private readonly List<uint> _toRemove = new List<uint>();
         private uint _timeToDelete;
 
         public World()
         {
+            Instance = this;
             WMapManager = new WorldMapEntityManager(this);
             CorpseManager = new CorpseManager(this);
             Party = new PartyManager(this);
@@ -39,7 +42,6 @@ namespace ClassicUO.Game
             SkillsGroupManager = new SkillsGroupManager(this);
             ChatManager = new ChatManager(this);
             AuraManager = new AuraManager(this);
-            UoAssist = new UoAssist(this);
             TargetManager = new TargetManager(this);
             DelayedObjectClickManager = new DelayedObjectClickManager(this);
             BoatMovingManager = new BoatMovingManager(this);
@@ -48,12 +50,33 @@ namespace ClassicUO.Game
             CommandManager = new CommandManager(this);
             Weather = new Weather(this);
             InfoBars = new InfoBarManager(this);
+            DurabilityManager = new DurabilityManager(this);
+            OPL = new ObjectPropertiesListManager(this);
+            CoolDownBarManager = new CoolDownBarManager(this);
         }
 
         public Point RangeSize;
 
+        // MobileUO: Unity doesn't support field keyword
+        private PlayerMobile _player;
+
         // MobileUO: removed private setter
-        public PlayerMobile Player { get; set; }
+        public PlayerMobile Player
+        {
+            get => _player;
+            set
+            {
+                _player = value;
+
+                UIManager.InGame = Map != null && _player != null;
+            }
+            //get;
+            //set
+            //{
+            //    field = value;
+            //    UIManager.InGame = Map != null && field != null;
+            //}
+        }
 
         public HouseCustomizationManager CustomHouseManager;
 
@@ -63,7 +86,8 @@ namespace ClassicUO.Game
 
         public uint LastObject, ObjectToRemove;
 
-        public ObjectPropertiesListManager OPL { get; } = new ObjectPropertiesListManager();
+        public ObjectPropertiesListManager OPL { get; }
+        public DurabilityManager DurabilityManager { get; }
 
         public CorpseManager CorpseManager { get; }
 
@@ -82,8 +106,6 @@ namespace ClassicUO.Game
         public ChatManager ChatManager { get; }
 
         public AuraManager AuraManager { get; }
-
-        public UoAssist UoAssist { get; }
 
         public TargetManager TargetManager { get; }
 
@@ -105,7 +127,25 @@ namespace ClassicUO.Game
 
         public Dictionary<uint, Mobile> Mobiles { get; } = new Dictionary<uint, Mobile>();
 
-        public Map.Map Map { get; private set; }
+        // MobileUO: Unity doesn't support field keyword
+        private Map.Map _map;
+
+        public Map.Map Map
+        {
+            get => _map;
+            private set
+            {
+                _map = value;
+
+                UIManager.InGame = Player != null && value != null;
+            }
+            //get;
+            //private set
+            //{
+            //    field = value;
+            //    UIManager.InGame = Player != null && field != null;
+            //}
+        }
 
         public byte ClientViewRange { get; set; } = Constants.MAX_VIEW_RANGE;
 
@@ -119,6 +159,8 @@ namespace ClassicUO.Game
         public WorldTextManager WorldTextManager { get; }
 
         public JournalManager Journal { get; } = new JournalManager();
+
+        public CoolDownBarManager CoolDownBarManager { get; }
 
 
         public int MapIndex
@@ -173,8 +215,6 @@ namespace ClassicUO.Game
                     {
                         Client.Game.UO.GameCursor.Graphic = 0xFFFF;
                     }
-
-                    UoAssist.SignalMapChanged(value);
                 }
             }
         }
@@ -212,7 +252,7 @@ namespace ClassicUO.Game
 
             Player = new PlayerMobile(this, serial);
             Mobiles.Add(Player);
-
+            EventSink.InvokeOnPlayerCreated();
             Log.Trace($"Player [0x{serial:X8}] created");
         }
 
@@ -278,14 +318,19 @@ namespace ClassicUO.Game
                             if (SerialHelper.IsMobile(container.Serial))
                             {
                                 UIManager.GetGump<PaperDollGump>(container.Serial)?.RequestUpdateContents();
+                                UIManager.GetGump<ModernPaperdoll>(container.Serial)?.RequestUpdateContents();
                             }
                             else if (SerialHelper.IsItem(container.Serial))
                             {
                                 UIManager.GetGump<ContainerGump>(container.Serial)?.RequestUpdateContents();
+                                #region GridContainer
+                                UIManager.GetGump<GridContainer>(container.Serial)?.RequestUpdateContents();
+                                #endregion
 
                                 if (container.Graphic == 0x2006)
                                 {
                                     UIManager.GetGump<GridLootGump>(container)?.RequestUpdateContents();
+                                    UIManager.GetGump<NearbyLootGump>(container)?.RequestUpdateContents();
                                 }
                             }
                         }
@@ -404,6 +449,39 @@ namespace ClassicUO.Game
             return SerialHelper.IsMobile(serial) && Mobiles.Contains(serial);
         }
 
+        public GameObject GetStaticOrMulti(ushort graphic, ushort x, ushort y, sbyte z)
+        {
+            if (Map is null)
+            {
+                Log.Error("World.GetStaticOrMulti called without a valid map.");
+                return null;
+            }
+
+            if (Map.GetTile(x, y) is not Land land)
+            {
+                return null;
+            }
+
+            GameObject i = land.TNext;
+            while (i is not null)
+            {
+                if (i is Static s)
+                {
+                    if (s.Graphic == graphic && s.X == x && s.Y == y && s.Z == z)
+                        return s;
+                }
+                else if (i is Multi m)
+                {
+                    if (m.Graphic == graphic && m.X == x && m.Y == y && m.Z == z)
+                        return m;
+                }
+
+                i = i.TNext;
+            }
+
+            return null;
+        }
+
         public Entity Get(uint serial)
         {
             Entity ent;
@@ -494,10 +572,16 @@ namespace ClassicUO.Game
                 if (SerialHelper.IsMobile(containerSerial))
                 {
                     UIManager.GetGump<PaperDollGump>(containerSerial)?.RequestUpdateContents();
+                    UIManager.GetGump<ModernPaperdoll>(containerSerial)?.RequestUpdateContents();
                 }
                 else if (SerialHelper.IsItem(containerSerial))
                 {
                     UIManager.GetGump<ContainerGump>(containerSerial)?.RequestUpdateContents();
+                    #region GridContainer
+                    UIManager.GetGump<GridContainer>(containerSerial)?.RequestUpdateContents();
+                    #endregion
+
+                    UIManager.GetGump<NearbyLootGump>(containerSerial)?.RequestUpdateContents();
                 }
 
                 Entity container = Get(containerSerial);

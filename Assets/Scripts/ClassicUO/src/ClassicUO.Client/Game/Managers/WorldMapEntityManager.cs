@@ -6,21 +6,22 @@ using ClassicUO.Game.Data;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.UI.Gumps;
 using ClassicUO.Network;
-using ClassicUO.Network.Encryption;
 using ClassicUO.Utility.Logging;
 
 namespace ClassicUO.Game.Managers
 {
-    internal class WMapEntity
+    public class WMapEntity
     {
+        private static Dictionary<uint, string> _mobileNameCache = new();
+
         public WMapEntity(uint serial)
         {
             Serial = serial;
 
-            //var mob = World.Mobiles.Get(serial);
+            var mob = Client.Game.UO.World.Mobiles.Get(serial);
 
-            //if (mob != null)
-            //    GetName();
+            if (mob != null)
+                GetName();
         }
 
         public bool IsGuild;
@@ -29,24 +30,26 @@ namespace ClassicUO.Game.Managers
         public readonly uint Serial;
         public int X, Y, HP, Map;
 
-        //public string GetName()
-        //{
-        //    Entity e = World.Get(Serial);
+        public string GetName()
+        {
+            Entity e = Client.Game.UO.World.Get(Serial);
 
-        //    if (e != null && !e.IsDestroyed && !string.IsNullOrEmpty(e.Name) && Name != e.Name)
-        //    {
-        //        Name = e.Name;
-        //    }
+            if (e != null && !e.IsDestroyed && !string.IsNullOrEmpty(e.Name) && Name != e.Name)
+            {
+                Name = e.Name;
+                _mobileNameCache[Serial] = Name;
+            }
 
-        //    return string.IsNullOrEmpty(Name) ? "<out of range>" : Name;
-        //}
+            return string.IsNullOrEmpty(Name) && !_mobileNameCache.TryGetValue(Serial, out Name) ? "<out of range>" : Name;
+        }
     }
 
-    internal sealed class WorldMapEntityManager
+    public sealed class WorldMapEntityManager
     {
         private bool _ackReceived;
         private uint _lastUpdate, _lastPacketSend, _lastPacketRecv;
         private readonly List<WMapEntity> _toRemove = new List<WMapEntity>();
+        public WMapEntity _corpse;
         private readonly World _world;
 
         public WorldMapEntityManager(World world) { _world = world; }
@@ -56,7 +59,7 @@ namespace ClassicUO.Game.Managers
             get
             {
                 return ((_world.ClientFeatures.Flags & CharacterListFlags.CLF_NEW_MOVEMENT_SYSTEM) == 0 || _ackReceived) &&
-                        (NetClient.Socket.Encryption == null || NetClient.Socket.Encryption.EncryptionType == 0) &&
+                        (AsyncNetClient.Encryption == null || AsyncNetClient.Encryption.EncryptionType == 0) &&
                         ProfileManager.CurrentProfile != null && ProfileManager.CurrentProfile.WorldMapShowParty &&
                         UIManager.GetGump<WorldMapGump>() != null; // horrible, but works
             }
@@ -76,7 +79,7 @@ namespace ClassicUO.Game.Managers
                 Log.Warn("Server support new movement system. Can't use the 0xF0 packet to query guild/party position");
                 v = false;
             }
-            else if (NetClient.Socket.Encryption?.EncryptionType != 0 && !_ackReceived)
+            else if (AsyncNetClient.Encryption?.EncryptionType != 0 && !_ackReceived)
             {
                 Log.Warn("Server has encryption. Can't use the 0xF0 packet to query guild/party position");
                 v = false;
@@ -162,6 +165,10 @@ namespace ClassicUO.Game.Managers
 
         public void RemoveUnupdatedWEntity()
         {
+            if (_corpse != null && _corpse.LastUpdate < Time.Ticks - 1000)
+            {
+                _corpse = null;
+            }
             if (_lastUpdate > Time.Ticks)
             {
                 return;
@@ -215,7 +222,7 @@ namespace ClassicUO.Game.Managers
                 //    return;
                 //}
 
-                NetClient.Socket.Send_QueryGuildPosition();
+                AsyncNetClient.Socket.Send_QueryGuildPosition();
 
                 if (_world.Party != null && _world.Party.Leader != 0)
                 {
@@ -227,7 +234,7 @@ namespace ClassicUO.Game.Managers
 
                             if (mob == null || mob.Distance > _world.ClientViewRange)
                             {
-                                NetClient.Socket.Send_QueryPartyPosition();
+                                AsyncNetClient.Socket.Send_QueryPartyPosition();
 
                                 break;
                             }

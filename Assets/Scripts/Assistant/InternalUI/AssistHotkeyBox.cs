@@ -31,7 +31,7 @@ using ClassicUO.Utility;
 using Assistant;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.UI.Gumps;
-using SDL2;
+using SDL3;
 
 namespace ClassicUO.Game.UI.Controls
 {

@@ -18,7 +18,7 @@ using ClassicUO.Renderer.Animations;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class ShopGump : Gump
+    public class ShopGump : Gump
     {
         enum ButtonScroll
         {
@@ -645,11 +645,11 @@ namespace ClassicUO.Game.UI.Gumps
 
                     if (IsBuyGump)
                     {
-                        NetClient.Socket.Send_BuyRequest(LocalSerial, items);
+                        AsyncNetClient.Socket.Send_BuyRequest(LocalSerial, items);
                     }
                     else
                     {
-                        NetClient.Socket.Send_SellRequest(LocalSerial, items);
+                        AsyncNetClient.Socket.Send_SellRequest(LocalSerial, items);
                     }
 
                     Dispose();
@@ -876,47 +876,50 @@ namespace ClassicUO.Game.UI.Gumps
                 else
                 {
                     ref readonly var artInfo = ref Client.Game.UO.Arts.GetArt(Graphic);
-                    hueVector = ShaderHueTranslator.GetHueVector(
-                        Hue,
-                        Client.Game.UO.FileManager.TileData.StaticData[Graphic].IsPartialHue,
-                        1f
-                    );
+                    if (artInfo.Texture != null)
+                    {
+                        hueVector = ShaderHueTranslator.GetHueVector(
+                            Hue,
+                            Client.Game.UO.FileManager.TileData.StaticData[Graphic].IsPartialHue,
+                            1f
+                        );
 
                     var rect = Client.Game.UO.Arts.GetRealArtBounds(Graphic);
 
-                    const int RECT_SIZE = 50;
+                        const int RECT_SIZE = 50;
 
-                    Point originalSize = new Point(RECT_SIZE, Height);
-                    Point point = new Point();
+                        Point originalSize = new Point(RECT_SIZE, Height);
+                        Point point = new Point();
 
-                    if (rect.Width < RECT_SIZE)
-                    {
-                        originalSize.X = rect.Width;
-                        point.X = (RECT_SIZE >> 1) - (originalSize.X >> 1);
+                        if (rect.Width < RECT_SIZE)
+                        {
+                            originalSize.X = rect.Width;
+                            point.X = (RECT_SIZE >> 1) - (originalSize.X >> 1);
+                        }
+
+                        if (rect.Height < Height)
+                        {
+                            originalSize.Y = rect.Height;
+                            point.Y = (Height >> 1) - (originalSize.Y >> 1);
+                        }
+
+                        batcher.Draw(
+                            artInfo.Texture,
+                            new Rectangle(
+                                x + point.X - 5,
+                                y + point.Y + 10,
+                                originalSize.X,
+                                originalSize.Y
+                            ),
+                            new Rectangle(
+                                artInfo.UV.X + rect.X,
+                                artInfo.UV.Y + rect.Y,
+                                rect.Width,
+                                rect.Height
+                            ),
+                            hueVector
+                        );
                     }
-
-                    if (rect.Height < Height)
-                    {
-                        originalSize.Y = rect.Height;
-                        point.Y = (Height >> 1) - (originalSize.Y >> 1);
-                    }
-
-                    batcher.Draw(
-                        artInfo.Texture,
-                        new Rectangle(
-                            x + point.X - 5,
-                            y + point.Y + 10,
-                            originalSize.X,
-                            originalSize.Y
-                        ),
-                        new Rectangle(
-                            artInfo.UV.X + rect.X,
-                            artInfo.UV.Y + rect.Y,
-                            rect.Width,
-                            rect.Height
-                        ),
-                        hueVector
-                    );
                 }
 
                 return base.Draw(batcher, x, y);

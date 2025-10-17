@@ -73,7 +73,12 @@ namespace Microsoft.Xna.Framework.Graphics
         {
         }
 
-        public void DrawIndexedPrimitives(PrimitiveType triangleList, int i, int i1, int i2, int i3, int i4)
+        public void DrawIndexedPrimitives(PrimitiveType primitiveType,
+            int baseVertex,
+            int minVertexIndex,
+            int numVertices,
+            int startIndex,
+            int primitiveCount)
         {
         }
     }

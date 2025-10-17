@@ -11,11 +11,11 @@ using ClassicUO.Assets;
 using ClassicUO.Resources;
 using ClassicUO.Utility;
 using ClassicUO.Utility.Logging;
-using SDL2;
+using SDL3;
 
 namespace ClassicUO.Game.UI.Gumps.Login
 {
-    internal class ServerSelectionGump : Gump
+    public class ServerSelectionGump : Gump
     {
         private const ushort SELECTED_COLOR = 0x0021;
         private const ushort NORMAL_COLOR = 0x034F;
@@ -235,6 +235,22 @@ namespace ClassicUO.Game.UI.Gumps.Login
                         loginScene.StepBack();
 
                         break;
+                }
+            }
+        }
+
+        protected override void OnControllerButtonUp(SDL.SDL_GamepadButton button)
+        {
+            base.OnControllerButtonUp(button);
+            if (button == SDL.SDL_GamepadButton.SDL_GAMEPAD_BUTTON_SOUTH)
+            {
+                LoginScene loginScene = Client.Game.GetScene<LoginScene>();
+
+                if (loginScene.Servers?.Any(s => s != null) ?? false)
+                {
+                    int index = loginScene.GetServerIndexFromSettings();
+
+                    loginScene.SelectServer((byte)loginScene.Servers[index].Index);
                 }
             }
         }

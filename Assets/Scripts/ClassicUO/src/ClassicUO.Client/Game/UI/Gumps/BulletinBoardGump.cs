@@ -13,7 +13,7 @@ using ClassicUO.Utility;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class BulletinBoardGump : Gump
+    public class BulletinBoardGump : Gump
     {
         private readonly DataBox _databox;
 
@@ -139,7 +139,7 @@ namespace ClassicUO.Game.UI.Gumps
         }
     }
 
-    internal class BulletinBoardItem : Gump
+    public class BulletinBoardItem : Gump
     {
         private readonly ExpandableScroll _articleContainer;
         private readonly Button _buttonPost;
@@ -419,7 +419,7 @@ namespace ClassicUO.Game.UI.Gumps
             switch ((ButtonType) buttonID)
             {
                 case ButtonType.Post:
-                    NetClient.Socket.Send_BulletinBoardPostMessage(LocalSerial, _msgSerial, _subjectTextbox.Text, _textBox.Text);
+                    AsyncNetClient.Socket.Send_BulletinBoardPostMessage(LocalSerial, _msgSerial, _subjectTextbox.Text, _textBox.Text);
 
                     Dispose();
 
@@ -446,7 +446,7 @@ namespace ClassicUO.Game.UI.Gumps
                     break;
 
                 case ButtonType.Remove:
-                    NetClient.Socket.Send_BulletinBoardRemoveMessage(LocalSerial, _msgSerial);
+                    AsyncNetClient.Socket.Send_BulletinBoardRemoveMessage(LocalSerial, _msgSerial);
                     Dispose();
 
                     break;
@@ -482,7 +482,7 @@ namespace ClassicUO.Game.UI.Gumps
         }
     }
 
-    internal class BulletinBoardObject : Control
+    public class BulletinBoardObject : Control
     {
         public BulletinBoardObject(uint serial, string text)
         {
@@ -546,7 +546,7 @@ namespace ClassicUO.Game.UI.Gumps
 
             if (root != null)
             {
-                NetClient.Socket.Send_BulletinBoardRequestMessage(root.LocalSerial, LocalSerial);
+                AsyncNetClient.Socket.Send_BulletinBoardRequestMessage(root.LocalSerial, LocalSerial);
             }
 
             return true;

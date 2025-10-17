@@ -6,7 +6,7 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.GameObjects
 {
-    internal sealed class MovingEffect : GameEffect
+    public sealed class MovingEffect : GameEffect
     {
         public MovingEffect
         (

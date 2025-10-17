@@ -7,7 +7,7 @@ using System.IO;
 
 namespace ClassicUO.Game.Data
 {
-    internal static class LightColors
+    public static class LightColors
     {
 
         private static readonly Dictionary<ushort, LightShaderData> _shaderdata = new Dictionary<ushort, LightShaderData>();

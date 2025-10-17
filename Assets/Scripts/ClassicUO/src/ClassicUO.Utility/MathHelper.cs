@@ -33,7 +33,7 @@ namespace ClassicUO.Utility
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ulong Combine(uint val1, uint val2)
         {
-            return (val1 | (val2 << 32));
+            return (ulong)(uint)val1 | ((ulong)(uint)val2 << 32);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

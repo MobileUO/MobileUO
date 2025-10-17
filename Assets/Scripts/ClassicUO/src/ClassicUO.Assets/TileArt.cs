@@ -258,8 +258,8 @@ namespace ClassicUO.Assets
 
                     if (!Appearances.TryGetValue(subType, out var dict))
                     {
-                        // MobileUO: collection expressions are not available in Unity's C#
-                        dict = new Dictionary<uint, uint>(); //[];
+                            // MobileUO: collection expressions are not available in Unity's C#
+                            dict = new Dictionary<uint, uint>(); //[];
                         Appearances.Add(subType, dict);
                     }
 

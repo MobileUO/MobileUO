@@ -2,7 +2,7 @@
 
 namespace ClassicUO.Game.Managers
 {
-    internal sealed class ChatChannel
+    public sealed class ChatChannel
     {
         public ChatChannel(string name, bool hasPassword)
         {

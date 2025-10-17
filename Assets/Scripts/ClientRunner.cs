@@ -12,7 +12,7 @@ using ClassicUO.Utility.Logging;
 using Microsoft.Xna.Framework;
 using Newtonsoft.Json;
 using PreferenceEnums;
-using SDL2;
+using SDL3;
 using System;
 using System.IO;
 using System.Linq;

@@ -3,7 +3,7 @@ using ClassicUO.Network;
 using ClassicUO.Game.Managers;
 using ClassicUO.Assets;
 using ClassicUO.Game.UI.Controls;
-using SDL2;
+using SDL3;
 
 using System;
 using System.Linq;
@@ -12,7 +12,7 @@ using System.Collections.ObjectModel;
 using Assistant.Core;
 using Assistant.Scripts;
 
-using AssistGump = ClassicUO.Game.UI.Gumps.AssistantGump;
+using AssistGump = ClassicUO.Game.UI.Gumps.MobileUOAssistantGump;
 using ClassicUO;
 
 namespace Assistant

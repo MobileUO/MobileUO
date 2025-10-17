@@ -1,20 +1,19 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
+
 using System.Collections.Generic;
 using System.IO;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.UI.Gumps;
-using ClassicUO.Assets;
-using ClassicUO.Renderer;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
 using System;
 
 namespace ClassicUO.Game.Managers
 {
-    internal sealed class ContainerManager
+    public sealed class ContainerManager
     {
         private readonly Dictionary<ushort, ContainerData> _data =
             new Dictionary<ushort, ContainerData>();

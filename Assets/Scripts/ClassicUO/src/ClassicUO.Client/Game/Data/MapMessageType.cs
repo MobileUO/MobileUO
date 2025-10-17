@@ -2,7 +2,7 @@
 
 namespace ClassicUO.Game.Data
 {
-    internal enum MapMessageType
+    public enum MapMessageType
     {
         Add = 1,
         Insert,

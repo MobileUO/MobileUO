@@ -2,22 +2,24 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
+using System.Text;
 using System.Xml;
+using ClassicUO.Configuration;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.UI.Controls;
+using ClassicUO.Input;
 using ClassicUO.Renderer;
-using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class Gump : Control
+    public class Gump : Control
     {
         // MobileUO: added variables
         private Button closeButton;
         public static bool CloseButtonsEnabled;
+        private bool isLocked = false;
 
         public Gump(World world, uint local, uint server)
         {
@@ -41,8 +43,8 @@ namespace ClassicUO.Game.UI.Gumps
             if ((closeButton == null || closeButton.IsDisposed) && CloseButtonsEnabled && (CanCloseWithRightClick || CanCloseWithEsc))
             {
                 closeButton = new Button(MOBILE_CLOSE_BUTTON_ID, 1150, 1152, 1151);
-                closeButton.Width = (int) Math.Round(closeButton.Width * 1.25f);
-                closeButton.Height = (int) Math.Round(closeButton.Height * 1.5f);
+                closeButton.Width = (int)Math.Round(closeButton.Width * 1.25f);
+                closeButton.Height = (int)Math.Round(closeButton.Height * 1.5f);
                 closeButton.ContainsByBounds = true;
                 closeButton.ButtonAction = ButtonAction.Activate;
             }
@@ -64,9 +66,13 @@ namespace ClassicUO.Game.UI.Gumps
             }
         }
 
-        public World World { get; }
+        public string PacketGumpText { get; set; } = string.Empty;
 
-        public bool CanBeSaved => GumpType != Gumps.GumpType.None;
+        public World World { get; }
+        
+        public virtual bool ShouldBeSaved => true;
+
+        public bool CanBeSaved => ShouldBeSaved && (GumpType != Gumps.GumpType.None || ServerSerial != 0);
 
         public virtual GumpType GumpType { get; }
 
@@ -74,6 +80,55 @@ namespace ClassicUO.Game.UI.Gumps
 
         public uint MasterGumpSerial { get; set; }
 
+        public float AlphaOffset = 0;
+
+        protected override void OnMouseWheel(MouseEventType delta)
+        {
+            base.OnMouseWheel(delta);
+
+            if (Keyboard.Alt && ProfileManager.CurrentProfile.EnableAlphaScrollingOnGumps)
+            {
+                if (delta == MouseEventType.WheelScrollUp && Alpha < 0.99)
+                {
+                    AlphaOffset += 0.02f;
+                    Alpha += 0.02f;
+                    foreach (Control c in Children)
+                    {
+                        c.Alpha += 0.02f;
+                        if (c.Alpha > 1) c.Alpha = 1;
+                    }
+                }
+                else if (Alpha > 0.1)
+                {
+                    AlphaOffset -= 0.02f;
+                    Alpha -= 0.02f;
+                    foreach (Control c in Children)
+                        c.Alpha -= 0.02f;
+                }
+            }
+        }
+
+        public virtual bool IsLocked
+        {
+            get { return isLocked; }
+            set
+            {
+                isLocked = value;
+                if (isLocked)
+                {
+                    CanMove = false;
+                    CanCloseWithRightClick = false;
+                }
+                else
+                {
+                    CanMove = true;
+                    CanCloseWithRightClick = true;
+                }
+                OnLockedChanged();
+            }
+        }
+
+        public bool CanBeLocked { get; set; } = true;
 
         public override void Update()
         {
@@ -110,33 +165,115 @@ namespace ClassicUO.Game.UI.Gumps
             }
         }
 
+        protected override void OnMouseUp(int x, int y, MouseButtonType button)
+        {
+            base.OnMouseUp(x, y, button);
+            if (CanBeLocked && ((Keyboard.Ctrl && Keyboard.Alt) || Controller.Button_LeftTrigger) && UIManager.MouseOverControl != null && (UIManager.MouseOverControl == this || UIManager.MouseOverControl.RootParent == this))
+            {
+                IsLocked ^= true;
+            }
+        }
 
         public virtual void Save(XmlTextWriter writer)
         {
-            writer.WriteAttributeString("type", ((int) GumpType).ToString());
+            writer.WriteAttributeString("type", ((int)GumpType).ToString());
             writer.WriteAttributeString("x", X.ToString());
             writer.WriteAttributeString("y", Y.ToString());
             writer.WriteAttributeString("serial", LocalSerial.ToString());
+            writer.WriteAttributeString("serverSerial", ServerSerial.ToString());
+            writer.WriteAttributeString("isLocked", isLocked.ToString());
+            writer.WriteAttributeString("alphaOffset", AlphaOffset.ToString());
+        }
+
+        public void CenterXInScreen()
+        {
+            Rectangle windowBounds = Client.Game.Window.ClientBounds;
+            if (ProfileManager.CurrentProfile.GlobalScaling)
+            {
+                float scale = ProfileManager.CurrentProfile.GlobalScale;
+                // Convert physical width to unscaled (logical) width
+                float logicalWidth = windowBounds.Width / scale;
+                // Center in logical coordinates
+                X = (int)((logicalWidth - Width) / 2);
+            }
+            else
+            {
+                X = (windowBounds.Width - Width) / 2;
+            }
+        }
+
+        public void CenterYInScreen()
+        {
+            Rectangle windowBounds = Client.Game.Window.ClientBounds;
+            if (ProfileManager.CurrentProfile.GlobalScaling)
+            {
+                float scale = ProfileManager.CurrentProfile.GlobalScale;
+                float logicalHeight = windowBounds.Height / scale;
+                Y = (int)((logicalHeight - Height) / 2);
+            }
+            else
+            {
+                Y = (windowBounds.Height - Height) / 2;
+            }
+        }
+
+        public void CenterXInViewPort()
+        {
+            var camera = Client.Game.Scene.Camera;
+            if (ProfileManager.CurrentProfile.GlobalScaling)
+            {
+                float scale = ProfileManager.CurrentProfile.GlobalScale;
+                // Compute the camera's physical center, then convert to logical coordinates.
+                float logicalCenterX = (camera.Bounds.X + camera.Bounds.Width / 2f);
+                // Set element X so that its center aligns with the camera's logical center.
+                X = (int)(logicalCenterX - ((Width / scale) / 2f));
+            }
+            else
+            {
+                X = camera.Bounds.X + ((camera.Bounds.Width - Width) / 2);
+            }
+        }
+
+        public void CenterYInViewPort()
+        {
+            var camera = Client.Game.Scene.Camera;
+            if (ProfileManager.CurrentProfile.GlobalScaling)
+            {
+                float scale = ProfileManager.CurrentProfile.GlobalScale;
+                float logicalCenterY = (camera.Bounds.Y + camera.Bounds.Height / 2f);
+                Y = (int)(logicalCenterY - ((Height / scale) / 2f));
+            }
+            else
+            {
+                Y = camera.Bounds.Y + ((camera.Bounds.Height - Height) / 2);
+            }
         }
 
         public void SetInScreen()
         {
             Rectangle windowBounds = Client.Game.Window.ClientBounds;
-            Rectangle bounds = Bounds;
-            bounds.X += windowBounds.X;
-            bounds.Y += windowBounds.Y;
 
-            if (windowBounds.Intersects(bounds))
-            {
-                return;
-            }
+            int halfWidth = Width / 2;
+            int halfHeight = Height / 2;
 
-            X = 0;
-            Y = 0;
+            int newX = (int)MathHelper.Clamp(X, -halfWidth, windowBounds.Width - halfWidth);
+            int newY = (int)MathHelper.Clamp(Y, -halfHeight, windowBounds.Height - halfHeight);
+
+            X = newX;
+            Y = newY;
         }
 
         public virtual void Restore(XmlElement xml)
         {
+            if (bool.TryParse(xml.GetAttribute("isLocked"), out bool lockedStatus))
+                IsLocked = lockedStatus;
+            if (float.TryParse(xml.GetAttribute("alphaOffset"), out float alpha))
+            {
+                AlphaOffset = alpha;
+                Alpha += alpha;
+                foreach (Control c in Children)
+                    c.Alpha += alpha;
+            }
         }
 
         public void RequestUpdateContents()
@@ -177,6 +314,17 @@ namespace ClassicUO.Game.UI.Gumps
             Location = position;
         }
 
+        protected override void OnMove(int x, int y)
+        {
+            base.OnMove(x, y);
+
+            SetInScreen();
+        }
+
+        protected virtual void OnLockedChanged()
+        {
+        }
+
         public override bool Draw(UltimaBatcher2D batcher, int x, int y)
         {
             return IsVisible && base.Draw(batcher, x, y);
@@ -199,7 +347,7 @@ namespace ClassicUO.Game.UI.Gumps
                             break;
 
                         case StbTextBox textBox:
-                            entries.Add(new Tuple<ushort, string>((ushort) textBox.LocalSerial, textBox.Text));
+                            entries.Add(new Tuple<ushort, string>((ushort)textBox.LocalSerial, textBox.Text));
 
                             break;
                     }
@@ -207,6 +355,7 @@ namespace ClassicUO.Game.UI.Gumps
 
                 GameActions.ReplyGump
                 (
+                    World,
                     LocalSerial,
                     // Seems like MasterGump serial does not work as expected.
                     /*MasterGumpSerial != 0 ? MasterGumpSerial :*/ ServerSerial,

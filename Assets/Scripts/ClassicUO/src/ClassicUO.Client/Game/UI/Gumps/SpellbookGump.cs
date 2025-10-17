@@ -1,9 +1,7 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Xml;
+
+using ClassicUO.Assets;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
 using ClassicUO.Game.GameObjects;
@@ -11,14 +9,16 @@ using ClassicUO.Game.Managers;
 using ClassicUO.Game.Scenes;
 using ClassicUO.Game.UI.Controls;
 using ClassicUO.Input;
-using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using ClassicUO.Resources;
 using Microsoft.Xna.Framework;
+using System;
+using System.Collections.Generic;
+using System.Xml;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class SpellbookGump : Gump
+    public class SpellbookGump : Gump
     {
         private DataBox _dataBox;
         private HitBox _hitBox;
@@ -30,6 +30,8 @@ namespace ClassicUO.Game.UI.Gumps
         private SpellBookType _spellBookType;
         private readonly bool[] _spells = new bool[64];
         private int _enqueuePage = -1;
+
+        public SpellBookType SpellBookType => _spellBookType;
 
         public SpellbookGump(World world, uint item) : this(world)
         {
@@ -614,64 +616,23 @@ namespace ClassicUO.Game.UI.Gumps
                 switch (_spellBookType)
                 {
                     case SpellBookType.Magery:
-                    {
-                        Label text = new Label(
-                            SpellsMagery.CircleNames[i >> 3],
-                            false,
-                            0x0288,
-                            font: 6
-                        )
                         {
-                            X = topTextX,
-                            Y = topTextY + 4
-                        };
+                            Label text = new Label(
+                                SpellsMagery.CircleNames[i >> 3],
+                                false,
+                                0x0288,
+                                font: 6
+                            )
+                            {
+                                X = topTextX,
+                                Y = topTextY + 4
+                            };
 
-                        _dataBox.Add(text, page1);
+                            _dataBox.Add(text, page1);
 
-                        text = new Label(name, false, 0x0288, 80, 6) { X = iconTextX, Y = 34 };
+                            text = new Label(name, false, 0x0288, 80, 6) { X = iconTextX, Y = 34 };
 
-                        _dataBox.Add(text, page1);
-                        int abbreviatureY = 26;
-
-                        if (text.Height < 24)
-                        {
-                            abbreviatureY = 31;
-                        }
-
-                        abbreviatureY += text.Height;
-
-                        text = new Label(abbreviature, false, 0x0288, font: 8)
-                        {
-                            X = iconTextX,
-                            Y = abbreviatureY
-                        };
-
-                        _dataBox.Add(text, page1);
-
-                        break;
-                    }
-
-                    case SpellBookType.Mastery:
-                    {
-                        Label text = new Label(
-                            SpellsMastery.GetMasteryGroupByID(i + 1),
-                            false,
-                            0x0288,
-                            font: 6
-                        )
-                        {
-                            X = topTextX,
-                            Y = topTextY + 4
-                        };
-
-                        _dataBox.Add(text, page1);
-
-                        text = new Label(name, false, 0x0288, 80, 6) { X = iconTextX, Y = 34 };
-
-                        _dataBox.Add(text, page1);
-
-                        if (!string.IsNullOrEmpty(abbreviature))
-                        {
+                            _dataBox.Add(text, page1);
                             int abbreviatureY = 26;
 
                             if (text.Height < 24)
@@ -681,46 +642,88 @@ namespace ClassicUO.Game.UI.Gumps
 
                             abbreviatureY += text.Height;
 
-                            text = new Label(abbreviature, false, 0x0288, 80, 6)
+                            text = new Label(abbreviature, false, 0x0288, font: 8)
                             {
                                 X = iconTextX,
                                 Y = abbreviatureY
                             };
 
                             _dataBox.Add(text, page1);
+
+                            break;
                         }
 
-                        break;
-                    }
-
-                    default:
-                    {
-                        Label text = new Label(name, false, 0x0288, font: 6)
+                    case SpellBookType.Mastery:
                         {
-                            X = topTextX,
-                            Y = topTextY
-                        };
-
-                        _dataBox.Add(text, page1);
-
-                        if (!string.IsNullOrEmpty(abbreviature))
-                        {
-                            text = new Label(abbreviature, false, 0x0288, 80, 6)
+                            Label text = new Label(
+                                SpellsMastery.GetMasteryGroupByID(i + 1),
+                                false,
+                                0x0288,
+                                font: 6
+                            )
                             {
-                                X = iconTextX,
-                                Y = 34
+                                X = topTextX,
+                                Y = topTextY + 4
                             };
 
                             _dataBox.Add(text, page1);
+
+                            text = new Label(name, false, 0x0288, 80, 6) { X = iconTextX, Y = 34 };
+
+                            _dataBox.Add(text, page1);
+
+                            if (!string.IsNullOrEmpty(abbreviature))
+                            {
+                                int abbreviatureY = 26;
+
+                                if (text.Height < 24)
+                                {
+                                    abbreviatureY = 31;
+                                }
+
+                                abbreviatureY += text.Height;
+
+                                text = new Label(abbreviature, false, 0x0288, 80, 6)
+                                {
+                                    X = iconTextX,
+                                    Y = abbreviatureY
+                                };
+
+                                _dataBox.Add(text, page1);
+                            }
+
+                            break;
                         }
 
-                        break;
-                    }
+                    default:
+                        {
+                            Label text = new Label(name, false, 0x0288, font: 6)
+                            {
+                                X = topTextX,
+                                Y = topTextY
+                            };
+
+                            _dataBox.Add(text, page1);
+
+                            if (!string.IsNullOrEmpty(abbreviature))
+                            {
+                                text = new Label(abbreviature, false, 0x0288, 80, 6)
+                                {
+                                    X = iconTextX,
+                                    Y = 34
+                                };
+
+                                _dataBox.Add(text, page1);
+                            }
+
+                            break;
+                        }
                 }
 
                 ushort iconGraphic;
                 int toolTipCliloc;
 
+                var spellDef = GetSpellDefinition(iconSerial);
                 if (_spellBookType == SpellBookType.Mastery)
                 {
                     iconGraphic = (ushort)SpellsMastery.GetSpell(i + 1).GumpIconID;
@@ -729,11 +732,10 @@ namespace ClassicUO.Game.UI.Gumps
                 }
                 else
                 {
-                    iconGraphic = (ushort)(iconStartGraphic + i);
+                    iconGraphic = (ushort)spellDef.GumpIconSmallID;
                     GetSpellToolTip(out toolTipCliloc);
                 }
 
-                var spellDef = GetSpellDefinition(iconSerial);
                 HueGumpPic icon = new HueGumpPic(
                     this,
                     iconX,
