@@ -5,6 +5,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using ClassicUO.Utility.Logging;
+// MobileUO: added using
+using Application = UnityEngine.Application;
 
 namespace ClassicUO.Assets
 {
@@ -196,7 +198,8 @@ namespace ClassicUO.Assets
 
         public void Load()
         {
-            exePath = AppContext.BaseDirectory;
+            // MobileUO: use app data path
+            exePath = Application.persistentDataPath;
 
             string gumpPath = Path.Combine(exePath, IMAGES_FOLDER, GUMP_EXTERNAL_FOLDER);
 

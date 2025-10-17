@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+// MobileUO: added using
+using Application = UnityEngine.Application;
 
 namespace ClassicUO.Assets
 {
@@ -15,7 +17,8 @@ namespace ClassicUO.Assets
 
         private SoundOverrideLoader()
         {
-            var exePath = AppContext.BaseDirectory;
+            // MobileUO: use app data path
+            var exePath = Application.persistentDataPath;
 
             Task.Factory.StartNew(() =>
             {

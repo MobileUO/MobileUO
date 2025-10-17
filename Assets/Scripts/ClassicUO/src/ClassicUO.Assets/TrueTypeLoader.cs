@@ -37,6 +37,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+// MobileUO: added using
+using Application = UnityEngine.Application;
 
 namespace ClassicUO.Assets
 {
@@ -64,7 +66,8 @@ namespace ClassicUO.Assets
                 KernelHeight = 2
             };
 
-            string fontPath = Path.Combine(AppContext.BaseDirectory, "Fonts");
+            // MobileUO: use app data path
+            string fontPath = Path.Combine(Application.persistentDataPath, "Fonts");
 
             if (!Directory.Exists(fontPath))
                 Directory.CreateDirectory(fontPath);
