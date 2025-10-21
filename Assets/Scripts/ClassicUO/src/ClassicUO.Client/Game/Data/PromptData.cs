@@ -2,14 +2,14 @@
 
 namespace ClassicUO.Game.Data
 {
-    internal enum ConsolePrompt
+    public enum ConsolePrompt
     {
         None,
         ASCII,
         Unicode
     }
 
-    internal struct PromptData
+    public struct PromptData
     {
         public ConsolePrompt Prompt;
         public ulong Data;

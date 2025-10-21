@@ -30,7 +30,7 @@ namespace ClassicUO.Game.Managers
     //    SmallLight = 9
     //}
 
-    internal enum AffixType : byte
+    public enum AffixType : byte
     {
         Append = 0x00,
         Prepend = 0x01,
@@ -39,7 +39,7 @@ namespace ClassicUO.Game.Managers
     }
 
 
-    internal sealed class MessageManager
+    public sealed class MessageManager
     {
         private readonly World _world;
 

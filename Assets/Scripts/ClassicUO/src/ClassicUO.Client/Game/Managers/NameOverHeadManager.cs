@@ -8,7 +8,7 @@ using ClassicUO.Game.UI.Gumps;
 namespace ClassicUO.Game.Managers
 {
     [Flags]
-    internal enum NameOverheadTypeAllowed
+    public enum NameOverheadTypeAllowed
     {
         All,
         Mobiles,
@@ -17,7 +17,7 @@ namespace ClassicUO.Game.Managers
         MobilesCorpses = Mobiles | Corpses
     }
 
-    internal sealed class NameOverHeadManager
+    public sealed class NameOverHeadManager
     {
         private NameOverHeadHandlerGump _gump;
         private readonly World _world;

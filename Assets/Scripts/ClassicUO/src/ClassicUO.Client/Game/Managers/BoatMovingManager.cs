@@ -9,7 +9,7 @@ using ClassicUO.Utility.Collections;
 
 namespace ClassicUO.Game.Managers
 {
-    internal sealed class BoatMovingManager
+    public sealed class BoatMovingManager
     {
         private const int SLOW_INTERVAL = 1000;
         private const int NORMAL_INTERVAL = 500;

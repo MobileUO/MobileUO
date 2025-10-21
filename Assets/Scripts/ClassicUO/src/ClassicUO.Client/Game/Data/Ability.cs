@@ -6,7 +6,7 @@ using System.Collections.Generic;
 namespace ClassicUO.Game.Data
 {
     [Flags]
-    internal enum Ability : ushort
+    public enum Ability : ushort
     {
         Invalid = 0xFF,
         None = 0,

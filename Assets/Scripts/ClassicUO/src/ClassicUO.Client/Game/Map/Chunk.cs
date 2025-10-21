@@ -12,7 +12,7 @@ using System.Buffers;
 
 namespace ClassicUO.Game.Map
 {
-    internal sealed class Chunk
+    public sealed class Chunk
     {
         //private static readonly QueuedPool<Chunk> _pool = new QueuedPool<Chunk>
         //(

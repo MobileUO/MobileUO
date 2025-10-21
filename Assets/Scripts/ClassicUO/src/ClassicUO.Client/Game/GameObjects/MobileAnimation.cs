@@ -10,7 +10,7 @@ using ClassicUO.Renderer.Animations;
 
 namespace ClassicUO.Game.GameObjects
 {
-    internal partial class Mobile
+    public partial class Mobile
     {
         private static readonly ushort[] HANDS_BASE_ANIMID =
         {

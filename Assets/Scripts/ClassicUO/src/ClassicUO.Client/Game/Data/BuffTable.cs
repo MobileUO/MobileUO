@@ -6,7 +6,7 @@ using System.IO;
 
 namespace ClassicUO.Game.Data
 {
-    internal enum BuffIconType : short
+    public enum BuffIconType : short
     {
         DismountPrevention = 0x3E9,
         NoRearm = 0x3EA,

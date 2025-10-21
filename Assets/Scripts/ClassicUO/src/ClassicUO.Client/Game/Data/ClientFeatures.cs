@@ -6,7 +6,7 @@ using ClassicUO.Utility;
 namespace ClassicUO.Game.Data
 {
     [Flags]
-    internal enum CharacterListFlags : uint
+    public enum CharacterListFlags : uint
     {
         CLF_UNKNOWN = 0x01,
         CLF_OWERWRITE_CONFIGURATION_BUTTON = 0x02,
@@ -26,7 +26,7 @@ namespace ClassicUO.Game.Data
         CLF_UNLOCK_FELUCCA_AREAS = 0x8000
     }
 
-    internal class ClientFeatures
+    public class ClientFeatures
     {
         public CharacterListFlags Flags { get; private set; }
 

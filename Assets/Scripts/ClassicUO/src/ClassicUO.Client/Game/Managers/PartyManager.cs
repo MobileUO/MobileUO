@@ -11,7 +11,7 @@ using ClassicUO.Resources;
 
 namespace ClassicUO.Game.Managers
 {
-    internal sealed class PartyManager
+    public sealed class PartyManager
     {
         private const int PARTY_SIZE = 10;
 
@@ -217,7 +217,7 @@ namespace ClassicUO.Game.Managers
         }
     }
 
-    internal class PartyMember : IEquatable<PartyMember>
+    public class PartyMember : IEquatable<PartyMember>
     {
         private readonly World _world;
         private string _name;

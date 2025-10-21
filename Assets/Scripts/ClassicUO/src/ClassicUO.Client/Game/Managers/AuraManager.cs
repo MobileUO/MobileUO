@@ -88,7 +88,7 @@ namespace ClassicUO.Game.Managers
         }
     }
 
-    internal sealed class AuraManager
+    public sealed class AuraManager
     {
         private readonly World _world;
         private readonly Aura _aura;

@@ -19,7 +19,7 @@ using ClassicUO.Network;
 
 namespace ClassicUO.Game
 {
-    internal sealed class World
+    public sealed class World
     {
         private readonly EffectManager _effectManager;
         private readonly List<uint> _toRemove = new List<uint>();

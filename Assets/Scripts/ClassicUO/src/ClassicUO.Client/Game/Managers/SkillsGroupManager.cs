@@ -14,7 +14,7 @@ using ClassicUO.Utility.Logging;
 
 namespace ClassicUO.Game.Managers
 {
-    internal sealed class SkillsGroup
+    public sealed class SkillsGroup
     {
         private readonly byte[] _list = new byte[60];
 
@@ -154,7 +154,7 @@ namespace ClassicUO.Game.Managers
         }
     }
 
-    internal sealed class SkillsGroupManager
+    public sealed class SkillsGroupManager
     {
         private readonly World _world;
 

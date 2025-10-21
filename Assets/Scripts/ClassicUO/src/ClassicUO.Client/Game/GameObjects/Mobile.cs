@@ -14,7 +14,7 @@ using ClassicUO.Game.Scenes;
 
 namespace ClassicUO.Game.GameObjects
 {
-    internal partial class Mobile : Entity
+    public partial class Mobile : Entity
     {
         //private static readonly QueuedPool<Mobile> _pool = new QueuedPool<Mobile>(
         //    Constants.PREDICTABLE_CHUNKS,
@@ -1067,7 +1067,7 @@ namespace ClassicUO.Game.GameObjects
             }
         }
 
-        internal struct Step
+        public struct Step
         {
             public int X,
                 Y;

@@ -6,7 +6,7 @@ using ClassicUO.Game.GameObjects;
 
 namespace ClassicUO.Game.Managers
 {
-    internal sealed class HouseManager
+    public sealed class HouseManager
     {
         private readonly Dictionary<uint, House> _houses = new Dictionary<uint, House>();
         private readonly World _world;

@@ -10,7 +10,7 @@ using ClassicUO.Utility.Logging;
 
 namespace ClassicUO.Game.Managers
 {
-    internal sealed class CommandManager
+    public sealed class CommandManager
     {
         private readonly Dictionary<string, Action<string[]>> _commands = new Dictionary<string, Action<string[]>>();
         private readonly World _world;

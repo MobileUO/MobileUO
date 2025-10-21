@@ -25,7 +25,7 @@ using XnaVector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace ClassicUO.Renderer
 {
-    internal sealed class UltimaBatcher2D : IDisposable
+    public sealed class UltimaBatcher2D : IDisposable
     {
         private static readonly float[] _cornerOffsetX = new float[] { 0.0f, 1.0f, 0.0f, 1.0f };
         private static readonly float[] _cornerOffsetY = new float[] { 0.0f, 0.0f, 1.0f, 1.0f };

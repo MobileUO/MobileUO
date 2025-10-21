@@ -17,7 +17,7 @@ using ClassicUO.Game.UI.Controls;
 
 namespace ClassicUO.Game.GameObjects
 {
-    internal partial class Item
+    public partial class Item
     {
         private static EquipConvData? _equipConvData;
 

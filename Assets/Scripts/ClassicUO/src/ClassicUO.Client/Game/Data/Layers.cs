@@ -2,7 +2,7 @@
 
 namespace ClassicUO.Game.Data
 {
-    internal enum Layer : byte
+    public enum Layer : byte
     {
         Invalid = 0x00,
         OneHanded = 0x01,

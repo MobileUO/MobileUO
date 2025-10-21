@@ -15,7 +15,7 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.Managers
 {
-    internal struct CustomBuildObject
+    public struct CustomBuildObject
     {
         public CustomBuildObject(ushort graphic)
         {
@@ -27,7 +27,7 @@ namespace ClassicUO.Game.Managers
         public int X, Y, Z;
     }
 
-    internal sealed class HouseCustomizationManager
+    public sealed class HouseCustomizationManager
     {
         public readonly List<CustomHouseWallCategory> Walls = new List<CustomHouseWallCategory>();
         public readonly List<CustomHouseFloor> Floors = new List<CustomHouseFloor>();
@@ -1750,7 +1750,7 @@ namespace ClassicUO.Game.Managers
         }
     }
 
-    internal enum CUSTOM_HOUSE_GUMP_STATE
+    public enum CUSTOM_HOUSE_GUMP_STATE
     {
         CHGS_WALL = 0,
         CHGS_DOOR,
@@ -1773,7 +1773,7 @@ namespace ClassicUO.Game.Managers
         CHGVS_HIDE_ALL
     }
 
-    internal enum CUSTOM_HOUSE_BUILD_TYPE
+    public enum CUSTOM_HOUSE_BUILD_TYPE
     {
         CHBT_NORMAL = 0,
         CHBT_ROOF,
@@ -1782,7 +1782,7 @@ namespace ClassicUO.Game.Managers
     }
 
     [Flags]
-    internal enum CUSTOM_HOUSE_MULTI_OBJECT_FLAGS
+    public enum CUSTOM_HOUSE_MULTI_OBJECT_FLAGS
     {
         CHMOF_GENERIC_INTERNAL = 0x01,
         CHMOF_FLOOR = 0x02,

@@ -10,7 +10,7 @@ using ClassicUO.Utility.Logging;
 
 namespace ClassicUO.Game.Managers
 {
-    internal sealed class JournalManager
+    public sealed class JournalManager
     {
         private StreamWriter _fileWriter;
         private bool _writerHasException;
@@ -118,7 +118,7 @@ namespace ClassicUO.Game.Managers
         }
     }
 
-    internal class JournalEntry
+    public class JournalEntry
     {
         public byte Font;
         public ushort Hue;

@@ -4,7 +4,7 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.Data
 {
-    internal struct ContainerData
+    public struct ContainerData
     {
         public ContainerData
         (

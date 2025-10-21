@@ -5,7 +5,7 @@ using System;
 namespace ClassicUO.Game.Data
 {
     [Flags]
-    internal enum MessageType : byte
+    public enum MessageType : byte
     {
         Regular = 0,
         System = 1,

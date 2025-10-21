@@ -12,7 +12,7 @@ using MathHelper = ClassicUO.Utility.MathHelper;
 
 namespace ClassicUO.Game
 {
-    internal sealed class Pathfinder
+    public sealed class Pathfinder
     {
         private const int PATHFINDER_MAX_NODES = 10000;
         private int _goalNode;

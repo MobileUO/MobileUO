@@ -4,14 +4,14 @@ using ClassicUO.Resources;
 
 namespace ClassicUO.Game.Data
 {
-    internal enum Lock : byte
+    public enum Lock : byte
     {
         Up = 0,
         Down = 1,
         Locked = 2
     }
 
-    internal sealed class Skill
+    public sealed class Skill
     {
         public Skill(string name, int index, bool click)
         {

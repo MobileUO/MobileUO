@@ -4,7 +4,7 @@ using ClassicUO.Configuration;
 
 namespace ClassicUO.Game.Data
 {
-    internal enum NotorietyFlag : byte
+    public enum NotorietyFlag : byte
     {
         Unknown = 0x00,
         Innocent = 0x01,
