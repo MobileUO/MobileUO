@@ -8,7 +8,7 @@ using System.Runtime.CompilerServices;
 
 namespace ClassicUO.Game.GameObjects
 {
-    internal sealed partial class Static : GameObject
+    public sealed partial class Static : GameObject
     {
         //private static readonly QueuedPool<Static> _pool = new QueuedPool<Static>
         //(
@@ -36,6 +36,8 @@ namespace ClassicUO.Game.GameObjects
         public bool IsVegetation;
         public int Index;
 
+        private bool _isLight;
+
 
         public static Static Create(World world, ushort graphic, ushort hue, int index)
         {
@@ -61,6 +63,8 @@ namespace ClassicUO.Game.GameObjects
             {
                 s._canBeTransparent = 0;
             }
+
+            s._isLight = s.ItemData.IsLight;
 
             return s;
         }

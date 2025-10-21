@@ -10,7 +10,7 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.GameObjects
 {
-    internal sealed partial class Static
+    public sealed partial class Static
     {
         private int _canBeTransparent;
 
