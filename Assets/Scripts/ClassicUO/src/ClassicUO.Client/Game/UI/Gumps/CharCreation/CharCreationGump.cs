@@ -12,7 +12,7 @@ using ClassicUO.Utility;
 
 namespace ClassicUO.Game.UI.Gumps.CharCreation
 {
-    internal class CharCreationGump : Gump
+    public class CharCreationGump : Gump
     {
         private PlayerMobile _character;
         private int _cityIndex;
@@ -91,16 +91,16 @@ namespace ClassicUO.Game.UI.Gumps.CharCreation
                 }
 
                 Skill skill2 = _character.Skills[skillIndex];
-                skill2.ValueFixed = (ushort) info.SkillDefVal[i, 1];
+                skill2.ValueFixed = (ushort)info.SkillDefVal[i, 1];
                 skill2.BaseFixed = 0;
                 skill2.CapFixed = 0;
                 skill2.Lock = Lock.Locked;
             }
 
             _selectedProfession = info;
-            _character.Strength = (ushort) _selectedProfession.StatsVal[0];
-            _character.Intelligence = (ushort) _selectedProfession.StatsVal[1];
-            _character.Dexterity = (ushort) _selectedProfession.StatsVal[2];
+            _character.Strength = (ushort)_selectedProfession.StatsVal[0];
+            _character.Intelligence = (ushort)_selectedProfession.StatsVal[1];
+            _character.Dexterity = (ushort)_selectedProfession.StatsVal[2];
 
             SetAttributes();
 
@@ -184,7 +184,7 @@ namespace ClassicUO.Game.UI.Gumps.CharCreation
                         Remove(existing);
                     }
 
-                    Add(new CreateCharSelectionCityGump(World, (byte) _selectedProfession.DescriptionIndex, _loginScene), 4);
+                    Add(new CreateCharSelectionCityGump(World, (byte)_selectedProfession.DescriptionIndex, _loginScene), 4);
 
                     ChangePage(4);
 

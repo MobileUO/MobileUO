@@ -11,7 +11,7 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal sealed class IgnoreManagerGump : Gump
+    public sealed class IgnoreManagerGump : Gump
     {
         private const ushort HUE_FONT = 0xFFFF;
         private const ushort BACKGROUND_COLOR = 999;

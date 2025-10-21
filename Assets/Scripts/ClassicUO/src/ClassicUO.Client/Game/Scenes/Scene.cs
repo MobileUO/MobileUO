@@ -9,7 +9,7 @@ using SDL2;
 
 namespace ClassicUO.Game.Scenes
 {
-    internal abstract class Scene : IDisposable
+    public abstract class Scene : IDisposable
     {
         public bool IsDestroyed { get; private set; }
         public bool IsLoaded { get; private set; }

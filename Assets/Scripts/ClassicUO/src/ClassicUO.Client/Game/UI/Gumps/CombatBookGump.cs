@@ -12,7 +12,7 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class CombatBookGump : Gump
+    public class CombatBookGump : Gump
     {
         private readonly int _abilityCount = Constants.MAX_ABILITIES_COUNT;
         private int _dictionaryPagesCount = 3;
@@ -49,7 +49,7 @@ namespace ClassicUO.Game.UI.Gumps
             Clear();
             _primAbility = null;
             _secAbility = null;
-            
+
             Add(new GumpPic(0, 0, 0x2B02, 0));
 
             Add(_pageCornerLeft = new GumpPic(50, 8, 0x08BB, 0));
@@ -103,8 +103,10 @@ namespace ClassicUO.Game.UI.Gumps
                             font: 9
                         )
                         {
-                            X = dataX, Y = 42 + y, AcceptMouseInput = true,
-                            LocalSerial = (uint) maxPages++,
+                            X = dataX,
+                            Y = 42 + y,
+                            AcceptMouseInput = true,
+                            LocalSerial = (uint)maxPages++,
                             Tag = offs
                         };
 
@@ -125,7 +127,7 @@ namespace ClassicUO.Game.UI.Gumps
 
                     if (spellsOnPage == 4)
                     {
-                        if(_primAbility == null)
+                        if (_primAbility == null)
                         {
                             byte bab1 = (byte)(((byte)World.Player.PrimaryAbility & 0x7F) - 1);
                             _primAbility = new GumpPic(215, 105, (ushort)(0x5200 + bab1), (ushort)(((byte)World.Player.PrimaryAbility & 0x80) != 0 ? 38 : 0));
@@ -141,7 +143,8 @@ namespace ClassicUO.Game.UI.Gumps
                             0x0288,
                             80,
                             6
-                        ) { X = 265, Y = 105 };
+                        )
+                        { X = 265, Y = 105 };
 
                         Add(text, page);
                         Add(_primAbility, page);
@@ -163,7 +166,8 @@ namespace ClassicUO.Game.UI.Gumps
                             0x0288,
                             80,
                             6
-                        ) { X = 265, Y = 150 };
+                        )
+                        { X = 265, Y = 150 };
 
 
                         Add(text, page);
@@ -184,7 +188,7 @@ namespace ClassicUO.Game.UI.Gumps
                     break;
                 }
 
-                GumpPic icon = new GumpPic(62, 40, (ushort) (0x5200 + i), 0);
+                GumpPic icon = new GumpPic(62, 40, (ushort)(0x5200 + i), 0);
                 Add(icon, pageW);
                 icon.SetTooltip(Client.Game.UO.FileManager.Clilocs.GetString(1061693 + i), 150);
 
@@ -215,7 +219,7 @@ namespace ClassicUO.Game.UI.Gumps
                 );
 
 
-                List<ushort> list = GetItemsList((byte) i);
+                List<ushort> list = GetItemsList((byte)i);
                 int maxStaticCount = Client.Game.UO.FileManager.TileData.StaticData.Length;
 
                 int textX = 62;
@@ -303,7 +307,7 @@ namespace ClassicUO.Game.UI.Gumps
                 return;
             }
 
-            ref readonly AbilityDefinition def = ref AbilityData.Abilities[((byte) World.Player.PrimaryAbility & 0x7F) - 1];
+            ref readonly AbilityDefinition def = ref AbilityData.Abilities[((byte)World.Player.PrimaryAbility & 0x7F) - 1];
 
             GetSpellFloatingButton(def.Index)?.Dispose();
 
@@ -324,7 +328,7 @@ namespace ClassicUO.Game.UI.Gumps
                 return;
             }
 
-            ref readonly AbilityDefinition def = ref AbilityData.Abilities[((byte) World.Player.SecondaryAbility & 0x7F) - 1];
+            ref readonly AbilityDefinition def = ref AbilityData.Abilities[((byte)World.Player.SecondaryAbility & 0x7F) - 1];
 
             GetSpellFloatingButton(def.Index)?.Dispose();
 
@@ -444,7 +448,7 @@ namespace ClassicUO.Game.UI.Gumps
 
             _primAbility.IsVisible = _secAbility.IsVisible = page <= _dictionaryPagesCount - _abilityCount;
 
-            if(playSound)
+            if (playSound)
                 Client.Game.Audio.PlaySound(0x0055);
         }
 
@@ -457,361 +461,361 @@ namespace ClassicUO.Game.UI.Gumps
             switch (index)
             {
                 case 0:
-                {
-                    list.Add(3908);
-                    list.Add(5048);
-                    list.Add(3935);
-                    list.Add(5119);
-                    list.Add(9927);
-                    list.Add(5181);
-                    list.Add(5040);
-                    list.Add(5121);
-                    list.Add(3939);
-                    list.Add(9932);
-                    list.Add(11554);
-                    list.Add(16497);
-                    list.Add(16502);
-                    list.Add(16494);
-                    list.Add(16491);
+                    {
+                        list.Add(3908);
+                        list.Add(5048);
+                        list.Add(3935);
+                        list.Add(5119);
+                        list.Add(9927);
+                        list.Add(5181);
+                        list.Add(5040);
+                        list.Add(5121);
+                        list.Add(3939);
+                        list.Add(9932);
+                        list.Add(11554);
+                        list.Add(16497);
+                        list.Add(16502);
+                        list.Add(16494);
+                        list.Add(16491);
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 1:
-                {
-                    list.Add(3779);
-                    list.Add(5115);
-                    list.Add(3912);
-                    list.Add(3910);
-                    list.Add(5185);
-                    list.Add(9924);
-                    list.Add(5127);
-                    list.Add(5040);
-                    list.Add(3720);
-                    list.Add(5125);
-                    list.Add(11552);
-                    list.Add(16499);
-                    list.Add(16498);
+                    {
+                        list.Add(3779);
+                        list.Add(5115);
+                        list.Add(3912);
+                        list.Add(3910);
+                        list.Add(5185);
+                        list.Add(9924);
+                        list.Add(5127);
+                        list.Add(5040);
+                        list.Add(3720);
+                        list.Add(5125);
+                        list.Add(11552);
+                        list.Add(16499);
+                        list.Add(16498);
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 2:
-                {
-                    list.Add(5048);
-                    list.Add(3912);
-                    list.Add(5183);
-                    list.Add(5179);
-                    list.Add(3933);
-                    list.Add(5113);
-                    list.Add(3722);
-                    list.Add(9930);
-                    list.Add(3920);
-                    list.Add(11556);
-                    list.Add(16487);
-                    list.Add(16500);
+                    {
+                        list.Add(5048);
+                        list.Add(3912);
+                        list.Add(5183);
+                        list.Add(5179);
+                        list.Add(3933);
+                        list.Add(5113);
+                        list.Add(3722);
+                        list.Add(9930);
+                        list.Add(3920);
+                        list.Add(11556);
+                        list.Add(16487);
+                        list.Add(16500);
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 3:
-                {
-                    list.Add(5050);
-                    list.Add(3914);
-                    list.Add(3935);
-                    list.Add(3714);
-                    list.Add(5092);
-                    list.Add(5179);
-                    list.Add(5127);
-                    list.Add(5177);
-                    list.Add(9926);
-                    list.Add(4021);
-                    list.Add(10146);
-                    list.Add(11556);
-                    list.Add(11560);
-                    list.Add(5109);
-                    list.Add(16500);
-                    list.Add(16495);
+                    {
+                        list.Add(5050);
+                        list.Add(3914);
+                        list.Add(3935);
+                        list.Add(3714);
+                        list.Add(5092);
+                        list.Add(5179);
+                        list.Add(5127);
+                        list.Add(5177);
+                        list.Add(9926);
+                        list.Add(4021);
+                        list.Add(10146);
+                        list.Add(11556);
+                        list.Add(11560);
+                        list.Add(5109);
+                        list.Add(16500);
+                        list.Add(16495);
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 4:
-                {
-                    list.Add(5111);
-                    list.Add(3718);
-                    list.Add(3781);
-                    list.Add(3908);
-                    list.Add(3573);
-                    list.Add(3714);
-                    list.Add(3933);
-                    list.Add(5125);
-                    list.Add(11558);
-                    list.Add(11560);
-                    list.Add(5109);
-                    list.Add(9934);
-                    list.Add(16493);
-                    list.Add(16494);
+                    {
+                        list.Add(5111);
+                        list.Add(3718);
+                        list.Add(3781);
+                        list.Add(3908);
+                        list.Add(3573);
+                        list.Add(3714);
+                        list.Add(3933);
+                        list.Add(5125);
+                        list.Add(11558);
+                        list.Add(11560);
+                        list.Add(5109);
+                        list.Add(9934);
+                        list.Add(16493);
+                        list.Add(16494);
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 5:
-                {
-                    list.Add(3918);
-                    list.Add(3914);
-                    list.Add(9927);
-                    list.Add(3573);
-                    list.Add(5044);
-                    list.Add(3720);
-                    list.Add(9930);
-                    list.Add(5117);
-                    list.Add(16501);
-                    list.Add(16495);
+                    {
+                        list.Add(3918);
+                        list.Add(3914);
+                        list.Add(9927);
+                        list.Add(3573);
+                        list.Add(5044);
+                        list.Add(3720);
+                        list.Add(9930);
+                        list.Add(5117);
+                        list.Add(16501);
+                        list.Add(16495);
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 6:
-                {
-                    list.Add(3718);
-                    list.Add(5187);
-                    list.Add(3916);
-                    list.Add(5046);
-                    list.Add(5119);
-                    list.Add(9931);
-                    list.Add(3722);
-                    list.Add(9929);
-                    list.Add(9933);
-                    list.Add(10148);
-                    list.Add(10153);
-                    list.Add(16488);
-                    list.Add(16493);
-                    list.Add(16496);
+                    {
+                        list.Add(3718);
+                        list.Add(5187);
+                        list.Add(3916);
+                        list.Add(5046);
+                        list.Add(5119);
+                        list.Add(9931);
+                        list.Add(3722);
+                        list.Add(9929);
+                        list.Add(9933);
+                        list.Add(10148);
+                        list.Add(10153);
+                        list.Add(16488);
+                        list.Add(16493);
+                        list.Add(16496);
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 7:
-                {
-                    list.Add(5111);
-                    list.Add(3779);
-                    list.Add(3922);
-                    list.Add(9928);
-                    list.Add(5121);
-                    list.Add(9929);
-                    list.Add(11553);
-                    list.Add(16490);
-                    list.Add(16488);
+                    {
+                        list.Add(5111);
+                        list.Add(3779);
+                        list.Add(3922);
+                        list.Add(9928);
+                        list.Add(5121);
+                        list.Add(9929);
+                        list.Add(11553);
+                        list.Add(16490);
+                        list.Add(16488);
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 8:
-                {
-                    list.Add(3910);
-                    list.Add(9925);
-                    list.Add(9931);
-                    list.Add(5181);
-                    list.Add(9926);
-                    list.Add(5123);
-                    list.Add(3920);
-                    list.Add(5042);
-                    list.Add(16499);
-                    list.Add(16502);
-                    list.Add(16496);
-                    list.Add(16491);
+                    {
+                        list.Add(3910);
+                        list.Add(9925);
+                        list.Add(9931);
+                        list.Add(5181);
+                        list.Add(9926);
+                        list.Add(5123);
+                        list.Add(3920);
+                        list.Add(5042);
+                        list.Add(16499);
+                        list.Add(16502);
+                        list.Add(16496);
+                        list.Add(16491);
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 9:
-                {
-                    list.Add(5117);
-                    list.Add(9932);
-                    list.Add(9933);
-                    list.Add(16492);
+                    {
+                        list.Add(5117);
+                        list.Add(9932);
+                        list.Add(9933);
+                        list.Add(16492);
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 10:
-                {
-                    list.Add(5050);
-                    list.Add(3918);
-                    list.Add(5046);
-                    list.Add(9924);
-                    list.Add(9925);
-                    list.Add(5113);
-                    list.Add(3569);
-                    list.Add(9928);
-                    list.Add(3939);
-                    list.Add(5042);
-                    list.Add(16497);
-                    list.Add(16498);
+                    {
+                        list.Add(5050);
+                        list.Add(3918);
+                        list.Add(5046);
+                        list.Add(9924);
+                        list.Add(9925);
+                        list.Add(5113);
+                        list.Add(3569);
+                        list.Add(9928);
+                        list.Add(3939);
+                        list.Add(5042);
+                        list.Add(16497);
+                        list.Add(16498);
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 11:
-                {
-                    list.Add(3781);
-                    list.Add(5187);
-                    list.Add(5185);
-                    list.Add(5092);
-                    list.Add(5044);
-                    list.Add(3922);
-                    list.Add(5123);
-                    list.Add(4021);
-                    list.Add(11553);
-                    list.Add(16490);
+                    {
+                        list.Add(3781);
+                        list.Add(5187);
+                        list.Add(5185);
+                        list.Add(5092);
+                        list.Add(5044);
+                        list.Add(3922);
+                        list.Add(5123);
+                        list.Add(4021);
+                        list.Add(11553);
+                        list.Add(16490);
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 12:
-                {
-                    list.Add(5115);
-                    list.Add(5183);
-                    list.Add(3916);
-                    list.Add(5177);
-                    list.Add(3569);
-                    list.Add(10157);
-                    list.Add(11559);
-                    list.Add(9934);
-                    list.Add(16501);
+                    {
+                        list.Add(5115);
+                        list.Add(5183);
+                        list.Add(3916);
+                        list.Add(5177);
+                        list.Add(3569);
+                        list.Add(10157);
+                        list.Add(11559);
+                        list.Add(9934);
+                        list.Add(16501);
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 13:
-                {
-                    list.Add(10146);
+                    {
+                        list.Add(10146);
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 14:
-                {
-                    list.Add(10148);
-                    list.Add(10150);
-                    list.Add(10151);
+                    {
+                        list.Add(10148);
+                        list.Add(10150);
+                        list.Add(10151);
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 15:
-                {
-                    list.Add(10147);
-                    list.Add(10158);
-                    list.Add(10159);
-                    list.Add(11557);
+                    {
+                        list.Add(10147);
+                        list.Add(10158);
+                        list.Add(10159);
+                        list.Add(11557);
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 16:
-                {
-                    list.Add(10151);
-                    list.Add(10157);
-                    list.Add(11561);
+                    {
+                        list.Add(10151);
+                        list.Add(10157);
+                        list.Add(11561);
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 17:
-                {
-                    list.Add(10152);
+                    {
+                        list.Add(10152);
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 18:
                 case 20:
-                {
-                    list.Add(10155);
+                    {
+                        list.Add(10155);
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 19:
-                {
-                    list.Add(10152);
-                    list.Add(10153);
-                    list.Add(10158);
-                    list.Add(11554);
+                    {
+                        list.Add(10152);
+                        list.Add(10153);
+                        list.Add(10158);
+                        list.Add(11554);
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 21:
-                {
-                    list.Add(10149);
+                    {
+                        list.Add(10149);
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 22:
-                {
-                    list.Add(10149);
-                    list.Add(10159);
+                    {
+                        list.Add(10149);
+                        list.Add(10159);
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 23:
-                {
-                    list.Add(11555);
-                    list.Add(11558);
-                    list.Add(11559);
-                    list.Add(11561);
+                    {
+                        list.Add(11555);
+                        list.Add(11558);
+                        list.Add(11559);
+                        list.Add(11561);
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 24:
                 case 27:
-                {
-                    list.Add(11550);
+                    {
+                        list.Add(11550);
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 25:
-                {
-                    list.Add(11551);
+                    {
+                        list.Add(11551);
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 26:
-                {
-                    list.Add(11551);
-                    list.Add(11552);
+                    {
+                        list.Add(11551);
+                        list.Add(11552);
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 28:
-                {
-                    list.Add(11557);
+                    {
+                        list.Add(11557);
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 29:
-                {
-                    list.Add(16492);
+                    {
+                        list.Add(16492);
 
-                    break;
-                }
+                        break;
+                    }
 
                 case 30:
-                {
-                    list.Add(16487);
+                    {
+                        list.Add(16487);
 
-                    break;
-                }
+                        break;
+                    }
             }
 
             return list;

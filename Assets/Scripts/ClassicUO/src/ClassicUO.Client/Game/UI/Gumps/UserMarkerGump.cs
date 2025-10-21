@@ -11,7 +11,7 @@ using ClassicUO.Resources;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal sealed class UserMarkersGump : Gump
+    public sealed class UserMarkersGump : Gump
     {
         private readonly StbTextBox _textBoxX;
         private readonly StbTextBox _textBoxY;
@@ -52,7 +52,7 @@ namespace ClassicUO.Game.UI.Gumps
         {
             CanMove = true;
 
-            _mapMaxX= Client.Game.UO.FileManager.Maps.MapsDefaultSize[world.MapIndex, 0];
+            _mapMaxX = Client.Game.UO.FileManager.Maps.MapsDefaultSize[world.MapIndex, 0];
             _mapMaxY = Client.Game.UO.FileManager.Maps.MapsDefaultSize[world.MapIndex, 1];
 
             _markers = markers;

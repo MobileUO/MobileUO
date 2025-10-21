@@ -7,7 +7,7 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class SplitMenuGump : Gump
+    public class SplitMenuGump : Gump
     {
         private bool _firstChange;
         private int _lastValue;
@@ -59,7 +59,8 @@ namespace ClassicUO.Game.UI.Gumps
                 _okButton = new Button(0, 0x085d, 0x085e, 0x085f)
                 {
                     ButtonAction = ButtonAction.Default,
-                    X = 102, Y = 37
+                    X = 102,
+                    Y = 37
                 }
             );
 
@@ -69,7 +70,8 @@ namespace ClassicUO.Game.UI.Gumps
             (
                 _textBox = new StbTextBox(1, isunicode: false, hue: 0x0386, maxWidth: 60)
                 {
-                    X = 29, Y = 42,
+                    X = 29,
+                    Y = 42,
                     Width = 60,
                     Height = 20,
                     NumbersOnly = true

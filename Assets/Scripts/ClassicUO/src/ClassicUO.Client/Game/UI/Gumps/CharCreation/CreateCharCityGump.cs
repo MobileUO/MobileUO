@@ -14,7 +14,7 @@ using MathHelper = ClassicUO.Utility.MathHelper;
 
 namespace ClassicUO.Game.UI.Gumps.CharCreation
 {
-    internal class CreateCharSelectionCityGump : Gump
+    public class CreateCharSelectionCityGump : Gump
     {
         private readonly List<CityControl> _cityControls = new List<CityControl>();
         private readonly string[] _cityNames = { "Felucca", "Trammel", "Ilshenar", "Malas", "Tokuno", "Ter Mur" };
@@ -93,7 +93,7 @@ namespace ClassicUO.Game.UI.Gumps.CharCreation
 
             if (Client.Game.UO.Version >= ClientVersion.CV_70130)
             {
-                Add(new GumpPic(62, 54, (ushort) (0x15D9 + map), 0));
+                Add(new GumpPic(62, 54, (ushort)(0x15D9 + map), 0));
                 Add(new GumpPic(57, 49, 0x15DF, 0));
                 _facetName.Text = _cityNames[map];
             }
@@ -107,7 +107,7 @@ namespace ClassicUO.Game.UI.Gumps.CharCreation
 
             Add
             (
-                new Button((int) Buttons.PreviousScreen, 0x15A1, 0x15A3, 0x15A2)
+                new Button((int)Buttons.PreviousScreen, 0x15A1, 0x15A3, 0x15A2)
                 {
                     X = 586,
                     Y = 445,
@@ -117,7 +117,7 @@ namespace ClassicUO.Game.UI.Gumps.CharCreation
 
             Add
             (
-                new Button((int) Buttons.Finish, 0x15A4, 0x15A6, 0x15A5)
+                new Button((int)Buttons.Finish, 0x15A4, 0x15A6, 0x15A5)
                 {
                     X = 610,
                     Y = 445,
@@ -206,7 +206,7 @@ namespace ClassicUO.Game.UI.Gumps.CharCreation
 
             if (index >= _cityNames.Length)
             {
-                index = (uint) (_cityNames.Length - 1);
+                index = (uint)(_cityNames.Length - 1);
             }
 
             _facetName.Text = _cityNames[index];
@@ -222,7 +222,7 @@ namespace ClassicUO.Game.UI.Gumps.CharCreation
                 return;
             }
 
-            switch ((Buttons) buttonID)
+            switch ((Buttons)buttonID)
             {
                 case Buttons.PreviousScreen:
                     charCreationGump.StepBack(_selectedProfession > 0 ? 2 : 1);
@@ -310,7 +310,7 @@ namespace ClassicUO.Game.UI.Gumps.CharCreation
                 _label.MouseUp += (sender, e) =>
                 {
                     _label.IsSelected = true;
-                    int idx = (int) _label.Tag;
+                    int idx = (int)_label.Tag;
                     OnButtonClick(idx + 2);
                 };
 

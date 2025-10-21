@@ -6,7 +6,7 @@ using ClassicUO.Game.UI.Gumps;
 
 namespace ClassicUO.Game.UI.Controls
 {
-    internal class InfoBarBuilderControl : Control
+    public class InfoBarBuilderControl : Control
     {
         private readonly StbTextBox infoLabel;
         private readonly ClickableColorBox labelColor;
@@ -27,7 +27,7 @@ namespace ClassicUO.Game.UI.Controls
                 0,
                 170,
                 dataVars,
-                (int) item.var
+                (int)item.var
             );
 
 
@@ -49,12 +49,13 @@ namespace ClassicUO.Game.UI.Controls
                 25,
                 ButtonAction.Activate,
                 ResGumps.Delete
-            ) { ButtonParameter = 999 };
+            )
+            { ButtonParameter = 999 };
 
             deleteButton.MouseUp += (sender, e) =>
             {
                 Dispose();
-                ((DataBox) Parent)?.ReArrangeChildren();
+                ((DataBox)Parent)?.ReArrangeChildren();
             };
 
             Add(new ResizePic(0x0BB8) { X = infoLabel.X - 5, Y = 0, Width = infoLabel.Width + 10, Height = infoLabel.Height });
@@ -69,7 +70,7 @@ namespace ClassicUO.Game.UI.Controls
         }
 
         public string LabelText => infoLabel.Text;
-        public InfoBarVars Var => (InfoBarVars) varStat.SelectedIndex;
+        public InfoBarVars Var => (InfoBarVars)varStat.SelectedIndex;
         public ushort Hue => labelColor.Hue;
     }
 }

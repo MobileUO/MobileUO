@@ -44,7 +44,7 @@ namespace ClassicUO.Game.UI.Controls
         (
             int.TryParse(parts[4], out int lineIndex) && lineIndex >= 0 && lineIndex < lines.Length ? lines[lineIndex] : string.Empty,
             true,
-            (ushort) (UInt16Converter.Parse(parts[3]) + 1),
+            (ushort)(UInt16Converter.Parse(parts[3]) + 1),
             0,
             style: FontStyle.BlackBorder
         )
