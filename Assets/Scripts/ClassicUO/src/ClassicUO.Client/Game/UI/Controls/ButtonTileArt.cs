@@ -1,20 +1,19 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
 using System.Collections.Generic;
-using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Controls
 {
-    internal class ButtonTileArt : Button
+    public class ButtonTileArt : Button
     {
         private readonly ushort _hue;
         private readonly bool _isPartial;
-        private readonly int _tileX,
-            _tileY;
+        private readonly int _tileX, _tileY;
         private ushort _graphic;
+        private Vector3 hueVector;
 
         public ButtonTileArt(List<string> gparams) : base(gparams)
         {
@@ -37,6 +36,8 @@ namespace ClassicUO.Game.UI.Controls
             }
 
             _isPartial = Client.Game.UO.FileManager.TileData.StaticData[_graphic].IsPartialHue;
+
+            hueVector = ShaderHueTranslator.GetHueVector(_hue, _isPartial, 1f);
         }
 
         public override bool Draw(UltimaBatcher2D batcher, int x, int y)

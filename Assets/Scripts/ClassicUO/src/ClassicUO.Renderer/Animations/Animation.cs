@@ -1,8 +1,7 @@
-using System;
-using System.Runtime.CompilerServices;
 using ClassicUO.Assets;
 using Microsoft.Xna.Framework.Graphics;
-using static System.Collections.Specialized.BitVector32;
+using System;
+using System.Runtime.CompilerServices;
 
 namespace ClassicUO.Renderer.Animations
 {
@@ -165,13 +164,10 @@ namespace ClassicUO.Renderer.Animations
             hue = 0;
             useUOP = false;
 
-            if (action >= AnimationsLoader.MAX_ACTIONS || dir >= AnimationsLoader.MAX_DIRECTIONS)
+            if (action >= AnimationsLoader.MAX_ACTIONS || dir >= AnimationsLoader.MAX_DIRECTIONS || id >= ushort.MaxValue)
             {
                 return Span<SpriteInfo>.Empty;
             }
-
-            if (id >= ushort.MaxValue)
-                return Span<SpriteInfo>.Empty;
 
             if (id >= _dataIndex.Length)
             {
