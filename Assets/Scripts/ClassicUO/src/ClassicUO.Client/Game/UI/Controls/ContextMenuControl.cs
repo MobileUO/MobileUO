@@ -10,7 +10,7 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Controls
 {
-    internal class ContextMenuControl
+    public class ContextMenuControl
     {
         private readonly List<ContextMenuItemEntry> _items;
         private readonly Gump _gump;
@@ -64,7 +64,7 @@ namespace ClassicUO.Game.UI.Controls
         }
     }
 
-    internal sealed class ContextMenuItemEntry
+    public sealed class ContextMenuItemEntry
     {
         public ContextMenuItemEntry(string text, Action action = null, bool canBeSelected = false, bool defaultValue = false)
         {
