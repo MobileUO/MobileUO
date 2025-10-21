@@ -9,7 +9,7 @@ using System;
 
 namespace ClassicUO.Game.GameObjects
 {
-    internal sealed partial class Land
+    public sealed partial class Land
     {
         public override bool Draw(UltimaBatcher2D batcher, int posX, int posY, float depth)
         {

@@ -82,7 +82,7 @@ namespace ClassicUO.Renderer
                 _updateMatrixes = true;
             }
 
-            _timeDelta= timeDelta;
+            _timeDelta = timeDelta;
             _mousePos = mousePos;
 
             UpdateMatrices();
@@ -106,16 +106,16 @@ namespace ClassicUO.Renderer
             // MobileUO: use old version of logic here to fix rendering
             // MobileUO: TODO: use new version
             point.X += Bounds.X;
-			point.Y += Bounds.Y;
+            point.Y += Bounds.Y;
 
-			point.X = (int) (point.X / Zoom);
-			point.Y = (int) (point.Y / Zoom);
+            point.X = (int)(point.X / Zoom);
+            point.Y = (int)(point.Y / Zoom);
 
-			point.X -= (int) (Bounds.X / Zoom);
-			point.Y -= (int) (Bounds.Y / Zoom);
+            point.X -= (int)(Bounds.X / Zoom);
+            point.Y -= (int)(Bounds.Y / Zoom);
 
-			point.X += Bounds.X;
-			point.Y += Bounds.Y;
+            point.X += Bounds.X;
+            point.Y += Bounds.Y;
 
             return point;
         }
@@ -125,8 +125,8 @@ namespace ClassicUO.Renderer
         {
             float x = position.X * matrix.M11 + position.Y * matrix.M21 + matrix.M41;
             float y = position.X * matrix.M12 + position.Y * matrix.M22 + matrix.M42;
-            result.X = (int) x;
-            result.Y = (int) y;
+            result.X = (int)x;
+            result.Y = (int)y;
         }
 
         public Point MouseToWorldPosition()
@@ -139,9 +139,9 @@ namespace ClassicUO.Renderer
             // MobileUO: use old version of logic here to fix mouse
             // MobileUO: TODO: use new version
             //UnityEngine.Debug.Log($"Mouse: ({Mouse.Position.X}, {Mouse.Position.Y}); GameWindowPosition ({ProfileManager.CurrentProfile.GameWindowPosition.X}, {ProfileManager.CurrentProfile.GameWindowPosition.Y})");
-            mouse.X = (int) ((Mouse.Position.X - (ProfileManager.CurrentProfile.GameWindowPosition.X + 5)) * Zoom);
-			mouse.Y = (int) ((Mouse.Position.Y - (ProfileManager.CurrentProfile.GameWindowPosition.Y + 5)) * Zoom);
-			return mouse;
+            mouse.X = (int)((Mouse.Position.X - (ProfileManager.CurrentProfile.GameWindowPosition.X + 5)) * Zoom);
+            mouse.Y = (int)((Mouse.Position.Y - (ProfileManager.CurrentProfile.GameWindowPosition.Y + 5)) * Zoom);
+            return mouse;
 
             //return ScreenToWorld(mouse);
         }

@@ -38,6 +38,9 @@ namespace ClassicUO.Game.GameObjects
                 return false;
             }
 
+            if (ForceTransparentHouse)
+                AlphaHue = ForcedTransparency;
+
             ushort hue = Hue;
 
             if (State != 0)

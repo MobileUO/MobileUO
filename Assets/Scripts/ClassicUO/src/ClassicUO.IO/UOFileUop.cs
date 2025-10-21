@@ -39,7 +39,6 @@ namespace ClassicUO.IO
             base.Dispose();
         }
 
-
         public bool TryGetUOPData(ulong hash, out UOFileIndex data)
         {
             return _hashes.TryGetValue(hash, out data);

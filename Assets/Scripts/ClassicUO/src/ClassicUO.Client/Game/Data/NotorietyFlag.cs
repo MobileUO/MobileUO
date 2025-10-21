@@ -16,7 +16,7 @@ namespace ClassicUO.Game.Data
         Invulnerable = 0x07
     }
 
-    internal static class Notoriety
+    public static class Notoriety
     {
         public static ushort GetHue(NotorietyFlag flag)
         {

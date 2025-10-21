@@ -169,7 +169,7 @@ namespace ClassicUO.Game.Managers
             }
 
             label = xml.GetAttribute("text");
-            var = (InfoBarVars) int.Parse(xml.GetAttribute("var"));
+            var = (InfoBarVars)int.Parse(xml.GetAttribute("var"));
             hue = ushort.Parse(xml.GetAttribute("hue"));
         }
 
@@ -182,7 +182,7 @@ namespace ClassicUO.Game.Managers
         {
             writer.WriteStartElement("info");
             writer.WriteAttributeString("text", label);
-            writer.WriteAttributeString("var", ((int) var).ToString());
+            writer.WriteAttributeString("var", ((int)var).ToString());
             writer.WriteAttributeString("hue", hue.ToString());
             writer.WriteEndElement();
         }

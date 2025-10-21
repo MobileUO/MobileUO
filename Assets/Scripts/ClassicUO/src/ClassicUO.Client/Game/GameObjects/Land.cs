@@ -10,7 +10,7 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.GameObjects
 {
-    internal sealed partial class Land : GameObject
+    public sealed partial class Land : GameObject
     {
         //private static readonly QueuedPool<Land> _pool = new QueuedPool<Land>
         //(
@@ -71,7 +71,7 @@ namespace ClassicUO.Game.GameObjects
 
         public int CalculateCurrentAverageZ(int direction)
         {
-            int result = GetDirectionZ(((byte) (direction >> 1) + 1) & 3);
+            int result = GetDirectionZ(((byte)(direction >> 1) + 1) & 3);
 
             if ((direction & 1) != 0)
             {
@@ -122,11 +122,11 @@ namespace ClassicUO.Game.GameObjects
 
             if (Math.Abs(zTop - zBottom) <= Math.Abs(zLeft - zRight))
             {
-                AverageZ = (sbyte) ((zTop + zBottom) >> 1);
+                AverageZ = (sbyte)((zTop + zBottom) >> 1);
             }
             else
             {
-                AverageZ = (sbyte) ((zLeft + zRight) >> 1);
+                AverageZ = (sbyte)((zLeft + zRight) >> 1);
             }
 
             MinZ = Math.Min(zTop, Math.Min(zRight, Math.Min(zLeft, zBottom)));

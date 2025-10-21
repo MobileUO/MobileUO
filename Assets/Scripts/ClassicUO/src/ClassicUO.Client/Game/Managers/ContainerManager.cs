@@ -1,13 +1,12 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
+
 using System.Collections.Generic;
 using System.IO;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.UI.Gumps;
-using ClassicUO.Assets;
-using ClassicUO.Renderer;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
 using System;
@@ -315,7 +314,8 @@ namespace ClassicUO.Game.Managers
                             minimizer_x,
                             minimizer_y
                         );
-                    } else
+                    }
+                    else
                     {
                         Console.WriteLine($"Error parsing container data at line {line}");
                     }

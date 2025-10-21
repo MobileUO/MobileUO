@@ -16,7 +16,7 @@ namespace ClassicUO.Utility.Logging
                 LogTypes.Info, Tuple.Create(ConsoleColor.Green, "  Info    ")
             },
             {
-                LogTypes.Debug, Tuple.Create(ConsoleColor.DarkGreen, "  Debug   ")
+                LogTypes.Debug, Tuple.Create(ConsoleColor.DarkMagenta, "  Debug   ")
             },
             {
                 LogTypes.Trace, Tuple.Create(ConsoleColor.Green, "  Trace   ")
