@@ -14,7 +14,7 @@ using ClassicUO.Game.Scenes;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class GridLootGump : Gump
+    public class GridLootGump : Gump
     {
         private const int MAX_WIDTH = 300;
         private const int MAX_HEIGHT = 420;
@@ -34,6 +34,7 @@ namespace ClassicUO.Game.UI.Gumps
         private readonly Label _corpseNameLabel;
         private readonly bool _hideIfEmpty;
         private int _pagesCount;
+        private bool firstItemsLoaded = false;
 
         public GridLootGump(World world, uint local) : base(world, local, 0)
         {
@@ -308,6 +309,11 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 IsVisible = true;
             }
+
+            if (!firstItemsLoaded)
+            {
+                firstItemsLoaded = true;
+            }
         }
 
         private bool ItemBelongsToGroup(Item it, int group)
@@ -518,6 +524,8 @@ namespace ClassicUO.Game.UI.Gumps
                         var item = _gump.World.Items.Get(serial);
 
                         _gump.HandleItemClick(serial, item, (ushort)amount.Value);
+                        // MobileUO: TODO: TazUO uses this, maybe implement later but requires changes due to double click to loot feature
+                        //GameActions.GrabItem(_gump.World, item, (ushort)amount.Value);
                     }
                 };
 
