@@ -7,13 +7,16 @@ using ClassicUO.Renderer;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class QuestionGump : Gump
+    public class QuestionGump : Gump
     {
         private readonly Action<bool> _result;
 
         public QuestionGump(World world, string message, Action<bool> result) : base(world, 0, 0)
         {
             CanCloseWithRightClick = true;
+            AlphaBlendControl ab = new AlphaBlendControl(0.15f) { Width = Client.Game.Window.ClientBounds.Width, Height = Client.Game.Window.ClientBounds.Height };
+            Add(ab);
+
             Add(new GumpPic(0, 0, 0x0816, 0));
 
             ref readonly var gumpInfo = ref Client.Game.UO.Gumps.GetGump(0x0816);
@@ -44,8 +47,11 @@ namespace ClassicUO.Game.UI.Gumps
             CanMove = false;
             IsModal = true;
 
-            X = (Client.Game.Window.ClientBounds.Width - Width) >> 1;
-            Y = (Client.Game.Window.ClientBounds.Height - Height) >> 1;
+            CenterXInScreen();
+            CenterYInScreen();
+
+            ab.X = -X;
+            ab.Y = -Y;
 
             WantUpdateSize = false;
             _result = result;

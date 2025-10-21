@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Xml;
+using ClassicUO.Configuration;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.UI.Controls;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Xml;
 
 namespace ClassicUO.Game.UI.Gumps
 {
@@ -117,6 +118,38 @@ namespace ClassicUO.Game.UI.Gumps
             writer.WriteAttributeString("x", X.ToString());
             writer.WriteAttributeString("y", Y.ToString());
             writer.WriteAttributeString("serial", LocalSerial.ToString());
+        }
+
+        public void CenterXInScreen()
+        {
+            Rectangle windowBounds = Client.Game.Window.ClientBounds;
+            if (ProfileManager.CurrentProfile.GlobalScaling)
+            {
+                float scale = ProfileManager.CurrentProfile.GlobalScale;
+                // Convert physical width to unscaled (logical) width
+                float logicalWidth = windowBounds.Width / scale;
+                // Center in logical coordinates
+                X = (int)((logicalWidth - Width) / 2);
+            }
+            else
+            {
+                X = (windowBounds.Width - Width) / 2;
+            }
+        }
+
+        public void CenterYInScreen()
+        {
+            Rectangle windowBounds = Client.Game.Window.ClientBounds;
+            if (ProfileManager.CurrentProfile.GlobalScaling)
+            {
+                float scale = ProfileManager.CurrentProfile.GlobalScale;
+                float logicalHeight = windowBounds.Height / scale;
+                Y = (int)((logicalHeight - Height) / 2);
+            }
+            else
+            {
+                Y = (windowBounds.Height - Height) / 2;
+            }
         }
 
         public void SetInScreen()

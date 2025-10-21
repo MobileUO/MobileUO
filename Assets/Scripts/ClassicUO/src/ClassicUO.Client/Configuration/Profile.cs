@@ -385,6 +385,9 @@ namespace ClassicUO.Configuration
             }
         };
 
+        public bool GlobalScaling { get; set; } = false;
+        public float GlobalScale { get; set; } = 1.5f;
+
         public void Save(World world, string path)
         {
             Log.Trace($"Saving path:\t\t{path}");
