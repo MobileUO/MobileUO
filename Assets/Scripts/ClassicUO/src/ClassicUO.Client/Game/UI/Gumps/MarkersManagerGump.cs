@@ -13,7 +13,7 @@ using ClassicUO.Renderer;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal sealed class MarkersManagerGump : Gump
+    public sealed class MarkersManagerGump : Gump
     {
         private const int WIDTH = 620;
         private const int HEIGHT = 500;
@@ -157,7 +157,8 @@ namespace ClassicUO.Game.UI.Gumps
             // Search Field
             Add(_searchTextBox = new SearchTextBoxControl(WIDTH / 2 - 150, 40));
 
-            DrawArea(_markerFiles[_categoryId].IsEditable);
+            if (_markerFiles.Count > 0)
+                DrawArea(_markerFiles[_categoryId].IsEditable);
 
             var initX = 0;
             foreach (var file in _markerFiles)
@@ -311,7 +312,7 @@ namespace ClassicUO.Game.UI.Gumps
             base.Dispose();
         }
 
-        internal class DrawTexture : Control
+        public class DrawTexture : Control
         {
             public Texture2D Texture;
 
@@ -431,7 +432,7 @@ namespace ClassicUO.Game.UI.Gumps
                         _iconTexture?.Dispose();
                         _iconTexture = new DrawTexture(editedMarker.MarkerIcon);
                     }
-                        
+
 
                     EditMarkerEvent.Raise();
                 }
