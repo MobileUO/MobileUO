@@ -10,14 +10,14 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal enum ANCHOR_TYPE
+    public enum ANCHOR_TYPE
     {
         NONE,
         SPELL,
         HEALTHBAR
     }
 
-    internal abstract class AnchorableGump : Gump
+    public abstract class AnchorableGump : Gump
     {
         private AnchorableGump _anchorCandidate;
 
