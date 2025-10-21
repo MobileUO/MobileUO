@@ -1,11 +1,10 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
 using ClassicUO.Renderer;
-using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Controls
 {
-    internal class ScissorControl : Control
+    public class ScissorControl : Control
     {
         public ScissorControl(bool enabled, int x, int y, int width, int height) : this(enabled)
         {

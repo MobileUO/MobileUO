@@ -14,7 +14,7 @@ using ClassicUO.Game.Scenes;
 
 namespace ClassicUO.Game.UI.Controls
 {
-    internal class ItemGump : Control
+    public class ItemGump : Control
     {
         private ushort _graphic;
         private readonly bool _is_gump;
@@ -167,9 +167,9 @@ namespace ClassicUO.Game.UI.Controls
             {
                 return false;
             }
-            
+
             // MobileUO: allow coarse item selection
-            if(!PixelCheck)
+            if (!PixelCheck)
             {
                 return true;
             }

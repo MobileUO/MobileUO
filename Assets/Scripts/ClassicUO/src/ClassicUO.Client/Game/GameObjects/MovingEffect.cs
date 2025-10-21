@@ -6,7 +6,7 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.GameObjects
 {
-    internal sealed class MovingEffect : GameEffect
+    public sealed class MovingEffect : GameEffect
     {
         public MovingEffect
         (
@@ -124,8 +124,8 @@ namespace ClassicUO.Game.GameObjects
                 return;
             }
 
-            int newOffsetX = (int) (source.X / 22f);
-            int newOffsetY = (int) (source.Y / 22f);
+            int newOffsetX = (int)(source.X / 22f);
+            int newOffsetY = (int)(source.Y / 22f);
 
             TileOffsetOnMonitorToXY(ref newOffsetX, ref newOffsetY, out int newCoordX, out int newCoordY);
 
@@ -141,12 +141,12 @@ namespace ClassicUO.Game.GameObjects
 
 
             IsPositionChanged = true;
-            AngleToTarget = (float) Math.Atan2(-offset.Y, -offset.X);
+            AngleToTarget = (float)Math.Atan2(-offset.Y, -offset.X);
 
             if (newX != sX || newY != sY)
             {
                 // TODO: Z is wrong. We have to calculate an average
-                SetSource((ushort) newX, (ushort) newY, (sbyte)sZ);
+                SetSource((ushort)newX, (ushort)newY, (sbyte)sZ);
 
                 Vector2 nextSource = new Vector2((newCoordX - newCoordY) * 22, (newCoordX + newCoordY) * 22 - offsetSourceZ * 4);
 

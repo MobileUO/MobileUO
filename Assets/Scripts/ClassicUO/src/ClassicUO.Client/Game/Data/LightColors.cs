@@ -7,7 +7,7 @@ using System.IO;
 
 namespace ClassicUO.Game.Data
 {
-    internal static class LightColors
+    public static class LightColors
     {
 
         private static readonly Dictionary<ushort, LightShaderData> _shaderdata = new Dictionary<ushort, LightShaderData>();
@@ -474,9 +474,9 @@ namespace ClassicUO.Game.Data
                     uint b = (entry.Value.RGB & 0x00_00_FF);
 
                     buffer[32 * (entry.Key - 1) + i] = 0xFF_00_00_00 |
-                        ((lightCurveTables[(uint) entry.Value.BlueCurve][i] * b) / 31) << 16 |
-                        ((lightCurveTables[(uint) entry.Value.GreenCurve][i] * g) / 31) << 8 |
-                        ((lightCurveTables[(uint) entry.Value.RedCurve][i] * r) / 31);
+                        ((lightCurveTables[(uint)entry.Value.BlueCurve][i] * b) / 31) << 16 |
+                        ((lightCurveTables[(uint)entry.Value.GreenCurve][i] * g) / 31) << 8 |
+                        ((lightCurveTables[(uint)entry.Value.RedCurve][i] * r) / 31);
                 }
             }
         }

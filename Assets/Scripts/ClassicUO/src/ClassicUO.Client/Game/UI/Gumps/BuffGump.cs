@@ -15,7 +15,7 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class BuffGump : Gump
+    public class BuffGump : Gump
     {
         private GumpPic _background;
         private Button _button;
@@ -37,8 +37,6 @@ namespace ClassicUO.Game.UI.Gumps
 
             _direction = GumpDirection.LEFT_HORIZONTAL;
             _graphic = 0x7580;
-
-            SetInScreen();
 
             BuildGump();
         }

@@ -102,7 +102,7 @@ namespace ClassicUO.Game.GameObjects
                     {
                         unsafe
                         {
-                            AnimationGraphic = (ushort) (Graphic + AnimDataFrame.FrameData[AnimIndex]);
+                            AnimationGraphic = (ushort)(Graphic + AnimDataFrame.FrameData[AnimIndex]);
                         }
 
                         AnimIndex++;
@@ -155,7 +155,7 @@ namespace ClassicUO.Game.GameObjects
         {
             Source = null;
 
-            SetInWorldTile(x, y,z);
+            SetInWorldTile(x, y, z);
         }
 
         protected (ushort x, ushort y, sbyte z) GetTarget()

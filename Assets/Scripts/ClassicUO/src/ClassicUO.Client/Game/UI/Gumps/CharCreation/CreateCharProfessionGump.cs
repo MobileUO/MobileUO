@@ -10,7 +10,7 @@ using ClassicUO.Assets;
 
 namespace ClassicUO.Game.UI.Gumps.CharCreation
 {
-    internal class CreateCharProfessionGump : Gump
+    public class CreateCharProfessionGump : Gump
     {
         private readonly ProfessionInfo _Parent;
 
@@ -77,7 +77,7 @@ namespace ClassicUO.Game.UI.Gumps.CharCreation
 
             Add
             (
-                new Button((int) Buttons.Prev, 0x15A1, 0x15A3, 0x15A2)
+                new Button((int)Buttons.Prev, 0x15A1, 0x15A3, 0x15A2)
                 {
                     X = 586,
                     Y = 445,
@@ -103,25 +103,25 @@ namespace ClassicUO.Game.UI.Gumps.CharCreation
 
         public override void OnButtonClick(int buttonID)
         {
-            switch ((Buttons) buttonID)
+            switch ((Buttons)buttonID)
             {
                 case Buttons.Prev:
 
-                {
-                    if (_Parent != null && _Parent.TopLevel)
                     {
-                        Parent.Add(new CreateCharProfessionGump(World));
-                        Parent.Remove(this);
-                    }
-                    else
-                    {
-                        Parent.Remove(this);
-                        CharCreationGump charCreationGump = UIManager.GetGump<CharCreationGump>();
-                        charCreationGump?.StepBack();
-                    }
+                        if (_Parent != null && _Parent.TopLevel)
+                        {
+                            Parent.Add(new CreateCharProfessionGump(World));
+                            Parent.Remove(this);
+                        }
+                        else
+                        {
+                            Parent.Remove(this);
+                            CharCreationGump charCreationGump = UIManager.GetGump<CharCreationGump>();
+                            charCreationGump?.StepBack();
+                        }
 
-                    break;
-                }
+                        break;
+                    }
             }
 
             base.OnButtonClick(buttonID);
@@ -133,7 +133,7 @@ namespace ClassicUO.Game.UI.Gumps.CharCreation
         }
     }
 
-    internal class ProfessionInfoGump : Control
+    public class ProfessionInfoGump : Control
     {
         private readonly ProfessionInfo _info;
 

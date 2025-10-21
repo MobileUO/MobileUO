@@ -60,7 +60,7 @@ namespace ClassicUO.Game.Data
 
             direction = direction >= 7 ? direction - 7 : direction + 1;
 
-            return (Direction) direction;
+            return (Direction)direction;
         }
 
         public static Direction GetDirectionAB(int AAx, int AAy, int BBx, int BBy)
@@ -139,7 +139,7 @@ namespace ClassicUO.Game.Data
 
         public static Direction DirectionFromKeyboardArrows(bool upPressed, bool downPressed, bool leftPressed, bool rightPressed)
         {
-            int direction = (int) Direction.NONE;
+            int direction = (int)Direction.NONE;
 
             if (upPressed)
             {
@@ -180,17 +180,17 @@ namespace ClassicUO.Game.Data
                 direction = 1;
             }
 
-            return (Direction) direction;
+            return (Direction)direction;
         }
 
         public static Direction GetCardinal(Direction inDirection)
         {
-            return inDirection & (Direction) 0x6;
+            return inDirection & (Direction)0x6;
         }
 
         public static Direction Reverse(Direction inDirection)
         {
-            return (Direction) ((int) inDirection + 0x04) & Direction.Up;
+            return (Direction)((int)inDirection + 0x04) & Direction.Up;
         }
     }
 }

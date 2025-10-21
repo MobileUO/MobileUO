@@ -7,7 +7,7 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game
 {
-    sealed class ItemHold
+    public sealed class ItemHold
     {
         private bool _enabled;
 

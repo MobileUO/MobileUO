@@ -51,11 +51,11 @@ namespace ClassicUO.Game.Managers
                 // Redraw list of chars
                 UIManager.GetGump<IgnoreManagerGump>()?.Redraw();
 
-                GameActions.Print(_world,string.Format(ResGumps.AddToIgnoreListSuccess, charName));
+                GameActions.Print(_world, string.Format(ResGumps.AddToIgnoreListSuccess, charName));
                 return;
             }
 
-            GameActions.Print(_world,string.Format(ResGumps.AddToIgnoreListNotMobile));
+            GameActions.Print(_world, string.Format(ResGumps.AddToIgnoreListNotMobile));
         }
 
         /// <summary>

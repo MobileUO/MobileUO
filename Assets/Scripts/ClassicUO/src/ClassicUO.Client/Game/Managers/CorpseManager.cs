@@ -45,7 +45,7 @@ namespace ClassicUO.Game.Managers
 
                         if (item != null)
                         {
-                            item.Layer = (Layer) ((c.Direction & Direction.Mask) | (c.IsRunning ? Direction.Running : 0));
+                            item.Layer = (Layer)((c.Direction & Direction.Mask) | (c.IsRunning ? Direction.Running : 0));
                         }
                     }
 
@@ -94,7 +94,7 @@ namespace ClassicUO.Game.Managers
         }
     }
 
-    internal struct CorpseInfo
+    public struct CorpseInfo
     {
         public CorpseInfo(uint corpseSerial, uint objectSerial, Direction direction, bool isRunning)
         {

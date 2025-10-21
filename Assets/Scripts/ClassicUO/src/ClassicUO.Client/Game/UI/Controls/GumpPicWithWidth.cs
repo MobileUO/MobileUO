@@ -6,7 +6,7 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Controls
 {
-    internal class GumpPicWithWidth : GumpPic
+    public class GumpPicWithWidth : GumpPic
     {
         public GumpPicWithWidth(int x, int y, ushort graphic, ushort hue, int perc)
             : base(x, y, graphic, hue)

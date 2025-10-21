@@ -51,9 +51,9 @@ namespace ClassicUO.Renderer
 
         public Vector2 MeasureString(ReadOnlySpan<char> text)
         {
-            if (text == null)
+            if (text.IsEmpty)
             {
-                throw new ArgumentNullException("text");
+                throw new ArgumentNullException(nameof(text));
             }
 
             if (text.Length == 0)
@@ -188,7 +188,7 @@ namespace ClassicUO.Renderer
                 int typeReaderIndex = reader.Read7BitEncodedInt();
                 reader.Read7BitEncodedInt();
 
-                SurfaceFormat format = (SurfaceFormat) reader.ReadInt32();
+                SurfaceFormat format = (SurfaceFormat)reader.ReadInt32();
                 int width = reader.ReadInt32();
                 int height = reader.ReadInt32();
                 int levelCount = reader.ReadInt32();
@@ -340,11 +340,11 @@ namespace ClassicUO.Renderer
         private static void ConvertRgb565ToRgb888(ushort color, out byte r, out byte g, out byte b)
         {
             int temp = (color >> 11) * 255 + 16;
-            r = (byte) ((temp / 32 + temp) / 32);
+            r = (byte)((temp / 32 + temp) / 32);
             temp = ((color & 0x07E0) >> 5) * 255 + 32;
-            g = (byte) ((temp / 64 + temp) / 64);
+            g = (byte)((temp / 64 + temp) / 64);
             temp = (color & 0x001F) * 255 + 16;
-            b = (byte) ((temp / 32 + temp) / 32);
+            b = (byte)((temp / 32 + temp) / 32);
         }
 
         private static void DecompressDxt3Block
@@ -388,82 +388,82 @@ namespace ClassicUO.Renderer
                     switch (alphaIndex)
                     {
                         case 0:
-                            a = (byte) ((a0 & 0x0F) | ((a0 & 0x0F) << 4));
+                            a = (byte)((a0 & 0x0F) | ((a0 & 0x0F) << 4));
 
                             break;
 
                         case 1:
-                            a = (byte) ((a0 & 0xF0) | ((a0 & 0xF0) >> 4));
+                            a = (byte)((a0 & 0xF0) | ((a0 & 0xF0) >> 4));
 
                             break;
 
                         case 2:
-                            a = (byte) ((a1 & 0x0F) | ((a1 & 0x0F) << 4));
+                            a = (byte)((a1 & 0x0F) | ((a1 & 0x0F) << 4));
 
                             break;
 
                         case 3:
-                            a = (byte) ((a1 & 0xF0) | ((a1 & 0xF0) >> 4));
+                            a = (byte)((a1 & 0xF0) | ((a1 & 0xF0) >> 4));
 
                             break;
 
                         case 4:
-                            a = (byte) ((a2 & 0x0F) | ((a2 & 0x0F) << 4));
+                            a = (byte)((a2 & 0x0F) | ((a2 & 0x0F) << 4));
 
                             break;
 
                         case 5:
-                            a = (byte) ((a2 & 0xF0) | ((a2 & 0xF0) >> 4));
+                            a = (byte)((a2 & 0xF0) | ((a2 & 0xF0) >> 4));
 
                             break;
 
                         case 6:
-                            a = (byte) ((a3 & 0x0F) | ((a3 & 0x0F) << 4));
+                            a = (byte)((a3 & 0x0F) | ((a3 & 0x0F) << 4));
 
                             break;
 
                         case 7:
-                            a = (byte) ((a3 & 0xF0) | ((a3 & 0xF0) >> 4));
+                            a = (byte)((a3 & 0xF0) | ((a3 & 0xF0) >> 4));
 
                             break;
 
                         case 8:
-                            a = (byte) ((a4 & 0x0F) | ((a4 & 0x0F) << 4));
+                            a = (byte)((a4 & 0x0F) | ((a4 & 0x0F) << 4));
 
                             break;
 
                         case 9:
-                            a = (byte) ((a4 & 0xF0) | ((a4 & 0xF0) >> 4));
+                            a = (byte)((a4 & 0xF0) | ((a4 & 0xF0) >> 4));
 
                             break;
 
                         case 10:
-                            a = (byte) ((a5 & 0x0F) | ((a5 & 0x0F) << 4));
+                            a = (byte)((a5 & 0x0F) | ((a5 & 0x0F) << 4));
 
                             break;
 
                         case 11:
-                            a = (byte) ((a5 & 0xF0) | ((a5 & 0xF0) >> 4));
+                            a = (byte)((a5 & 0xF0) | ((a5 & 0xF0) >> 4));
 
                             break;
 
                         case 12:
-                            a = (byte) ((a6 & 0x0F) | ((a6 & 0x0F) << 4));
+                            a = (byte)((a6 & 0x0F) | ((a6 & 0x0F) << 4));
 
                             break;
 
                         case 13:
-                            a = (byte) ((a6 & 0xF0) | ((a6 & 0xF0) >> 4));
+                            a = (byte)((a6 & 0xF0) | ((a6 & 0xF0) >> 4));
 
                             break;
 
                         case 14:
-                            a = (byte) ((a7 & 0x0F) | ((a7 & 0x0F) << 4));
+                            a = (byte)((a7 & 0x0F) | ((a7 & 0x0F) << 4));
 
                             break;
 
                         case 15:
-                            a = (byte) ((a7 & 0xF0) | ((a7 & 0xF0) >> 4));
+                            a = (byte)((a7 & 0xF0) | ((a7 & 0xF0) >> 4));
 
                             break;
                     }
@@ -487,16 +487,16 @@ namespace ClassicUO.Renderer
                             break;
 
                         case 2:
-                            r = (byte) ((2 * r0 + r1) / 3);
-                            g = (byte) ((2 * g0 + g1) / 3);
-                            b = (byte) ((2 * b0 + b1) / 3);
+                            r = (byte)((2 * r0 + r1) / 3);
+                            g = (byte)((2 * g0 + g1) / 3);
+                            b = (byte)((2 * b0 + b1) / 3);
 
                             break;
 
                         case 3:
-                            r = (byte) ((r0 + 2 * r1) / 3);
-                            g = (byte) ((g0 + 2 * g1) / 3);
-                            b = (byte) ((b0 + 2 * b1) / 3);
+                            r = (byte)((r0 + 2 * r1) / 3);
+                            g = (byte)((g0 + 2 * g1) / 3);
+                            b = (byte)((b0 + 2 * b1) / 3);
 
                             break;
                     }

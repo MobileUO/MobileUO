@@ -5,7 +5,7 @@ using ClassicUO.Network;
 
 namespace ClassicUO.Game.Data
 {
-    internal class PopupMenuData
+    public class PopupMenuData
     {
         public PopupMenuData(uint serial, PopupMenuItem[] items)
         {
@@ -35,7 +35,7 @@ namespace ClassicUO.Game.Data
 
                 if (isNewCliloc)
                 {
-                    cliloc = (int) p.ReadUInt32BE();
+                    cliloc = (int)p.ReadUInt32BE();
                     index = p.ReadUInt16BE();
                     flags = p.ReadUInt16BE();
                 }
@@ -57,7 +57,7 @@ namespace ClassicUO.Game.Data
 
                     if ((flags & 0x20) != 0)
                     {
-                        replaced = (ushort) (p.ReadUInt16BE() );
+                        replaced = (ushort)(p.ReadUInt16BE());
                     }
                 }
 

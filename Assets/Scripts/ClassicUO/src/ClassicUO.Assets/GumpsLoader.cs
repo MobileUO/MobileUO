@@ -200,7 +200,7 @@ namespace ClassicUO.Assets
         public override void ClearResources()
         {
             base.ClearResources();
-            
+
             _file?.Dispose();
             _file = null;
             //_instance = null;

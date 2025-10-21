@@ -11,7 +11,7 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Controls
 {
-    internal class Combobox : Control
+    public class Combobox : Control
     {
         private readonly byte _font;
         // MobileUO: removed readonly - for assistant
@@ -46,7 +46,8 @@ namespace ClassicUO.Game.UI.Controls
             (
                 new ResizePic(0x0BB8)
                 {
-                    Width = width, Height = Height
+                    Width = width,
+                    Height = Height
                 }
             );
 
@@ -63,7 +64,8 @@ namespace ClassicUO.Game.UI.Controls
             (
                 _label = new Label(initialText, unicode, 0x0453, font: font1)
                 {
-                    X = 2, Y = 5
+                    X = 2,
+                    Y = 5
                 }
             );
 
@@ -94,7 +96,7 @@ namespace ClassicUO.Game.UI.Controls
         internal string GetSelectedItem => _label.Text;
 
         // MobileUO: for assistant
-        internal uint GetItemsLength => (uint) _items.Length;
+        internal uint GetItemsLength => (uint)_items.Length;
 
         // MobileUO: for assistant
         internal void SetItemsValue(string[] items)
@@ -275,7 +277,7 @@ namespace ClassicUO.Game.UI.Controls
             {
                 if (e.Button == MouseButtonType.Left)
                 {
-                    _combobox.SelectedIndex = (int) ((Label) sender).Tag;
+                    _combobox.SelectedIndex = (int)((Label)sender).Tag;
 
                     Dispose();
                 }

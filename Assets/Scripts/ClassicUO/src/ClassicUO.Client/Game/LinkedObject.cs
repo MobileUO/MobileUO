@@ -199,7 +199,7 @@ namespace ClassicUO.Game
 
             int unitsize = 1; //size of the components we are merging; 1 for first iteration, multiplied by 2 after each iteration
 
-            T p = null, q = null, e = null, head = (T) Items, tail = null;
+            T p = null, q = null, e = null, head = (T)Items, tail = null;
 
             while (true)
             {
@@ -218,7 +218,7 @@ namespace ClassicUO.Game
                     for (int i = 0; i < unitsize; i++)
                     {
                         psize++;
-                        q = (T) q.Next;
+                        q = (T)q.Next;
 
                         if (q == null)
                         {
@@ -233,25 +233,25 @@ namespace ClassicUO.Game
                         if (psize == 0)
                         {
                             e = q;
-                            q = (T) q.Next;
+                            q = (T)q.Next;
                             qsize--;
                         }
                         else if (qsize == 0 || q == null)
                         {
                             e = p;
-                            p = (T) p.Next;
+                            p = (T)p.Next;
                             psize--;
                         }
                         else if (comparison(p, q) <= 0)
                         {
                             e = p;
-                            p = (T) p.Next;
+                            p = (T)p.Next;
                             psize--;
                         }
                         else
                         {
                             e = q;
-                            q = (T) q.Next;
+                            q = (T)q.Next;
                             qsize--;
                         }
 

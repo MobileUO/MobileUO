@@ -10,13 +10,13 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Controls
 {
-    internal enum HSliderBarStyle
+    public enum HSliderBarStyle
     {
         MetalWidgetRecessedBar,
         BlueWidgetNoBar
     }
 
-    internal class HSliderBar : Control
+    public class HSliderBar : Control
     {
         private bool _clicked;
         private readonly bool _drawUp;

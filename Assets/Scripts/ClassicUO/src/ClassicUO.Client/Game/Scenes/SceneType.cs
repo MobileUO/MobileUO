@@ -2,7 +2,7 @@
 
 namespace ClassicUO.Game.Scenes
 {
-    internal enum SceneType
+    public enum SceneType
     {
         None,
         Login,

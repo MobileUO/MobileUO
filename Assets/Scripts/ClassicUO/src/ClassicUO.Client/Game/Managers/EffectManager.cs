@@ -18,9 +18,9 @@ namespace ClassicUO.Game.Managers
 
         public void Update()
         {
-            for (GameEffect f = (GameEffect) Items; f != null;)
+            for (GameEffect f = (GameEffect)Items; f != null;)
             {
-                GameEffect next = (GameEffect) f.Next;
+                GameEffect next = (GameEffect)f.Next;
 
                 f.Update();
 
@@ -226,7 +226,7 @@ namespace ClassicUO.Game.Managers
 
         public new void Clear()
         {
-            GameEffect first = (GameEffect) Items;
+            GameEffect first = (GameEffect)Items;
 
             while (first != null)
             {
@@ -234,7 +234,7 @@ namespace ClassicUO.Game.Managers
 
                 first.Destroy();
 
-                first = (GameEffect) n;
+                first = (GameEffect)n;
             }
 
             Items = null;
