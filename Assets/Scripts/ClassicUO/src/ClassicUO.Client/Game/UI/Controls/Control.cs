@@ -320,12 +320,51 @@ namespace ClassicUO.Game.UI.Controls
             }
         }
 
+        /// <summary>
+        /// Intended for any ui changes that only need to occur just before drawing to the screen.
+        /// </summary>
+        public virtual void PreDraw()
+        {
+            if (IsDisposed) return;
+
+            if (Children.Count == 0) return;
+
+            int count = Children.Count;
+
+            for (int i = 0; i < count; i++)
+            {
+                if (i >= Children.Count)
+                    continue;
+
+                Control c = Children[i];
+
+                if (c == null || c.IsDisposed)
+                    continue;
+
+                c.PreDraw();
+            }
+
+            CleanUpDisposedChildren();
+        }
+
         public virtual void OnPageChanged()
         {
             //Update size as pages may vary in size.
             if (ServerSerial != 0)
             {
                 WantUpdateSize = true;
+            }
+        }
+
+        private void CleanUpDisposedChildren()
+        {
+            for (int i = Children.Count - 1; i >= 0; i--)
+            {
+                if (Children[i]?.IsDisposed == true)
+                {
+                    OnChildRemoved();
+                    Children.RemoveAt(i);
+                }
             }
         }
 
