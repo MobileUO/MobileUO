@@ -97,6 +97,7 @@ namespace ClassicUO.IO.Audio
                     // MobileUO: use this version
                     // MobileUO: TODO: get new version to work
                     SoundInstance.SubmitBuffer(buffer.Array);
+                    //SoundInstance.SubmitBuffer(buffer.Array, buffer.Offset, buffer.Count);
                 }
             }
         }

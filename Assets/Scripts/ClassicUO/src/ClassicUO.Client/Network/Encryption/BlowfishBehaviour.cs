@@ -4,7 +4,7 @@ using System;
 
 namespace ClassicUO.Network.Encryption
 {
-    internal sealed unsafe class BlowfishEncryption
+    public sealed unsafe class BlowfishEncryption
     {
         private readonly byte[] _seed = new byte[Crypt_Constants.CRYPT_GAME_SEED_LENGTH];
         private int _table_index, _block_pos, _stream_pos;
@@ -155,7 +155,7 @@ namespace ClassicUO.Network.Encryption
                     }
                 }
 
-                dst[i] = (byte) (src[i] ^ _seed[_block_pos]);
+                dst[i] = (byte)(src[i] ^ _seed[_block_pos]);
 
                 _seed[_block_pos] = dst[i];
                 _block_pos = (_block_pos + 1) % 8;
@@ -686,23 +686,23 @@ namespace ClassicUO.Network.Encryption
 
             public static void N2L(ref byte* C, ref uint LL)
             {
-                LL = (uint) *C++ << 24;
-                LL |= (uint) *C++ << 16;
-                LL |= (uint) *C++ << 8;
+                LL = (uint)*C++ << 24;
+                LL |= (uint)*C++ << 16;
+                LL |= (uint)*C++ << 8;
                 LL |= *C++;
             }
 
             public static void L2N(ref uint LL, ref byte* C)
             {
-                (*C++) = (byte) ((LL >> 24) & 0xff);
-                (*C++) = (byte) ((LL >> 16) & 0xff);
-                (*C++) = (byte) ((LL >> 8) & 0xff);
-                (*C++) = (byte) (LL & 0xff);
+                (*C++) = (byte)((LL >> 24) & 0xff);
+                (*C++) = (byte)((LL >> 16) & 0xff);
+                (*C++) = (byte)((LL >> 8) & 0xff);
+                (*C++) = (byte)(LL & 0xff);
             }
 
             public static void L2N(ref uint LL, uint R, uint P, byte[] S)
             {
-                LL = (uint) (LL ^ P ^ (((S[R >> 24] + S[0x0100 + ((R >> 16) & 0xff)]) ^ S[0x0200 + ((R >> 8) & 0xff)]) + S[0x0300 + (R & 0xff)]));
+                LL = (uint)(LL ^ P ^ (((S[R >> 24] + S[0x0100 + ((R >> 16) & 0xff)]) ^ S[0x0200 + ((R >> 8) & 0xff)]) + S[0x0300 + (R & 0xff)]));
             }
 
             public static void Round(ref uint LL, uint R, uint[] S, uint P)

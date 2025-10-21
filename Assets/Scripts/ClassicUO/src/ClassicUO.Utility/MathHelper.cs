@@ -33,14 +33,14 @@ namespace ClassicUO.Utility
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ulong Combine(uint val1, uint val2)
         {
-            return (val1 | (val2 << 32));
+            return (ulong)(uint)val1 | ((ulong)(uint)val2 << 32);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void GetNumbersFromCombine(ulong b, out int val1, out int val2)
         {
-            val1 = (int) (0xFFFFFFFF & b);
-            val2 = (int) (b >> 32);
+            val1 = (int)(0xFFFFFFFF & b);
+            val2 = (int)(b >> 32);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -84,7 +84,7 @@ namespace ClassicUO.Utility
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float AngleBetweenVectors(Vector2 from, Vector2 to)
         {
-            return (float) Math.Atan2(to.Y - from.Y, to.X - from.X);
+            return (float)Math.Atan2(to.Y - from.Y, to.X - from.X);
         }
 
         private static float GetMachineEpsilonFloat()

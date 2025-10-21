@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 
 namespace ClassicUO.Network
 {
-    internal sealed class CircularBuffer
+    public sealed class CircularBuffer
     {
         private byte[] _buffer;
         private int _head;
