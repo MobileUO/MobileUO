@@ -9,7 +9,7 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace ClassicUO.Game.GameObjects
 {
-    internal sealed partial class LightningEffect
+    public sealed partial class LightningEffect
     {
         public override bool Draw(UltimaBatcher2D batcher, int posX, int posY, float depth)
         {

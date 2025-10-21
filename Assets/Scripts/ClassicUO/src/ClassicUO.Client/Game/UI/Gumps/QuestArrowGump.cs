@@ -9,7 +9,7 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class QuestArrowGump : Gump
+    public class QuestArrowGump : Gump
     {
         private GumpPic _arrow;
         private Direction _direction;
@@ -51,7 +51,7 @@ namespace ClassicUO.Game.UI.Gumps
                 return;
             }
 
-            Direction dir = (Direction) GameCursor.GetMouseDirection
+            Direction dir = (Direction)GameCursor.GetMouseDirection
             (
                 World.Player.X,
                 World.Player.Y,
@@ -60,7 +60,7 @@ namespace ClassicUO.Game.UI.Gumps
                 0
             );
 
-            ushort gumpID = (ushort) (0x1194 + ((int) dir + 1) % 8);
+            ushort gumpID = (ushort)(0x1194 + ((int)dir + 1) % 8);
 
             if (_direction != dir || _arrow == null)
             {
@@ -86,8 +86,8 @@ namespace ClassicUO.Game.UI.Gumps
             int x = (Client.Game.Scene.Camera.Bounds.Width >> 1) - (gox - goy) * 22;
             int y = (Client.Game.Scene.Camera.Bounds.Height >> 1) - (gox + goy) * 22;
 
-            x -= (int) World.Player.Offset.X;
-            y -= (int) (World.Player.Offset.Y - World.Player.Offset.Z);
+            x -= (int)World.Player.Offset.X;
+            y -= (int)(World.Player.Offset.Y - World.Player.Offset.Z);
             y += World.Player.Z << 2;
 
 
@@ -173,12 +173,14 @@ namespace ClassicUO.Game.UI.Gumps
                 _needHue = !_needHue;
             }
 
-            _arrow.Hue = (ushort) (_needHue ? 0 : 0x21);
+            _arrow.Hue = (ushort)(_needHue ? 0 : 0x21);
         }
 
 
         protected override void OnMouseUp(int x, int y, MouseButtonType button)
         {
+            if (CanCloseWithRightClick) return; //This is set to true in Python API, we can ignore server-side stuff
+
             bool leftClick = button == MouseButtonType.Left;
             bool rightClick = button == MouseButtonType.Right;
 

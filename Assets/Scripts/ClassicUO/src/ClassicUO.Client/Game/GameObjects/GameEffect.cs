@@ -9,7 +9,7 @@ using ClassicUO.Utility;
 
 namespace ClassicUO.Game.GameObjects
 {
-    internal abstract partial class GameEffect : GameObject
+    public abstract partial class GameEffect : GameObject
     {
         private readonly EffectManager _manager;
 

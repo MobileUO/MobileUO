@@ -306,6 +306,7 @@ namespace ClassicUO.Game.Data
             { 0x0908, new (0x0908, Ability.WhirlwindAttack, Ability.Dismount) },
             { 0x4075, new (0x4075, Ability.WhirlwindAttack, Ability.Dismount) }, // Gargish Talwar
             { 0x4076, new (0x4076, Ability.ArmorIgnore, Ability.MortalStrike) }, // Shortblade
+            { 0x0907, new (0x0907, Ability.ArmorIgnore, Ability.MortalStrike) }, // Shortblade
             { 0x48AE, new (0x48AE, Ability.BleedAttack, Ability.InfectiousStrike) },
             { 0x48B0, new (0x48B0, Ability.BleedAttack, Ability.ConcussionBlow) }, // Gargish Battle Axe
             { 0x48B3, new (0x48B3, Ability.CrushingBlow, Ability.Dismount) },
@@ -342,6 +343,7 @@ namespace ClassicUO.Game.Data
             { 0x48D0, new (0x48D0, Ability.Feint, Ability.DoubleStrike) },             // Gargish Daisho
             { 0xA289, new (0xA289, Ability.ConcussionBlow, Ability.WhirlwindAttack) }, // Barbed Whip
             { 0xA28A, new (0xA28A, Ability.ArmorPierce, Ability.WhirlwindAttack) },    // Spiked Whip
+            { 0xA292, new (0xA292, Ability.ArmorPierce, Ability.WhirlwindAttack) },    // Spiked Whip
             { 0xA28B, new (0xA28B, Ability.BleedAttack, Ability.WhirlwindAttack) },    // Bladed Whip
             { 0x08FF, new (0x08FF, Ability.MysticArc, Ability.ConcussionBlow) },       // Boomerang
             { 0x0900, new (0x0900, Ability.ArmorIgnore, Ability.ParalyzingBlow) },     // Stone War Sword
