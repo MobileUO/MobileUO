@@ -30,6 +30,14 @@ namespace ClassicUO.Game.GameObjects
         public bool IsPositionChanged { get; protected set; }
         public TextContainer TextContainer { get; private set; }
         private AverageOverTime _averageOverTime;
+        protected Profile _profile = ProfileManager.CurrentProfile;
+
+        public int DistanceFrom(Vector2 pos)
+        {
+            if (pos == null) { return int.MaxValue; }
+
+            return Math.Max(Math.Abs(X - (int)pos.X), Math.Abs(Y - (int)pos.Y));
+        }
 
         public int Distance
         {

@@ -392,6 +392,11 @@ namespace ClassicUO.Configuration
         public byte ForcedHouseTransparency { get; set; } = 40;
         public ushort ForcedTransparencyHouseTileHue { get; set; } = 0;
         public bool ForceHouseTransparency { get; set; }
+        public bool EnableSpellIndicators { get; set; } = true;
+
+        public bool DisplayRadius { get; set; } = false;
+        public int DisplayRadiusDistance { get; set; } = 10;
+        public ushort DisplayRadiusHue { get; set; } = 22;
 
         public void Save(World world, string path)
         {
