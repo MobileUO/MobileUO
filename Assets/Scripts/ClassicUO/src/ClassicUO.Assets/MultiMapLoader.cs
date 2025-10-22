@@ -113,7 +113,7 @@ namespace ClassicUO.Assets
             while (_file.Position < _file.Length)
             {
                 byte pic = _file.ReadUInt8();
-                byte size = (byte) (pic & 0x7F);
+                byte size = (byte)(pic & 0x7F);
                 bool colored = (pic & 0x80) != 0;
 
                 int currentHeight = y * pheight;
@@ -240,7 +240,7 @@ namespace ClassicUO.Assets
             {
                 colorOffset -= 31;
                 int idx = colorOffset / maxPixelValue; // 0..31
-                if ((uint)idx >= 32u) 
+                if ((uint)idx >= 32u)
                     idx = Math.Clamp(idx, 0, 31);
 
                 ushort c16 = ct[idx];

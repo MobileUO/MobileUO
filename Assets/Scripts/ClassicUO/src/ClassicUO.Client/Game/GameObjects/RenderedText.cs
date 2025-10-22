@@ -9,6 +9,7 @@ using Microsoft.Xna.Framework.Graphics;
 using StbTextEditSharp;
 using System;
 using System.Collections.Generic;
+using ClassicUO.Utility.Logging;
 
 namespace ClassicUO.Game
 {
@@ -634,13 +635,20 @@ namespace ClassicUO.Game
 
             if (isValid && (Texture == null || Texture.IsDisposed))
             {
-                Texture = new Texture2D(
-                    Client.Game.GraphicsDevice,
-                    fi.Width,
-                    fi.Height,
-                    false,
-                    SurfaceFormat.Color
-                );
+                if (fi.Width < 0 || fi.Height < 0)
+                {
+                    Log.Error("Invalid texture size: " + fi.Width + "x" + fi.Height);
+                }
+                else
+                {
+                    Texture = new Texture2D(
+                        Client.Game.GraphicsDevice,
+                        fi.Width,
+                        fi.Height,
+                        false,
+                        SurfaceFormat.Color
+                    );
+                }
             }
 
             Links.Clear();

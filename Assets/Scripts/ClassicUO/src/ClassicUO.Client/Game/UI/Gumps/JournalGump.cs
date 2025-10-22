@@ -15,7 +15,7 @@ using ClassicUO.Utility.Collections;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class JournalGump : Gump
+    public class JournalGump : Gump
     {
         private const int _diffY = 22;
         private readonly ExpandableScroll _background;
@@ -66,12 +66,12 @@ namespace ClassicUO.Game.UI.Gumps
                 }
             );
 
-            Hue = (ushort) (ProfileManager.CurrentProfile.JournalDarkMode ? DARK_MODE_JOURNAL_HUE : 0);
+            Hue = (ushort)(ProfileManager.CurrentProfile.JournalDarkMode ? DARK_MODE_JOURNAL_HUE : 0);
 
             darkMode.ValueChanged += (sender, e) =>
             {
                 bool ok = ProfileManager.CurrentProfile.JournalDarkMode = !ProfileManager.CurrentProfile.JournalDarkMode;
-                Hue = (ushort) (ok ? DARK_MODE_JOURNAL_HUE : 0);
+                Hue = (ushort)(ok ? DARK_MODE_JOURNAL_HUE : 0);
             };
 
             _scrollBar = new ScrollFlag(-25, _diffY + 36, Height - _diffY, true);
@@ -160,11 +160,11 @@ namespace ClassicUO.Game.UI.Gumps
 
             void on_check_box(object sender, EventArgs e)
             {
-                Checkbox c = (Checkbox) sender;
+                Checkbox c = (Checkbox)sender;
 
                 if (c != null)
                 {
-                    switch ((TextType) c.LocalSerial)
+                    switch ((TextType)c.LocalSerial)
                     {
                         case TextType.CLIENT:
                             ProfileManager.CurrentProfile.ShowJournalClient = c.IsChecked;
@@ -197,7 +197,7 @@ namespace ClassicUO.Game.UI.Gumps
             }
 
             InitializeJournalEntries();
-            World.Journal.EntryAdded += AddJournalEntry;
+            EventSink.JournalEntryAdded += AddJournalEntry;
         }
 
         public override GumpType GumpType => GumpType.Journal;
@@ -217,7 +217,7 @@ namespace ClassicUO.Game.UI.Gumps
                 {
                     _isMinimized = value;
 
-                    _gumpPic.Graphic = value ? (ushort) 0x830 : (ushort) 0x82D;
+                    _gumpPic.Graphic = value ? (ushort)0x830 : (ushort)0x82D;
 
                     if (value)
                     {
@@ -247,7 +247,7 @@ namespace ClassicUO.Game.UI.Gumps
 
         public override void Dispose()
         {
-            World.Journal.EntryAdded -= AddJournalEntry;
+            EventSink.JournalEntryAdded -= AddJournalEntry;
             base.Dispose();
         }
 
@@ -266,17 +266,18 @@ namespace ClassicUO.Game.UI.Gumps
 
         private void AddJournalEntry(object sender, JournalEntry entry)
         {
-            var usrSend = entry.Name != string.Empty ? $"{entry.Name}" : string.Empty;
-
             // Check if ignored person
-            if (!string.IsNullOrEmpty(usrSend) && World.IgnoreManager.IgnoredCharsList.Contains(usrSend))
+            if (!string.IsNullOrEmpty(entry.Name) && World.IgnoreManager.IgnoredCharsList.Contains(entry.Name))
                 return;
 
-            string text = $"{usrSend}: {entry.Text}";
-
-            if (string.IsNullOrEmpty(usrSend))
+            string text;
+            if (string.IsNullOrEmpty(entry.Name))
             {
                 text = entry.Text;
+            }
+            else
+            {
+                text = $"{entry.Name}: {entry.Text}";
             }
 
             _journalEntries.AddEntry
@@ -550,7 +551,7 @@ namespace ClassicUO.Game.UI.Gumps
                 (
                     text,
                     hue,
-                    (byte) font,
+                    (byte)font,
                     isUnicode,
                     FontStyle.Indention | FontStyle.BlackBorder,
                     maxWidth: Width - (18 + h.Width)

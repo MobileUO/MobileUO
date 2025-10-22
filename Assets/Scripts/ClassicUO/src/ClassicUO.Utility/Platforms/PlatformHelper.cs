@@ -17,10 +17,23 @@ namespace ClassicUO.Utility.Platforms
         // MobileUO: added variable for Mobile
         public static readonly bool IsMobile = UnityEngine.Application.isMobilePlatform;
 
-        public static void LaunchBrowser(string url)
+        public static void LaunchBrowser(string url, bool localFile = false, bool retry = false)
         {
             try
             {
+                if (!localFile)
+                {
+                    if (!Uri.TryCreate(url, UriKind.Absolute, out Uri uri) || (uri.Scheme != "http" && uri.Scheme != "https"))
+                    {
+                        Log.Error($"Invalid URL format: {url}, trying with https://..");
+
+                        if (!retry)
+                            LaunchBrowser("https://" + url, true);
+
+                        return;
+                    }
+                }
+
                 // MobileUO: handle opening URLs 
                 if (IsMobile)
                 {
@@ -30,10 +43,11 @@ namespace ClassicUO.Utility.Platforms
                 {
                     ProcessStartInfo psi = new ProcessStartInfo
                     {
-                        FileName = url,
-                        UseShellExecute = true
+                        FileName = "cmd",
+                        Arguments = $"/c start \"\" \"{url}\"",
+                        UseShellExecute = false,
+                        CreateNoWindow = true
                     };
-
                     Process.Start(psi);
                 }
                 else if (IsOSX)

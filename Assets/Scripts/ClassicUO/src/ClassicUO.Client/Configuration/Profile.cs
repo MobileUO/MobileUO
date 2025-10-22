@@ -385,6 +385,8 @@ namespace ClassicUO.Configuration
             }
         };
 
+        public int MoveMultiObjectDelay { get; set; } = 1000;
+
         public bool GlobalScaling { get; set; } = false;
         public float GlobalScale { get; set; } = 1.5f;
         public byte ForcedHouseTransparency { get; set; } = 40;
