@@ -6,13 +6,14 @@ using ClassicUO.Game.Data;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.UI.Gumps;
 using ClassicUO.IO;
-using ClassicUO.Network;
 using ClassicUO.Resources;
 
 namespace ClassicUO.Game.Managers
 {
     public sealed class PartyManager
     {
+        public bool InParty => Leader != 0;
+
         private const int PARTY_SIZE = 10;
 
         private readonly World _world;
@@ -106,6 +107,9 @@ namespace ClassicUO.Game.Managers
                             if (!Contains(serial))
                             {
                                 Members[i] = new PartyMember(_world, serial);
+                                var mob = _world.Mobiles.Get(serial);
+                                if (mob != null)
+                                    mob.InParty = true;
                             }
 
                             done++;
@@ -137,6 +141,10 @@ namespace ClassicUO.Game.Managers
                             if (Members[i] != null && SerialHelper.IsValid(Members[i].Serial))
                             {
                                 uint serial = Members[i].Serial;
+
+                                var mob = _world.Mobiles.Get(serial);
+                                if (mob != null)
+                                    mob.InParty = false;
 
                                 Members[i] = null;
 

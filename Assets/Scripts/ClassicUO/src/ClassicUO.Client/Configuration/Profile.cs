@@ -387,6 +387,9 @@ namespace ClassicUO.Configuration
 
         public bool GlobalScaling { get; set; } = false;
         public float GlobalScale { get; set; } = 1.5f;
+        public byte ForcedHouseTransparency { get; set; } = 40;
+        public ushort ForcedTransparencyHouseTileHue { get; set; } = 0;
+        public bool ForceHouseTransparency { get; set; }
 
         public void Save(World world, string path)
         {

@@ -11,20 +11,29 @@ namespace ClassicUO.Renderer
         readonly List<byte> m_Data = new List<byte>(InitialDataCount); // list<t> access is 10% slower than t[].
 
         // MobileUO: added PixelCheck
-        public bool Get(ulong textureID, int x, int y, int extraRange = 0, bool pixelCheck = true)
+        public bool Get(ulong textureID, int x, int y, int extraRange = 0, bool pixelCheck = true, double scale = 1f)
         {
             int index;
             if (!m_IDs.TryGetValue(textureID, out index))
             {
                 return false;
             }
+
+            if (scale != 1f)
+            {
+                x = (int)(x / scale);
+                y = (int)(y / scale);
+            }
+
             int width = ReadIntegerFromData(ref index);
+
+
             if (x < 0 || x >= width)
             {
                 return false;
             }
-            int height = ReadIntegerFromData(ref index);
-            if (y < 0 || y >= height)
+
+            if (y < 0 || y >= ReadIntegerFromData(ref index))
             {
                 return false;
             }
@@ -86,7 +95,7 @@ namespace ClassicUO.Renderer
 
                 if (texture.UnityTexture == null)
                     return false;
-                
+
                 int pos = y * texture.Width + x;
                 return GetDataAtPos(pos, texture) != 0;
             }
@@ -173,7 +182,7 @@ namespace ClassicUO.Renderer
             int y = pos / width;
             y *= width;
             var index = y + (width - x - 1);
-            
+
             var data = (texture.UnityTexture as UnityEngine.Texture2D).GetRawTextureData<uint>();
             //We reverse the index because we had already reversed it in Texture2D.SetData
             var reversedIndex = data.Length - index - 1;

@@ -3,8 +3,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ClassicUO.Configuration;
 using ClassicUO.Game.Managers;
-using ClassicUO.Utility.Collections;
 using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.GameObjects
@@ -58,6 +58,14 @@ namespace ClassicUO.Game.GameObjects
             m.SetInWorldTile(x, y, z);
 
             Components.Add(m);
+
+            if (ProfileManager.CurrentProfile.ForceHouseTransparency)
+            {
+                var tile = _world.Map.GetTile(x, y);
+                tile.Hue = ProfileManager.CurrentProfile.ForcedTransparencyHouseTileHue;
+                Multi.ForcedTransparency = ProfileManager.CurrentProfile.ForcedHouseTransparency;
+                m.ForceTransparentHouse = true;
+            }
 
             return m;
         }

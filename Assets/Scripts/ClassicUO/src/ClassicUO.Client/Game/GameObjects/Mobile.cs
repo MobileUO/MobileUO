@@ -177,6 +177,8 @@ namespace ClassicUO.Game.GameObjects
             }
         }
 
+        public bool InParty { get; set; }
+
         public bool IsDrivingBoat
         {
             get
