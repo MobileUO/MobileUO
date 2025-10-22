@@ -17,7 +17,7 @@ using System.Runtime.CompilerServices;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class MiniMapGump : Gump
+    public class MiniMapGump : Gump
     {
         struct ColorInfo
         {
@@ -287,7 +287,7 @@ namespace ClassicUO.Game.UI.Gumps
                     indexMap.MapFile.Seek((long)indexMap.MapAddress, System.IO.SeekOrigin.Begin);
                     // MobileUO: TODO: InlineArray feature is not available in Unity's C#
                     var cells = indexMap.MapFile.ReadMapBlock()/*.Read<MapBlock>()*/.Cells;
-                    
+
                     Chunk block = World.Map.GetChunk(blockIndex);
                     int realBlockX = i << 3;
                     int realBlockY = j << 3;
@@ -364,10 +364,11 @@ namespace ClassicUO.Game.UI.Gumps
 
                             if (isLand && color > 0x4000)
                             {
-                                color = Client.Game.UO.FileManager.Hues.GetColor16(
-                                    16384,
-                                    (ushort)(color - 0x4000)
-                                ); //28672 is an arbitrary position in hues.mul, is the 14 position in the range
+                                color = Client.Game.UO.FileManager.Hues.GetHueColorRgba5551(16, (ushort)(color - 0x4000));
+                                //                                 color = Client.Game.UO.FileManager.Hues.GetColor16(
+                                //     16384,
+                                //     (ushort)(color - 0x4000)
+                                // ); //28672 is an arbitrary position in hues.mul, is the 14 position in the range
                             }
                             else
                             {
