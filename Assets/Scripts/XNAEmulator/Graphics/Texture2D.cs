@@ -357,6 +357,17 @@ namespace Microsoft.Xna.Framework.Graphics
             GetData(0, null, data, startIndex, elementCount);
         }
 
+        public void GetData<T>(T[] data) where T : struct
+        {
+            GetData(
+                0,
+                null,
+                data,
+                0,
+                data.Length
+            );
+        }
+
         public void GetData<T>(int level, Rectangle? rect, T[] data, int startIndex, int elementCount) where T : struct
         {
             if (!UnityMainThreadDispatcher.IsMainThread())

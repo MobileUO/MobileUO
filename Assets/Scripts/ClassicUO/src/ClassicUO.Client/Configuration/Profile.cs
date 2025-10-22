@@ -397,6 +397,9 @@ namespace ClassicUO.Configuration
         public bool DisplayRadius { get; set; } = false;
         public int DisplayRadiusDistance { get; set; } = 10;
         public ushort DisplayRadiusHue { get; set; } = 22;
+        public bool UseGridLayoutContainerGumps { get; set; } = true;
+
+        public bool AutoAvoidObstacules { get; set; } = true;
 
         public void Save(World world, string path)
         {

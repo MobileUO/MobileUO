@@ -1,19 +1,19 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
-using System;
 using ClassicUO.Input;
 using ClassicUO.Renderer;
 using Microsoft.Xna.Framework;
+using System;
 
 namespace ClassicUO.Game.UI.Controls
 {
-    internal enum ScrollbarBehaviour
+    public enum ScrollbarBehaviour
     {
         ShowWhenDataExceedFromView,
         ShowAlways
     }
 
-    internal class ScrollArea : Control
+    public class ScrollArea : Control
     {
         private bool _isNormalScroll;
         private readonly ScrollBarBase _scrollBar;
@@ -42,7 +42,8 @@ namespace ClassicUO.Game.UI.Controls
             {
                 _scrollBar = new ScrollFlag
                 {
-                    X = Width - 19, Height = h
+                    X = Width - 19,
+                    Height = h
                 };
 
                 Width += 15;
@@ -67,14 +68,11 @@ namespace ClassicUO.Game.UI.Controls
         public int ScrollMinValue => _scrollBar.MinValue;
         public int ScrollMaxValue => _scrollBar.MaxValue;
 
-
         public Rectangle ScissorRectangle;
 
-
-        public override void Update()
+        public override void PreDraw()
         {
-            base.Update();
-
+            base.PreDraw();
             CalculateScrollBarMaxValue();
 
             if (ScrollbarBehaviour == ScrollbarBehaviour.ShowAlways)
@@ -85,6 +83,26 @@ namespace ClassicUO.Game.UI.Controls
             {
                 _scrollBar.IsVisible = _scrollBar.MaxValue > _scrollBar.MinValue;
             }
+        }
+
+        public void UpdateScrollbarPosition()
+        {
+            if (_isNormalScroll)
+                _scrollBar.X = Width - 14;
+            else
+                _scrollBar.X = Width - 19;
+        }
+
+        public void ResetScrollbarPosition()
+        {
+            _scrollBar?.ResetScrollPosition();
+        }
+
+        public int ScrollBarWidth()
+        {
+            if (_scrollBar == null)
+                return 0;
+            return _scrollBar.Width;
         }
 
         public void Scroll(bool isup)
@@ -101,7 +119,12 @@ namespace ClassicUO.Game.UI.Controls
 
         public override bool Draw(UltimaBatcher2D batcher, int x, int y)
         {
-            ScrollBarBase scrollbar = (ScrollBarBase) Children[0];
+            if (IsDisposed)
+            {
+                return false;
+            }
+
+            ScrollBarBase scrollbar = (ScrollBarBase)Children[0];
             scrollbar.Draw(batcher, x + scrollbar.X, y + scrollbar.Y);
 
             if (batcher.ClipBegin(x + ScissorRectangle.X, y + ScissorRectangle.Y, Width - 14 + ScissorRectangle.Width, Height + ScissorRectangle.Height))
@@ -125,7 +148,6 @@ namespace ClassicUO.Game.UI.Controls
 
             return true;
         }
-
 
         protected override void OnMouseWheel(MouseEventType delta)
         {
@@ -186,7 +208,6 @@ namespace ClassicUO.Game.UI.Controls
                 }
             }
 
-            int width = Math.Abs(startX) + Math.Abs(endX);
             int height = Math.Abs(startY) + Math.Abs(endY) - _scrollBar.Height;
             height = Math.Max(0, height - (-ScissorRectangle.Y + ScissorRectangle.Height));
 
