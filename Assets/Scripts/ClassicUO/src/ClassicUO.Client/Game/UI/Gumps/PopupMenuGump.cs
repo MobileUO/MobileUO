@@ -3,19 +3,26 @@
 using ClassicUO.Game.Data;
 using ClassicUO.Game.UI.Controls;
 using ClassicUO.Input;
-using ClassicUO.Assets;
 using ClassicUO.Utility;
-using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class PopupMenuGump : Gump
+    public class PopupMenuGump : Gump
     {
+        public static uint CloseNext = uint.MaxValue;
+
         private ushort _selectedItem;
         private readonly PopupMenuData _data;
 
         public PopupMenuGump(World world, PopupMenuData data) : base(world, 0, 0)
         {
+            if (CloseNext != uint.MaxValue && data.Serial == CloseNext)
+            {
+                Dispose();
+                CloseNext = uint.MaxValue;
+                return;
+            }
+
             CanMove = false;
             CanCloseWithRightClick = true;
             _data = data;
@@ -118,6 +125,9 @@ namespace ClassicUO.Game.UI.Gumps
         {
             if (button == MouseButtonType.Left)
             {
+                if (CUOEnviroment.Debug)
+                    GameActions.Print(World, $"Popup menu [{_data.Serial}] response: {_selectedItem}");
+
                 GameActions.ResponsePopupMenu(_data.Serial, _selectedItem);
                 Dispose();
             }

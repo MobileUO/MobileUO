@@ -22,9 +22,12 @@ namespace ClassicUO.Game.Managers
 
         public void Add(string text, ushort hue, string name, TextType type, bool isunicode = true, MessageType messageType = MessageType.Regular)
         {
+            if (JournalFilterManager.Instance.IgnoreMessage(text))
+                return;
+
             JournalEntry entry = Entries.Count >= Constants.MAX_JOURNAL_HISTORY_COUNT ? Entries.RemoveFromFront() : new JournalEntry();
 
-            byte font = (byte) (isunicode ? 0 : 9);
+            byte font = (byte)(isunicode ? 0 : 9);
 
             if (ProfileManager.CurrentProfile != null && ProfileManager.CurrentProfile.OverrideAllFonts)
             {
@@ -51,17 +54,21 @@ namespace ClassicUO.Game.Managers
 
             Entries.AddToBack(entry);
             EntryAdded.Raise(entry);
+            EventSink.InvokeJournalEntryAdded(null, entry);
 
             if (_fileWriter == null && !_writerHasException)
             {
                 CreateWriter();
             }
 
-            string output = $"[{timeNow:G}]  {name}: {text}";
-
+            string output;
             if (string.IsNullOrWhiteSpace(name))
             {
                 output = $"[{timeNow:G}]  {text}";
+            }
+            else
+            {
+                output = $"[{timeNow:G}]  {name}: {text}";
             }
 
             _fileWriter?.WriteLine(output);
@@ -129,7 +136,6 @@ namespace ClassicUO.Game.Managers
 
         public TextType TextType;
         public DateTime Time;
-
         public MessageType MessageType;
     }
 }
