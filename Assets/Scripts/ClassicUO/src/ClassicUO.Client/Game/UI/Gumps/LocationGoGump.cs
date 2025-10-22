@@ -10,13 +10,13 @@ using Microsoft.Xna.Framework;
 namespace ClassicUO.Game.UI.Gumps
 {
 
-    internal partial class LocationGoGump : Gump
+    public partial class LocationGoGump : Gump
     {
         /**
          * Valid inputs:
          * 3123, 124
          * 123 4141
-         * 1331:745 
+         * 1331:745
          */
         // MobileUO: TODO: GeneratedRegex feature is not available in Unity's C#
         //[GeneratedRegex(@"^(?<X>\d+)\s*[,:\s]\s*(?<Y>\d+)$")]
@@ -137,7 +137,7 @@ namespace ClassicUO.Game.UI.Gumps
                 point.Y = int.Parse(match.Groups["Y"].Value);
                 return true;
             }
-            catch (Exception e)
+            catch
             {
                 // do nothing
             }

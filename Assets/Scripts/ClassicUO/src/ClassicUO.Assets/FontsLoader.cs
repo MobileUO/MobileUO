@@ -32,10 +32,9 @@ namespace ClassicUO.Assets
         private const byte NOPRINT_CHARS = 32;
         private const float ITALIC_FONT_KOEFFICIENT = 3.3f;
 
-
-        public struct Margin 
-        { 
-            public int X, Y, Width, Height; 
+        public struct Margin
+        {
+            public int X, Y, Width, Height;
 
             // MobileUO: feature parameterless struct constructors is not available in C# 9.0
             // MobileUO TODO: Fix when Unity supports > C# 9.0
@@ -59,7 +58,7 @@ namespace ClassicUO.Assets
             }
 
             // MobileUO: can't use parameterless struct constructors in C# 9.0
-            public static readonly Margin Empty = new Margin(0, 0, 0, 0); 
+            public static readonly Margin Empty = new Margin(0, 0, 0, 0);
         }
 
         struct HtmlStatus
@@ -3102,7 +3101,6 @@ namespace ClassicUO.Assets
                         break;
 
                     case HTML_TAG_TYPE.HTT_BASEFONT:
-
                         if (MemoryExtensions.Equals(command, "color", StringComparison.InvariantCultureIgnoreCase))
                         {
                             ReadColorFromTextBuffer(value, ref info.Color);
@@ -3119,23 +3117,23 @@ namespace ClassicUO.Assets
                                     info.Font = 1;
                             }
                             else switch (font)
-                            {
-                                case 0:
-                                case 4:
-                                    info.Font = 1;
+                                {
+                                    case 0:
+                                    case 4:
+                                        info.Font = 1;
 
-                                    break;
+                                        break;
 
-                                case < 4:
-                                    info.Font = 2;
+                                    case < 4:
+                                        info.Font = 2;
 
-                                    break;
+                                        break;
 
-                                default:
-                                    info.Font = 0;
+                                    default:
+                                        info.Font = 0;
 
-                                    break;
-                            }
+                                        break;
+                                }
                         }
 
                         break;

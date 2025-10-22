@@ -1,5 +1,7 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
+using System;
+using System.Xml;
 using ClassicUO.Configuration;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.Scenes;
@@ -8,12 +10,10 @@ using ClassicUO.Input;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
-using System;
-using System.Xml;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class DebugGump : Gump
+    public class DebugGump : Gump
     {
         private const string DEBUG_STRING_0 = "- FPS: {0} (Min={1}, Max={2}), Zoom: {3:0.00}, Total Objs: {4}\n";
         private const string DEBUG_STRING_1 = "- Mobiles: {0}   Items: {1}   Statics: {2}   Multi: {3}   Lands: {4}   Effects: {5}\n";
@@ -48,7 +48,8 @@ namespace ClassicUO.Game.UI.Gumps
             (
                 _alphaBlendControl = new AlphaBlendControl(.7f)
                 {
-                    Width = Width, Height = Height
+                    Width = Width,
+                    Height = Height
                 }
             );
 
@@ -123,33 +124,12 @@ namespace ClassicUO.Game.UI.Gumps
 
                     if (Profiler.Enabled)
                     {
-                        double timeDraw = Profiler.GetContext("RenderFrame").TimeInContext;
-
-                        double timeUpdate = Profiler.GetContext("Update").TimeInContext;
-
-                        double timeFixedUpdate = Profiler.GetContext("FixedUpdate").TimeInContext;
-
-                        double timeOutOfContext = Profiler.GetContext("OutOfContext").TimeInContext;
-
-                        //double timeTotalCheck = timeOutOfContext + timeDraw + timeUpdate;
                         double timeTotal = Profiler.TrackedTime;
 
-                        double avgDrawMs = Profiler.GetContext("RenderFrame").AverageTime;
-
-                        sb.Append("- Profiling\n");
-
-                        sb.Append
-                        (
-                            string.Format
-                            (
-                                "    Draw:{0:0.0}% Update:{1:0.0}% FixedUpd:{2:0.0} AvgDraw:{3:0.0}ms {4}\n",
-                                100d * (timeDraw / timeTotal),
-                                100d * (timeUpdate / timeTotal),
-                                100d * (timeFixedUpdate / timeTotal),
-                                avgDrawMs,
-                                CUOEnviroment.CurrentRefreshRate
-                            )
-                        );
+                        foreach (var pd in Profiler.AllFrameData)
+                        {
+                            sb.Append($"\n[{pd.Context[pd.Context.Length - 1]}] [Last: {pd.LastTime:0.0}ms] [Total %: {100d * (pd.TimeInContext / timeTotal):0.00}]");
+                        }
                     }
                 }
                 else
@@ -167,14 +147,15 @@ namespace ClassicUO.Game.UI.Gumps
                     }
                 }
 
+
                 _cacheText = sb.ToString();
 
                 sb.Dispose();
 
                 Vector2 size = Fonts.Bold.MeasureString(_cacheText);
 
-                _alphaBlendControl.Width = Width = (int) (size.X + 20);
-                _alphaBlendControl.Height = Height = (int) (size.Y + 20);
+                _alphaBlendControl.Width = Width = (int)(size.X + 20);
+                _alphaBlendControl.Height = Height = (int)(size.Y + 20);
 
                 WantUpdateSize = true;
             }

@@ -152,6 +152,38 @@ namespace ClassicUO.Game.UI.Gumps
             }
         }
 
+        public void CenterXInViewPort()
+        {
+            var camera = Client.Game.Scene.Camera;
+            if (ProfileManager.CurrentProfile.GlobalScaling)
+            {
+                float scale = ProfileManager.CurrentProfile.GlobalScale;
+                // Compute the camera's physical center, then convert to logical coordinates.
+                float logicalCenterX = (camera.Bounds.X + camera.Bounds.Width / 2f);
+                // Set element X so that its center aligns with the camera's logical center.
+                X = (int)(logicalCenterX - ((Width / scale) / 2f));
+            }
+            else
+            {
+                X = camera.Bounds.X + ((camera.Bounds.Width - Width) / 2);
+            }
+        }
+
+        public void CenterYInViewPort()
+        {
+            var camera = Client.Game.Scene.Camera;
+            if (ProfileManager.CurrentProfile.GlobalScaling)
+            {
+                float scale = ProfileManager.CurrentProfile.GlobalScale;
+                float logicalCenterY = (camera.Bounds.Y + camera.Bounds.Height / 2f);
+                Y = (int)(logicalCenterY - ((Height / scale) / 2f));
+            }
+            else
+            {
+                Y = camera.Bounds.Y + ((camera.Bounds.Height - Height) / 2);
+            }
+        }
+
         public void SetInScreen()
         {
             Rectangle windowBounds = Client.Game.Window.ClientBounds;

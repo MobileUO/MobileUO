@@ -10,11 +10,13 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Controls
 {
-    internal class NiceButton : HitBox
+    public class NiceButton : HitBox
     {
         private readonly ButtonAction _action;
         private readonly int _groupnumber;
         private bool _isSelected;
+        public Color? BackgroundColor { get; set; } = null;
+        public bool DisplayBorder;
 
         public NiceButton
         (
@@ -81,17 +83,17 @@ namespace ClassicUO.Game.UI.Controls
                     // MobileUO: for assistant
                     IEnumerable<NiceButton> list;
 
-	                if (p is ScrollAreaItem)
-	                {
-		                p = p.Parent;
+                    if (p is ScrollAreaItem)
+                    {
+                        p = p.Parent;
 
-		                list = p.FindControls<ScrollAreaItem>()
-				                .SelectMany(s => s.Children.OfType<NiceButton>());
-	                }
-	                else
-	                {
-		                list = p.FindControls<NiceButton>();
-	                }
+                        list = p.FindControls<ScrollAreaItem>()
+                                .SelectMany(s => s.Children.OfType<NiceButton>());
+                    }
+                    else
+                    {
+                        list = p.FindControls<NiceButton>();
+                    }
 
                     foreach (NiceButton b in list)
                     {
@@ -103,6 +105,8 @@ namespace ClassicUO.Game.UI.Controls
                 }
             }
         }
+
+        public bool AlwaysShowBackground;
 
         internal static NiceButton GetSelected(Control p, int group)
         {
@@ -140,11 +144,31 @@ namespace ClassicUO.Game.UI.Controls
             }
         }
 
+        public void SetBackgroundHue(ushort hue)
+        {
+            Hue = hue;
+        }
+
+        public void SetText(string text)
+        {
+            TextLabel.Text = text;
+        }
+
         public override bool Draw(UltimaBatcher2D batcher, int x, int y)
         {
-            if (IsSelected)
+            if (BackgroundColor.HasValue)
             {
-                Vector3 hueVector = ShaderHueTranslator.GetHueVector(0, false, Alpha);
+                batcher.Draw
+                (
+                    SolidColorTextureCache.GetTexture(BackgroundColor.Value),
+                    new Rectangle(x, y, Width, Height),
+                    ShaderHueTranslator.GetHueVector(0, false, Alpha)
+                );
+            }
+
+            if (IsSelected || AlwaysShowBackground)
+            {
+                Vector3 hueVector = ShaderHueTranslator.GetHueVector(Hue, false, Alpha);
 
                 batcher.Draw
                 (
@@ -153,6 +177,16 @@ namespace ClassicUO.Game.UI.Controls
                     new Rectangle(0, 0, Width, Height),
                     hueVector
                 );
+            }
+
+            if (DisplayBorder)
+            {
+                batcher.DrawRectangle(
+                    SolidColorTextureCache.GetTexture(Color.LightGray),
+                    x, y,
+                    Width, Height,
+                    ShaderHueTranslator.GetHueVector(0, false, Alpha)
+                    );
             }
 
             return base.Draw(batcher, x, y);

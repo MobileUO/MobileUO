@@ -298,10 +298,23 @@ namespace ClassicUO.Game.UI.Gumps
 
     internal class BorderControl : Control
     {
-        private readonly int _borderSize;
+        private int _borderSize;
 
-        const ushort H_BORDER = 0x0A8C;
-        const ushort V_BORDER = 0x0A8D;
+        private ushort h_border = 0x0A8C;
+        private ushort v_border = 0x0A8D;
+        private ushort h_bottom_border = 0x0A8C;
+        private ushort v_right_border = 0x0A8D;
+        private ushort t_left = 0xffff, t_right = 0xffff, b_left = 0xffff, b_right = 0xffff;
+
+        public int BorderSize { get { return _borderSize; } set { _borderSize = value; } }
+        public ushort H_Border { get { return h_border; } set { h_border = value; } }
+        public ushort V_Border { get { return v_border; } set { v_border = value; } }
+        public ushort V_Right_Border { get { return v_right_border; } set { v_right_border = value; } }
+        public ushort H_Bottom_Border { get { return h_bottom_border; } set { h_bottom_border = value; } }
+        public ushort T_Left { get { return t_left; } set { t_left = value; } }
+        public ushort T_Right { get { return t_right; } set { t_right = value; } }
+        public ushort B_Left { get { return b_left; } set { b_left = value; } }
+        public ushort B_Right { get { return b_right; } set { b_right = value; } }
 
         public BorderControl(int x, int y, int w, int h, int borderSize)
         {
@@ -326,7 +339,7 @@ namespace ClassicUO.Game.UI.Gumps
                 hueVector.Y = 1;
             }
 
-            ref readonly var gumpInfo = ref Client.Game.UO.Gumps.GetGump(H_BORDER);
+            ref readonly var gumpInfo = ref Client.Game.UO.Gumps.GetGump(h_border);
 
             // sopra
             batcher.DrawTiled(
@@ -344,7 +357,7 @@ namespace ClassicUO.Game.UI.Gumps
                 hueVector
             );
 
-            gumpInfo = ref Client.Game.UO.Gumps.GetGump(V_BORDER);
+            gumpInfo = ref Client.Game.UO.Gumps.GetGump(v_border);
             //sx
             batcher.DrawTiled(
                 gumpInfo.Texture,
