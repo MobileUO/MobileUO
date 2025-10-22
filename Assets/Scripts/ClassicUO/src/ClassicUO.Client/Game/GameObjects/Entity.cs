@@ -9,6 +9,8 @@ using ClassicUO.Network;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
 using static ClassicUO.Network.NetClient;
+// MobileUO: TODO: TazUO - switch to Async later
+//using static ClassicUO.Network.AsyncNetClient;
 
 namespace ClassicUO.Game.GameObjects
 {
@@ -34,7 +36,21 @@ namespace ClassicUO.Game.GameObjects
         public bool ExecuteAnimation = true;
         internal long LastAnimationChangeTime;
         public Flags Flags;
-        public ushort Hits;
+        public ushort Hits
+        {
+            get => hits; set
+            {
+                if (Serial == World.Player)
+                {
+                    hits = value;
+                    EventSink.InvokeOnPlayerStatChange(this, value);
+                }
+                else
+                {
+                    hits = value;
+                }
+            }
+        }
         public ushort HitsMax;
         public byte HitsPercentage;
         public bool IsClicked;
@@ -42,7 +58,7 @@ namespace ClassicUO.Game.GameObjects
         public string Name;
         public uint Serial;
         public HitsRequestStatus HitsRequest;
-
+        private ushort hits;
 
         public bool IsHidden => (Flags & Flags.Hidden) != 0;
 
@@ -71,7 +87,7 @@ namespace ClassicUO.Game.GameObjects
 
         public void FixHue(ushort hue)
         {
-            ushort fixedColor = (ushort) (hue & 0x3FFF);
+            ushort fixedColor = (ushort)(hue & 0x3FFF);
 
             if (fixedColor != 0)
             {
@@ -80,11 +96,11 @@ namespace ClassicUO.Game.GameObjects
                     fixedColor = 1;
                 }
 
-                fixedColor |= (ushort) (hue & 0xC000);
+                fixedColor |= (ushort)(hue & 0xC000);
             }
             else
             {
-                fixedColor = (ushort) (hue & 0x8000);
+                fixedColor = (ushort)(hue & 0x8000);
             }
 
             Hue = fixedColor;
@@ -139,7 +155,7 @@ namespace ClassicUO.Game.GameObjects
                     Socket.Send_NameRequest(Serial);
                 }
 
-                UIManager.Add(new NameOverheadGump(World, this));
+                UIManager.Add(new NameOverheadGump(World, this), false);
             }
 
 
@@ -172,7 +188,7 @@ namespace ClassicUO.Game.GameObjects
 
                 for (LinkedObject i = Items; i != null; i = i.Next)
                 {
-                    Item it = (Item) i;
+                    Item it = (Item)i;
 
                     if (it.Graphic == graphic)
                     {
@@ -199,7 +215,7 @@ namespace ClassicUO.Game.GameObjects
             {
                 for (LinkedObject i = Items; i != null; i = i.Next)
                 {
-                    Item it = (Item) i;
+                    Item it = (Item)i;
 
                     if (it.Graphic == graphic && it.Hue == hue)
                     {
@@ -225,7 +241,7 @@ namespace ClassicUO.Game.GameObjects
         {
             for (LinkedObject i = Items; i != null; i = i.Next)
             {
-                Item item = (Item) i;
+                Item item = (Item)i;
 
                 if (item.Graphic == graphic)
                 {
@@ -236,7 +252,7 @@ namespace ClassicUO.Game.GameObjects
                 {
                     for (LinkedObject ic = Items; ic != null; ic = ic.Next)
                     {
-                        Item childItem = (Item) ic;
+                        Item childItem = (Item)ic;
 
                         Item res = childItem.GetItemByGraphic(graphic, deepsearch);
 
@@ -256,7 +272,7 @@ namespace ClassicUO.Game.GameObjects
         {
             for (LinkedObject i = Items; i != null; i = i.Next)
             {
-                Item it = (Item) i;
+                Item it = (Item)i;
 
                 if (!it.IsDestroyed && it.Layer == layer)
                 {
@@ -289,7 +305,7 @@ namespace ClassicUO.Game.GameObjects
 
         public override int GetHashCode()
         {
-            return (int) Serial;
+            return (int)Serial;
         }
 
         public abstract void ProcessAnimation(bool evalutate = false);

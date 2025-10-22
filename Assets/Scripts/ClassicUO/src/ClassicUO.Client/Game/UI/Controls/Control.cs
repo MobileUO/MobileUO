@@ -477,6 +477,13 @@ namespace ClassicUO.Game.UI.Controls
         {
         }
 
+        /// <summary>
+        /// Invoked when alpha is changed on a control
+        /// </summary>
+        /// <param name="oldValue"></param>
+        /// <param name="newValue"></param>
+        public virtual void AlphaChanged(float oldValue, float newValue) { }
+
         public Control GetFirstControlAcceptKeyboardInput()
         {
             if (_acceptKeyboardInput)
