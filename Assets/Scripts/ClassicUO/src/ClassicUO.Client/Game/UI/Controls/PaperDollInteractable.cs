@@ -1,5 +1,6 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
+using System.Collections.Generic;
 using ClassicUO.Assets;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
@@ -10,8 +11,6 @@ using ClassicUO.Input;
 using ClassicUO.Utility;
 using ClassicUO.Utility.Logging;
 using Microsoft.Xna.Framework;
-using System.Collections.Generic;
-using UnityEngine.UIElements;
 
 namespace ClassicUO.Game.UI.Controls
 {

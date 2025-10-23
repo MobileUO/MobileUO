@@ -467,6 +467,7 @@ namespace ClassicUO.Configuration
         public ushort ImprovedBuffBarHue { get; set; } = 905;
         #endregion
 
+        public bool ForceTooltipsOnOldClients { get; set; } = true;
 
         public void Save(World world, string path)
         {

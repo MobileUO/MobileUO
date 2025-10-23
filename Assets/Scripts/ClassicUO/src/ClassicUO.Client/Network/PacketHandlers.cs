@@ -694,9 +694,9 @@ namespace ClassicUO.Network
 
                 if (mobile == world.Player)
                 {
-                    world.UoAssist.SignalHits();
-                    world.UoAssist.SignalStamina();
-                    world.UoAssist.SignalMana();
+                    //world.UoAssist.SignalHits();
+                    //world.UoAssist.SignalStamina();
+                    //world.UoAssist.SignalMana();
                 }
             }
         }
@@ -1797,9 +1797,9 @@ namespace ClassicUO.Network
 
                 if (mobile == world.Player)
                 {
-                    world.UoAssist.SignalHits();
-                    world.UoAssist.SignalStamina();
-                    world.UoAssist.SignalMana();
+                    //world.UoAssist.SignalHits();
+                    //world.UoAssist.SignalStamina();
+                    //world.UoAssist.SignalMana();
                 }
             }
         }
@@ -3421,7 +3421,7 @@ namespace ClassicUO.Network
 
             if (entity == world.Player)
             {
-                world.UoAssist.SignalHits();
+                //world.UoAssist.SignalHits();
             }
         }
 
@@ -3439,7 +3439,7 @@ namespace ClassicUO.Network
 
             if (mobile == world.Player)
             {
-                world.UoAssist.SignalMana();
+                //world.UoAssist.SignalMana();
             }
         }
 
@@ -3457,7 +3457,7 @@ namespace ClassicUO.Network
 
             if (mobile == world.Player)
             {
-                world.UoAssist.SignalStamina();
+                //world.UoAssist.SignalStamina();
             }
         }
 

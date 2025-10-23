@@ -23,7 +23,7 @@ using SDL2;
 
 namespace ClassicUO.Game.Scenes
 {
-    internal partial class GameScene : Scene
+    public partial class GameScene : Scene
     {
         // MobileUO: NOTE: Added these to allow the game viewport to be smaller than what CUO was allowing
         public static int MinimumViewportWidth = 200;
