@@ -434,6 +434,28 @@ namespace ClassicUO.Configuration
         public ushort AltGridContainerBackgroundHue { get; set; } = 0x0000;
         public bool DisableTargetingGridContainers { get; set; }
 
+        #region COOLDOWNS
+        public int CoolDownX { get; set; } = 50;
+        public int CoolDownY { get; set; } = 50;
+
+        public List<ushort> Condition_Hue { get; set; } = new List<ushort>();
+        public List<string> Condition_Label { get; set; } = new List<string>();
+        public List<int> Condition_Duration { get; set; } = new List<int>();
+        public List<string> Condition_Trigger { get; set; } = new List<string>();
+        public List<int> Condition_Type { get; set; } = new List<int>();
+        public List<bool> Condition_ReplaceIfExists { get; set; } = new List<bool>();
+        public int CoolDownConditionCount
+        {
+            get
+            {
+                return Condition_Hue.Count;
+            }
+            set { }
+        }
+
+        public bool UseLastMovedCooldownPosition { get; set; } = true;
+
+        #endregion
 
         public void Save(World world, string path)
         {

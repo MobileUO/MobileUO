@@ -13,13 +13,20 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Controls
 {
-    internal class HtmlControl : Control
+    public class HtmlControl : Control
     {
         private RenderedText _gameText;
         private ScrollBarBase _scrollBar;
 
         public HtmlControl(List<string> parts, string[] lines) : this()
         {
+            if (parts.Count < 8)
+            {
+                Log.Error("Invalid HTML Control data. Expected 8 parts, got " + parts.Count + " parts.");
+                Log.Error(string.Join(", ", parts));
+                return;
+            }
+
             X = int.Parse(parts[1]);
             Y = int.Parse(parts[2]);
             Width = int.Parse(parts[3]);
@@ -117,7 +124,7 @@ namespace ClassicUO.Game.UI.Controls
                         }
                         else
                         {
-                            htmlColor = (HuesHelper.Color16To32((ushort) hue) << 8) | 0xFF;
+                            htmlColor = (HuesHelper.Color16To32((ushort)hue) << 8) | 0xFF;
                         }
                     }
                     else if (!HasBackground)
@@ -140,7 +147,7 @@ namespace ClassicUO.Game.UI.Controls
                 }
                 else
                 {
-                    _gameText.Hue = (ushort) hue;
+                    _gameText.Hue = (ushort)hue;
                 }
 
                 _gameText.HasBackgroundColor = !HasBackground;
@@ -153,35 +160,35 @@ namespace ClassicUO.Game.UI.Controls
                 (
                     new ResizePic(0x2486)
                     {
-                        Width = Width - (HasScrollbar ? 16 : 0), Height = Height, AcceptMouseInput = false
+                        Width = Width - (HasScrollbar ? 16 : 0),
+                        Height = Height,
+                        AcceptMouseInput = false
                     }
                 );
             }
 
-            if (HasScrollbar)
+            if (UseFlagScrollbar)
             {
-                if (UseFlagScrollbar)
+                _scrollBar = new ScrollFlag
                 {
-                    _scrollBar = new ScrollFlag
-                    {
-                        Location = new Point(Width - 14, 0)
-                    };
-                }
-                else
-                {
-                    _scrollBar = new ScrollBar(Width - 14, 0, Height);
-                }
-
-                _scrollBar.Height = Height;
-                _scrollBar.MinValue = 0;
-
-                _scrollBar.MaxValue = /* _gameText.Height*/ /* Children.Sum(s => s.Height) - Height +*/
-                    _gameText.Height - Height + (HasBackground ? 8 : 0);
-
-                ScrollY = _scrollBar.Value;
-
-                Add(_scrollBar);
+                    Location = new Point(Width - 14, 0),
+                };
             }
+            else
+            {
+                _scrollBar = new ScrollBar(Width - 14, 0, Height);
+            }
+
+            _scrollBar.IsVisible = HasScrollbar;
+            _scrollBar.Height = Height;
+            _scrollBar.MinValue = 0;
+
+            _scrollBar.MaxValue = /* _gameText.Height*/ /* Children.Sum(s => s.Height) - Height +*/
+                _gameText.Height - Height + (HasBackground ? 8 : 0);
+
+            ScrollY = _scrollBar.Value;
+
+            Add(_scrollBar);
 
             //if (Width != _gameText.Width)
             //    Width = _gameText.Width;
@@ -189,11 +196,6 @@ namespace ClassicUO.Game.UI.Controls
 
         protected override void OnMouseWheel(MouseEventType delta)
         {
-            if (!HasScrollbar)
-            {
-                return;
-            }
-
             switch (delta)
             {
                 case MouseEventType.WheelScrollUp:
@@ -210,20 +212,23 @@ namespace ClassicUO.Game.UI.Controls
 
         public override void Update()
         {
-            if (HasScrollbar)
+            if (WantUpdateSize)
             {
-                if (WantUpdateSize)
+                if (_scrollBar != null && _gameText != null)
                 {
                     _scrollBar.Height = Height;
                     _scrollBar.MinValue = 0;
 
                     _scrollBar.MaxValue = /* _gameText.Height*/ /*Children.Sum(s => s.Height) - Height */
                         _gameText.Height - Height + (HasBackground ? 8 : 0);
-
-                    //_scrollBar.IsVisible = _scrollBar.MaxValue > _scrollBar.MinValue;
-                    WantUpdateSize = false;
                 }
 
+                //_scrollBar.IsVisible = _scrollBar.MaxValue > _scrollBar.MinValue;
+                WantUpdateSize = false;
+            }
+
+            if (_scrollBar != null)
+            {
                 ScrollY = _scrollBar.Value;
             }
 
