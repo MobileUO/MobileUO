@@ -458,6 +458,15 @@ namespace ClassicUO.Configuration
         #endregion
 
         public double PaperdollScale { get; set; } = 1f;
+        public bool ShowTargetIndicator { get; set; }
+
+        public int HealthLineSizeMultiplier { get; set; } = 1;
+
+        #region IMPROVED BUFF BAR
+        public bool UseImprovedBuffBar { get; set; } = true;
+        public ushort ImprovedBuffBarHue { get; set; } = 905;
+        #endregion
+
 
         public void Save(World world, string path)
         {
