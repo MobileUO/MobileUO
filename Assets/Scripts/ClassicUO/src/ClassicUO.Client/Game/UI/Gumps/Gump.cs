@@ -20,6 +20,8 @@ namespace ClassicUO.Game.UI.Gumps
         private Button closeButton;
         public static bool CloseButtonsEnabled;
 
+        private bool isLocked = false;
+
         public Gump(World world, uint local, uint server)
         {
             World = world;
@@ -74,6 +76,27 @@ namespace ClassicUO.Game.UI.Gumps
         public bool InvalidateContents { get; set; }
 
         public uint MasterGumpSerial { get; set; }
+        public float AlphaOffset = 0;
+
+        public virtual bool IsLocked
+        {
+            get { return isLocked; }
+            set
+            {
+                isLocked = value;
+                if (isLocked)
+                {
+                    CanMove = false;
+                    CanCloseWithRightClick = false;
+                }
+                else
+                {
+                    CanMove = true;
+                    CanCloseWithRightClick = true;
+                }
+                OnLockedChanged();
+            }
+        }
 
 
         public override void Update()
@@ -240,6 +263,10 @@ namespace ClassicUO.Game.UI.Gumps
             }
 
             Location = position;
+        }
+
+        protected virtual void OnLockedChanged()
+        {
         }
 
         public override bool Draw(UltimaBatcher2D batcher, int x, int y)

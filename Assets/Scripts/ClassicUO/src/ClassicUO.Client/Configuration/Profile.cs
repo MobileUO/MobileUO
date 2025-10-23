@@ -397,9 +397,43 @@ namespace ClassicUO.Configuration
         public bool DisplayRadius { get; set; } = false;
         public int DisplayRadiusDistance { get; set; } = 10;
         public ushort DisplayRadiusHue { get; set; } = 22;
+        #region GRID CONTAINER
         public bool UseGridLayoutContainerGumps { get; set; } = true;
+        public bool GridContainersDefaultToOldStyleView { get; set; } = false;
+        public int GridContainerSearchMode { get; set; } = 1;
+        public bool EnableGridContainerAnchor { get; set; } = false;
+        public byte GridBorderAlpha { get; set; } = 75;
+        public ushort GridBorderHue { get; set; } = 0;
+        public byte GridContainersScale { get; set; } = 100;
+        public bool GridContainerScaleItems { get; set; } = true;
+        public bool GridEnableContPreview { get; set; } = true;
+        public int Grid_BorderStyle { get; set; } = 0;
+        public int Grid_DefaultColumns { get; set; } = 5;
+        public int Grid_DefaultRows { get; set; } = 5;
+        public bool Grid_UseContainerHue { get; set; } = false;
+        public bool Grid_HideBorder { get; set; } = false;
+        #endregion
+        public int SpellIconScale { get; set; } = 100;
+        public bool SpellIcon_DisplayHotkey { get; set; } = true;
+        public ushort SpellIcon_HotkeyHue { get; set; } = 1;
 
         public bool AutoAvoidObstacules { get; set; } = true;
+        public bool CorpseSingleClickLoot { get; set; } = false;
+        [JsonConverter(typeof(Point2Converter))] public Point WorldMapPosition { get; set; } = new Point(100, 100);
+        [JsonConverter(typeof(Point2Converter))] public Point PaperdollPosition { get; set; } = new Point(100, 100);
+        [JsonConverter(typeof(Point2Converter))] public Point JournalPosition { get; set; } = new Point(100, 100);
+        [JsonConverter(typeof(Point2Converter))] public Point StatusGumpPosition { get; set; } = new Point(100, 100);
+        [JsonConverter(typeof(Point2Converter))] public Point BackpackGridPosition { get; set; } = new Point(100, 100);
+        [JsonConverter(typeof(Point2Converter))] public Point BackpackGridSize { get; set; } = new Point(300, 300);
+        public bool WorldMapLocked { get; set; } = false;
+        public bool PaperdollLocked { get; set; } = false;
+        public bool JournalLocked { get; set; } = false;
+        public bool StatusGumpLocked { get; set; } = false;
+        public bool BackPackLocked { get; set; } = false;
+        public byte ContainerOpacity { get; set; } = 50;
+        public ushort AltGridContainerBackgroundHue { get; set; } = 0x0000;
+        public bool DisableTargetingGridContainers { get; set; }
+
 
         public void Save(World world, string path)
         {

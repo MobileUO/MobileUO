@@ -1,20 +1,21 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
-using System;
-using System.Xml;
+using ClassicUO.Assets;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.Scenes;
 using ClassicUO.Game.UI.Controls;
 using ClassicUO.Input;
-using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using Microsoft.Xna.Framework;
+using SDL2;
+using System;
+using System.Xml;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class UseSpellButtonGump : AnchorableGump
+    public class UseSpellButtonGump : AnchorableGump
     {
         const ushort LOCK_GRAPHIC = 0x1086;
 
@@ -26,12 +27,13 @@ namespace ClassicUO.Game.UI.Gumps
         public bool ShowEdit =>
             Keyboard.Ctrl && Keyboard.Alt && ProfileManager.CurrentProfile.FastSpellsAssign;
 
-        public UseSpellButtonGump(World world) : base(world,0, 0)
+        public UseSpellButtonGump(World world) : base(world, 0, 0)
         {
             CanMove = true;
             AcceptMouseInput = true;
             CanCloseWithRightClick = true;
-
+            Width = (int)Math.Round(44 * (ProfileManager.CurrentProfile.SpellIconScale / 100f));
+            Height = (int)Math.Round(44 * (ProfileManager.CurrentProfile.SpellIconScale / 100f));
             _mm = world.Macros;
         }
 
@@ -52,12 +54,7 @@ namespace ClassicUO.Game.UI.Gumps
 
         private void BuildGump()
         {
-            Add(
-                _background = new GumpPic(0, 0, (ushort)_spell.GumpIconSmallID, 0)
-                {
-                    AcceptMouseInput = false
-                }
-            );
+            Add(_background = new GumpPic(0, 0, (ushort)_spell.GumpIconSmallID, 0) { AcceptMouseInput = false, Width = Width, Height = Height });
 
             int cliloc = GetSpellTooltip(_spell.ID);
 
@@ -66,11 +63,46 @@ namespace ClassicUO.Game.UI.Gumps
                 SetTooltip(Client.Game.UO.FileManager.Clilocs.GetString(cliloc), 80);
             }
 
-            WantUpdateSize = true;
+            if (ProfileManager.CurrentProfile.SpellIcon_DisplayHotkey)
+            {
+                Macro macro = _mm.FindMacro(_spell.Name);
+                if (macro != null)
+                {
+                    string hotKeyString = "";
+
+                    if (macro.Ctrl)
+                        hotKeyString += "Ctrl ";
+                    if (macro.Alt)
+                        hotKeyString += "Alt ";
+                    if (macro.Shift)
+                        hotKeyString += "Shift ";
+                    // MobileUO: TODO: TazUO revisit after SDL3
+                    //if (macro.Key != SDL3.SDL.SDL_Keycode.SDLK_UNKNOWN)
+                    //{
+                    //    hotKeyString += (char)macro.Key;
+                    //}
+                    else if (macro.MouseButton != MouseButtonType.None)
+                    {
+                        hotKeyString += macro.MouseButton;
+                    }
+                    else if (macro.WheelScroll == true)
+                    {
+                        hotKeyString += macro.WheelScroll;
+                    }
+
+                    Label hotkeyLabel = new Label(hotKeyString, true, ProfileManager.CurrentProfile.SpellIcon_HotkeyHue, Width, style: FontStyle.BlackBorder);
+                    Add(hotkeyLabel);
+                }
+            }
+
             AcceptMouseInput = true;
-            GroupMatrixWidth = 44;
-            GroupMatrixHeight = 44;
+            GroupMatrixWidth = Width;
+            GroupMatrixHeight = Height;
             AnchorType = ANCHOR_TYPE.SPELL;
+
+            Alpha += AlphaOffset;
+            foreach (Control c in Children)
+                c.Alpha += AlphaOffset;
         }
 
         public override bool Draw(UltimaBatcher2D batcher, int x, int y)
