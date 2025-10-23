@@ -3,7 +3,6 @@
 using System.Collections.Generic;
 using ClassicUO.Game.Scenes;
 using ClassicUO.Input;
-using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
@@ -22,10 +21,11 @@ namespace ClassicUO.Game.UI.Controls
     {
         private readonly string _caption;
         private bool _entered;
+        private bool _hasBeenClicked; //Use in python api
         private readonly RenderedText[] _fontTexture;
-        private ushort _normal,
-            _pressed,
-            _over;
+        private ushort _normal, _pressed, _over;
+        private Vector3 hueVector;
+        private int hue;
 
         // MobileUO: NOTE: Added for enlarging small buttons in MobileUO
         private bool enlarged;
@@ -38,7 +38,7 @@ namespace ClassicUO.Game.UI.Controls
             {
                 return;
             }
-            
+
             if (enlarged && enlarge == false)
             {
                 Width /= 2;
@@ -103,8 +103,9 @@ namespace ClassicUO.Game.UI.Controls
 
             CanMove = false;
             AcceptMouseInput = true;
-            //CanCloseWithRightClick = false;
             CanCloseWithEsc = false;
+
+            hueVector = ShaderHueTranslator.GetHueVector(Hue, false, Alpha, true);
         }
 
         public Button(List<string> parts)
@@ -191,7 +192,15 @@ namespace ClassicUO.Game.UI.Controls
             }
         }
 
-        public int Hue { get; set; }
+        public int Hue
+        {
+            get => hue; set
+            {
+                hue = value;
+                hueVector = ShaderHueTranslator.GetHueVector(Hue, false, Alpha, true);
+
+            }
+        }
         public ushort FontHue { get; }
 
         public ushort HueHover { get; }
@@ -203,15 +212,15 @@ namespace ClassicUO.Game.UI.Controls
         // MobileUO: keep this override so we can enlarge buttons for MobileUO
         public override void Update()
         {
-             base.Update();
+            base.Update();
 
             if (IsDisposed)
             {
                 return;
             }
-            
+
             // MobileUO: NOTE: Added for enlarging small buttons in MobileUO
-            ToggleSize(UserPreferences.EnlargeSmallButtons.CurrentValue == (int) PreferenceEnums.EnlargeSmallButtons.On);
+            ToggleSize(UserPreferences.EnlargeSmallButtons.CurrentValue == (int)PreferenceEnums.EnlargeSmallButtons.On);
         }
 
         protected override void OnMouseEnter(int x, int y)
@@ -222,6 +231,12 @@ namespace ClassicUO.Game.UI.Controls
         protected override void OnMouseExit(int x, int y)
         {
             _entered = false;
+        }
+
+        public override void AlphaChanged(float oldValue, float newValue)
+        {
+            base.AlphaChanged(oldValue, newValue);
+            hueVector = ShaderHueTranslator.GetHueVector(Hue, false, Alpha, true);
         }
 
         public override bool Draw(UltimaBatcher2D batcher, int x, int y)
@@ -258,9 +273,7 @@ namespace ClassicUO.Game.UI.Controls
                 return false;
             }
 
-            var hue = ShaderHueTranslator.GetHueVector(Hue, false, Alpha, true);
-
-            batcher.Draw(texture, new Rectangle(x, y, Width, Height), bounds, hue);
+            batcher.Draw(texture, new Rectangle(x, y, Width, Height), bounds, hueVector);
 
             if (!string.IsNullOrEmpty(_caption))
             {
@@ -285,6 +298,17 @@ namespace ClassicUO.Game.UI.Controls
             return base.Draw(batcher, x, y);
         }
 
+        /// <summary>
+        /// Used in python api to determine if a button was clicked or not.
+        /// </summary>
+        /// <returns></returns>
+        public bool HasBeenClicked()
+        {
+            var status = _hasBeenClicked;
+            _hasBeenClicked = false;
+            return status;
+        }
+
         protected override void OnMouseDown(int x, int y, MouseButtonType button)
         {
             if (button == MouseButtonType.Left)
@@ -297,6 +321,8 @@ namespace ClassicUO.Game.UI.Controls
         {
             if (button == MouseButtonType.Left)
             {
+                _hasBeenClicked = true;
+
                 IsClicked = false;
 
                 if (!MouseIsOver)
@@ -334,7 +360,7 @@ namespace ClassicUO.Game.UI.Controls
 
             return ContainsByBounds
                 ? base.Contains(x, y)
-                : Client.Game.UO.Gumps.PixelCheck(_normal, x - Offset.X, y - Offset.Y);
+                : Client.Game.UO.Gumps.PixelCheck(_normal, x - Offset.X, y - Offset.Y, InternalScale);
         }
 
         public sealed override void Dispose()

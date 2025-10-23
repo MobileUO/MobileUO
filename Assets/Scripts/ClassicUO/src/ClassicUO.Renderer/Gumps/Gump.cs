@@ -46,7 +46,7 @@ namespace ClassicUO.Renderer.Gumps
             return ref spriteInfo;
         }
 
-        public bool PixelCheck(uint idx, int x, int y) => _picker.Get(idx, x, y);
+        public bool PixelCheck(uint idx, int x, int y, double scale = 1f) => _picker.Get(idx, x, y, scale: scale);
 
         // MobileUO: added way to clear sprite arrays when toggling using sprite sheets or not
         public void ClearSpriteInfo()

@@ -51,6 +51,11 @@ namespace ClassicUO.Game.UI.Controls
 
         public bool IsFromServer { get; set; }
 
+        /// <summary>
+        /// This is intended for scaling mouse positions and other non-visual uses
+        /// </summary>
+        public double InternalScale { get; set; } = 1.0f;
+
         public int Page { get; set; }
 
         public Point Location
