@@ -6,11 +6,13 @@ using ClassicUO.Network;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace ClassicUO.Game.UI.Controls
 {
     public abstract class GumpPicBase : Control
     {
+        public bool IsPartialHue { get; set; }
         private ushort _graphic;
 
         protected GumpPicBase()
@@ -51,7 +53,7 @@ namespace ClassicUO.Game.UI.Controls
                 return false;
             }
 
-            if (Client.Game.UO.Gumps.PixelCheck(Graphic, x - Offset.X, y - Offset.Y))
+            if (Client.Game.UO.Gumps.PixelCheck(Graphic, x - Offset.X, y - Offset.Y, InternalScale))
             {
                 return true;
             }
@@ -68,6 +70,51 @@ namespace ClassicUO.Game.UI.Controls
             }
 
             return false;
+        }
+    }
+
+    public class EmbeddedGumpPic : GumpPicBase
+    {
+        private Texture2D _customTexture;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        /// <param name="texture">Texture does not dispose, make sure you handle disposing elsewhere.</param>
+        /// <param name="hue"></param>
+        public EmbeddedGumpPic(int x, int y, Texture2D texture, ushort hue = 0)
+        {
+            X = x;
+            Y = y;
+            _customTexture = texture;
+            Hue = hue;
+
+            if (_customTexture != null)
+            {
+                Width = _customTexture.Width;
+                Height = _customTexture.Height;
+            }
+        }
+
+        public override bool Draw(UltimaBatcher2D batcher, int x, int y)
+        {
+            if (IsDisposed || _customTexture == null || _customTexture.IsDisposed)
+            {
+                return false;
+            }
+
+            Vector3 hueVector = ShaderHueTranslator.GetHueVector(Hue, false, Alpha, true);
+
+            batcher.Draw(
+                _customTexture,
+                new Rectangle(x, y, Width, Height),
+                _customTexture.Bounds,
+                hueVector
+            );
+
+            return base.Draw(batcher, x, y);
         }
     }
 
@@ -100,7 +147,6 @@ namespace ClassicUO.Game.UI.Controls
             )
         { }
 
-        public bool IsPartialHue { get; set; }
         public bool ContainsByBounds { get; set; }
 
         public override bool Contains(int x, int y)
@@ -135,7 +181,7 @@ namespace ClassicUO.Game.UI.Controls
             {
                 batcher.Draw(
                     gumpInfo.Texture,
-                    new Rectangle(x, y, Width, Height),
+                    new Rectangle(x, y, (int)(Width * Scale), (int)(Height * Scale)),
                     gumpInfo.UV,
                     hueVector
                 );
@@ -145,7 +191,7 @@ namespace ClassicUO.Game.UI.Controls
         }
     }
 
-    internal class VirtueGumpPic : GumpPic
+    public class VirtueGumpPic : GumpPic
     {
         private readonly World _world;
 
@@ -158,6 +204,8 @@ namespace ClassicUO.Game.UI.Controls
         {
             if (button == MouseButtonType.Left)
             {
+                // MobileUO: TODO: TazUO revisit later
+                //AsyncNetClient.Socket.Send_VirtueGumpResponse(_world.Player, Graphic);
                 NetClient.Socket.Send_VirtueGumpResponse(_world.Player, Graphic);
 
                 return true;
@@ -167,9 +215,21 @@ namespace ClassicUO.Game.UI.Controls
         }
     }
 
-    internal class GumpPicInPic : GumpPicBase
+    public class GumpPicInPic : GumpPicBase
     {
-        private readonly Rectangle _picInPicBounds;
+        private Rectangle _picInPicBounds;
+
+        public Vector2 DrawOffset { get; set; } = Vector2.Zero;
+
+        public Rectangle PicInPicBounds
+        {
+            get => _picInPicBounds; set
+            {
+                _picInPicBounds = value;
+                Width = _picInPicBounds.Width;
+                Height = _picInPicBounds.Height;
+            }
+        }
 
         public GumpPicInPic(
             int x,
@@ -224,7 +284,7 @@ namespace ClassicUO.Game.UI.Controls
             {
                 batcher.Draw(
                     gumpInfo.Texture,
-                    new Rectangle(x, y, Width, Height),
+                    new Rectangle((int)(x + DrawOffset.X), (int)(y + DrawOffset.Y), (int)(Width * Scale), (int)(Height * Scale)),
                     sourceBounds,
                     hueVector
                 );

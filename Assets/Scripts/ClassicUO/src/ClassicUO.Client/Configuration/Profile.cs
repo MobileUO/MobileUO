@@ -457,6 +457,8 @@ namespace ClassicUO.Configuration
 
         #endregion
 
+        public double PaperdollScale { get; set; } = 1f;
+
         public void Save(World world, string path)
         {
             Log.Trace($"Saving path:\t\t{path}");
