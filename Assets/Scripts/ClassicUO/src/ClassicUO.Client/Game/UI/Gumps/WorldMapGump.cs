@@ -1,11 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Xml;
+using ClassicUO.Assets;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
 using ClassicUO.Game.GameObjects;
@@ -13,7 +8,7 @@ using ClassicUO.Game.Managers;
 using ClassicUO.Game.UI.Controls;
 using ClassicUO.Input;
 using ClassicUO.IO;
-using ClassicUO.Assets;
+using ClassicUO.Network.Encryption;
 using ClassicUO.Renderer;
 using ClassicUO.Resources;
 using ClassicUO.Utility;
@@ -21,15 +16,21 @@ using ClassicUO.Utility.Logging;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using SDL2;
-using SpriteFont = ClassicUO.Renderer.SpriteFont;
-using System.Text.Json.Serialization;
-using static ClassicUO.Game.UI.Gumps.WorldMapGump;
-using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Formats.Png;
-using ClassicUO.Network.Encryption;
-using System.Text;
+using SixLabors.ImageSharp.PixelFormats;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading;
+using System.Threading.Tasks;
+using System.Xml;
+using UnityEngine.LightTransport;
+using static ClassicUO.Game.UI.Gumps.WorldMapGump;
+using SpriteFont = ClassicUO.Renderer.SpriteFont;
 
 namespace ClassicUO.Game.UI.Gumps
 {
@@ -3336,6 +3337,59 @@ namespace ClassicUO.Game.UI.Gumps
                 }
             );
         }
+
+        public void AddUserMarker(string markerName, int x, int y, int map, string color = "yellow")
+        {
+            if (!World.InGame)
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(markerName))
+            {
+                GameActions.Print(World, ResGumps.InvalidMarkerName, 0x2A);
+                return;
+            }
+
+            try
+            {
+                var markerCsv = $"{x},{y},{map},{markerName}, ,{color},4";
+
+                using (var fileStream = File.Open(UserMarkersFilePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Write))
+                using (var streamWriter = new StreamWriter(fileStream))
+                {
+                    streamWriter.BaseStream.Seek(0, SeekOrigin.End);
+                    streamWriter.WriteLine(markerCsv);
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Error($"Error saving user marker: {e}");
+                GameActions.Print(World, "Failed to save user markers", 32);
+            }
+
+            var mapMarker = new WMapMarker
+            {
+                X = x,
+                Y = y,
+                Color = GetColor(color),
+                ColorName = color,
+                MapId = map,
+                MarkerIconName = "",
+                Name = markerName,
+                ZoomIndex = 3
+            };
+
+            if (!string.IsNullOrWhiteSpace(mapMarker.MarkerIconName) && _markerIcons.TryGetValue(mapMarker.MarkerIconName, out Texture2D markerIconTexture))
+            {
+                mapMarker.MarkerIcon = markerIconTexture;
+            }
+
+            var mapMarkerFile = _markerFiles.FirstOrDefault(x => x.FullPath == UserMarkersFilePath);
+
+            mapMarkerFile?.Markers.Add(mapMarker);
+        }
+
     }
 
     #endregion

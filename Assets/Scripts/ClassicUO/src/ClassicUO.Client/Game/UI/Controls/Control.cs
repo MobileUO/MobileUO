@@ -940,5 +940,43 @@ namespace ClassicUO.Game.UI.Controls
         {
             return this is Button button && button.ButtonID == MOBILE_CLOSE_BUTTON_ID;
         }
+
+        /// <summary>
+        /// Called after the control has been disposed.
+        /// </summary>
+        public virtual void AfterDispose() { }
+
+        public void ForceSizeUpdate(bool onlyIfLarger = true)
+        {
+            int h = onlyIfLarger ? Height : 0, w = onlyIfLarger ? Width : 0;
+            for (int i = 0; i < Children.Count; i++)
+            {
+                Control c = Children[i];
+                if ((c.Page == 0 || c.Page == ActivePage) && c.IsVisible && !c.IsDisposed)
+                {
+                    if (w < c.Bounds.Right)
+                    {
+                        w = c.Bounds.Right;
+                    }
+
+                    if (h < c.Bounds.Bottom)
+                    {
+                        h = c.Bounds.Bottom;
+                    }
+                }
+            }
+
+            if (w != Width)
+            {
+                Width = w;
+            }
+
+            if (h != Height)
+            {
+                Height = h;
+            }
+
+            WantUpdateSize = false;
+        }
     }
 }

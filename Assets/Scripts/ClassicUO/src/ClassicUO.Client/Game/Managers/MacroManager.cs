@@ -1862,6 +1862,20 @@ namespace ClassicUO.Game.Managers
         public bool Alt { get; set; }
         public bool Ctrl { get; set; }
         public bool Shift { get; set; }
+        public bool HideLabel = false;
+        public ushort Hue = 0x00;
+        public ushort? Graphic = null;
+
+        private byte _scale = 100;
+        public byte Scale
+        {
+            get { return _scale; }
+            set
+            {
+                if (value <= 10) _scale = 10;
+                else _scale = value;
+            }
+        }
 
         public bool Equals(Macro other)
         {

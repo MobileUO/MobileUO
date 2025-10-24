@@ -2069,7 +2069,7 @@ namespace ClassicUO.Game.UI.Gumps
                                 return;
                             }
 
-                            UIManager.Gumps.OfType<MacroButtonGump>().FirstOrDefault(s => s._macro == _macroControl.Macro)?.Dispose();
+                            UIManager.Gumps.OfType<MacroButtonGump>().FirstOrDefault(s => s.TheMacro == _macroControl.Macro)?.Dispose();
 
                             MacroButtonGump macroButtonGump = new MacroButtonGump(World, _macroControl.Macro, Mouse.Position.X, Mouse.Position.Y);
 
@@ -2121,7 +2121,7 @@ namespace ClassicUO.Game.UI.Gumps
 
                             if (_macroControl != null)
                             {
-                                UIManager.Gumps.OfType<MacroButtonGump>().FirstOrDefault(s => s._macro == _macroControl.Macro)?.Dispose();
+                                UIManager.Gumps.OfType<MacroButtonGump>().FirstOrDefault(s => s.TheMacro == _macroControl.Macro)?.Dispose();
 
                                 World.Macros.Remove(_macroControl.Macro);
 
@@ -2180,7 +2180,7 @@ namespace ClassicUO.Game.UI.Gumps
                         return;
                     }
 
-                    UIManager.Gumps.OfType<MacroButtonGump>().FirstOrDefault(s => s._macro == m)?.Dispose();
+                    UIManager.Gumps.OfType<MacroButtonGump>().FirstOrDefault(s => s.TheMacro == m)?.Dispose();
 
                     MacroButtonGump macroButtonGump = new MacroButtonGump(World, m, Mouse.Position.X, Mouse.Position.Y);
 
