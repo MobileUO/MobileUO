@@ -785,6 +785,20 @@ namespace ClassicUO.Assets
             41300000 anim 1246,1247 , group 0  (jack o lantern)
             */
 
+            /*
+            based on the current "mode" the mobile is in (e.g. IsFlying check) select the right set of definitions from the xtra array
+            then consult the num2 based list for stand/walk/run
+            and the num3 based list for NewCharacterAnimation packets
+            /
+            / flags
+            41100000
+            41400000 usually group 22,24 (walk run?)
+            40C00000 often group 31
+            42860000 anim 692   Animated weapon
+            41F80000 anim 692
+            41300000 anim 1246,1247 , group 0  (jack o lantern)
+            */
+
             var animSeq = new UOFileUop(
                 animationSequencePath,
                 "build/animationsequence/{0:D8}.bin"
@@ -809,8 +823,8 @@ namespace ClassicUO.Assets
                 var reader = new StackDataReader(buf);
                 if (entry.CompressionFlag >= CompressionType.Zlib)
                 {
-                    if (dbuf.Length < entry.DecompressedLength)
-                        dbuf = new byte[entry.DecompressedLength];
+                    if (dbuf.Length <= entry.DecompressedLength)
+                        dbuf = new byte[entry.DecompressedLength * 2];
 
                     var ok = ZLib.Decompress(buf.AsSpan(0, entry.Length), dbuf.AsSpan(0, entry.DecompressedLength));
                     if (ok != ZLib.ZLibError.Ok)
@@ -1041,8 +1055,25 @@ namespace ClassicUO.Assets
                         {
                             direction = (byte)data.Direction1;
                         }
+                        {
+                            if (data.Direction1 == -1)
+                            {
+                                if (direction == 7)
+                                {
+                                    direction = (byte)data.Direction4;
+                                }
+                                else
+                                {
+                                    direction = (byte)data.Direction2;
+                                }
+                            }
+                            else
+                            {
+                                direction = (byte)data.Direction1;
+                            }
 
-                        break;
+                            break;
+                        }
                     }
 
                 case 1:
@@ -1063,8 +1094,25 @@ namespace ClassicUO.Assets
                         {
                             direction = (byte)data.Direction2;
                         }
+                        {
+                            if (data.Direction2 == -1)
+                            {
+                                if (direction == 1)
+                                {
+                                    direction = (byte)data.Direction1;
+                                }
+                                else
+                                {
+                                    direction = (byte)data.Direction3;
+                                }
+                            }
+                            else
+                            {
+                                direction = (byte)data.Direction2;
+                            }
 
-                        break;
+                            break;
+                        }
                     }
 
                 case 3:
@@ -1085,8 +1133,25 @@ namespace ClassicUO.Assets
                         {
                             direction = (byte)data.Direction3;
                         }
+                        {
+                            if (data.Direction3 == -1)
+                            {
+                                if (direction == 3)
+                                {
+                                    direction = (byte)data.Direction2;
+                                }
+                                else
+                                {
+                                    direction = (byte)data.Direction4;
+                                }
+                            }
+                            else
+                            {
+                                direction = (byte)data.Direction3;
+                            }
 
-                        break;
+                            break;
+                        }
                     }
 
                 case 5:
@@ -1107,8 +1172,25 @@ namespace ClassicUO.Assets
                         {
                             direction = (byte)data.Direction4;
                         }
+                        {
+                            if (data.Direction4 == -1)
+                            {
+                                if (direction == 5)
+                                {
+                                    direction = (byte)data.Direction3;
+                                }
+                                else
+                                {
+                                    direction = (byte)data.Direction1;
+                                }
+                            }
+                            else
+                            {
+                                direction = (byte)data.Direction4;
+                            }
 
-                        break;
+                            break;
+                        }
                     }
             }
 
@@ -1176,12 +1258,12 @@ namespace ClassicUO.Assets
         {
             //ConvertBodyIfNeeded(ref animID);
 
-            if (animFlags.HasFlag(AnimationFlags.CalculateOffsetByLowGroup))
+            if ((animFlags & AnimationFlags.CalculateOffsetByLowGroup) != 0)
             {
                 animType = AnimationGroupsType.Animal;
             }
 
-            if (animFlags.HasFlag(AnimationFlags.CalculateOffsetLowGroupExtended))
+            if ((animFlags & AnimationFlags.CalculateOffsetLowGroupExtended) != 0)
             {
                 animType = AnimationGroupsType.Monster;
             }
@@ -1277,15 +1359,22 @@ namespace ClassicUO.Assets
             }
 
             file.Seek(index.Position, SeekOrigin.Begin);
-            var buf = new byte[index.Size];
-            file.Read(buf);
+            // MobileUO: TODO: TazUO - I get CRC errors if we don't slice correctly
+            var buf = ArrayPool<byte>.Shared.Rent((int)index.Size); //new byte[index.Size];
+            //file.Read(buf);
 
             var reader = new StackDataReader(buf);
 
+            var src = buf.AsSpan(0, (int)index.Size);
+            file.Read(src);
+
+            byte[] dbuf = null;
             if (index.CompressionType >= CompressionType.Zlib)
             {
-                var dbuf = new byte[(int)index.UncompressedSize];
-                var result = ZLib.Decompress(buf, dbuf);
+                dbuf = ArrayPool<byte>.Shared.Rent((int)index.UncompressedSize); //new byte[(int)index.UncompressedSize];
+                var dst = dbuf.AsSpan(0, (int)index.UncompressedSize);
+
+                var result = ZLib.Decompress(src, dst);
                 if (result != ZLib.ZLibError.Ok)
                 {
                     Log.Error($"error reading uop animation. AnimID: {animID} | Group: {animGroup} | Dir: {direction} | FileIndex: {fileIndex}");
@@ -1295,10 +1384,10 @@ namespace ClassicUO.Assets
 
                 if (index.CompressionType == CompressionType.ZlibBwt)
                 {
-                    dbuf = ClassicUO.Utility.BwtDecompress.Decompress(dbuf);
+                    dbuf = BwtDecompress.Decompress(dst.ToArray());
                 }
 
-                reader = new StackDataReader(dbuf);
+                reader = new StackDataReader(dst);
             }
 
             reader.Skip(32);
@@ -1329,7 +1418,7 @@ namespace ClassicUO.Assets
                     frame.PixelOffset = pixeloffset;
                 }
 
-                var list = new List<UOPFrameData>();
+                var list = new List<UOPFrameData>(fc);
                 var lastFrameId = 1;
                 for (var i = 0; i < fc; ++i)
                 {
@@ -1425,6 +1514,9 @@ namespace ClassicUO.Assets
             finally
             {
                 ArrayPool<UOPFrameData>.Shared.Return(sharedBuffer);
+                ArrayPool<byte>.Shared.Return(buf);
+                if (dbuf != null)
+                    ArrayPool<byte>.Shared.Return(dbuf);
             }
         }
 
