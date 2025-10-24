@@ -469,6 +469,9 @@ namespace ClassicUO.Configuration
 
         public bool ForceTooltipsOnOldClients { get; set; } = true;
 
+        // title bar stats
+        public bool EnableTitleBarStats { get; set; } = false;
+        public TitleBarStatsMode TitleBarStatsMode { get; set; } = TitleBarStatsMode.Text;
         public void Save(World world, string path)
         {
             Log.Trace($"Saving path:\t\t{path}");

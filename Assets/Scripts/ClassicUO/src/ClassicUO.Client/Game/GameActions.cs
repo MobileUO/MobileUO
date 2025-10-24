@@ -501,9 +501,9 @@ namespace ClassicUO.Game
             return true;
         }
 
-        public static void DropItem(uint serial, int x, int y, int z, uint container)
+        public static void DropItem(uint serial, int x, int y, int z, uint container, bool force = false)
         {
-            if (Client.Game.UO.GameCursor.ItemHold.Enabled && !Client.Game.UO.GameCursor.ItemHold.IsFixedPosition && (Client.Game.UO.GameCursor.ItemHold.Serial != container || Client.Game.UO.GameCursor.ItemHold.ItemData.IsStackable))
+            if (force || (Client.Game.UO.GameCursor.ItemHold.Enabled && !Client.Game.UO.GameCursor.ItemHold.IsFixedPosition && (Client.Game.UO.GameCursor.ItemHold.Serial != container || Client.Game.UO.GameCursor.ItemHold.ItemData.IsStackable)))
             {
                 if (Client.Game.UO.Version >= ClientVersion.CV_6017)
                 {
