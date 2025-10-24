@@ -9,7 +9,6 @@ using ClassicUO.Game.Data;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.Scenes;
 using ClassicUO.Game.UI.Gumps;
-using ClassicUO.IO;
 using ClassicUO.Network;
 using Microsoft.Xna.Framework;
 
@@ -65,6 +64,8 @@ namespace ClassicUO.Game.Managers
 
 
             InitializeHouse();
+
+            GenerateFloorPlace(); //# HOUSE FIXES
         }
 
         public int Category = -1, MaxPage = 1, CurrentFloor = 1, FloorCount = 4, RoofZ = 1, MinHouseZ = -120, Components, Fixtures, MaxComponets, MaxFixtures;
@@ -117,7 +118,7 @@ namespace ClassicUO.Game.Managers
 
             int componentsOnFloor = (width - 1) * (height - 1);
 
-            MaxComponets = FloorCount * (componentsOnFloor + 2 * (width + height) - 4) - (int) (FloorCount * componentsOnFloor * -0.25) + 2 * width + 3 * height - 5;
+            MaxComponets = FloorCount * (componentsOnFloor + 2 * (width + height) - 4) - (int)(FloorCount * componentsOnFloor * -0.25) + 2 * width + 3 * height - 5;
 
             MaxFixtures = MaxComponets / 20;
         }
@@ -175,12 +176,12 @@ namespace ClassicUO.Game.Managers
                 {
                     state |= CUSTOM_HOUSE_MULTI_OBJECT_FLAGS.CHMOF_FLOOR;
 
-                    if (FloorVisionState[currentFloor] == (int) CUSTOM_HOUSE_FLOOR_VISION_STATE.CHGVS_HIDE_FLOOR)
+                    if (FloorVisionState[currentFloor] == (int)CUSTOM_HOUSE_FLOOR_VISION_STATE.CHGVS_HIDE_FLOOR)
                     {
                         state |= CUSTOM_HOUSE_MULTI_OBJECT_FLAGS.CHMOF_IGNORE_IN_RENDER;
                     }
-                    else if (FloorVisionState[currentFloor] == (int) CUSTOM_HOUSE_FLOOR_VISION_STATE.CHGVS_TRANSPARENT_FLOOR
-                             || FloorVisionState[currentFloor] == (int) CUSTOM_HOUSE_FLOOR_VISION_STATE.CHGVS_TRANSLUCENT_FLOOR)
+                    else if (FloorVisionState[currentFloor] == (int)CUSTOM_HOUSE_FLOOR_VISION_STATE.CHGVS_TRANSPARENT_FLOOR
+                             || FloorVisionState[currentFloor] == (int)CUSTOM_HOUSE_FLOOR_VISION_STATE.CHGVS_TRANSLUCENT_FLOOR)
                     {
                         state |= CUSTOM_HOUSE_MULTI_OBJECT_FLAGS.CHMOF_TRANSPARENT;
                     }
@@ -223,11 +224,11 @@ namespace ClassicUO.Game.Managers
 
                     if (!ignore)
                     {
-                        if (FloorVisionState[currentFloor] == (int) CUSTOM_HOUSE_FLOOR_VISION_STATE.CHGVS_HIDE_CONTENT)
+                        if (FloorVisionState[currentFloor] == (int)CUSTOM_HOUSE_FLOOR_VISION_STATE.CHGVS_HIDE_CONTENT)
                         {
                             state |= CUSTOM_HOUSE_MULTI_OBJECT_FLAGS.CHMOF_IGNORE_IN_RENDER;
                         }
-                        else if (FloorVisionState[currentFloor] == (int) CUSTOM_HOUSE_FLOOR_VISION_STATE.CHGVS_TRANSPARENT_CONTENT)
+                        else if (FloorVisionState[currentFloor] == (int)CUSTOM_HOUSE_FLOOR_VISION_STATE.CHGVS_TRANSPARENT_CONTENT)
                         {
                             state |= CUSTOM_HOUSE_MULTI_OBJECT_FLAGS.CHMOF_TRANSPARENT;
                         }
@@ -236,7 +237,7 @@ namespace ClassicUO.Game.Managers
 
                 if (!ignore)
                 {
-                    if (FloorVisionState[currentFloor] == (int) CUSTOM_HOUSE_FLOOR_VISION_STATE.CHGVS_HIDE_ALL)
+                    if (FloorVisionState[currentFloor] == (int)CUSTOM_HOUSE_FLOOR_VISION_STATE.CHGVS_HIDE_ALL)
                     {
                         state |= CUSTOM_HOUSE_MULTI_OBJECT_FLAGS.CHMOF_IGNORE_IN_RENDER;
                     }
@@ -251,7 +252,7 @@ namespace ClassicUO.Game.Managers
             {
                 for (int y = StartPos.Y + 1; y < EndPos.Y; y++)
                 {
-                    IEnumerable<Multi> multi = house.Components.Where(s => s.X == x && s.Y == y);
+                    IEnumerable<Multi> multi = house.GetMultiAt(x, y); //HOUSE FIXES house.Components.Where(s => s.X == x && s.Y == y);
 
                     if (multi == null)
                     {
@@ -284,9 +285,9 @@ namespace ClassicUO.Game.Managers
                         (
                             floorMulti.Graphic,
                             0,
-                            (ushort) (foundationItem.X + (x - foundationItem.X)),
-                            (ushort) (foundationItem.Y + (y - foundationItem.Y)),
-                            (sbyte) z,
+                            (ushort)(foundationItem.X + (x - foundationItem.X)),
+                            (ushort)(foundationItem.Y + (y - foundationItem.Y)),
+                            (sbyte)z,
                             true,
                             false
                         );
@@ -295,12 +296,12 @@ namespace ClassicUO.Game.Managers
 
                         CUSTOM_HOUSE_MULTI_OBJECT_FLAGS state = CUSTOM_HOUSE_MULTI_OBJECT_FLAGS.CHMOF_FLOOR;
 
-                        if (FloorVisionState[0] == (int) CUSTOM_HOUSE_FLOOR_VISION_STATE.CHGVS_HIDE_FLOOR)
+                        if (FloorVisionState[0] == (int)CUSTOM_HOUSE_FLOOR_VISION_STATE.CHGVS_HIDE_FLOOR)
                         {
                             state |= CUSTOM_HOUSE_MULTI_OBJECT_FLAGS.CHMOF_IGNORE_IN_RENDER;
                         }
-                        else if (FloorVisionState[0] == (int) CUSTOM_HOUSE_FLOOR_VISION_STATE.CHGVS_TRANSPARENT_FLOOR
-                                 || FloorVisionState[0] == (int) CUSTOM_HOUSE_FLOOR_VISION_STATE.CHGVS_TRANSLUCENT_FLOOR)
+                        else if (FloorVisionState[0] == (int)CUSTOM_HOUSE_FLOOR_VISION_STATE.CHGVS_TRANSPARENT_FLOOR
+                                 || FloorVisionState[0] == (int)CUSTOM_HOUSE_FLOOR_VISION_STATE.CHGVS_TRANSLUCENT_FLOOR)
                         {
                             state |= CUSTOM_HOUSE_MULTI_OBJECT_FLAGS.CHMOF_TRANSPARENT;
                         }
@@ -569,17 +570,26 @@ namespace ClassicUO.Game.Managers
 
             for (int i = 1; i < CurrentFloor; i++)
             {
-                for (int x = _bounds.X; x < EndPos.X; x++)
+                for (int x = StartPos.X; x < EndPos.X; x++)
                 {
-                    for (int y = _bounds.Y; y < EndPos.Y; y++)
+                    for (int y = StartPos.Y; y < EndPos.Y; y++)
                     {
-                        var mo = house.Add
+                        ushort tempColor = color;
+
+                        bool isOuter = (x == StartPos.X) || (y == StartPos.Y); //HOUSE FIXES
+
+                        if (x == StartPos.X || y == StartPos.Y)
+                        {
+                            tempColor++;
+                        }
+
+                        Multi mo = house.Add
                         (
                             0x0496,
-                            (ushort)(x == _bounds.X || y == _bounds.Y ? 0x34 : color),
+                            isOuter ? (ushort)161 : tempColor, //HOUSE FIXES
                             (ushort)(foundationItem.X + (x - foundationItem.X)),
                             (ushort)(foundationItem.Y + (y - foundationItem.Y)),
-                            (sbyte) z,
+                            (sbyte)z,
                             true,
                             false
                         );
@@ -656,19 +666,32 @@ namespace ClassicUO.Game.Managers
 
                         if (type == CUSTOM_HOUSE_BUILD_TYPE.CHBT_ROOF)
                         {
+                            // MobileUO: TODO: TazUO revisit async
+                            //AsyncNetClient.Socket.Send_CustomHouseDeleteRoof(_world, place.Graphic, place.X - foundationItem.X, place.Y - foundationItem.Y, z);
                             NetClient.Socket.Send_CustomHouseDeleteRoof(_world, place.Graphic, place.X - foundationItem.X, place.Y - foundationItem.Y, z);
                         }
                         else
                         {
+                            // MobileUO: TODO: TazUO revisit async
+                            //AsyncNetClient.Socket.Send_CustomHouseDeleteItem(_world, place.Graphic, place.X - foundationItem.X, place.Y - foundationItem.Y, z);
                             NetClient.Socket.Send_CustomHouseDeleteItem(_world, place.Graphic, place.X - foundationItem.X, place.Y - foundationItem.Y, z);
                         }
 
-                        place.Destroy();
+                        foreach (Multi multiObject in multi.ToList())
+                        {
+                            if (multiObject == place)
+                            {
+                                multiObject.Destroy();
+                                if (house.Components.Contains(multiObject))
+                                    house.Components.Remove(multiObject);
+                            }
+                        }
+                        //place.Destroy(); HOUSE FIXES
                     }
                 }
                 else if (SelectedGraphic != 0)
                 {
-                    var list = new List<CustomBuildObject>();
+                    List<CustomBuildObject> list = new();
 
                     if (CanBuildHere(list, out CUSTOM_HOUSE_BUILD_TYPE type) && list.Count > 0)
                     {
@@ -688,23 +711,25 @@ namespace ClassicUO.Game.Managers
 
                                 if (SelectedGraphic == stair.North)
                                 {
-                                    graphic = (ushort) stair.MultiNorth;
+                                    graphic = (ushort)stair.MultiNorth;
                                 }
                                 else if (SelectedGraphic == stair.East)
                                 {
-                                    graphic = (ushort) stair.MultiEast;
+                                    graphic = (ushort)stair.MultiEast;
                                 }
                                 else if (SelectedGraphic == stair.South)
                                 {
-                                    graphic = (ushort) stair.MultiSouth;
+                                    graphic = (ushort)stair.MultiSouth;
                                 }
                                 else if (SelectedGraphic == stair.West)
                                 {
-                                    graphic = (ushort) stair.MultiWest;
+                                    graphic = (ushort)stair.MultiWest;
                                 }
 
                                 if (graphic != 0)
                                 {
+                                    // MobileUO: TODO: TazUO revisit async
+                                    //AsyncNetClient.Socket.Send_CustomHouseAddStair(_world, graphic, placeX - foundationItem.X, placeY - foundationItem.Y);
                                     NetClient.Socket.Send_CustomHouseAddStair(_world, graphic, placeX - foundationItem.X, placeY - foundationItem.Y);
                                 }
                             }
@@ -779,10 +804,14 @@ namespace ClassicUO.Game.Managers
 
                                 if (type == CUSTOM_HOUSE_BUILD_TYPE.CHBT_ROOF)
                                 {
+                                    // MobileUO: TODO: TazUO revisit async
+                                    //AsyncNetClient.Socket.Send_CustomHouseAddRoof(_world, item.Graphic, x, y, item.Z);
                                     NetClient.Socket.Send_CustomHouseAddRoof(_world, item.Graphic, x, y, item.Z);
                                 }
                                 else
                                 {
+                                    // MobileUO: TODO: TazUO revisit async
+                                    //AsyncNetClient.Socket.Send_CustomHouseAddItem(_world, item.Graphic, x, y);
                                     NetClient.Socket.Send_CustomHouseAddItem(_world, item.Graphic, x, y);
                                 }
                             }
@@ -803,9 +832,9 @@ namespace ClassicUO.Game.Managers
                             (
                                 item.Graphic,
                                 0,
-                                (ushort) (foundationItem.X + xx + item.X),
-                                (ushort) (foundationItem.Y + yy + item.Y),
-                                (sbyte) (z + item.Z),
+                                (ushort)(foundationItem.X + xx + item.X),
+                                (ushort)(foundationItem.Y + yy + item.Y),
+                                (sbyte)(z + item.Z),
                                 true,
                                 false
                             );
@@ -1065,25 +1094,33 @@ namespace ClassicUO.Game.Managers
                     {
                         foreach (var multi in house.GetMultiAt(gobj.X + item.X, gobj.Y + item.Y))
                         {
-                            if (!multi.IsCustom)
-                                continue;
-
-                            if ((multi.State & CUSTOM_HOUSE_MULTI_OBJECT_FLAGS.CHMOF_GENERIC_INTERNAL) == 0 && multi.Z >= minZ && multi.Z < maxZ)
+                            foreach (Multi multiObject in house.GetMultiAt(gobj.X + item.X, gobj.Y + item.Y)) //HOUSE FIXES Multi multiObject in house.Components.Where(s => s.X == gobj.X + item.X && s.Y == gobj.Y + item.Y))
                             {
-                                if (type == CUSTOM_HOUSE_BUILD_TYPE.CHBT_STAIR)
+                                if (multiObject.IsCustom && (multiObject.State & CUSTOM_HOUSE_MULTI_OBJECT_FLAGS.CHMOF_GENERIC_INTERNAL) == 0 && multiObject.Z >= minZ && multiObject.Z < maxZ)
                                 {
-                                    if ((multi.State & CUSTOM_HOUSE_MULTI_OBJECT_FLAGS.CHMOF_FLOOR) == 0)
-                                        return false;
-                                }
-                                else
-                                {
-                                    if ((multi.State & CUSTOM_HOUSE_MULTI_OBJECT_FLAGS.CHMOF_STAIR) != 0)
-                                        return false;
+                                    if (type == CUSTOM_HOUSE_BUILD_TYPE.CHBT_STAIR)
+                                    {
+                                        if ((multiObject.State & CUSTOM_HOUSE_MULTI_OBJECT_FLAGS.CHMOF_FLOOR) == 0)
+                                        {
+                                            return false;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        if ((multiObject.State & CUSTOM_HOUSE_MULTI_OBJECT_FLAGS.CHMOF_STAIR) != 0)
+                                        {
+                                            return false;
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                 }
+            }
+            else
+            {
+                return false;
             }
 
             return result;
@@ -1254,7 +1291,7 @@ namespace ClassicUO.Game.Managers
                     house.GetMultiAt(item.X, item.Y),
                     minZ - 20,
                     maxZ - 20,
-                    (int) CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_DIRECT_SUPPORT
+                    (int)CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_DIRECT_SUPPORT
                 ) || ValidatePlaceStructure
                 (
                     foundationItem,
@@ -1262,7 +1299,7 @@ namespace ClassicUO.Game.Managers
                     house.GetMultiAt(item.X - 1, item.Y),
                     minZ - 20,
                     maxZ - 20,
-                    (int) (CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_DIRECT_SUPPORT | CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_CANGO_W)
+                    (int)(CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_DIRECT_SUPPORT | CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_CANGO_W)
                 ) || ValidatePlaceStructure
                 (
                     foundationItem,
@@ -1270,7 +1307,7 @@ namespace ClassicUO.Game.Managers
                     house.GetMultiAt(item.X, item.Y - 1),
                     minZ - 20,
                     maxZ - 20,
-                    (int) (CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_DIRECT_SUPPORT | CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_CANGO_N)
+                    (int)(CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_DIRECT_SUPPORT | CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_CANGO_N)
                 ))
                 {
                     Point[] table =
@@ -1354,7 +1391,7 @@ namespace ClassicUO.Game.Managers
                             house.GetMultiAt(item.X, item.Y + 1),
                             minZ,
                             maxZ,
-                            (int) (CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_BOTTOM | CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_N)
+                            (int)(CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_BOTTOM | CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_N)
                         );
                     }
 
@@ -1367,7 +1404,7 @@ namespace ClassicUO.Game.Managers
                             house.GetMultiAt(item.X - 1, item.Y),
                             minZ,
                             maxZ,
-                            (int) (CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_BOTTOM | CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_E)
+                            (int)(CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_BOTTOM | CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_E)
                         );
                     }
 
@@ -1380,7 +1417,7 @@ namespace ClassicUO.Game.Managers
                             house.GetMultiAt(item.X, item.Y - 1),
                             minZ,
                             maxZ,
-                            (int) (CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_BOTTOM | CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_S)
+                            (int)(CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_BOTTOM | CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_S)
                         );
                     }
 
@@ -1393,7 +1430,7 @@ namespace ClassicUO.Game.Managers
                             house.GetMultiAt(item.X + 1, item.Y),
                             minZ,
                             maxZ,
-                            (int) (CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_BOTTOM | CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_W)
+                            (int)(CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_BOTTOM | CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_W)
                         );
                     }
 
@@ -1416,7 +1453,7 @@ namespace ClassicUO.Game.Managers
                             house.GetMultiAt(item.X, item.Y + 1),
                             minZ,
                             maxZ,
-                            (int) (CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_TOP | CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_N)
+                            (int)(CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_TOP | CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_N)
                         );
                     }
 
@@ -1429,7 +1466,7 @@ namespace ClassicUO.Game.Managers
                             house.GetMultiAt(item.X - 1, item.Y),
                             minZ,
                             maxZ,
-                            (int) (CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_TOP | CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_E)
+                            (int)(CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_TOP | CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_E)
                         );
                     }
 
@@ -1442,7 +1479,7 @@ namespace ClassicUO.Game.Managers
                             house.GetMultiAt(item.X, item.Y - 1),
                             minZ,
                             maxZ,
-                            (int) (CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_TOP | CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_S)
+                            (int)(CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_TOP | CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_S)
                         );
                     }
 
@@ -1455,7 +1492,7 @@ namespace ClassicUO.Game.Managers
                             house.GetMultiAt(item.X + 1, item.Y),
                             minZ,
                             maxZ,
-                            (int) (CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_TOP | CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_W)
+                            (int)(CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_TOP | CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_W)
                         );
                     }
 
@@ -1518,21 +1555,21 @@ namespace ClassicUO.Game.Managers
                     {
                         CustomHousePlaceInfo info = ObjectsInfo[info1];
 
-                        if ((flags & (int) CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_DIRECT_SUPPORT) != 0)
+                        if ((flags & (int)CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_DIRECT_SUPPORT) != 0)
                         {
                             if ((item.State & CUSTOM_HOUSE_MULTI_OBJECT_FLAGS.CHMOF_INCORRECT_PLACE) != 0 || info.DirectSupports == 0)
                             {
                                 continue;
                             }
 
-                            if ((flags & (int) CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_CANGO_W) != 0)
+                            if ((flags & (int)CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_CANGO_W) != 0)
                             {
                                 if (info.CanGoW != 0)
                                 {
                                     return true;
                                 }
                             }
-                            else if ((flags & (int) CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_CANGO_N) != 0)
+                            else if ((flags & (int)CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_CANGO_N) != 0)
                             {
                                 if (info.CanGoN != 0)
                                 {
@@ -1544,7 +1581,7 @@ namespace ClassicUO.Game.Managers
                                 return true;
                             }
                         }
-                        else if (((flags & (int) CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_BOTTOM) != 0 && info.Bottom != 0) || ((flags & (int) CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_TOP) != 0 && info.Top != 0))
+                        else if (((flags & (int)CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_BOTTOM) != 0 && info.Bottom != 0) || ((flags & (int)CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_TOP) != 0 && info.Top != 0))
                         {
                             if ((item.State & CUSTOM_HOUSE_MULTI_OBJECT_FLAGS.CHMOF_VALIDATED_PLACE) == 0)
                             {
@@ -1569,46 +1606,46 @@ namespace ClassicUO.Game.Managers
 
                             if ((item.State & CUSTOM_HOUSE_MULTI_OBJECT_FLAGS.CHMOF_INCORRECT_PLACE) == 0)
                             {
-                                if ((flags & (int) CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_BOTTOM) != 0)
+                                if ((flags & (int)CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_BOTTOM) != 0)
                                 {
-                                    if ((flags & (int) CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_N) != 0 && info.AdjUN != 0)
+                                    if ((flags & (int)CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_N) != 0 && info.AdjUN != 0)
                                     {
                                         return true;
                                     }
 
-                                    if ((flags & (int) CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_E) != 0 && info.AdjUE != 0)
+                                    if ((flags & (int)CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_E) != 0 && info.AdjUE != 0)
                                     {
                                         return true;
                                     }
 
-                                    if ((flags & (int) CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_S) != 0 && info.AdjUS != 0)
+                                    if ((flags & (int)CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_S) != 0 && info.AdjUS != 0)
                                     {
                                         return true;
                                     }
 
-                                    if ((flags & (int) CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_W) != 0 && info.AdjUW != 0)
+                                    if ((flags & (int)CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_W) != 0 && info.AdjUW != 0)
                                     {
                                         return true;
                                     }
                                 }
                                 else
                                 {
-                                    if ((flags & (int) CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_N) != 0 && info.AdjLN != 0)
+                                    if ((flags & (int)CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_N) != 0 && info.AdjLN != 0)
                                     {
                                         return true;
                                     }
 
-                                    if ((flags & (int) CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_E) != 0 && info.AdjLE != 0)
+                                    if ((flags & (int)CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_E) != 0 && info.AdjLE != 0)
                                     {
                                         return true;
                                     }
 
-                                    if ((flags & (int) CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_S) != 0 && info.AdjLS != 0)
+                                    if ((flags & (int)CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_S) != 0 && info.AdjLS != 0)
                                     {
                                         return true;
                                     }
 
-                                    if ((flags & (int) CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_W) != 0 && info.AdjLW != 0)
+                                    if ((flags & (int)CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS.CHVCF_W) != 0 && info.AdjLW != 0)
                                     {
                                         return true;
                                     }
@@ -1762,7 +1799,7 @@ namespace ClassicUO.Game.Managers
         CHGS_FIXTURE
     }
 
-    internal enum CUSTOM_HOUSE_FLOOR_VISION_STATE
+    public enum CUSTOM_HOUSE_FLOOR_VISION_STATE
     {
         CHGVS_NORMAL = 0,
         CHGVS_TRANSPARENT_CONTENT,
@@ -1799,7 +1836,7 @@ namespace ClassicUO.Game.Managers
     }
 
     [Flags]
-    internal enum CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS
+    public enum CUSTOM_HOUSE_VALIDATE_CHECK_FLAGS
     {
         CHVCF_TOP = 0x01,
         CHVCF_BOTTOM = 0x02,

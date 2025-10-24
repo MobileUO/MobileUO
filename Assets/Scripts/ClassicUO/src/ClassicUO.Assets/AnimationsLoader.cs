@@ -962,7 +962,7 @@ namespace ClassicUO.Assets
             //            }
             //        }
             //    }
-                
+
             //    DataIndex[i] = null;
             //}
 
