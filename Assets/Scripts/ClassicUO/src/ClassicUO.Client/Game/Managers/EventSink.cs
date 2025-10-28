@@ -93,7 +93,7 @@ namespace ClassicUO.Game.Managers
         ///// <summary>
         ///// Invoked when a buff is "removed" to a player (Called before removal)
         ///// </summary>
-        //internal static event EventHandler<BuffEventArgs> OnBuffRemoved;
+        internal static event EventHandler<BuffEventArgs> OnBuffRemoved;
         //internal static event EventHandler<LegionScripting.PyClasses.Buff> PyOnBuffRemoved;
         //internal static void InvokeOnBuffRemoved(object sender, BuffEventArgs e)
         //{

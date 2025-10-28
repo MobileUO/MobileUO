@@ -467,7 +467,31 @@ namespace ClassicUO.Configuration
         public ushort ImprovedBuffBarHue { get; set; } = 905;
         #endregion
 
+        // Bandage Agent Settings
+        public bool EnableBandageAgent { get; set; } = false;
+        public int BandageAgentDelay { get; set; } = 3000;
+        public bool BandageAgentCheckForBuff { get; set; } = false;
+        public ushort BandageAgentGraphic { get; set; } = 0x0E21;
+        public bool BandageAgentUseNewPacket { get; set; } = true;
+        public bool BandageAgentCheckHidden { get; set; } = false;
+        public bool BandageAgentCheckPoisoned { get; set; } = false;
+        public int BandageAgentHPPercentage { get; set; } = 80;
+        public bool BandageAgentCheckInvul { get; set; } = true;
+        public bool BandageAgentBandageFriends { get; set; } = false;
+        public bool CloseHealthBarIfAnchored { get; set; } = false;
+        public bool DisableAutoFollowAlt { get; set; } = false;
+        public bool FollowingMode { get; set; } = false;
+        [JsonConverter(typeof(Point2Converter))]
+        public Point LastTargetHealthBarPos { get; set; } = Point.Zero;
+        public uint SavedMountSerial { get; set; } = 0;
+        public uint SetFavoriteMoveBagSerial { get; set; } = 0;
+
+
+        public uint FollowingTarget { get; set; }
         public bool ForceTooltipsOnOldClients { get; set; } = true;
+
+        public bool OpenHealthBarForLastAttack { get; set; } = true;
+        public bool UseOneHPBarForLastAttack { get; set; } = true;
 
         // title bar stats
         public bool EnableTitleBarStats { get; set; } = false;

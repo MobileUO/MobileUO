@@ -7,7 +7,7 @@ using static SDL2.SDL;
 
 namespace ClassicUO.Input
 {
-    internal sealed class MouseEventArgs : EventArgs
+    public sealed class MouseEventArgs : EventArgs
     {
         public MouseEventArgs(int x, int y, MouseButtonType button = MouseButtonType.None, ButtonState state = ButtonState.Released)
         {
@@ -27,7 +27,7 @@ namespace ClassicUO.Input
         public ButtonState ButtonState { get; }
     }
 
-    internal sealed class MouseDoubleClickEventArgs : EventArgs
+    public sealed class MouseDoubleClickEventArgs : EventArgs
     {
         public MouseDoubleClickEventArgs(int x, int y, MouseButtonType button)
         {
@@ -46,7 +46,7 @@ namespace ClassicUO.Input
         public bool Result { get; set; }
     }
 
-    internal sealed class MouseWheelEventArgs : EventArgs
+    public sealed class MouseWheelEventArgs : EventArgs
     {
         public MouseWheelEventArgs(MouseEventType direction)
         {
@@ -61,7 +61,7 @@ namespace ClassicUO.Input
         public MouseEventType Direction { get; }
     }
 
-    internal sealed class KeyboardEventArgs : EventArgs
+    public sealed class KeyboardEventArgs : EventArgs
     {
         public KeyboardEventArgs(SDL_Keycode key, SDL_Keymod mod, KeyboardEventType state)
         {
