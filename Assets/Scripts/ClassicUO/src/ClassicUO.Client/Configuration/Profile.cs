@@ -496,6 +496,14 @@ namespace ClassicUO.Configuration
         public bool HiddenLayersEnabled { get; set; } = false;
         public List<int> HiddenLayers { get; set; } = new List<int>();
         public bool HideLayersForSelf { get; set; } = true;
+        public bool CounterGumpLocked { get; set; }
+
+        public bool SellAgentEnabled { get; set; }
+        public int SellAgentMaxUniques { get; set; } = 50;
+        public int SellAgentMaxItems { get; set; } = 0;
+        public bool BuyAgentEnabled { get; set; }
+        public int BuyAgentMaxUniques { get; set; } = 50;
+        public int BuyAgentMaxItems { get; set; } = 0;
 
 
         public uint FollowingTarget { get; set; }
