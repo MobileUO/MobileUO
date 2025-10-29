@@ -486,6 +486,17 @@ namespace ClassicUO.Configuration
         public uint SavedMountSerial { get; set; } = 0;
         public uint SetFavoriteMoveBagSerial { get; set; } = 0;
 
+        public ushort HiddenBodyHue { get; set; } = 0x038E;
+        public byte HiddenBodyAlpha { get; set; } = 40;
+        public int PlayerConstantAlpha { get; set; } = 100;
+
+        public bool DisableGrayEnemies { get; set; }
+        public bool OverridePartyAndGuildHue { get; set; } = false;
+
+        public bool HiddenLayersEnabled { get; set; } = false;
+        public List<int> HiddenLayers { get; set; } = new List<int>();
+        public bool HideLayersForSelf { get; set; } = true;
+
 
         public uint FollowingTarget { get; set; }
         public bool ForceTooltipsOnOldClients { get; set; } = true;

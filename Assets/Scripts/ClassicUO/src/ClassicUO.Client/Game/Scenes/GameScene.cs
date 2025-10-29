@@ -29,6 +29,8 @@ namespace ClassicUO.Game.Scenes
         public static int MinimumViewportWidth = 200;
         public static int MinimumViewportHeight = 300;
 
+        public static GameScene Instance { get; private set; }
+
         private static readonly Lazy<BlendState> _darknessBlend = new Lazy<BlendState>(() =>
         {
             BlendState state = new BlendState();
@@ -83,6 +85,8 @@ namespace ClassicUO.Game.Scenes
         {
             _world = world;
             _useItemQueue = new UseItemQueue(world);
+
+            Instance = this;
         }
 
         public bool UpdateDrawPosition { get; set; }
@@ -284,8 +288,14 @@ namespace ClassicUO.Game.Scenes
         {
             if (IsDestroyed)
             {
+                if (Instance == this)
+                    Instance = null;
+
                 return;
             }
+
+            Instance = null;
+
 
             ProfileManager.CurrentProfile.GameWindowPosition = new Point(
                 Camera.Bounds.X,

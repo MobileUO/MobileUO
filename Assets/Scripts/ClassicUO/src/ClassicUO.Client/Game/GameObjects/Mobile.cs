@@ -144,6 +144,8 @@ namespace ClassicUO.Game.GameObjects
             set { }
         }
 
+        public Item Mount { get; set; }
+
         public bool IsHuman =>
             Graphic >= 0x0190 && Graphic <= 0x0193
             || Graphic >= 0x00B7 && Graphic <= 0x00BA
@@ -161,6 +163,11 @@ namespace ClassicUO.Game.GameObjects
 
         public bool IsGargoyle =>
             Client.Game.UO.Version >= ClientVersion.CV_7000 && Graphic == 0x029A || Graphic == 0x029B;
+
+        /// <summary>
+        /// This is only set for the main player character. This is not an indicator for other players.
+        /// </summary>
+        public bool IsPlayer;
 
         public bool IsMounted
         {
