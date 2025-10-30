@@ -188,20 +188,20 @@ namespace Assistant
                 switch (GetAttribute(data, "name"))
                 {
                     case "LastProfile":
-                    {
-                        gump.LastProfile = GetText(data, "").Replace(".xml", "");
-                        break;
-                    }
+                        {
+                            gump.LastProfile = GetText(data, "").Replace(".xml", "");
+                            break;
+                        }
                     case "SmartProfile":
-                    {
-                        gump.SmartProfile = GetBool(data, false);
-                        break;
-                    }
-                    /*case "NegotiateFeatures":
-                    {
-                        gump.NegotiateFeatures = GetBool(data, false);
-                        break;
-                    }*/
+                        {
+                            gump.SmartProfile = GetBool(data, false);
+                            break;
+                        }
+                        /*case "NegotiateFeatures":
+                        {
+                            gump.NegotiateFeatures = GetBool(data, false);
+                            break;
+                        }*/
                 }
                 /*for (int i = 0; i < Filter.List.Count; i++)
                 {
@@ -236,7 +236,7 @@ namespace Assistant
                 }
             }
             sub = root["snapshots"];
-            if(sub != null)
+            if (sub != null)
             {
                 UOSObjects.Gump.SnapOwnDeath = GetBool(sub["ownDeath"], false);
                 UOSObjects.Gump.SnapOtherDeath = GetBool(sub["othersDeath"], false);
@@ -258,7 +258,7 @@ namespace Assistant
                 gump.ItemsToLoot.Clear();
             gump.UpdateAutolootList();
             sub = root["gump"];
-            if(sub != null)
+            if (sub != null)
             {
                 int x = GetAttributeUShort(sub, "x", 300);
                 int y = GetAttributeUShort(sub, "y", 300);
@@ -270,7 +270,7 @@ namespace Assistant
         internal static void LoadSpellDef(FileInfo info, MobileUOAssistantGump gump)
         {
             XmlDocument doc = new XmlDocument();
-            if(!info.Exists)
+            if (!info.Exists)
             {
                 try
                 {
@@ -342,7 +342,7 @@ namespace Assistant
             Spell.SpellsByName.Clear();
             string GetClassName(int spellid)
             {
-                switch(spellid / 100)
+                switch (spellid / 100)
                 {
                     case 0:
                         return "Magery";
@@ -357,7 +357,7 @@ namespace Assistant
                     case 5:
                         return "Ninjisu";
                     case 6:
-                        if(spellid < 678)
+                        if (spellid < 678)
                             return "Mysticism";
                         return "Spellweaving";
                     case 7:
@@ -391,7 +391,7 @@ namespace Assistant
                             reagslist.Add(reag);
                         }
                     }
-                    if(string.IsNullOrEmpty(classname = GetAttribute(spell, "classname")))
+                    if (string.IsNullOrEmpty(classname = GetAttribute(spell, "classname")))
                         classname = GetClassName(id);
                     if (!orderedspells.TryGetValue(classname, out List<string> list))
                         orderedspells[classname] = list = new List<string>();
@@ -401,7 +401,7 @@ namespace Assistant
                     Spell.SpellsByID[id] = Spell.SpellsByName[name] = Spell.SpellsByName[name.Replace(" ", "")] = new Spell((int)targetType, id, circle, words, reagslist);
                 }
             }
-            foreach(KeyValuePair<string, List<string>> kvp in orderedspells)
+            foreach (KeyValuePair<string, List<string>> kvp in orderedspells)
             {
                 gump.AddSpellsToHotkeys(kvp.Key, kvp.Value);
             }
@@ -411,7 +411,7 @@ namespace Assistant
         {
             List<SkillEntry> skillEntries = new List<SkillEntry>();
             XmlDocument doc = new XmlDocument();
-            if(!info.Exists)
+            if (!info.Exists)
             {
                 try
                 {
@@ -519,7 +519,7 @@ namespace Assistant
                     foreach (XmlElement bodies in basic.GetElementsByTagName("body"))
                     {
                         body = GetAttributeUShort(bodies, "graphic");
-                        if(body > 0)
+                        if (body > 0)
                         {
                             bodyname = GetAttribute(bodies, "name");
                             Targeting.Humanoid.Add(body);
@@ -612,16 +612,16 @@ namespace Assistant
             }
 
             XmlElement root;
-            
+
             if (doc != null && (root = doc["bufficons"]) != null)
             {
-                foreach(XmlElement icons in root.GetElementsByTagName("icon"))
+                foreach (XmlElement icons in root.GetElementsByTagName("icon"))
                 {
                     int icon = (int)GetAttributeUInt(icons, "id");
-                    if(icon > 0)
+                    if (icon > 0)
                     {
                         string name = GetAttribute(icons, "name");
-                        if(!string.IsNullOrEmpty(name))
+                        if (!string.IsNullOrEmpty(name))
                         {
                             name = name.ToLower(Culture);
                             PlayerData.BuffNames[name] = PlayerData.BuffNames[name.Replace(" ", "")] = icon;
@@ -862,19 +862,19 @@ namespace Assistant
                         #endregion
 
                         #region dresslist
-                        foreach(DressList dl in DressList.DressLists)
+                        foreach (DressList dl in DressList.DressLists)
                         {
                             if (dl == null)
                                 continue;
                             xml.WriteStartElement("dresslist");
                             xml.WriteAttributeString("name", dl.Name);
-                            if(SerialHelper.IsItem(dl.UndressBag))
+                            if (SerialHelper.IsItem(dl.UndressBag))
                                 xml.WriteAttributeString("container", $"0x{dl.UndressBag:X8}");
                             foreach (KeyValuePair<Layer, DressItem> kvp in dl.LayerItems)
                             {
                                 xml.WriteStartElement("item");
                                 xml.WriteAttributeString("layer", ((int)kvp.Key).ToString());
-                                if(kvp.Value.ObjType > 0)
+                                if (kvp.Value.ObjType > 0)
                                     xml.WriteAttributeString("type", $"0x{kvp.Value.ObjType:X4}");
                                 xml.WriteString($"0x{kvp.Value.Serial:X8}");
                                 xml.WriteEndElement();
@@ -887,7 +887,7 @@ namespace Assistant
                         if (Organizer.Organizers.Count > 0)
                         {
                             xml.WriteStartElement("organizer");
-                            for(int i = 0; i < Organizer.Organizers.Count; ++i)
+                            for (int i = 0; i < Organizer.Organizers.Count; ++i)
                             {
                                 Organizer org = Organizer.Organizers[i];
                                 if (org == null)
@@ -900,9 +900,9 @@ namespace Assistant
                                 xml.WriteAttributeString("loop", $"{org.Loop}");
                                 xml.WriteAttributeString("complete", $"{org.Complete}");
                                 xml.WriteAttributeString("name", org.Name);
-                                if(org.Items.Count > 0)
+                                if (org.Items.Count > 0)
                                 {
-                                    foreach(ItemDisplay oi in org.Items)
+                                    foreach (ItemDisplay oi in org.Items)
                                     {
                                         xml.WriteStartElement("item");
                                         xml.WriteAttributeString("amount", $"0x{oi.Amount:X}");
@@ -926,7 +926,7 @@ namespace Assistant
                         {
                             foreach (List<ItemDisplay> list in scav.Values)
                             {
-                                foreach(ItemDisplay id in list)
+                                foreach (ItemDisplay id in list)
                                 {
                                     xml.WriteStartElement("scavenge");
                                     xml.WriteAttributeString("graphic", $"0x{id.Graphic:X4}");
@@ -944,7 +944,7 @@ namespace Assistant
                         if (Vendors.Buy.BuyList.Count > 0 || Vendors.Sell.SellList.Count > 0)
                         {
                             xml.WriteStartElement("vendors");
-                            if(Vendors.Buy.BuySelected != null)
+                            if (Vendors.Buy.BuySelected != null)
                             {
                                 xml.WriteStartElement("buystate");
                                 xml.WriteAttributeString("enabled", Vendors.Buy.BuySelected.Enabled.ToString());
@@ -1434,9 +1434,9 @@ namespace Assistant
                 foreach (XmlElement data in root.GetElementsByTagName("data"))
                 {
                     string name = GetAttribute(data, "name");
-                    if(name.StartsWith("Filter"))
+                    if (name.StartsWith("Filter"))
                     {
-                        for(int i = 0; i < Filter.List.Count; i++)
+                        for (int i = 0; i < Filter.List.Count; i++)
                         {
                             Filter f = Filter.List[i];
                             if (f.XmlName == name)
@@ -1448,7 +1448,7 @@ namespace Assistant
                     }
                     else
                     {
-                        switch(name.ToLower(Culture))
+                        switch (name.ToLower(Culture))
                         {
                             case "useobjectsqueue":
                                 gump.UseObjectsQueue = GetBool(data, true);
@@ -1641,12 +1641,12 @@ namespace Assistant
                             gump.AutoLoot = GetBool(lootitem, false);
                             continue;
                         }
-                        else if(lootitem.Name == "container")
+                        else if (lootitem.Name == "container")
                         {
                             gump.AutoLootContainer = GetUInt(lootitem, 0);
                             continue;
                         }
-                        else if(lootitem.Name == "guards")
+                        else if (lootitem.Name == "guards")
                         {
                             gump.NoAutoLootInGuards = GetBool(lootitem, false);
                             continue;
@@ -1680,7 +1680,7 @@ namespace Assistant
                             name = UOSObjects.GetDefaultItemName(graphic);
                         if (!dict.TryGetValue(graphic, out var list))
                             dict[(ushort)graphic] = list = new List<ItemDisplay>();
-                         list.Add(new ItemDisplay(graphic, name, color, GetAttributeBool(counter, "enabled")));
+                        list.Add(new ItemDisplay(graphic, name, color, GetAttributeBool(counter, "enabled")));
                     }
                     gump.UpdateScavengerItemsGump();
                 }
@@ -1788,7 +1788,7 @@ namespace Assistant
                             buystate.Item2 = GetAttributeBool(list, "enabled");
                             foundbuy = !string.IsNullOrEmpty(buystate.Item1);
                         }
-                        else if(list.Name == "sellstate")
+                        else if (list.Name == "sellstate")
                         {
                             sellstate.Item1 = GetAttribute(list, "list");
                             sellstate.Item2 = GetAttributeBool(list, "enabled");

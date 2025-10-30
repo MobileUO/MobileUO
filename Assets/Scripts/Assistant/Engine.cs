@@ -82,7 +82,7 @@ namespace Assistant
                     ClassicUO.Game.UI.Gumps.MobileUOAssistantGump old = _Gump;
                     _Gump = value;
                     old?.Dispose();
-                    if(_Gump != null)
+                    if (_Gump != null)
                         AfterBuild();
                 }
             }
@@ -95,7 +95,7 @@ namespace Assistant
                 _Gump.LoadConfig();
                 XmlFileParser.LoadProfile(_Gump, _Gump.ProfileSelected);
             }
-            else if(itr < 10)
+            else if (itr < 10)
                 Timer.DelayedCallbackState(TimeSpan.FromMilliseconds(200), AfterBuild, ++itr).Start();
         }
 
@@ -191,7 +191,7 @@ namespace Assistant
         {
             foreach (UOEntity ie in EntitiesInRange(range, false))
             {
-                if(ie.Graphic == graphic && (hue == -1 || hue  == ie.Hue))
+                if (ie.Graphic == graphic && (hue == -1 || hue == ie.Hue))
                     return ie;
             }
 
@@ -231,13 +231,13 @@ namespace Assistant
             if (Player == null)
                 return list;
 
-            foreach(UOItem i in Items.Values)
+            foreach (UOItem i in Items.Values)
             {
                 if (Utility.InRange(Player.Position, i.GetWorldPosition(), restrictrange ? Math.Min(range, Client.Game.UO.World.ClientViewRange) : range))
                     list.Add(i);
             }
 
-            if(sort)
+            if (sort)
                 list.Sort(Targeting.Instance);
 
             return list;
@@ -352,10 +352,10 @@ namespace Assistant
 
     internal enum PacketAction : byte
     {
-        None   = 0x0,
+        None = 0x0,
         Viewer = 0x1,
         Filter = 0x2,
-        Both   = 0x3
+        Both = 0x3
     }
 
     internal class Engine
@@ -364,7 +364,7 @@ namespace Assistant
 
         public static unsafe void Install(PluginHeader* plugin)
         {
-            if(!Instance.Install(plugin))
+            if (!Instance.Install(plugin))
             {
                 Process.GetCurrentProcess().Kill();
             }
@@ -510,7 +510,7 @@ namespace Assistant
                 //m_In += (uint)length;
 
                 Packet packet;
-                switch(pkta)
+                switch (pkta)
                 {
                     case PacketAction.Both:
                     case PacketAction.Filter:
@@ -614,11 +614,11 @@ namespace Assistant
             public void SetFeatures(ulong features)
             {
                 m_Features = features;
-                if(!Engine.Instance.AllowBit(FeatureBit.AutolootAgent))
+                if (!Engine.Instance.AllowBit(FeatureBit.AutolootAgent))
                 {
                     UOSObjects.Gump.DisableAutoLoot();
                 }
-                if(!Engine.Instance.AllowBit(FeatureBit.LoopingMacros))
+                if (!Engine.Instance.AllowBit(FeatureBit.LoopingMacros))
                 {
                     UOSObjects.Gump.DisableLoop();
                 }

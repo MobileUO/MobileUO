@@ -81,9 +81,9 @@ namespace Assistant
 
         public static bool HasTarget
         {
-            get 
-            { 
-                return m_HasTarget; 
+            get
+            {
+                return m_HasTarget;
             }
         }
 
@@ -115,16 +115,16 @@ namespace Assistant
 
         internal enum TargetType : byte
         {
-            None        = 0x00, 
-            Invalid     = 0x01, // invalid/across server line
-            Innocent    = 0x02, //Blue
-            Friend      = 0x04, //Green,
-            Gray        = 0x08, //Attackable but not criminal (gray)
-            Criminal    = 0x10, //gray
-            Enemy       = 0x20, //orange
-            Murderer    = 0x40, //red
-            Invulnerable= 0x80, //invulnerable
-            Any         = 0xFE  //any without invalid
+            None = 0x00,
+            Invalid = 0x01, // invalid/across server line
+            Innocent = 0x02, //Blue
+            Friend = 0x04, //Green,
+            Gray = 0x08, //Attackable but not criminal (gray)
+            Criminal = 0x10, //gray
+            Enemy = 0x20, //orange
+            Murderer = 0x40, //red
+            Invulnerable = 0x80, //invulnerable
+            Any = 0xFE  //any without invalid
         }
 
         internal static bool ValidTarget(TargetType target, byte noto)
@@ -165,7 +165,7 @@ namespace Assistant
 
         internal static void AttackTarget(uint serial)
         {
-            if(SerialHelper.IsValid(serial))
+            if (SerialHelper.IsValid(serial))
                 Engine.Instance.SendToServer(new AttackReq(serial));
         }
 
@@ -195,7 +195,7 @@ namespace Assistant
         {
             if (SerialHelper.IsValid(serial))
             {
-                if(UOSObjects.Gump.FriendDictionary.Remove(serial))
+                if (UOSObjects.Gump.FriendDictionary.Remove(serial))
                     UOSObjects.Gump.UpdateFriendListGump();
             }
         }
@@ -251,7 +251,7 @@ namespace Assistant
                     {
                         list.Add(m);
                     }
-                    else if(ValidTarget(noto, m.Notoriety))
+                    else if (ValidTarget(noto, m.Notoriety))
                     {
                         list.Add(m);
                     }
@@ -266,7 +266,7 @@ namespace Assistant
                 return m.Serial;
 
             }
-            else if(!noset)
+            else if (!noset)
                 UOSObjects.Player.SendMessage(MsgLevel.Warning, "No one matching that was found on your screen.");
             return 0;
         }
@@ -275,13 +275,13 @@ namespace Assistant
         internal static HashSet<ushort> Transformation = new HashSet<ushort>();
         internal enum FilterType : byte
         {
-            Invalid         = 0x00,//funzionamento simile a nextprev di razor
-            Closest         = 0x01,//solo il più vicino
-            Nearest         = 0x02,//ultimi due target
-            AnyRange        = 0x0F,
-            Humanoid        = 0x10,
-            Transformation  = 0x20,
-            AnyForm         = 0xF0
+            Invalid = 0x00,//funzionamento simile a nextprev di razor
+            Closest = 0x01,//solo il più vicino
+            Nearest = 0x02,//ultimi due target
+            AnyRange = 0x0F,
+            Humanoid = 0x10,
+            Transformation = 0x20,
+            AnyForm = 0xF0
         }
         internal static FilterType GetFilterType(UOMobile m)
         {
@@ -353,7 +353,7 @@ namespace Assistant
             if (e != null)
             {
                 MsgLevel level = e is UOMobile m ? (MsgLevel)m.Notoriety : (isenemy ? MsgLevel.Debug : MsgLevel.Friend);
-                if(!quiet)
+                if (!quiet)
                     UOSObjects.Player.OverheadMessage(PlayerData.GetColorCode(level), $"[{(isenemy ? "Enemy" : "Friend")}]: {e.GetName()}");
                 Interpreter.SetAlias(isenemy ? "enemy" : "friend", e.Serial);
             }
@@ -520,7 +520,7 @@ namespace Assistant
             //['any'/'beneficial'/'harmful'/'neutral'/'server'/'system']
             if (m_HasTarget)
             {
-                switch(type)
+                switch (type)
                 {
                     case "any":
                         return true;
@@ -583,7 +583,7 @@ namespace Assistant
                             else
                                 Target(ser);
                         }
-                        else if(_Ints.Length == 3)//point3d
+                        else if (_Ints.Length == 3)//point3d
                         {
                             Target(new Point3D(_Ints[0], _Ints[1], _Ints[2]));
                         }
@@ -635,7 +635,7 @@ namespace Assistant
             if (SerialHelper.IsValid(serial))
             {
                 LastTargetChanged();
-                if(SerialHelper.IsMobile(serial))
+                if (SerialHelper.IsMobile(serial))
                     Engine.Instance.SendToClient(new ChangeCombatant(serial));
                 m_LastCombatant = serial;
             }
@@ -1300,7 +1300,7 @@ namespace Assistant
             OnClearQueue();
             if (m_HasTarget)
             {
-                if(!m_ClientTarget)
+                if (!m_ClientTarget)
                     Engine.Instance.SendToServer(new TargetCancelResponse(m_CurrentID));
                 m_HasTarget = false;
             }
@@ -1322,7 +1322,7 @@ namespace Assistant
         private static TargetInfo _QueuedTarget = null;
         private static bool OnSimpleTarget()
         {
-            if(_QueuedTarget != null)
+            if (_QueuedTarget != null)
             {
                 _QueuedTarget.TargID = m_CurrentID;
                 m_LastGroundTarg = m_LastTarget = _QueuedTarget;
@@ -1824,16 +1824,16 @@ namespace Assistant
                     return;
 
                 UOSObjects.Player.OverheadMessage(FriendsManager.IsFriend(m.Serial) ? PlayerData.GetColorCode(MsgLevel.Friend) : m.GetNotorietyColorInt(), $"Target: {m.Name}");
-            /*}
+                /*}
 
-            if (Config.GetBool("ShowTextTargetIndicator") && info.Serial != 0 && info.Serial.IsMobile)
-            {
-                // lets not look it up again they had the previous feature enabled
-                if (m == null)
-                    m = UOSObjects.FindMobile(info.Serial);
+                if (Config.GetBool("ShowTextTargetIndicator") && info.Serial != 0 && info.Serial.IsMobile)
+                {
+                    // lets not look it up again they had the previous feature enabled
+                    if (m == null)
+                        m = UOSObjects.FindMobile(info.Serial);
 
-                if (m == null)
-                    return;*/
+                    if (m == null)
+                        return;*/
 
                 m.OverheadMessage(UOSObjects.Gump.HLTargetHue, $"*{m.Name}*");
             }

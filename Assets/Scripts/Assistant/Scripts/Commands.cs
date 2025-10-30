@@ -189,10 +189,10 @@ namespace Assistant.Scripts
         {
             targetType = Targeting.TargetType.None;
             filterType = Targeting.FilterType.Invalid;
-            for(int i = 0; i < args.Length; i++)
+            for (int i = 0; i < args.Length; i++)
             {
                 string val = args[i].AsString().ToLower(Interpreter.Culture);
-                switch(val)
+                switch (val)
                 {
                     case "innocent":
                         targetType |= Targeting.TargetType.Innocent;
@@ -277,7 +277,7 @@ namespace Assistant.Scripts
                 return true;
             }
             int soundid = Utility.ToInt32(args[0].AsString(), -1);
-            if(soundid >= 0)
+            if (soundid >= 0)
                 Client.Game.Audio.PlaySound(soundid);
             else
                 ScriptManager.Error(quiet, "Invalid sound id, only numbers are supported at the moment, and the number must be greater or equal than zero");
@@ -321,7 +321,7 @@ namespace Assistant.Scripts
         public static bool ToggleAutoLoot(string command, Argument[] args, bool quiet, bool force)
         {
             UOSObjects.Gump.AutoLoot = !UOSObjects.Gump.AutoLoot;
-            UOSObjects.Player?.SendMessage(UOSObjects.Gump.AutoLoot ? MsgLevel.Friend : MsgLevel.Info, $"AutoLoot {(UOSObjects.Gump.AutoLoot ? "Enabled" : "Disabled" )}");
+            UOSObjects.Player?.SendMessage(UOSObjects.Gump.AutoLoot ? MsgLevel.Friend : MsgLevel.Info, $"AutoLoot {(UOSObjects.Gump.AutoLoot ? "Enabled" : "Disabled")}");
             return true;
         }
 
@@ -337,7 +337,7 @@ namespace Assistant.Scripts
 
         private static bool CancelPrompt(string command, Argument[] args, bool quiet, bool force)
         {
-            if(UOSObjects.Player.HasPrompt)
+            if (UOSObjects.Player.HasPrompt)
                 UOSObjects.Player.CancelPrompt();
 
             return true;
@@ -514,10 +514,10 @@ namespace Assistant.Scripts
                 else
                 {
                     Engine.Instance.SendToServer(new DoubleClick(obj.Serial));
-                    if(args.Length > 0)
+                    if (args.Length > 0)
                     {
                         uint serial = args[0].AsSerial();
-                        if(SerialHelper.IsMobile(serial))
+                        if (SerialHelper.IsMobile(serial))
                         {
                             Targeting.SetAutoTargetAction((int)serial);
                         }
@@ -782,13 +782,13 @@ namespace Assistant.Scripts
             {
                 ScriptManager.Error(quiet, command, $"invalid item '0x{serial:X8}'");
             }
-            else if(p == Point3D.MinusOne && !SerialHelper.IsValid(destination) && nameStr != "any")
+            else if (p == Point3D.MinusOne && !SerialHelper.IsValid(destination) && nameStr != "any")
             {
                 ScriptManager.Error(quiet, command, $"invalid destination '0x{destination:X8}'");
             }
             else
             {
-                if(nameStr == "any")
+                if (nameStr == "any")
                 {
                     if (item.Container is uint)
                         destination = (uint)item.Container;
@@ -829,7 +829,7 @@ namespace Assistant.Scripts
             }
             else
             {
-                if(nameStr == "any")
+                if (nameStr == "any")
                 {
                     if (item.Container is uint)
                     {
@@ -862,13 +862,13 @@ namespace Assistant.Scripts
             }
 
             int graphicId = args[0].AsInt();
-            if(graphicId <= 0 || graphicId >= ushort.MaxValue)
+            if (graphicId <= 0 || graphicId >= ushort.MaxValue)
             {
                 ScriptManager.Error(quiet, command, $"invalid graphic '0x{graphicId:X}'");
                 return true;
             }
             ContainerType sourceType;
-            switch(args[1].AsString())
+            switch (args[1].AsString())
             {
                 case "world":
                 case "ground":
@@ -882,7 +882,7 @@ namespace Assistant.Scripts
                     break;
             }
             uint source = 0;
-            if(sourceType == ContainerType.None)
+            if (sourceType == ContainerType.None)
             {
                 source = args[1].AsSerial();
                 sourceType = ContainerType.Serial;
@@ -926,7 +926,7 @@ namespace Assistant.Scripts
             }
             UOEntity sent, dend;
             UOItem item = UOSObjects.FindItemByType(graphicId, color, range, sourceType);
-            if(item == null)
+            if (item == null)
             {
                 ScriptManager.Error(quiet, command, $"item not found");
             }
@@ -936,7 +936,7 @@ namespace Assistant.Scripts
             }
             else
             {
-                if(!item.OnGround && ((destType & ContainerType.Ground) == ContainerType.Ground || destination == 0))
+                if (!item.OnGround && ((destType & ContainerType.Ground) == ContainerType.Ground || destination == 0))
                     DragDropManager.DragDrop(item, p, amount < 1 ? item.Amount : amount);
                 else
                     DragDropManager.DragDrop(item, destination, p, amount < 1 ? item.Amount : amount);
@@ -1057,12 +1057,12 @@ namespace Assistant.Scripts
                 ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
-            else if(args[0] != null)
+            else if (args[0] != null)
             {
                 _MoveDirection.Clear();
-                for(int i = 0; i < args.Length; i++)
+                for (int i = 0; i < args.Length; i++)
                 {
-                    if(_Directions.TryGetValue(args[i].AsString().ToLower(), out Direction d))
+                    if (_Directions.TryGetValue(args[i].AsString().ToLower(), out Direction d))
                     {
                         _MoveDirection.Enqueue(d);
                     }
@@ -1098,7 +1098,7 @@ namespace Assistant.Scripts
 
             if (_Directions.TryGetValue(args[0].AsString().ToLower(), out Direction dir))
             {
-                if((UOSObjects.Player.Direction & Direction.Up) != dir)
+                if ((UOSObjects.Player.Direction & Direction.Up) != dir)
                     Engine.Instance.RequestMove(dir, false);
             }
 
@@ -1160,7 +1160,7 @@ namespace Assistant.Scripts
                 Skill sk = ScriptManager.GetSkill(args[0].AsString());
                 if (sk != null && sk.Index < Client.Game.UO.FileManager.Skills.Skills.Count)
                 {
-                    if(Client.Game.UO.FileManager.Skills.Skills[sk.Index].HasAction)
+                    if (Client.Game.UO.FileManager.Skills.Skills[sk.Index].HasAction)
                         Engine.Instance.SendToServer(new UseSkill(sk.Index));
                     else
                         new RunTimeError(null, $"Non usable skill: {args[0].AsString()}");
@@ -1174,13 +1174,13 @@ namespace Assistant.Scripts
 
         private static bool Feed(string command, Argument[] args, bool quiet, bool force)
         {
-            if(args.Length < 2)
+            if (args.Length < 2)
             {
                 ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
             UOItem backpack = UOSObjects.Player.GetItemOnLayer(Layer.Backpack);
-            if(backpack == null)
+            if (backpack == null)
             {
                 ScriptManager.Error(quiet, "Backpack not found");
                 return true;
@@ -1191,7 +1191,7 @@ namespace Assistant.Scripts
                 ushort graph = args[1].AsUShort(false);
                 int hue = -1;
                 int amount = -1;
-                if(args.Length > 2)
+                if (args.Length > 2)
                 {
                     hue = args[2].AsInt();
                     if (args.Length > 3)
@@ -1206,7 +1206,7 @@ namespace Assistant.Scripts
                 {
                     item = backpack.FindItemByID(Foods.GetFoodGraphics(args[1].AsString()), true, hue);
                 }
-                if(item != null)
+                if (item != null)
                 {
                     DragDropManager.DragDrop(item, targetSerial, Point3D.MinusOne, amount < 1 ? item.Amount : amount);
                 }
@@ -1225,18 +1225,18 @@ namespace Assistant.Scripts
             }
 
             uint targetSerial = args[0].AsSerial();
-            if(SerialHelper.IsValid(targetSerial))
+            if (SerialHelper.IsValid(targetSerial))
                 Engine.Instance.SendToServer(new RenameReq(targetSerial, args[1].AsString()));
             return true;
         }
 
-        
+
         private static string _nextPromptAliasName = "";
         private static void OnPromptAliasTarget(bool location, uint serial, Point3D p, ushort gfxid)
         {
             if (SerialHelper.IsValid(serial))
             {
-                if(!string.IsNullOrEmpty(_nextPromptAliasName))
+                if (!string.IsNullOrEmpty(_nextPromptAliasName))
                     Interpreter.SetAlias(_nextPromptAliasName, serial);
             }
             else
@@ -1301,7 +1301,7 @@ namespace Assistant.Scripts
             else
             {
                 uint gumpId = args[0].AsSerial();
-                if(UOSObjects.Player.OpenedGumps.TryGetValue(gumpId, out var glist) && glist.Count > 0)
+                if (UOSObjects.Player.OpenedGumps.TryGetValue(gumpId, out var glist) && glist.Count > 0)
                     return true;
             }
             return false;
@@ -1339,7 +1339,7 @@ namespace Assistant.Scripts
 
             if (args.Length == 1)
             {
-                switch(args[0].AsString().ToLower(XmlFileParser.Culture))
+                switch (args[0].AsString().ToLower(XmlFileParser.Culture))
                 {
                     case "on":
                     case "true":
@@ -1805,33 +1805,33 @@ namespace Assistant.Scripts
             switch (args.Length)
             {
                 case 1:
-                {
-                    // Only graphic
-                    
-                    UOEntity ent = UOSObjects.FindEntityByType(graphic);
-                    if (ent != null)
-                        serial = ent.Serial;
-                    break;
-                }
+                    {
+                        // Only graphic
+
+                        UOEntity ent = UOSObjects.FindEntityByType(graphic);
+                        if (ent != null)
+                            serial = ent.Serial;
+                        break;
+                    }
                 case 2:
-                {
-                    // graphic and color
-                    var color = args[1].AsUShort();
-                    UOEntity ent = UOSObjects.FindEntityByType(graphic, color);
-                    if (ent != null)
-                        serial = ent.Serial;
-                    break;
-                }
+                    {
+                        // graphic and color
+                        var color = args[1].AsUShort();
+                        UOEntity ent = UOSObjects.FindEntityByType(graphic, color);
+                        if (ent != null)
+                            serial = ent.Serial;
+                        break;
+                    }
                 case 3:
-                {
-                    // graphic, color, range
-                    var color = args[1].AsUShort();
-                    var range = args[2].AsInt();
-                    UOEntity ent = UOSObjects.FindEntityByType(graphic, color, range);
-                    if (ent != null)
-                        serial = ent.Serial;
-                    break;
-                }
+                    {
+                        // graphic, color, range
+                        var color = args[1].AsUShort();
+                        var range = args[2].AsInt();
+                        UOEntity ent = UOSObjects.FindEntityByType(graphic, color, range);
+                        if (ent != null)
+                            serial = ent.Serial;
+                        break;
+                    }
             }
 
             if (serial == uint.MaxValue)
@@ -1839,7 +1839,7 @@ namespace Assistant.Scripts
                 new RunTimeError(null, "Unable to find suitable target");
                 return true;
             }
-            if(command == "targettype")
+            if (command == "targettype")
                 Targeting.Target(serial);
             else
                 Targeting.SetAutoTargetAction((int)serial);
@@ -1921,7 +1921,7 @@ namespace Assistant.Scripts
                 ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
-            if(!HasMessageGump)
+            if (!HasMessageGump)
             {
                 if (MessageEnded)
                 {
@@ -1945,11 +1945,11 @@ namespace Assistant.Scripts
             }
             int x = Utility.ToInt32(args[0].AsString(), -1);
             int y = Utility.ToInt32(args[1].AsString(), -1);
-            if(x >= 0 && y >= 0 && x <= Client.Game.Window.ClientBounds.Width && y <= Client.Game.Window.ClientBounds.Height)
+            if (x >= 0 && y >= 0 && x <= Client.Game.Window.ClientBounds.Width && y <= Client.Game.Window.ClientBounds.Height)
             {
                 Mouse.Position.X = x;
                 Mouse.Position.Y = y;
-                if(args.Length > 2 && args[2].AsString() == "double")
+                if (args.Length > 2 && args[2].AsString() == "double")
                 {
                     if (args.Length > 3 && args[3].AsString() == "right")
                     {
@@ -2072,7 +2072,7 @@ namespace Assistant.Scripts
                 return true;
             }
             byte id = 0;
-            switch(args[0].AsString().ToLowerInvariant())
+            switch (args[0].AsString().ToLowerInvariant())
             {
                 case "honor":
                     id = 1; break;
@@ -2128,7 +2128,7 @@ namespace Assistant.Scripts
         private static int _colorPick = 0;
         private static bool AutoColorPick(string command, Argument[] args, bool quiet, bool force)
         {
-            if(args.Length < 1)
+            if (args.Length < 1)
             {
                 ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
@@ -2144,7 +2144,7 @@ namespace Assistant.Scripts
                 ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
-            if(!_hasAction)
+            if (!_hasAction)
             {
                 if (_hasObject == 0)
                 {
@@ -2185,7 +2185,7 @@ namespace Assistant.Scripts
                 if (!DragDropManager.EndHolding(p.ReadUInt()))
                     continue;
                 p.Skip(9 + (Engine.UsePostKRPackets ? 1 : 0));
-                if(_hasObject == p.ReadUInt())
+                if (_hasObject == p.ReadUInt())
                 {
                     _hasAction = false;
                 }
@@ -2374,24 +2374,24 @@ namespace Assistant.Scripts
             switch (args.Length)
             {
                 case 1:
-                {
-                    var alias = args[0].AsString();
-                    if (alias == "last")
                     {
-                        if (Targeting.LastTargetInfo.Type != 1)
+                        var alias = args[0].AsString();
+                        if (alias == "last")
                         {
-                            new RunTimeError(null, "Last target was not a ground target");
-                            return true;
-                        }
+                            if (Targeting.LastTargetInfo.Type != 1)
+                            {
+                                new RunTimeError(null, "Last target was not a ground target");
+                                return true;
+                            }
 
-                        position = new Point3D(Targeting.LastTargetInfo.X, Targeting.LastTargetInfo.Y, Targeting.LastTargetInfo.Z);
+                            position = new Point3D(Targeting.LastTargetInfo.X, Targeting.LastTargetInfo.Y, Targeting.LastTargetInfo.Z);
+                        }
+                        else if (alias == "current")
+                        {
+                            position = UOSObjects.Player.Position;
+                        }
+                        break;
                     }
-                    else if (alias == "current")
-                    {
-                        position = UOSObjects.Player.Position;
-                    }
-                    break;
-                }
                 case 3:
                     position = new Point3D(args[0].AsInt(), args[1].AsInt(), args[2].AsInt());
                     break;
@@ -2402,7 +2402,7 @@ namespace Assistant.Scripts
                 ScriptManager.Error(quiet, command, "No valid target found");
                 return true;
             }
-            if(command == "targettile")
+            if (command == "targettile")
                 Targeting.Target(position);
             else
                 Targeting.SetAutoTargetAction(position.X, position.Y, position.Z);
@@ -2494,7 +2494,7 @@ namespace Assistant.Scripts
 
         private static bool AutoTargetGhost(string command, Argument[] args, bool quiet, bool force)
         {
-            if(args.Length < 1)
+            if (args.Length < 1)
             {
                 ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
@@ -2580,18 +2580,18 @@ namespace Assistant.Scripts
             if (args[0].AsString() == "any")
                 any = true;
             uint gumpid = 0;
-            if(!any)
+            if (!any)
                 gumpid = args[0].AsUInt();
             List<PlayerData.GumpData> gumps;
             if (any)
             {
                 gumps = new List<PlayerData.GumpData>();
-                foreach(var list in UOSObjects.Player.OpenedGumps.Values)
+                foreach (var list in UOSObjects.Player.OpenedGumps.Values)
                 {
                     gumps.AddRange(list);
                 }
             }
-            else if(!UOSObjects.Player.OpenedGumps.TryGetValue(gumpid, out gumps) || gumps.Count == 0)
+            else if (!UOSObjects.Player.OpenedGumps.TryGetValue(gumpid, out gumps) || gumps.Count == 0)
             {
                 ScriptManager.Error(quiet, command, $"gump id 0x{gumpid:X} not found");
             }
@@ -2629,34 +2629,34 @@ namespace Assistant.Scripts
             }
             uint serial = args[1].AsSerial();
             UOEntity entity = null;
-            if(SerialHelper.IsMobile(serial))
+            if (SerialHelper.IsMobile(serial))
                 entity = UOSObjects.FindMobile(serial);
-            else if(SerialHelper.IsItem(serial))
+            else if (SerialHelper.IsItem(serial))
                 entity = UOSObjects.FindItem(serial);
             if (entity != null)
             {
-                switch(args[0].AsString())
+                switch (args[0].AsString())
                 {
                     case "paperdoll":
-                    {
-                        UIManager.GetGump<PaperDollGump>(serial)?.Dispose();
-                        break;
-                    }
+                        {
+                            UIManager.GetGump<PaperDollGump>(serial)?.Dispose();
+                            break;
+                        }
                     case "status":
-                    {
-                        UIManager.GetGump<StatusGumpBase>(serial)?.Dispose();
-                        break;
-                    }
+                        {
+                            UIManager.GetGump<StatusGumpBase>(serial)?.Dispose();
+                            break;
+                        }
                     case "profile":
-                    {
-                        UIManager.GetGump<ProfileGump>(serial == UOSObjects.Player.Serial ? Constants.PROFILE_LOCALSERIAL : serial)?.Dispose();
-                        break;
-                    }
+                        {
+                            UIManager.GetGump<ProfileGump>(serial == UOSObjects.Player.Serial ? Constants.PROFILE_LOCALSERIAL : serial)?.Dispose();
+                            break;
+                        }
                     case "container":
-                    {
-                        UIManager.GetGump<ContainerGump>(serial)?.Dispose();
-                        break;
-                    }
+                        {
+                            UIManager.GetGump<ContainerGump>(serial)?.Dispose();
+                            break;
+                        }
                 }
             }
             else

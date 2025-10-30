@@ -132,41 +132,41 @@ namespace Assistant
         {
             ushort id = p.ReadUShort();
 
-            switch ( id )
+            switch (id)
             {
                 case 1: // object property list
-                {
-                    uint serial = p.ReadUInt();
-                    if (SerialHelper.IsItem(serial))
                     {
-                        UOItem item = UOSObjects.FindItem( serial );
-                        if ( item == null )
-                            UOSObjects.AddItem( item=new UOItem( serial ) );
-
-                        item.ReadPropertyList( p, out string name );
-                        if (!string.IsNullOrEmpty(name))
-                            item.Name = name;
-                        if ( item.ModifiedOPL )
+                        uint serial = p.ReadUInt();
+                        if (SerialHelper.IsItem(serial))
                         {
-                            args.Block = true;
-                            Engine.Instance.SendToClient( item.ObjPropList.BuildPacket() );
-                        }
-                    }
-                    else if (SerialHelper.IsMobile(serial))
-                    {
-                        UOMobile m = UOSObjects.FindMobile( serial );
-                        if ( m == null )
-                            UOSObjects.AddMobile( m=new UOMobile( serial ) );
+                            UOItem item = UOSObjects.FindItem(serial);
+                            if (item == null)
+                                UOSObjects.AddItem(item = new UOItem(serial));
 
-                        m.ReadPropertyList( p, out _ );
-                        if ( m.ModifiedOPL )
-                        {
-                            args.Block = true;
-                            Engine.Instance.SendToClient( m.ObjPropList.BuildPacket() );
+                            item.ReadPropertyList(p, out string name);
+                            if (!string.IsNullOrEmpty(name))
+                                item.Name = name;
+                            if (item.ModifiedOPL)
+                            {
+                                args.Block = true;
+                                Engine.Instance.SendToClient(item.ObjPropList.BuildPacket());
+                            }
                         }
+                        else if (SerialHelper.IsMobile(serial))
+                        {
+                            UOMobile m = UOSObjects.FindMobile(serial);
+                            if (m == null)
+                                UOSObjects.AddMobile(m = new UOMobile(serial));
+
+                            m.ReadPropertyList(p, out _);
+                            if (m.ModifiedOPL)
+                            {
+                                args.Block = true;
+                                Engine.Instance.SendToClient(m.ObjPropList.BuildPacket());
+                            }
+                        }
+                        break;
                     }
-                    break;
-                }
             }
         }
 
@@ -175,25 +175,25 @@ namespace Assistant
             uint s = p.ReadUInt();
             uint hash = p.ReadUInt();
 
-            if ( SerialHelper.IsItem(s) )
+            if (SerialHelper.IsItem(s))
             {
-                 UOItem item = UOSObjects.FindItem( s );
-                 if ( item != null && item.OPLHash != hash )
-                 {
-                      item.OPLHash = hash;
-                      p.Seek(p.Position - 4);
-                      p.WriteUInt(item.OPLHash);
+                UOItem item = UOSObjects.FindItem(s);
+                if (item != null && item.OPLHash != hash)
+                {
+                    item.OPLHash = hash;
+                    p.Seek(p.Position - 4);
+                    p.WriteUInt(item.OPLHash);
                 }
             }
-            else if ( SerialHelper.IsMobile(s) )
+            else if (SerialHelper.IsMobile(s))
             {
-                 UOMobile m = UOSObjects.FindMobile( s );
-                 if ( m != null && m.OPLHash != hash )
-                 {
-                      m.OPLHash = hash;
-                      p.Seek( p.Position - 4 );
-                      p.WriteUInt( m.OPLHash );
-                 }
+                UOMobile m = UOSObjects.FindMobile(s);
+                if (m != null && m.OPLHash != hash)
+                {
+                    m.OPLHash = hash;
+                    p.Seek(p.Position - 4);
+                    p.WriteUInt(m.OPLHash);
+                }
             }
         }
 
@@ -253,7 +253,7 @@ namespace Assistant
                             world = true;
                     }
                 }
-                else if(SerialHelper.IsMobile(ser))
+                else if (SerialHelper.IsMobile(ser))
                 {
                     UOMobile m = UOSObjects.FindMobile(ser);
                     if (m != null)
@@ -289,7 +289,7 @@ namespace Assistant
                 Timer.DelayedCallbackState(TimeSpan.FromMilliseconds(150), OnAfterMobileDeath, m).Start();
             }
         }
-        
+
         private static void OnAfterMobileDeath(UOMobile m)
         {
             if (m.IsGhost && ((m == UOSObjects.Player && UOSObjects.Gump.SnapOwnDeath) || UOSObjects.Gump.SnapOtherDeath))
@@ -305,45 +305,45 @@ namespace Assistant
             switch (ext)
             {
                 case 0x10: // query object properties
-                {
-                    break;
-                }
+                    {
+                        break;
+                    }
                 case 0x15: // context menu response
-                {
-                    if (ScriptManager.Recording)
                     {
-                        UOEntity ent = null;
-                        uint ser = p.ReadUInt();
-                        ushort idx = p.ReadUShort();
-
-                        if (SerialHelper.IsMobile(ser))
-                            ent = UOSObjects.FindMobile(ser);
-                        else if (SerialHelper.IsItem(ser))
-                            ent = UOSObjects.FindItem(ser);
-
-                        if (ent != null && ent.ContextMenu != null)
-                        {
-                            ScriptManager.AddToScript($"contextmenu {(ser == Client.Game.UO.World.Player.Serial ? "'self'" : $"0x{ser:X}")} {idx}");
-                        }
-                    }
-                    break;
-                }
-                case 0x1C:// cast spell
-                {
-                    uint ser = uint.MaxValue;
-                    if (p.ReadUShort() == 1)
-                        ser = p.ReadUInt();
-                    ushort sid = p.ReadUShort();
-                    Spell s = Spell.Get(sid);
-                    if (s != null)
-                    {
-                        s.OnCast(p);
-                        args.Block = true;
                         if (ScriptManager.Recording)
-                            ScriptManager.AddToScript($"cast '{Spell.GetName(sid)}'");
+                        {
+                            UOEntity ent = null;
+                            uint ser = p.ReadUInt();
+                            ushort idx = p.ReadUShort();
+
+                            if (SerialHelper.IsMobile(ser))
+                                ent = UOSObjects.FindMobile(ser);
+                            else if (SerialHelper.IsItem(ser))
+                                ent = UOSObjects.FindItem(ser);
+
+                            if (ent != null && ent.ContextMenu != null)
+                            {
+                                ScriptManager.AddToScript($"contextmenu {(ser == Client.Game.UO.World.Player.Serial ? "'self'" : $"0x{ser:X}")} {idx}");
+                            }
+                        }
+                        break;
                     }
-                    break;
-                }
+                case 0x1C:// cast spell
+                    {
+                        uint ser = uint.MaxValue;
+                        if (p.ReadUShort() == 1)
+                            ser = p.ReadUInt();
+                        ushort sid = p.ReadUShort();
+                        Spell s = Spell.Get(sid);
+                        if (s != null)
+                        {
+                            s.OnCast(p);
+                            args.Block = true;
+                            if (ScriptManager.Recording)
+                                ScriptManager.AddToScript($"cast '{Spell.GetName(sid)}'");
+                        }
+                        break;
+                    }
             }
         }
 
@@ -356,63 +356,63 @@ namespace Assistant
                 switch (type)
                 {
                     case 0x24: // Use skill
-                    {
-                        if (!int.TryParse(command.Split(' ')[0], out int skillIndex) || skillIndex >= Client.Game.UO.FileManager.Skills.SkillsCount)
-                            break;
-
-                        UOSObjects.Player.LastSkill = skillIndex;
-                        if (ScriptManager.Recording)
-                            ScriptManager.AddToScript($"useskill '{Client.Game.UO.FileManager.Skills.Skills[skillIndex].Name}'");
-                        if (skillIndex == (int)SkillName.Stealth && !UOSObjects.Player.Visible)
-                            StealthSteps.Hide();
-                        SkillTimer.Start();
-                        break;
-                    }
-                    case 0x27: // Cast spell from book
-                    {
-                        string[] split = command.Split(' ');
-                        if (split.Length > 0)
                         {
-                            if (ushort.TryParse(split[0], out ushort spellID))
+                            if (!int.TryParse(command.Split(' ')[0], out int skillIndex) || skillIndex >= Client.Game.UO.FileManager.Skills.SkillsCount)
+                                break;
+
+                            UOSObjects.Player.LastSkill = skillIndex;
+                            if (ScriptManager.Recording)
+                                ScriptManager.AddToScript($"useskill '{Client.Game.UO.FileManager.Skills.Skills[skillIndex].Name}'");
+                            if (skillIndex == (int)SkillName.Stealth && !UOSObjects.Player.Visible)
+                                StealthSteps.Hide();
+                            SkillTimer.Start();
+                            break;
+                        }
+                    case 0x27: // Cast spell from book
+                        {
+                            string[] split = command.Split(' ');
+                            if (split.Length > 0)
                             {
-                                uint serial = 0;
-                                if (split.Length > 1)
-                                    serial = Utility.ToUInt32(split[1], uint.MaxValue);
+                                if (ushort.TryParse(split[0], out ushort spellID))
+                                {
+                                    uint serial = 0;
+                                    if (split.Length > 1)
+                                        serial = Utility.ToUInt32(split[1], uint.MaxValue);
+                                    Spell s = Spell.Get(spellID);
+                                    if (s != null)
+                                    {
+                                        s.OnCast(p);
+                                        args.Block = true;
+                                        if (ScriptManager.Recording)
+                                        {
+                                            if (SerialHelper.IsValid(serial))
+                                                ScriptManager.AddToScript($"cast '{Spell.GetName(spellID)}' 0x{serial:X}");
+                                            else
+                                                ScriptManager.AddToScript($"cast '{Spell.GetName(spellID)}'");
+                                        }
+                                    }
+                                }
+                            }
+
+                            break;
+                        }
+
+                    case 0x56: // Cast spell from macro
+                        {
+                            if (ushort.TryParse(command, out ushort spellID))
+                            {
                                 Spell s = Spell.Get(spellID);
                                 if (s != null)
                                 {
                                     s.OnCast(p);
                                     args.Block = true;
                                     if (ScriptManager.Recording)
-                                    {
-                                        if (SerialHelper.IsValid(serial))
-                                            ScriptManager.AddToScript($"cast '{Spell.GetName(spellID)}' 0x{serial:X}");
-                                        else
-                                            ScriptManager.AddToScript($"cast '{Spell.GetName(spellID)}'");
-                                    }
+                                        ScriptManager.AddToScript($"cast '{Spell.GetName(spellID)}'");
                                 }
                             }
+
+                            break;
                         }
-
-                        break;
-                    }
-
-                    case 0x56: // Cast spell from macro
-                    {
-                        if(ushort.TryParse(command, out ushort spellID))
-                        {
-                            Spell s = Spell.Get(spellID);
-                            if (s != null)
-                            {
-                                s.OnCast(p);
-                                args.Block = true;
-                                if (ScriptManager.Recording)
-                                    ScriptManager.AddToScript($"cast '{Spell.GetName(spellID)}'");
-                            }
-                        }
-
-                        break;
-                    }
                 }
             }
         }
@@ -775,102 +775,102 @@ namespace Assistant
             switch (type)
             {
                 case 0x02://list (with caps, 3.0.8 and up)
-                {
-                    int i;
-                    while ((i = p.ReadUShort()) > 0)
                     {
-                        if (i > 0 && i <= Skill.Count)
+                        int i;
+                        while ((i = p.ReadUShort()) > 0)
                         {
-                            Skill skill = UOSObjects.Player.Skills[i - 1];
+                            if (i > 0 && i <= Skill.Count)
+                            {
+                                Skill skill = UOSObjects.Player.Skills[i - 1];
+
+                                if (skill == null)
+                                    continue;
+
+                                skill.FixedValue = p.ReadUShort();
+                                skill.FixedBase = p.ReadUShort();
+                                skill.Lock = (LockType)p.ReadByte();
+                                skill.FixedCap = p.ReadUShort();
+                                if (!UOSObjects.Player.SkillsSent)
+                                    skill.Delta = 0;
+                            }
+                            else
+                            {
+                                p.Seek(p.Position + 7);
+                            }
+                        }
+
+                        UOSObjects.Player.SkillsSent = true;
+                        break;
+                    }
+
+                case 0x00: // list (without caps, older clients)
+                    {
+                        int i;
+                        while ((i = p.ReadUShort()) > 0)
+                        {
+                            if (i > 0 && i <= Skill.Count)
+                            {
+                                Skill skill = UOSObjects.Player.Skills[i - 1];
+
+                                if (skill == null)
+                                    continue;
+
+                                skill.FixedValue = p.ReadUShort();
+                                skill.FixedBase = p.ReadUShort();
+                                skill.Lock = (LockType)p.ReadByte();
+                                skill.FixedCap = 100;//p.ReadUShort();
+                                if (!UOSObjects.Player.SkillsSent)
+                                    skill.Delta = 0;
+                            }
+                            else
+                            {
+                                p.Seek(p.Position + 5);
+                            }
+                        }
+
+                        UOSObjects.Player.SkillsSent = true;
+                        break;
+                    }
+
+                case 0xDF: //change (with cap, new clients)
+                    {
+                        int i = p.ReadUShort();
+
+                        if (i >= 0 && i < Skill.Count)
+                        {
+                            Skill skill = UOSObjects.Player.Skills[i];
 
                             if (skill == null)
-                                continue;
+                                break;
 
+                            ushort old = skill.FixedBase;
                             skill.FixedValue = p.ReadUShort();
                             skill.FixedBase = p.ReadUShort();
                             skill.Lock = (LockType)p.ReadByte();
                             skill.FixedCap = p.ReadUShort();
-                            if (!UOSObjects.Player.SkillsSent)
-                                skill.Delta = 0;
                         }
-                        else
-                        {
-                            p.Seek(p.Position + 7);
-                        }
+                        break;
                     }
 
-                    UOSObjects.Player.SkillsSent = true;
-                    break;
-                }
-
-                case 0x00: // list (without caps, older clients)
-                {
-                    int i;
-                    while ((i = p.ReadUShort()) > 0)
+                case 0xFF: //change (without cap, older clients)
                     {
-                        if (i > 0 && i <= Skill.Count)
+                        int i = p.ReadUShort();
+
+                        if (i >= 0 && i < Skill.Count)
                         {
-                            Skill skill = UOSObjects.Player.Skills[i - 1];
+                            Skill skill = UOSObjects.Player.Skills[i];
 
                             if (skill == null)
-                                continue;
+                                break;
 
+                            ushort old = skill.FixedBase;
                             skill.FixedValue = p.ReadUShort();
                             skill.FixedBase = p.ReadUShort();
                             skill.Lock = (LockType)p.ReadByte();
-                            skill.FixedCap = 100;//p.ReadUShort();
-                            if (!UOSObjects.Player.SkillsSent)
-                                skill.Delta = 0;
+                            skill.FixedCap = 100;
                         }
-                        else
-                        {
-                            p.Seek(p.Position + 5);
-                        }
+                        break;
                     }
-
-                    UOSObjects.Player.SkillsSent = true;
-                    break;
-                }
-
-                case 0xDF: //change (with cap, new clients)
-                {
-                    int i = p.ReadUShort();
-
-                    if (i >= 0 && i < Skill.Count)
-                    {
-                        Skill skill = UOSObjects.Player.Skills[i];
-
-                        if (skill == null)
-                            break;
-
-                        ushort old = skill.FixedBase;
-                        skill.FixedValue = p.ReadUShort();
-                        skill.FixedBase = p.ReadUShort();
-                        skill.Lock = (LockType)p.ReadByte();
-                        skill.FixedCap = p.ReadUShort();
-                    }
-                    break;
-                }
-
-                case 0xFF: //change (without cap, older clients)
-                {
-                    int i = p.ReadUShort();
-
-                    if (i >= 0 && i < Skill.Count)
-                    {
-                        Skill skill = UOSObjects.Player.Skills[i];
-
-                        if (skill == null)
-                            break;
-
-                        ushort old = skill.FixedBase;
-                        skill.FixedValue = p.ReadUShort();
-                        skill.FixedBase = p.ReadUShort();
-                        skill.Lock = (LockType)p.ReadByte();
-                        skill.FixedCap = 100;
-                    }
-                    break;
-                }
             }
         }
 
@@ -912,7 +912,7 @@ namespace Assistant
             uint serial = p.ReadUInt();
             UOMobile m = UOSObjects.FindMobile(serial);
 
-            if(m == null)
+            if (m == null)
             {
                 UOSObjects.AddMobile(m = new UOMobile(serial));
                 UOSObjects.RequestMobileStatus(m);
@@ -1335,7 +1335,7 @@ namespace Assistant
                 UOSObjects.AddMobile(m = new UOMobile(serial));
 
             bool wasHidden = !m.Visible;
-            
+
             if (UOSObjects.Gump.ShowMobileFlags)
                 Targeting.CheckTextFlags(m);
 
@@ -1819,7 +1819,7 @@ namespace Assistant
                 type = MessageType.Spell;
             }
             BandageTimer.OnLocalizedMessage(num);
- 
+
             string text = Client.Game.UO.FileManager.Clilocs.Translate(num, ext_str);// Language.ClilocFormat(num, ext_str);
             if (text == null)
                 return;
@@ -1868,7 +1868,7 @@ namespace Assistant
             uint tid = p.ReadUInt();
             int bid = (int)p.ReadUInt();
 
-            if(UOSObjects.Player.OpenedGumps.TryGetValue(tid, out var list))
+            if (UOSObjects.Player.OpenedGumps.TryGetValue(tid, out var list))
                 list.Remove(list.First(g => g.ServerID == ser));
 
             if (!ScriptManager.Recording)
@@ -1918,60 +1918,60 @@ namespace Assistant
             switch (type)
             {
                 case 0x04: // close gump
-                {
-                    uint ser = p.ReadUInt();
-                    // int serial, int tid
-                    UOSObjects.Player.OpenedGumps.Remove(ser);
-                    break;
-                }
-                case 0x06: // party messages
-                {
-                    OnPartyMessage(p, args);
-                    break;
-                }
-                case 0x08: // map change
-                {
-                    if (UOSObjects.Player != null)
-                        UOSObjects.Player.Map = p.ReadByte();
-                    break;
-                }
-                case 0x14: // context menu
-                {
-                    p.ReadUInt(); // 0x01
-                    UOEntity ent = null;
-                    uint ser = p.ReadUInt();
-                    if (SerialHelper.IsMobile(ser))
-                        ent = UOSObjects.FindMobile(ser);
-                    else if (SerialHelper.IsItem(ser))
-                        ent = UOSObjects.FindItem(ser);
-
-                    if (ent != null)
                     {
-                        byte count = p.ReadByte();
+                        uint ser = p.ReadUInt();
+                        // int serial, int tid
+                        UOSObjects.Player.OpenedGumps.Remove(ser);
+                        break;
+                    }
+                case 0x06: // party messages
+                    {
+                        OnPartyMessage(p, args);
+                        break;
+                    }
+                case 0x08: // map change
+                    {
+                        if (UOSObjects.Player != null)
+                            UOSObjects.Player.Map = p.ReadByte();
+                        break;
+                    }
+                case 0x14: // context menu
+                    {
+                        p.ReadUInt(); // 0x01
+                        UOEntity ent = null;
+                        uint ser = p.ReadUInt();
+                        if (SerialHelper.IsMobile(ser))
+                            ent = UOSObjects.FindMobile(ser);
+                        else if (SerialHelper.IsItem(ser))
+                            ent = UOSObjects.FindItem(ser);
 
-                        try
+                        if (ent != null)
                         {
-                            ent.ContextMenu.Clear();
+                            byte count = p.ReadByte();
 
-                            for (int i = 0; i < count; i++)
+                            try
                             {
-                                ushort idx = p.ReadUShort();
-                                ushort num = p.ReadUShort();
-                                ushort flags = p.ReadUShort();
-                                ushort color = 0;
+                                ent.ContextMenu.Clear();
 
-                                if ((flags & 0x02) != 0)
-                                    color = p.ReadUShort();
+                                for (int i = 0; i < count; i++)
+                                {
+                                    ushort idx = p.ReadUShort();
+                                    ushort num = p.ReadUShort();
+                                    ushort flags = p.ReadUShort();
+                                    ushort color = 0;
 
-                                ent.ContextMenu.Add(idx, num);
+                                    if ((flags & 0x02) != 0)
+                                        color = p.ReadUShort();
+
+                                    ent.ContextMenu.Add(idx, num);
+                                }
+                            }
+                            catch
+                            {
                             }
                         }
-                        catch
-                        {
-                        }
+                        break;
                     }
-                    break;
-                }
                 /*case 0x18: // map patches
                 {
                     if (UOSObjects.Player != null)
@@ -1990,31 +1990,31 @@ namespace Assistant
                     break;
                 }*/
                 case 0x19: //  stat locks
-                {
-                    if (p.ReadByte() == 0x02)
                     {
-                        UOMobile m = UOSObjects.FindMobile(p.ReadUInt());
-                        if (UOSObjects.Player == m && m != null)
+                        if (p.ReadByte() == 0x02)
                         {
-                            p.ReadByte();// 0?
+                            UOMobile m = UOSObjects.FindMobile(p.ReadUInt());
+                            if (UOSObjects.Player == m && m != null)
+                            {
+                                p.ReadByte();// 0?
 
-                            byte locks = p.ReadByte();
+                                byte locks = p.ReadByte();
 
-                            UOSObjects.Player.StrLock = (LockType)((locks >> 4) & 3);
-                            UOSObjects.Player.DexLock = (LockType)((locks >> 2) & 3);
-                            UOSObjects.Player.IntLock = (LockType)(locks & 3);
+                                UOSObjects.Player.StrLock = (LockType)((locks >> 4) & 3);
+                                UOSObjects.Player.DexLock = (LockType)((locks >> 2) & 3);
+                                UOSObjects.Player.IntLock = (LockType)(locks & 3);
+                            }
                         }
+                        break;
                     }
-                    break;
-                }
-                /*case 0x1D: // Custom House "General Info"
-                {
-                    //only really used on packetsave, we don't need it on UOS+CUO, and latest razor packetsave don't actually work, so it's bloatware
-                    UOItem i = UOSObjects.FindItem(p.ReadUInt());
-                    if (i != null)
-                        i.HouseRevision = (int)p.ReadUInt();
-                    break;
-                }*/
+                    /*case 0x1D: // Custom House "General Info"
+                    {
+                        //only really used on packetsave, we don't need it on UOS+CUO, and latest razor packetsave don't actually work, so it's bloatware
+                        UOItem i = UOSObjects.FindItem(p.ReadUInt());
+                        if (i != null)
+                            i.HouseRevision = (int)p.ReadUInt();
+                        break;
+                    }*/
             }
         }
 
@@ -2022,7 +2022,7 @@ namespace Assistant
         internal static int SpecialPartyReceived = 0;
         internal static int SpecialFactionSent = 0;
         internal static int SpecialFactionReceived = 0;
- 
+
         private static void RunUOProtocolExtention(Packet p, PacketHandlerEventArgs args)
         {
             //this is currently handled in ClassicUO
@@ -2031,82 +2031,82 @@ namespace Assistant
             switch (p.ReadByte())
             {
                 case 1: // Custom Party information
-                {
-                    uint serial;
-
-                    SpecialPartyReceived++;
-
-                    while ((serial = p.ReadUInt()) > 0)
                     {
-                        if (!Party.Contains(serial))
-                            break;//Party.Add(serial);
-                        UOMobile mobile = UOSObjects.FindMobile(serial);
+                        uint serial;
 
-                        short x = (short)p.ReadUShort();
-                        short y = (short)p.ReadUShort();
-                        byte map = p.ReadByte();
+                        SpecialPartyReceived++;
 
-                        if (mobile == null)
+                        while ((serial = p.ReadUInt()) > 0)
                         {
-                            UOSObjects.AddMobile(mobile = new UOMobile(serial));
-                            mobile.Visible = false;
-                        }
+                            if (!Party.Contains(serial))
+                                break;//Party.Add(serial);
+                            UOMobile mobile = UOSObjects.FindMobile(serial);
 
-                        if (mobile.Name == null || mobile.Name.Length <= 0)
-                            mobile.Name = "(Not Seen)";
-
-                        if (map == UOSObjects.Player.Map)
-                            mobile.Position = new Point3D(x, y, mobile.Position.Z);
-                        else
-                            mobile.Position = Point3D.Zero;
-                    }
-                    break;
-                }
-                case 2: // Faction track information...
-                {
-                    bool locations = p.ReadByte() != 0;
-                    uint serial;
-                    SpecialFactionReceived++;
-                    if (!locations)
-                    {
-                        Faction.Clear();
-                    }
-
-                    while ((serial = p.ReadUInt()) > 0)
-                    {
-                        UOMobile mobile = UOSObjects.FindMobile(serial);
-                        if (mobile == null)
-                        {
-                            UOSObjects.AddMobile(mobile = new UOMobile(serial));
-                            mobile.Visible = false;
-                        }
-                        if (!locations || !Faction.Contains(serial) && (!UOSObjects.Gump.FriendsParty || !PacketHandlers.Party.Contains(serial)))
-                        {
-                            Faction.Add(serial);
-                        }
-
-                        if (locations)
-                        {
                             short x = (short)p.ReadUShort();
                             short y = (short)p.ReadUShort();
                             byte map = p.ReadByte();
-                            byte hits = p.ReadByte();
+
+                            if (mobile == null)
+                            {
+                                UOSObjects.AddMobile(mobile = new UOMobile(serial));
+                                mobile.Visible = false;
+                            }
+
+                            if (mobile.Name == null || mobile.Name.Length <= 0)
+                                mobile.Name = "(Not Seen)";
+
                             if (map == UOSObjects.Player.Map)
-                            {
                                 mobile.Position = new Point3D(x, y, mobile.Position.Z);
-                            }
                             else
-                            {
                                 mobile.Position = Point3D.Zero;
+                        }
+                        break;
+                    }
+                case 2: // Faction track information...
+                    {
+                        bool locations = p.ReadByte() != 0;
+                        uint serial;
+                        SpecialFactionReceived++;
+                        if (!locations)
+                        {
+                            Faction.Clear();
+                        }
+
+                        while ((serial = p.ReadUInt()) > 0)
+                        {
+                            UOMobile mobile = UOSObjects.FindMobile(serial);
+                            if (mobile == null)
+                            {
+                                UOSObjects.AddMobile(mobile = new UOMobile(serial));
+                                mobile.Visible = false;
+                            }
+                            if (!locations || !Faction.Contains(serial) && (!UOSObjects.Gump.FriendsParty || !PacketHandlers.Party.Contains(serial)))
+                            {
+                                Faction.Add(serial);
+                            }
+
+                            if (locations)
+                            {
+                                short x = (short)p.ReadUShort();
+                                short y = (short)p.ReadUShort();
+                                byte map = p.ReadByte();
+                                byte hits = p.ReadByte();
+                                if (map == UOSObjects.Player.Map)
+                                {
+                                    mobile.Position = new Point3D(x, y, mobile.Position.Z);
+                                }
+                                else
+                                {
+                                    mobile.Position = Point3D.Zero;
+                                }
+                            }
+                            if (string.IsNullOrEmpty(mobile.Name))
+                            {
+                                mobile.Name = "(Not Seen)";
                             }
                         }
-                        if (string.IsNullOrEmpty(mobile.Name))
-                        {
-                            mobile.Name = "(Not Seen)";
-                        }
+                        break;
                     }
-                    break;
-                }
                 /*case 0xF0:
                 {
                     if (UOSObjects.Player != null)
@@ -2116,13 +2116,13 @@ namespace Assistant
                     break;
                 }*/
                 case 0xFE: // Begin Handshake/Features Negotiation
-                {
-                    ulong features = p.ReadULong();
-                    Engine.Instance.SetFeatures(features);
-                    //Engine.Instance.SendToServer(new PRazorAnswer());
-                    //args.Block = true;
-                    break;
-                }
+                    {
+                        ulong features = p.ReadULong();
+                        Engine.Instance.SetFeatures(features);
+                        //Engine.Instance.SendToServer(new PRazorAnswer());
+                        //args.Block = true;
+                        break;
+                    }
             }
         }
 
@@ -2136,83 +2136,83 @@ namespace Assistant
             switch (p.ReadByte())
             {
                 case 0x01: // List
-                {
-                    Party.Clear();
-
-                    int count = p.ReadByte();
-                    for (int i = 0; i < count; i++)
                     {
-                        uint s = p.ReadUInt();
-                        if (UOSObjects.Player == null || s != UOSObjects.Player.Serial)
-                            Party.Add(s);
-                    }
+                        Party.Clear();
 
-                    break;
-                }
+                        int count = p.ReadByte();
+                        for (int i = 0; i < count; i++)
+                        {
+                            uint s = p.ReadUInt();
+                            if (UOSObjects.Player == null || s != UOSObjects.Player.Serial)
+                                Party.Add(s);
+                        }
+
+                        break;
+                    }
                 case 0x02: // Remove Member/Re-list
-                {
-                    Party.Clear();
-                    int count = p.ReadByte();
-                    uint remSerial = p.ReadUInt(); // the serial of who was removed
-
-                    if (UOSObjects.Player != null)
                     {
-                        UOMobile rem = UOSObjects.FindMobile(remSerial);
-                        if (rem != null && !Utility.InRange(UOSObjects.Player.Position, rem.Position, UOSObjects.Player.VisRange))
-                            rem.Remove();
-                    }
+                        Party.Clear();
+                        int count = p.ReadByte();
+                        uint remSerial = p.ReadUInt(); // the serial of who was removed
 
-                    for (int i = 0; i < count; i++)
-                    {
-                        uint s = p.ReadUInt();
-                        if (UOSObjects.Player == null || s != UOSObjects.Player.Serial)
-                            Party.Add(s);
-                    }
+                        if (UOSObjects.Player != null)
+                        {
+                            UOMobile rem = UOSObjects.FindMobile(remSerial);
+                            if (rem != null && !Utility.InRange(UOSObjects.Player.Position, rem.Position, UOSObjects.Player.VisRange))
+                                rem.Remove();
+                        }
 
-                    break;
-                }
+                        for (int i = 0; i < count; i++)
+                        {
+                            uint s = p.ReadUInt();
+                            if (UOSObjects.Player == null || s != UOSObjects.Player.Serial)
+                                Party.Add(s);
+                        }
+
+                        break;
+                    }
                 case 0x03: // text message
 
                 case 0x04: // 3 = private, 4 = public
-                {
-                    //Serial from = p.ReadUInt();
-                    //string text = p.ReadUnicodeStringSafe();
-                    break;
-                }
+                    {
+                        //Serial from = p.ReadUInt();
+                        //string text = p.ReadUnicodeStringSafe();
+                        break;
+                    }
                 case 0x07: // party invite
-                {
-                    //Serial leader = p.ReadUInt();
-                    PartyLeader = p.ReadUInt();
-
-                    //in UOS we can't auto-accept party
-                    /*if (Config.GetBool("BlockPartyInvites"))
                     {
-                        Client.Instance.SendToServer(new DeclineParty(PacketHandlers.PartyLeader));
-                    }*/
+                        //Serial leader = p.ReadUInt();
+                        PartyLeader = p.ReadUInt();
 
-                    if (UOSObjects.Gump.AutoAcceptParty)
-                    {
-                        UOMobile leaderMobile = UOSObjects.FindMobile(PartyLeader);
-                        if (leaderMobile != null && UOSObjects.Gump.IsFriend(leaderMobile.Serial))
+                        //in UOS we can't auto-accept party
+                        /*if (Config.GetBool("BlockPartyInvites"))
                         {
-                            if (PartyLeader != 0)
-                            {
-                                UOSObjects.Player.SendMessage($"Auto accepted party invite from: {leaderMobile.Name}");
+                            Client.Instance.SendToServer(new DeclineParty(PacketHandlers.PartyLeader));
+                        }*/
 
-                                Engine.Instance.SendToServer(new AcceptParty(PartyLeader));
-                                PartyLeader = 0;
+                        if (UOSObjects.Gump.AutoAcceptParty)
+                        {
+                            UOMobile leaderMobile = UOSObjects.FindMobile(PartyLeader);
+                            if (leaderMobile != null && UOSObjects.Gump.IsFriend(leaderMobile.Serial))
+                            {
+                                if (PartyLeader != 0)
+                                {
+                                    UOSObjects.Player.SendMessage($"Auto accepted party invite from: {leaderMobile.Name}");
+
+                                    Engine.Instance.SendToServer(new AcceptParty(PartyLeader));
+                                    PartyLeader = 0;
+                                }
                             }
                         }
-                    }
-                    else
-                    {
-                        if (m_PartyDeclineTimer == null)
-                            m_PartyDeclineTimer = Timer.DelayedCallback(TimeSpan.FromSeconds(10.0), new TimerCallback(PartyAutoDecline));
-                        m_PartyDeclineTimer.Start();
-                    }
+                        else
+                        {
+                            if (m_PartyDeclineTimer == null)
+                                m_PartyDeclineTimer = Timer.DelayedCallback(TimeSpan.FromSeconds(10.0), new TimerCallback(PartyAutoDecline));
+                            m_PartyDeclineTimer.Start();
+                        }
 
-                    break;
-                }
+                        break;
+                    }
             }
         }
 
@@ -2234,15 +2234,15 @@ namespace Assistant
             switch (packetID)
             {
                 case 0x19: // set ability
-                {
-                    uint ability = 0;
-                    if (p.ReadByte() == 0)
-                        ability = p.ReadUInt();
+                    {
+                        uint ability = 0;
+                        if (p.ReadByte() == 0)
+                            ability = p.ReadUInt();
 
-                    /*if (ability >= 0 && ability < (int)Ability.Invalid)
-                        ScriptManager.AddToScript($"setability '{ability}'");*/
-                    break;
-                }
+                        /*if (ability >= 0 && ability < (int)Ability.Invalid)
+                            ScriptManager.AddToScript($"setability '{ability}'");*/
+                        break;
+                    }
             }
         }
 
