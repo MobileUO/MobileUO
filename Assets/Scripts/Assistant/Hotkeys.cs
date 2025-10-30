@@ -12,7 +12,7 @@ using System.Collections.ObjectModel;
 using Assistant.Core;
 using Assistant.Scripts;
 
-using AssistGump = ClassicUO.Game.UI.Gumps.AssistantGump;
+using AssistGump = ClassicUO.Game.UI.Gumps.MobileUOAssistantGump;
 using ClassicUO;
 
 namespace Assistant

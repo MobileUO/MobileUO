@@ -1928,7 +1928,7 @@ namespace Assistant.Scripts
                     string title = args[0].AsString(), body = args[1].AsString();
                     MessageEnded = false;
                     HasMessageGump = true;
-                    UIManager.Add(new AssistantGump.MessageBoxGump(Client.Game.UO.World, title, body));
+                    UIManager.Add(new MobileUOAssistantGump.MessageBoxGump(Client.Game.UO.World, title, body));
                 }
                 else
                     MessageEnded = true;

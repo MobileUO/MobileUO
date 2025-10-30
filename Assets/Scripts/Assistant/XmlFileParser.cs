@@ -18,7 +18,7 @@ using ClassicUO.Game.UI.Assistant;
 
 using SDL2;
 
-using AssistantGump = ClassicUO.Game.UI.Gumps.AssistantGump;
+using MobileUOAssistantGump = ClassicUO.Game.UI.Gumps.MobileUOAssistantGump;
 using ClassicUO.Utility.Collections;
 
 namespace Assistant
@@ -157,7 +157,7 @@ namespace Assistant
             return i;
         }
 
-        internal static void LoadConfig(FileInfo info, AssistantGump gump)
+        internal static void LoadConfig(FileInfo info, MobileUOAssistantGump gump)
         {
             if (gump == null || gump.IsDisposed || UOSObjects.Player == null)
             {
@@ -267,7 +267,7 @@ namespace Assistant
             }
         }
 
-        internal static void LoadSpellDef(FileInfo info, AssistantGump gump)
+        internal static void LoadSpellDef(FileInfo info, MobileUOAssistantGump gump)
         {
             XmlDocument doc = new XmlDocument();
             if(!info.Exists)
@@ -407,7 +407,7 @@ namespace Assistant
             }
         }
 
-        internal static void LoadSkillDef(FileInfo info, AssistantGump gump)
+        internal static void LoadSkillDef(FileInfo info, MobileUOAssistantGump gump)
         {
             List<SkillEntry> skillEntries = new List<SkillEntry>();
             XmlDocument doc = new XmlDocument();
@@ -584,7 +584,7 @@ namespace Assistant
             }
         }
 
-        internal static void LoadBuffDef(FileInfo info, AssistantGump gump)
+        internal static void LoadBuffDef(FileInfo info, MobileUOAssistantGump gump)
         {
             XmlDocument doc = new XmlDocument();
             if (!info.Exists)
@@ -641,7 +641,7 @@ namespace Assistant
         }
 
 
-        internal static void SaveConfig(AssistantGump gump)
+        internal static void SaveConfig(MobileUOAssistantGump gump)
         {
             try
             {
@@ -706,7 +706,7 @@ namespace Assistant
         }
         internal static bool SaveProfile(string name = null)
         {
-            AssistantGump gump = UOSObjects.Gump;
+            MobileUOAssistantGump gump = UOSObjects.Gump;
             if (gump == null)
                 return false;
             SaveConfig(gump);
@@ -1402,7 +1402,7 @@ namespace Assistant
         }
         #endregion
 
-        internal static void LoadProfile(AssistantGump gump, string filename)
+        internal static void LoadProfile(MobileUOAssistantGump gump, string filename)
         {
             if (!string.IsNullOrWhiteSpace(filename))
             {
@@ -1442,7 +1442,7 @@ namespace Assistant
                             if (f.XmlName == name)
                             {
                                 bool.TryParse(GetText(data, "False"), out bool enabled);
-                                AssistantGump.FiltersCB[i].IsChecked = enabled;
+                                MobileUOAssistantGump.FiltersCB[i].IsChecked = enabled;
                             }
                         }
                     }

@@ -1878,8 +1878,8 @@ namespace Assistant
             if (sc < 0 || sc > 2000)
                 return;
             //int[] switches = new int[sc];
-            for (int i = 0; i < sc; i++, AssistantGump._InstanceSB.Append(' '))
-                AssistantGump._InstanceSB.Append(p.ReadUInt());
+            for (int i = 0; i < sc; i++, MobileUOAssistantGump._InstanceSB.Append(' '))
+                MobileUOAssistantGump._InstanceSB.Append(p.ReadUInt());
 
             /*int ec = (int)p.ReadUInt();
             if (ec < 0 || ec > 2000)
@@ -1895,8 +1895,8 @@ namespace Assistant
                 entries[x] = new GumpTextEntry(id, text);
             }*/
             ScriptManager.AddToScript($"waitforgump 0x{tid:X} 15000");
-            ScriptManager.AddToScript($"replygump 0x{tid:X} {bid} {AssistantGump._InstanceSB}");
-            AssistantGump._InstanceSB.Clear();
+            ScriptManager.AddToScript($"replygump 0x{tid:X} {bid} {MobileUOAssistantGump._InstanceSB}");
+            MobileUOAssistantGump._InstanceSB.Clear();
             //MacroActions are non present in UOS
             //UOSObjects.Player.LastGumpResponseAction = new GumpResponseAction(bid, switches, entries);
         }

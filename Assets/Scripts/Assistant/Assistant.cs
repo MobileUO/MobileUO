@@ -40,7 +40,7 @@ using ClassicUO.Input;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class AssistantGump : Gump
+    internal class MobileUOAssistantGump : Gump
     {
         public bool AssistantEnabled;
 
@@ -48,7 +48,7 @@ namespace ClassicUO.Game.UI.Gumps
         {
             internal MessageBoxGump(World world, string title, string body) : base(world, 0, 0)
             {
-                AssistantGump gump = UOSObjects.Gump;
+                MobileUOAssistantGump gump = UOSObjects.Gump;
                 if(gump == null || gump.IsDisposed || string.IsNullOrEmpty(body))
                 {
                     Dispose();
@@ -103,7 +103,7 @@ namespace ClassicUO.Game.UI.Gumps
 
             internal ObjectInspectorGump(World world, UOEntity inspected) : base(world, 0, 0)
             {
-                AssistantGump gump = UOSObjects.Gump;
+                MobileUOAssistantGump gump = UOSObjects.Gump;
                 if (gump == null || gump.IsDisposed || inspected == null)
                 {
                     Dispose();
@@ -777,7 +777,7 @@ namespace ClassicUO.Game.UI.Gumps
         private static int _buttonHeight = HEIGHT / 13;
         private static int _buttonWidth = WIDTH / 20;
 
-        public AssistantGump(World world) : base(world, 0, 0)
+        public MobileUOAssistantGump(World world) : base(world, 0, 0)
         {
             _controls.Add(_alphaBlend);
             Add(_alphaBlend);
@@ -3548,7 +3548,7 @@ namespace ClassicUO.Game.UI.Gumps
                         WIDTH = x;
                         HEIGHT = y;
                         XmlFileParser.SaveProfile();
-                        UIManager.Add(UOSObjects.Gump = new AssistantGump(World) { X = 200, Y = 200 });
+                        UIManager.Add(UOSObjects.Gump = new MobileUOAssistantGump(World) { X = 200, Y = 200 });
                     }
                     break;
                 }
