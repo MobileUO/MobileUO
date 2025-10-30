@@ -1,12 +1,14 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
 using System;
+using ClassicUO.Assets;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
 using ClassicUO.Renderer;
 using ClassicUO.Resources;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using MathHelper = Microsoft.Xna.Framework.MathHelper;
 
 namespace ClassicUO.Game
@@ -41,14 +43,14 @@ namespace ClassicUO.Game
         public WeatherType Type { get; private set; }
         public byte Count { get; private set; }
         public byte CurrentCount { get; private set; }
-        public byte Temperature{ get; private set; }
+        public byte Temperature { get; private set; }
         public sbyte Wind { get; private set; }
-
+        private Texture2D rainImage = PNGLoader.Instance.GetImageTexture(System.IO.Path.Combine(CUOEnviroment.ExecutablePath, "ExternalImages", "rain.png"));
 
 
         private static float SinOscillate(float freq, int range, uint current_tick)
         {
-            float anglef = (int) (current_tick / 2.7777f * freq) % 360;
+            float anglef = (int)(current_tick / 2.7777f * freq) % 360;
 
             return Math.Sign(MathHelper.ToRadians(anglef)) * range;
         }
@@ -73,7 +75,7 @@ namespace ClassicUO.Game
             Reset();
 
             Type = type;
-            Count = (byte) Math.Min(MAX_WEATHER_EFFECT, (int) count);
+            Count = (byte)Math.Min(MAX_WEATHER_EFFECT, (int)count);
             Temperature = temp;
             _timer = Time.Ticks + Constants.WEATHER_TIMER;
 
@@ -188,7 +190,7 @@ namespace ClassicUO.Game
 
         private void PlayThunder()
         {
-           PlaySound(RandomHelper.RandomList(0x028, 0x206));
+            PlaySound(RandomHelper.RandomList(0x028, 0x206));
         }
 
         private void PlaySound(int sound)
@@ -244,11 +246,11 @@ namespace ClassicUO.Game
                     windChanged = true;
                 }
 
-                _windTimer = Time.Ticks + (uint) (RandomHelper.GetValue(13, 19) * 1000);
+                _windTimer = Time.Ticks + (uint)(RandomHelper.GetValue(13, 19) * 1000);
 
                 sbyte lastWind = Wind;
 
-                Wind = (sbyte) RandomHelper.GetValue(0, 4);
+                Wind = (sbyte)RandomHelper.GetValue(0, 4);
 
                 if (RandomHelper.GetValue(0, 2) != 0)
                 {
@@ -350,9 +352,9 @@ namespace ClassicUO.Game
 
                         if (windChanged)
                         {
-                            effect.SpeedAngle = MathHelper.ToDegrees((float) Math.Atan2(effect.SpeedX, effect.SpeedY));
+                            effect.SpeedAngle = MathHelper.ToDegrees((float)Math.Atan2(effect.SpeedX, effect.SpeedY));
 
-                            effect.SpeedMagnitude = (float) Math.Sqrt(Math.Pow(effect.SpeedX, 2) + Math.Pow(effect.SpeedY, 2));
+                            effect.SpeedMagnitude = (float)Math.Sqrt(Math.Pow(effect.SpeedX, 2) + Math.Pow(effect.SpeedY, 2));
 
                             if (Type == WeatherType.WT_SNOW)
                             {
@@ -372,8 +374,8 @@ namespace ClassicUO.Game
                         speedAngle += SinOscillate(0.4f, 20, Time.Ticks + effect.ID);
 
                         float rad = MathHelper.ToRadians(speedAngle);
-                        effect.SpeedX = speedMagnitude * (float) Math.Sin(rad);
-                        effect.SpeedY = speedMagnitude * (float) Math.Cos(rad);
+                        effect.SpeedX = speedMagnitude * (float)Math.Sin(rad);
+                        effect.SpeedY = speedMagnitude * (float)Math.Cos(rad);
 
                         break;
                 }
@@ -385,8 +387,8 @@ namespace ClassicUO.Game
                     case WeatherType.WT_RAIN:
                     case WeatherType.WT_STORM_APPROACH:
 
-                        int oldX = (int) effect.X;
-                        int oldY = (int) effect.Y;
+                        int oldX = (int)effect.X;
+                        int oldY = (int)effect.Y;
 
                         float ofsx = effect.SpeedX * speedOffset;
                         float ofsy = effect.SpeedY * speedOffset;
@@ -398,33 +400,42 @@ namespace ClassicUO.Game
 
                         if (ofsx >= MAX_OFFSET_XY)
                         {
-                            oldX = (int) (effect.X - MAX_OFFSET_XY);
+                            oldX = (int)(effect.X - MAX_OFFSET_XY);
                         }
                         else if (ofsx <= -MAX_OFFSET_XY)
                         {
-                            oldX = (int) (effect.X + MAX_OFFSET_XY);
+                            oldX = (int)(effect.X + MAX_OFFSET_XY);
                         }
 
                         if (ofsy >= MAX_OFFSET_XY)
                         {
-                            oldY = (int) (effect.Y - MAX_OFFSET_XY);
+                            oldY = (int)(effect.Y - MAX_OFFSET_XY);
                         }
                         else if (oldY <= -MAX_OFFSET_XY)
                         {
-                            oldY = (int) (effect.Y + MAX_OFFSET_XY);
+                            oldY = (int)(effect.Y + MAX_OFFSET_XY);
                         }
 
-                        Vector2 start = new Vector2(x + oldX, y + oldY);
-                        Vector2 end = new Vector2(x + effect.X, y + effect.Y);
+                        if (rainImage != null)
+                        {
+                            Vector3 hue = ShaderHueTranslator.GetHueVector(0);
+                            batcher.Draw(rainImage, new Rectangle(x + oldX, y + oldY, 80, 80), new Rectangle(x, y, 1000, 1000), hue);
+                        }
+                        else
+                        {
 
-                        batcher.DrawLine
-                        (
-                           SolidColorTextureCache.GetTexture(Color.Blue),
-                           start,
-                           end,
-                           Vector3.UnitZ,
-                           2
-                        );
+                            Vector2 start = new Vector2(x + oldX, y + oldY);
+                            Vector2 end = new Vector2(x + effect.X, y + effect.Y);
+
+                            batcher.DrawLine
+                            (
+                               SolidColorTextureCache.GetTexture(Color.Blue),
+                               start,
+                               end,
+                               Vector3.UnitZ,
+                               2
+                            );
+                        }
 
                         break;
 
@@ -433,8 +444,8 @@ namespace ClassicUO.Game
                         effect.X += effect.SpeedX * speedOffset;
                         effect.Y += effect.SpeedY * speedOffset;
 
-                        snowRect.X = x + (int) effect.X;
-                        snowRect.Y = y + (int) effect.Y;
+                        snowRect.X = x + (int)effect.X;
+                        snowRect.Y = y + (int)effect.Y;
 
                         batcher.Draw
                         (
