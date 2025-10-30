@@ -1,67 +1,92 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
+
+using ClassicUO.Assets;
+using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.UI.Controls;
 using ClassicUO.Input;
-using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using ClassicUO.Resources;
 using Microsoft.Xna.Framework;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Text.RegularExpressions;
+using System.Xml;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class SkillGumpAdvanced : Gump
+    public class SkillGumpAdvanced : Gump
     {
-        private const int WIDTH = 500;
-        private const int HEIGHT = 360;
+        private const int WIDTH = 400;
 
-        private readonly Dictionary<Buttons, string> _buttonsToSkillsValues = new Dictionary<
-            Buttons,
-            string
-        >
+        private static readonly Dictionary<Buttons, string> _buttonsToSkillsValues = new()
         {
             { Buttons.SortName, "Name" },
             { Buttons.SortReal, "Base" },
             { Buttons.SortBase, "Value" },
-            { Buttons.SortCap, "Cap" }
+            { Buttons.SortCap, "Cap" },
+            { Buttons.SortLock, "Lock" }
         };
 
-        private readonly DataBox _databox;
-        private readonly List<SkillListEntry> _skillListEntries = new List<SkillListEntry>();
+        private DataBox _databox;
+        private List<SkillListEntry> _skillListEntries = new();
 
-        private bool _sortAsc;
-        private string _sortField;
-        private readonly GumpPic _sortOrderIndicator;
-        private double _totalReal,
-            _totalValue;
+        public static bool Dragging;
+
+        private static bool _sortAsc;
+        private static string _sortField = "Name";
+        private GumpPic _sortOrderIndicator;
+        private double _totalReal, _totalValue;
         private bool _updateSkillsNeeded;
+        private Button resizeDrag;
+        private Area BottomArea;
+        private int dragStartH;
+        private Label real, value;
+        private AlphaBlendControl background;
+
+        private ScrollArea area;
+        private static int last_x = 100, last_y = 100, last_button = (int)Buttons.SortName;
 
         public SkillGumpAdvanced(World world) : base(world, 0, 0)
         {
-            _totalReal = 0;
-            _totalValue = 0;
             CanMove = true;
             AcceptMouseInput = true;
             WantUpdateSize = false;
 
             Width = WIDTH;
-            Height = HEIGHT;
+            Height = 310;
+            if (ProfileManager.CurrentProfile != null)
+                Height = ProfileManager.CurrentProfile.AdvancedSkillsGumpHeight;
 
-            Add(
-                new AlphaBlendControl(0.95f)
+            Build();
+        }
+
+        private void Build()
+        {
+
+            Add
+            (background =
+                new AlphaBlendControl(0.65f)
                 {
                     X = 1,
                     Y = 1,
-                    Width = WIDTH - 2,
-                    Height = HEIGHT - 2
+                    Width = WIDTH - 1,
+                    Height = Height - 1
                 }
             );
 
-            ScrollArea area = new ScrollArea(20, 60, WIDTH - 40, 250, true)
+            area = new ScrollArea
+            (
+                5,
+                40,
+                WIDTH - 10,
+                Height - 60,
+                true
+            )
             {
                 AcceptMouseInput = true
             };
@@ -73,55 +98,188 @@ namespace ClassicUO.Game.UI.Gumps
 
             area.Add(_databox);
 
-            Add(
-                new NiceButton(10, 10, 180, 25, ButtonAction.Activate, ResGumps.Name)
+            NiceButton _;
+            Add
+            (_ =
+                new NiceButton
+                (
+                    5,
+                    5,
+                    180,
+                    25,
+                    ButtonAction.Activate,
+                    ResGumps.Name
+                )
                 {
                     ButtonParameter = (int)Buttons.SortName,
-                    IsSelected = true,
-                    X = 40,
-                    Y = 25
+                    IsSelected = last_button == (int)Buttons.SortName
                 }
             );
 
-            Add(
-                new NiceButton(10, 10, 80, 25, ButtonAction.Activate, ResGumps.Real)
+            Add
+            (_ =
+                new NiceButton
+                (
+                    _.X + _.Width + 10,
+                    _.Y,
+                    50,
+                    25,
+                    ButtonAction.Activate,
+                    ResGumps.Real
+                )
                 {
                     ButtonParameter = (int)Buttons.SortReal,
-                    X = 220,
-                    Y = 25
+                    IsSelected = last_button == (int)Buttons.SortReal
                 }
             );
 
-            Add(
-                new NiceButton(10, 10, 80, 25, ButtonAction.Activate, ResGumps.Base)
+            Add
+            (_ =
+                new NiceButton
+                (
+                    _.X + _.Width,
+                    _.Y,
+                    50,
+                    25,
+                    ButtonAction.Activate,
+                    ResGumps.Base
+                )
                 {
                     ButtonParameter = (int)Buttons.SortBase,
-                    X = 300,
-                    Y = 25
+                    IsSelected = last_button == (int)Buttons.SortBase
                 }
             );
 
-            Add(
-                new NiceButton(10, 10, 80, 25, ButtonAction.Activate, ResGumps.Cap)
+            Add
+            (_ =
+                new NiceButton
+                (
+                    _.X + _.Width,
+                    _.Y,
+                    50,
+                    25,
+                    ButtonAction.Activate,
+                    ResGumps.Cap
+                )
                 {
                     ButtonParameter = (int)Buttons.SortCap,
-                    X = 380,
-                    Y = 25
+                    IsSelected = last_button == (int)Buttons.SortCap
                 }
             );
 
-            Add(new Line(20, 60, 435, 1, 0xFFFFFFFF));
+            Add
+            (_ =
+                new NiceButton
+                (
+                    _.X + _.Width,
+                    _.Y,
+                    50,
+                    25,
+                    ButtonAction.Activate,
+                    "Lock"
+                )
+                {
+                    ButtonParameter = (int)Buttons.SortLock,
+                    IsSelected = last_button == (int)Buttons.SortLock
+                }
+            );
 
-            Add(new Line(20, 310, 435, 1, 0xFFFFFFFF));
+            Add
+            (
+                new Line
+                (
+                    area.X,
+                    area.Y - 1,
+                    area.Width,
+                    1,
+                    0xFFFFFFFF
+                )
+            );
+
+            BottomArea = new Area()
+            {
+                X = 1,
+                Y = area.Height + area.Y - 1,
+                AcceptMouseInput = true,
+                WantUpdateSize = false,
+                CanMove = true,
+                Width = Width,
+                Height = 20
+            };
+            Checkbox showGrp;
+            BottomArea.Add(showGrp = new Checkbox
+            (
+                0x00D2,
+                0x00D3,
+                "Show Groups",
+                0xFF,
+                1153
+            ));
+            showGrp.IsChecked = World.SkillsGroupManager.IsActive;
+            showGrp.ValueChanged += (sender, e) =>
+            {
+                World.SkillsGroupManager.IsActive = showGrp.IsChecked;
+                ForceUpdate();
+                World.SkillsGroupManager.Save();
+            };
+
+
+
+
+            Add(BottomArea);
 
             Add(_sortOrderIndicator = new GumpPic(0, 0, 0x985, 0));
-            OnButtonClick((int)Buttons.SortName);
+
+            Add(resizeDrag = new Button(0, 0x837, 0x838, 0x838));
+            resizeDrag.MouseDown += ResizeDrag_MouseDown;
+            resizeDrag.MouseUp += ResizeDrag_MouseUp;
+            resizeDrag.X = Width - 10;
+            resizeDrag.Y = Height - 10;
+
+            if (X == 0)
+                X = last_x;
+            if (Y == 0)
+                Y = last_y;
+
+            SetSortIndicatorPosition();
+            ForceUpdate();
+        }
+
+        private void SetSortIndicatorPosition()
+        {
+            if (FindControls<NiceButton>().Any(s => s.ButtonParameter == last_button))
+            {
+                NiceButton btn = FindControls<NiceButton>()
+                    .First(s => s.ButtonParameter == last_button);
+
+                ushort g = (ushort)(_sortAsc ? 0x985 : 0x983);
+
+                _sortOrderIndicator.Graphic = g;
+                _sortOrderIndicator.X = btn.X + btn.Width - 15;
+                _sortOrderIndicator.Y = btn.Y + 5;
+                btn.IsSelected = true;
+            }
+        }
+
+        protected override void OnMove(int x, int y)
+        {
+            base.OnMove(x, y);
+            last_x = X;
+            last_y = Y;
+        }
+
+        public override void Dispose()
+        {
+            base.Dispose();
+            last_x = X;
+            last_y = Y;
         }
 
         public override GumpType GumpType => GumpType.SkillMenu;
 
         public override void OnButtonClick(int buttonID)
         {
+            last_button = buttonID;
             if (_buttonsToSkillsValues.TryGetValue((Buttons)buttonID, out string fieldValue))
             {
                 if (_sortField == fieldValue)
@@ -132,17 +290,7 @@ namespace ClassicUO.Game.UI.Gumps
                 _sortField = fieldValue;
             }
 
-            if (FindControls<NiceButton>().Any(s => s.ButtonParameter == buttonID))
-            {
-                NiceButton btn = FindControls<NiceButton>()
-                    .First(s => s.ButtonParameter == buttonID);
-
-                ushort g = (ushort)(_sortAsc ? 0x985 : 0x983);
-
-                _sortOrderIndicator.Graphic = g;
-                _sortOrderIndicator.X = btn.X + btn.Width - 15;
-                _sortOrderIndicator.Y = btn.Y + 5;
-            }
+            SetSortIndicatorPosition();
 
             _updateSkillsNeeded = true;
         }
@@ -160,43 +308,209 @@ namespace ClassicUO.Game.UI.Gumps
             }
 
             _skillListEntries.Clear();
-
             PropertyInfo pi = typeof(Skill).GetProperty(_sortField);
-            List<Skill> sortSkills = new List<Skill>(
-                World.Player.Skills.OrderBy(x => pi.GetValue(x, null))
-            );
 
-            if (_sortAsc)
+            if (World.SkillsGroupManager.IsActive)
             {
-                sortSkills.Reverse();
+                World.SkillsGroupManager.Groups.Sort((s1, s2) =>
+                {
+                    var m1 = Regex.Match(s1.Name, "^\\d+");
+                    var m2 = Regex.Match(s2.Name, "^\\d+");
+                    if (!m1.Success || !m2.Success)
+                    {
+                        return s1.Name.CompareTo(s2.Name);
+                    }
+
+                    if (!int.TryParse(m1.Value, out var v1) || !int.TryParse(m2.Value, out var v2))
+                    {
+                        return s1.Name.CompareTo(s2.Name);
+                    }
+                    return v1.CompareTo(v2);
+
+                });
+                if (_sortAsc)
+                {
+                    World.SkillsGroupManager.Groups.Reverse();
+                }
+
+                foreach (SkillsGroup g in World.SkillsGroupManager.Groups)
+                {
+                    var skillEntries = new List<SkillListEntry>();
+                    var a = new Area();
+                    a.AcceptMouseInput = true;
+                    a.WantUpdateSize = false;
+                    a.CanMove = true;
+                    a.Height = 26;
+                    a.Width = Width - 26;
+                    a.Tag = g.IsMaximized;
+                    a.MouseUp += (sender, e) =>
+                    {
+                        g.IsMaximized = !g.IsMaximized;
+                        var _a = (Area)sender;
+                        var newState = !(bool)_a.Tag;
+                        _a.Tag = newState;
+                        foreach (var entry in skillEntries)
+                        {
+                            entry.IsVisible = newState;
+                        }
+                        _databox.WantUpdateSize = true;
+                        _databox.ReArrangeChildren();
+                    };
+
+
+                    var skills = new List<Skill>();
+                    for (int i = 0; i < g.Count; i++)
+                    {
+                        byte index = g.GetSkill(i);
+                        if (index < Client.Game.UO.FileManager.Skills.SkillsCount)
+                        {
+                            skills.Add(World.Player.Skills[index]);
+                        }
+                    }
+
+                    skills = skills.OrderBy(s => pi.GetValue(s, null)).ToList();
+                    if (_sortAsc)
+                    {
+                        skills.Reverse();
+                    }
+
+                    var grpReal = skills.Sum(s => s.Base);
+                    var grpVal = skills.Sum(s => s.Value);
+                    _totalReal += grpReal;
+                    _totalValue += grpVal;
+                    ;
+
+                    foreach (var s in skills)
+                    {
+                        skillEntries.Add(new SkillListEntry(World, this, s));
+                    }
+                    a.Add
+                    (
+                            new ResizePic(0x0BB8)
+                            {
+                                X = 1,
+                                Y = 3,
+                                Width = 180,
+                                Height = 22
+                            }
+                    );
+                    StbTextBox _textbox;
+                    a.Add
+                    (
+                        _textbox = new StbTextBox
+                        (
+                            3,
+                            -1,
+                            200,
+                            false,
+                            FontStyle.Fixed
+                        )
+                        {
+                            X = 5,
+                            Y = 3,
+                            Width = 180,
+                            Height = 17,
+                            IsEditable = false
+                        }
+                    );
+
+                    _textbox.SetText(g.Name);
+                    _textbox.IsEditable = false;
+
+                    _textbox.MouseDown += (s, e) =>
+                    {
+                        if (!g.IsMaximized)
+                        {
+                            a.InvokeMouseUp(e.Location, e.Button);
+                        }
+                        UIManager.KeyboardFocusControl = _textbox;
+                        _textbox.SetKeyboardFocus();
+                        _textbox.IsEditable = true;
+                        _textbox.AllowSelection = true;
+                    };
+
+                    _textbox.FocusLost += (s, e) =>
+                    {
+                        _textbox.IsEditable = false;
+                        _textbox.AllowSelection = false;
+                        UIManager.KeyboardFocusControl = null;
+                        UIManager.SystemChat.SetFocus();
+                    };
+                    _textbox.TextChanged += (s, e) =>
+                    {
+                        g.Name = _textbox.Text;
+                    };
+                    a.Add(new Label(grpReal.ToString("F1"), true, 1153) { X = 205, Y = 3 });
+                    a.Add(new Label(grpVal.ToString("F1"), true, 1153) { X = 255, Y = 3 });
+
+                    _databox.Add(a);
+                    foreach (var entry in skillEntries)
+                    {
+                        entry.IsVisible = g.IsMaximized;
+                        _skillListEntries.Add(entry);
+                        _databox.Add(entry);
+                    }
+                }
+            }
+            else
+            {
+                List<Skill> sortSkills = new List<Skill>(World.Player.Skills.OrderBy(x => pi.GetValue(x, null)));
+                if (_sortAsc)
+                {
+                    sortSkills.Reverse();
+                }
+                foreach (Skill skill in sortSkills)
+                {
+                    _totalReal += skill.Base;
+                    _totalValue += skill.Value;
+                    _skillListEntries.Add(new SkillListEntry(World, this, skill));
+                }
+                foreach (var entry in _skillListEntries)
+                {
+                    _databox.Add(entry);
+                }
             }
 
-            foreach (Skill skill in sortSkills)
-            {
-                _totalReal += skill.Base;
-                _totalValue += skill.Value;
-
-                Label skillName = new Label(skill.Name, true, 1153, font: 3);
-                Label skillValueBase = new Label(skill.Base.ToString(), true, 1153, font: 3);
-                Label skillValue = new Label(skill.Value.ToString(), true, 1153, font: 3);
-                Label skillCap = new Label(skill.Cap.ToString(), true, 1153, font: 3);
-
-                _skillListEntries.Add(
-                    new SkillListEntry(this, skillName, skillValueBase, skillValue, skillCap, skill)
-                );
-            }
-
-            foreach (SkillListEntry t in _skillListEntries)
-            {
-                _databox.Add(t);
-            }
 
             _databox.WantUpdateSize = true;
             _databox.ReArrangeChildren();
 
-            Add(new Label(ResGumps.Total, true, 1153) { X = 40, Y = 320 });
-            Add(new Label(_totalReal.ToString("F1"), true, 1153) { X = 220, Y = 320 });
-            Add(new Label(_totalValue.ToString("F1"), true, 1153) { X = 300, Y = 320 });
+            Add(real = new Label(_totalReal.ToString("F1"), true, 1153) { X = 205, Y = Height - 20, AcceptMouseInput = false });
+            Add(value = new Label(_totalValue.ToString("F1"), true, 1153) { X = 255, Y = Height - 20, AcceptMouseInput = false });
+
+            SetSortIndicatorPosition();
+        }
+
+        public override void Save(XmlTextWriter writer)
+        {
+            base.Save(writer);
+
+            writer.WriteAttributeString("sortasc", _sortAsc.ToString());
+            writer.WriteAttributeString("sortfield", _sortField);
+            writer.WriteAttributeString("lastbutton", last_button.ToString());
+        }
+
+        public override void Restore(XmlElement xml)
+        {
+            base.Restore(xml);
+
+            if (xml.HasAttribute("sortasc"))
+                bool.TryParse(xml.GetAttribute("sortasc"), out _sortAsc);
+            if (xml.HasAttribute("sortfield"))
+                _sortField = xml.GetAttribute("sortfield");
+            if (xml.HasAttribute("lastbutton"))
+                int.TryParse(xml.GetAttribute("lastbutton"), out last_button);
+        }
+
+        private void ResizeDrag_MouseUp(object sender, Input.MouseEventArgs e)
+        {
+            Dragging = false;
+        }
+
+        private void ResizeDrag_MouseDown(object sender, Input.MouseEventArgs e)
+        {
+            dragStartH = Height;
+            Dragging = true;
         }
 
         public override void Update()
@@ -214,10 +528,30 @@ namespace ClassicUO.Game.UI.Gumps
 
                 _updateSkillsNeeded = false;
             }
+
+            int steps = Mouse.LDragOffset.Y;
+
+            if (Dragging && steps != 0)
+            {
+                Height = dragStartH + steps;
+                if (Height < 170)
+                    Height = 170;
+                ProfileManager.CurrentProfile.AdvancedSkillsGumpHeight = Height;
+
+                area.Height = Height - 60;
+                background.Height = Height - 1;
+                _databox.WantUpdateSize = true;
+                resizeDrag.Y = Height - 11;
+                real.Y = Height - 20;
+                value.Y = Height - 20;
+                BottomArea.Y = area.Height + area.Y - 1;
+            }
         }
 
         public override bool Draw(UltimaBatcher2D batcher, int x, int y)
         {
+            if (!IsVisible) return false;
+
             Vector3 hueVector = ShaderHueTranslator.GetHueVector(0);
 
             batcher.DrawRectangle(
@@ -242,38 +576,56 @@ namespace ClassicUO.Game.UI.Gumps
             SortName = 1,
             SortReal = 2,
             SortBase = 3,
-            SortCap = 4
+            SortCap = 4,
+            SortLock = 5,
         }
     }
 
-    internal class SkillListEntry : Control
+
+    public class SkillListEntry : Control
     {
         private readonly SkillGumpAdvanced _gump;
         private readonly Button _activeUse;
         private readonly Skill _skill;
-
-        public SkillListEntry(
-            SkillGumpAdvanced gump,
-            Label skillname,
-            Label skillvaluebase,
-            Label skillvalue,
-            Label skillcap,
-            Skill skill
-        )
+        public SkillListEntry(World world, SkillGumpAdvanced gump, Skill skill)
         {
             _gump = gump;
             Height = 20;
-            Label skillName = skillname;
-            Label skillValueBase = skillvaluebase;
-            Label skillValue = skillvalue;
-            Label skillCap = skillcap;
+            Label skillName = new Label(skill.Name, true, 1153, font: 3) { AcceptMouseInput = skill.IsClickable, CanMove = true };
+            if (skill.IsClickable)
+            {
+                skillName.MouseDoubleClick += skillDoubleClick;
+
+                void skillDoubleClick(object sender, MouseDoubleClickEventArgs e)
+                {
+                    GetSpellFloatingButton(_skill.Index)?.Dispose();
+
+                    ref readonly var gumpInfo = ref Client.Game.UO.Gumps.GetGump(0x24B8);
+
+                    SkillButtonGump skillButtonGump = new SkillButtonGump(
+                        world,
+                        _skill,
+                        Mouse.LClickPosition.X - (gumpInfo.UV.Width >> 1),
+                        Mouse.LClickPosition.Y - (gumpInfo.UV.Height >> 1)
+                    );
+
+                    UIManager.Add(skillButtonGump);
+                    UIManager.AttemptDragControl(skillButtonGump, true);
+                }
+            }
+
+            Label skillValueBase = new Label(skill.Base.ToString(), true, 1153, font: 3);
+            Label skillValue = new Label(skill.Value.ToString(), true, 1153, font: 3);
+            Label skillCap = new Label(skill.Cap.ToString(), true, 1153, font: 3);
 
             _skill = skill;
-            skillName.X = 20;
+            CanMove = true;
+            AcceptMouseInput = true;
 
             if (skill.IsClickable)
             {
-                Add(
+                Add
+                (
                     _activeUse = new Button((int)Buttons.ActiveSkillUse, 0x837, 0x838)
                     {
                         X = 0,
@@ -283,29 +635,19 @@ namespace ClassicUO.Game.UI.Gumps
                 );
             }
 
+            skillName.X = 20;
             Add(skillName);
-            skillValueBase.X = 200;
 
+            skillValueBase.X = 205;
             Add(skillValueBase);
-            skillValue.X = 280;
 
+            skillValue.X = 255;
             Add(skillValue);
-            skillCap.X = 360;
 
+            skillCap.X = 305;
             Add(skillCap);
 
-            GumpPic loc = new GumpPic(
-                425,
-                4,
-                (ushort)(
-                    skill.Lock == Lock.Up
-                        ? 0x983
-                        : skill.Lock == Lock.Down
-                            ? 0x985
-                            : 0x82C
-                ),
-                0
-            );
+            GumpPic loc = new GumpPic(355, 4, (ushort)(skill.Lock == Lock.Up ? 0x983 : skill.Lock == Lock.Down ? 0x985 : 0x82C), 0);
 
             Add(loc);
 
@@ -337,23 +679,19 @@ namespace ClassicUO.Game.UI.Gumps
             };
         }
 
-        protected override void OnDragBegin(int x, int y)
+        protected override void OnDragEnd(int x, int y)
         {
-            if (_skill.IsClickable && Mouse.LButtonPressed)
+            if (!_skill.IsClickable)
+                base.OnDragEnd(x, y);
+        }
+
+        protected override void OnMouseOver(int x, int y)
+        {
+            base.OnMouseOver(x, y);
+
+            if (Mouse.LButtonPressed && Math.Abs(Mouse.LDragOffset.X) >= Constants.MIN_PICKUP_DRAG_DISTANCE_PIXELS || Math.Abs(Mouse.LDragOffset.Y) >= Constants.MIN_PICKUP_DRAG_DISTANCE_PIXELS)
             {
-                GetSpellFloatingButton(_skill.Index)?.Dispose();
-
-                ref readonly var gumpInfo = ref Client.Game.UO.Gumps.GetGump(0x24B8);
-
-                SkillButtonGump skillButtonGump = new SkillButtonGump(
-                    _gump.World,
-                    _skill,
-                    Mouse.LClickPosition.X + (gumpInfo.UV.Width >> 1),
-                    Mouse.LClickPosition.Y + (gumpInfo.UV.Height >> 1)
-                );
-
-                UIManager.Add(skillButtonGump);
-                UIManager.AttemptDragControl(skillButtonGump, true);
+                InvokeDragBegin(Mouse.Position);
             }
         }
 

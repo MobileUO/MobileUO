@@ -504,6 +504,8 @@ namespace ClassicUO.Configuration
         public bool BuyAgentEnabled { get; set; }
         public int BuyAgentMaxUniques { get; set; } = 50;
         public int BuyAgentMaxItems { get; set; } = 0;
+        public int AdvancedSkillsGumpHeight { get; set; } = 510;
+
 
 
         public uint FollowingTarget { get; set; }
