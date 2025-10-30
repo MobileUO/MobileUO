@@ -65,7 +65,7 @@ namespace ClassicUO.Assets
                     {
                         int index = reader.ReadInt();
 
-                        if (index < 0 || index >= MAX_SOUND_DATA_INDEX_COUNT || index >= _file.Entries.Length || _file.Entries[index].Length != 0)
+                        if (index < 0 || index >= MAX_SOUND_DATA_INDEX_COUNT || index >= _file.Entries.Length || _file.Entries[index].Length > 0)
                         {
                             continue;
                         }
@@ -108,7 +108,7 @@ namespace ClassicUO.Assets
                 }
             }
 
-            path = FileManager.GetUOFilePath(FileManager.Version >= ClientVersion.CV_4011C ?  @"Music/Digital/Config.txt" : @"Music/Config.txt");
+            path = FileManager.GetUOFilePath(FileManager.Version >= ClientVersion.CV_4011C ? @"Music/Digital/Config.txt" : @"Music/Config.txt");
 
             if (File.Exists(path))
             {
@@ -212,6 +212,11 @@ namespace ClassicUO.Assets
                 return false;
             }
 
+            if (SoundOverrideLoader.Instance.TryGetSoundOverride(sound, out data, out name))
+            {
+                return true;
+            }
+
             ref var entry = ref _file.GetValidRefEntry(sound);
             if (entry.Length <= 0)
                 return false;
@@ -272,13 +277,13 @@ namespace ClassicUO.Assets
             // This will list all case variants of the filename even on file systems that
             // are case sensitive.
             Regex pattern = new Regex($"^{name}.mp3", RegexOptions.IgnoreCase);
-            
+
             var file = musicFileList.FirstOrDefault(path => pattern.IsMatch(Path.GetFileName(path)));
 
             //If found, return path to file
             if (string.IsNullOrEmpty(file) == false)
                 return Path.GetFileName(musicFileList[0]);
-            
+
             // If we've made it this far, there is no file with that name, regardless of case spelling
             // return name and GetMusic will fail gracefully (play nothing)
             Log.Warn($"No File found known as {name}");
@@ -339,7 +344,7 @@ namespace ClassicUO.Assets
             // MobileUO: added dispose/nulling
             _file?.Dispose();
             _file = null;
-            
+
             //_instance = null;
         }
     }
