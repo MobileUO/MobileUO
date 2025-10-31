@@ -743,10 +743,12 @@ namespace ClassicUO.Game.Scenes
         }
 
         private ushort retries = 0;
-        private void AfterRelayConnect(long ip, ushort port, uint seed)
+        // MobileUO: TazUO - had to make this async and await the disconnect instead of .Wait()
+        private async void AfterRelayConnect(long ip, ushort port, uint seed)
         {
+            Log.Info("AfterRelayConnect");
             AsyncNetClient.Socket.Connected -= OnNetClientConnected;
-            AsyncNetClient.Socket.Disconnect().Wait();
+            await AsyncNetClient.Socket.Disconnect();
             AsyncNetClient.Socket = new AsyncNetClient();
 
             retries++;
@@ -756,9 +758,18 @@ namespace ClassicUO.Game.Scenes
             {
                 EncryptionHelper.Instance?.Initialize(false, seed);
                 AsyncNetClient.Socket.EnableCompression();
-                unsafe
+
+                // MobileUO: TODO: stackalloc in async not supported in Unity's C#
+                //unsafe
                 {
-                    Span<byte> b = stackalloc byte[4] { (byte)(seed >> 24), (byte)(seed >> 16), (byte)(seed >> 8), (byte)seed };
+                    //Span<byte> b = stackalloc byte[4] { (byte)(seed >> 24), (byte)(seed >> 16), (byte)(seed >> 8), (byte)seed };
+                    byte[] b =
+                    {
+                (byte)(seed >> 24),
+                (byte)(seed >> 16),
+                (byte)(seed >> 8),
+                (byte)seed
+            };
                     AsyncNetClient.Socket.Send(b, true, true);
                 }
 
@@ -766,13 +777,13 @@ namespace ClassicUO.Game.Scenes
             }
             else
             {
-                if(retries > 5)
+                if (retries > 5)
                 {
                     retries = 0;
                     StepBack();
                     return;
                 }
-                
+
                 AfterRelayConnect(ip, port, seed);
             }
         }
