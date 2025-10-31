@@ -1359,16 +1359,22 @@ namespace ClassicUO.Assets
             }
 
             file.Seek(index.Position, SeekOrigin.Begin);
+            // MobileUO: TODO: TazUO - I get CRC errors if we don't slice correctly
             var buf = ArrayPool<byte>.Shared.Rent((int)index.Size); //new byte[index.Size];
-            file.Read(buf);
+            //file.Read(buf);
 
             var reader = new StackDataReader(buf);
+
+            var src = buf.AsSpan(0, (int)index.Size);
+            file.Read(src);
 
             byte[] dbuf = null;
             if (index.CompressionType >= CompressionType.Zlib)
             {
                 dbuf = ArrayPool<byte>.Shared.Rent((int)index.UncompressedSize); //new byte[(int)index.UncompressedSize];
-                var result = ZLib.Decompress(buf, dbuf);
+                var dst = dbuf.AsSpan(0, (int)index.UncompressedSize);
+
+                var result = ZLib.Decompress(src, dst);
                 if (result != ZLib.ZLibError.Ok)
                 {
                     Log.Error($"error reading uop animation. AnimID: {animID} | Group: {animGroup} | Dir: {direction} | FileIndex: {fileIndex}");
@@ -1378,10 +1384,10 @@ namespace ClassicUO.Assets
 
                 if (index.CompressionType == CompressionType.ZlibBwt)
                 {
-                    dbuf = BwtDecompress.Decompress(dbuf);
+                    dbuf = BwtDecompress.Decompress(dst.ToArray());
                 }
 
-                reader = new StackDataReader(dbuf);
+                reader = new StackDataReader(dst);
             }
 
             reader.Skip(32);
@@ -1509,10 +1515,11 @@ namespace ClassicUO.Assets
             {
                 ArrayPool<UOPFrameData>.Shared.Return(sharedBuffer);
                 ArrayPool<byte>.Shared.Return(buf);
-                if(dbuf != null)
+                if (dbuf != null)
                     ArrayPool<byte>.Shared.Return(dbuf);
             }
         }
+
 
         public Span<FrameInfo> ReadMULAnimationFrames(int fileIndex, AnimationDirection index)
         {
