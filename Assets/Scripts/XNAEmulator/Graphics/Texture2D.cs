@@ -82,10 +82,21 @@ namespace Microsoft.Xna.Framework.Graphics
         }
 
         private byte[] tempByteData;
+        private Rectangle tempRect;
+        private bool tempHasRect;
 
         internal void SetData(byte[] data)
         {
             tempByteData = data;
+            tempHasRect = false;
+            UnityMainThreadDispatcher.Dispatch(SetDataBytes);
+        }
+
+        internal void SetData(byte[] data, Rectangle rect)
+        {
+            tempByteData = data;
+            tempRect = rect;
+            tempHasRect = true;
             UnityMainThreadDispatcher.Dispatch(SetDataBytes);
         }
 
@@ -97,6 +108,34 @@ namespace Microsoft.Xna.Framework.Graphics
             int elementCount
         ) where T : struct
         {
+            if (typeof(T) == typeof(byte))
+            {
+                // Simplest case: we only support byte[] for now
+                var byteArray = data as byte[];
+                if (byteArray == null)
+                {
+                    // copy to a new byte[]
+                    byteArray = new byte[elementCount];
+                    Buffer.BlockCopy(data, startIndex, byteArray, 0, elementCount);
+                }
+
+                Rectangle r;
+                if (rect.HasValue)
+                {
+                    r = rect.Value;
+                }
+                else
+                {
+                    r = new Rectangle(0, 0, Math.Max(Width >> level, 1), Math.Max(Height >> level, 1));
+                }
+
+                // Use the rect-aware byte path
+                SetData(byteArray, r);
+                return;
+            }
+
+            throw new NotSupportedException($"SetData<{typeof(T).Name}> not implemented.");
+
             // MobileUO: TODO: might need to implement this?
             //if (data == null)
             //{
@@ -155,27 +194,76 @@ namespace Microsoft.Xna.Framework.Graphics
             {
                 var dataLength = tempByteData.Length;
                 var destText = UnityTexture as UnityEngine.Texture2D;
-                var dst = destText.GetRawTextureData<byte>();
-                var tmp = new byte[dataLength];
-                var textureBytesWidth = Width * 4;
-                var textureBytesHeight = Height;
-
-                for (int i = 0; i < dataLength; i++)
+                if (destText == null)
                 {
-                    int x = i % textureBytesWidth;
-                    int y = i / textureBytesWidth;
-                    y = textureBytesHeight - y - 1;
-                    var index = y * textureBytesWidth + x;
-                    var colorByte = tempByteData[index];
-                    tmp[i] = colorByte;
+                    Debug.LogError("UnityTexture is not a Texture2D in SetDataBytes.");
+                    return;
                 }
 
-                dst.CopyFrom(tmp);
+                var dst = destText.GetRawTextureData<byte>();
+                var textureBytesWidth = Width * 4;
+
+                if (!tempHasRect)
+                {
+                    // full texture, dataLength == Width * Height * 4
+                    var tmp = new byte[dataLength];
+                    var textureBytesHeight = Height;
+
+                    for (int i = 0; i < dataLength; i++)
+                    {
+                        int x = i % textureBytesWidth;
+                        int y = i / textureBytesWidth;
+                        y = textureBytesHeight - y - 1;
+                        var index = y * textureBytesWidth + x;
+                        var colorByte = tempByteData[index];
+                        tmp[i] = colorByte;
+                    }
+
+                    dst.CopyFrom(tmp);
+                }
+                else
+                {
+                    //  sub-rectangle upload (FontStashSharp path)
+                    var rect = tempRect;
+                    int w = rect.Width;
+                    int h = rect.Height;
+
+                    // dataLength should be w * h * 4
+                    if (dataLength < w * h * 4)
+                    {
+                        Debug.LogError($"SetDataBytes: dataLength ({dataLength}) < expected ({w * h * 4}).");
+                        return;
+                    }
+
+                    // We'll write directly into dst (full texture) at the rect position.
+                    // dst layout: row-major, bottom-left origin
+                    // incoming tempByteData: row-major, TOP-left origin
+                    for (int row = 0; row < h; row++)
+                    {
+                        int srcRow = row;               // 0 = top row of rect buffer
+                        //int dstRow = (Height - (rect.Y + h)) + row; // convert to Unity bottom-left
+
+                        // Convert XNA-top rect.Y + row to Unity-bottom row index
+                        int dstRow = (Height - 1 - rect.Y) - row;
+
+                        int srcRowStart = srcRow * w * 4;
+                        int dstRowStart = (dstRow * Width + rect.X) * 4;
+
+                        int bytesToCopy = w * 4;
+
+                        for (int i = 0; i < bytesToCopy; i++)
+                        {
+                            dst[dstRowStart + i] = tempByteData[srcRowStart + i];
+                        }
+                    }
+                }
+
                 destText.Apply();
             }
             finally
             {
                 tempByteData = null;
+                tempHasRect = false;
             }
         }
 
@@ -578,6 +666,18 @@ namespace Microsoft.Xna.Framework.Graphics
                 Debug.LogError($"Error in SaveAsPng: {ex.Message}");
                 throw;
             }
+        }
+
+        public void SaveToFile(string filePath)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+
+            using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write))
+            {
+                SaveAsPng(fs, Width, Height);
+            }
+
+            Debug.Log($"Saved texture to {filePath}");
         }
     }
 }
