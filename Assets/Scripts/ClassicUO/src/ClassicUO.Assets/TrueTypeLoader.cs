@@ -78,6 +78,7 @@ namespace ClassicUO.Assets
                 fontSystem.AddFont(File.ReadAllBytes(ttf));
 
                 _fonts[Path.GetFileNameWithoutExtension(ttf)] = fontSystem;
+                Log.Trace($"Loaded font: {Path.GetFileNameWithoutExtension(ttf)}");
             }
 
             LoadEmbeddedFonts();
