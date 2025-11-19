@@ -5,13 +5,11 @@ using SDL3;
 using System;
 using System.Buffers;
 using System.Collections.Concurrent;
-using System.Data;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using UnityEditor.PackageManager;
 
 namespace ClassicUO.Network
 {
