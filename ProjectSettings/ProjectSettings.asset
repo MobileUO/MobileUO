@@ -12,8 +12,8 @@ PlayerSettings:
   targetDevice: 2
   useOnDemandResources: 0
   accelerometerFrequency: 0
-  companyName: MobileUO
-  productName: MobileUO
+  companyName: MobileUO102
+  productName: MobileUO102
   defaultCursor: {fileID: 0}
   cursorHotspot: {x: 0, y: 0}
   m_SplashScreenBackgroundColor: {r: 0.13725491, g: 0.12156863, b: 0.1254902, a: 1}
@@ -163,8 +163,8 @@ PlayerSettings:
   androidMaxAspectRatio: 2.1
   androidMinAspectRatio: 1
   applicationIdentifier:
-    Android: com.mobileuo.mobileuo
-    Standalone: com.mobileuo.mobileuo
+    Android: com.mobileuo.mobileuo102
+    Standalone: com.mobileuo.mobileuo102
     Tizen: 
     iPhone: com.saltedcaramelgames.mobileuo
     tvOS: 
@@ -913,14 +913,14 @@ PlayerSettings:
   editorAssembliesCompatibilityLevel: 1
   m_RenderingPath: 1
   m_MobileRenderingPath: 1
-  metroPackageName: MobileUO
+  metroPackageName: MobileUO102
   metroPackageVersion: 
   metroCertificatePath: 
   metroCertificatePassword: 
   metroCertificateSubject: 
   metroCertificateIssuer: 
   metroCertificateNotAfter: 0000000000000000
-  metroApplicationDescription: MobileUO
+  metroApplicationDescription: MobileUO102
   wsaImages: {}
   metroTileShortName: 
   metroTileShowName: 0
