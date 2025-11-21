@@ -1055,6 +1055,7 @@ GameObject:
   - component: {fileID: 204360073}
   - component: {fileID: 204360074}
   - component: {fileID: 204360075}
+  - component: {fileID: 204360076}
   m_Layer: 0
   m_Name: ClientRunner
   m_TagString: MainCamera
@@ -1166,6 +1167,21 @@ MonoBehaviour:
   altKeyButtonPresenter: {fileID: 1901229110}
   shiftKeyButtonPresenter: {fileID: 1895604235}
   escButton: {fileID: 1726893539}
+--- !u!114 &204360076
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 204360071}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74adedc74b77af84c875ff9275ad602b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  showFPS: 1
+  textColor: {r: 0, g: 1, b: 0, a: 1}
+  fontSize: 24
 --- !u!1 &225267982
 GameObject:
   m_ObjectHideFlags: 0
