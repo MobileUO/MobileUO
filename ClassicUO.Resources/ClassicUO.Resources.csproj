@@ -8,12 +8,17 @@
 	<!-- This puts the output in \Assets\ and not \Assets\net8.0\ -->
 	<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
   </PropertyGroup>
-  
-  
-  <!--<PropertyGroup Condition="'$(TargetFramework)'=='net8.0'">
-    <OutputPath>..\Assets\</OutputPath>
-  </PropertyGroup>-->
 
+  <ItemGroup>
+    <None Remove="gumpartassets\*.png" />
+    <None Remove="fonts\*.ttf" />
+  </ItemGroup>
+	
+  <ItemGroup>
+    <EmbeddedResource Include="gumpartassets\*.png" />
+    <EmbeddedResource Include="fonts\*.ttf" />
+  </ItemGroup>
+	
   <ItemGroup>
     <EmbeddedResource Update="ResErrorMessages.resx">
       <Generator>PublicResXFileCodeGenerator</Generator>

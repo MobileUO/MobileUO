@@ -246,7 +246,9 @@ namespace ClassicUO.Assets
         {
             Log.Debug("Loading resource assets");
 
-            var assembly = GetType().Assembly;
+            // MobileUO: load from ClassicUO.Resources dll
+            //var assembly = GetType().Assembly
+            var assembly = typeof(ClassicUO.Resources.ResourcesMarker).Assembly;
 
             //Load the custom gump art included with TUO
             for (uint i = 40303; i <= 40312; i++)

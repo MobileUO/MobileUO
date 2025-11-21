@@ -376,8 +376,13 @@ namespace Microsoft.Xna.Framework.Graphics
                     imageData = memoryStream.ToArray();
                 }
 
-                // Create a new Unity texture
-                var texture = new UnityEngine.Texture2D(2, 2);
+                // Create a new Unity texture WITH NO MIPMAPS, RGBA32
+                var texture = new UnityEngine.Texture2D(2, 2,
+                    TextureFormat.RGBA32,
+                    mipChain: false,
+                    linear: false
+                );
+
                 if (!texture.LoadImage(imageData))
                 {
                     Debug.LogError("Failed to load texture from stream.");

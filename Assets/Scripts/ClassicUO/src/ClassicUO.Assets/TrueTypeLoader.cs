@@ -93,7 +93,9 @@ namespace ClassicUO.Assets
                 KernelHeight = 2
             };
 
-            var assembly = this.GetType().Assembly;
+            // MobileUO: load from ClassicUO.Resources dll
+            //var assembly = this.GetType().Assembly;
+            var assembly = typeof(ClassicUO.Resources.ResourcesMarker).Assembly;
             string fontAssetFolder = assembly.GetName().Name + ".fonts";
             // Get all embedded resource names
             var resourceNames = assembly.GetManifestResourceNames()
@@ -108,9 +110,9 @@ namespace ClassicUO.Assets
                     {
                         var rnameParts = resourceName.Split('.');
                         string fname = rnameParts[rnameParts.Length - 2];
-#if DEBUG
+//#if DEBUG
                         Log.Trace($"Loaded embedded font: {fname}");
-#endif
+//#endif
                         var memoryStream = new MemoryStream();
                         stream.CopyTo(memoryStream);
 
