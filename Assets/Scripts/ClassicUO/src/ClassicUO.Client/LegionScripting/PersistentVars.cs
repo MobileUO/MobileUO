@@ -30,13 +30,14 @@ namespace ClassicUO.LegionScripting
             Cache = SqliteCacheMode.Shared
         }.ToString();
 
-        public static void Load()
+        // MobileUO: TazUO - had to make this async and await the InitializeDatabaseAsync() of .Wait()
+        public async static void Load()
         {
             _charScopeKey = ProfileManager.CurrentProfile.ServerName + ProfileManager.CurrentProfile.Username + ProfileManager.CurrentProfile.CharacterName;
             _accountScopeKey = ProfileManager.CurrentProfile.ServerName + ProfileManager.CurrentProfile.Username;
             _serverScopeKey = ProfileManager.CurrentProfile.ServerName;
 
-            InitializeDatabaseAsync().Wait();
+            await InitializeDatabaseAsync();//.Wait();
         }
 
         private static async Task InitializeDatabaseAsync()
