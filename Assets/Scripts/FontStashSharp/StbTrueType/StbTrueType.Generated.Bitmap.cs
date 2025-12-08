@@ -284,6 +284,11 @@ namespace StbTrueTypeSharp
             CRuntime.free(e);
         }
 
+        // MobileUO: TODO: TazUO: optimized build of this method causes hangs when rendering
+        // (likely IL2CPP/Mono codegen bug with unsafe pointers).
+        // Options are: either include: NoOptimization OR force old rasterizer (which does not show the issue)
+        // We are going to use the old rasterizer for now
+        //[MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
         public static void stbtt__rasterize_sorted_edges(stbtt__bitmap* result, stbtt__edge* e, int n, int vsubsample,
             int off_x, int off_y, void* userdata)
         {
@@ -364,6 +369,8 @@ namespace StbTrueTypeSharp
                 }
 
                 step = &active;
+                // This debug comment is what helped me figure out the optimization issue with this function
+                //UnityEngine.Debug.Log($"StbTrueType.Generated.Bitmap: stbtt__rasterize_sorted_edges()");
                 while (*step != null)
                 {
                     var z = *step;

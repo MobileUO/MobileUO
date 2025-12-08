@@ -70,7 +70,10 @@ namespace FontStashSharp
 				var loaderSettings = new StbTrueTypeSharpSettings
 				{
 					KernelWidth = _settings.KernelWidth,
-					KernelHeight = _settings.KernelHeight
+					KernelHeight = _settings.KernelHeight,
+                    // MobileUO: TODO: TazUO: force using old rasterizer
+                    // see: StbTrueType.stbtt__rasterize_sorted_edges for more details
+                    UseOldRasterizer = true
 				};
 				_fontLoader = new StbTrueTypeSharpLoader(loaderSettings);
 			}
