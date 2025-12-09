@@ -241,7 +241,8 @@ namespace ClassicUO.Game.Scenes
             }
 
             PersistentVars.Load();
-            LegionScripting.LegionScripting.Init(_world);
+            // MobileUO: TODO: TazUO: commented out for now until we are ready to get LegionScripting working
+            //LegionScripting.LegionScripting.Init(_world);
             BuySellAgent.Load();
             OrganizerAgent.Load();
             GraphicsReplacement.Load();
