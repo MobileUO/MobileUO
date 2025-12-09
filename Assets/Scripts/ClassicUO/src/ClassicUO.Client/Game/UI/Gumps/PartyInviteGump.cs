@@ -8,7 +8,7 @@ using ClassicUO.Resources;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class PartyInviteGump : Gump
+    public class PartyInviteGump : Gump
     {
         public PartyInviteGump(World world, uint inviter) : base(world, 0, 0)
         {
@@ -74,7 +74,7 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 if (World.Party.Inviter != 0 && World.Party.Leader == 0)
                 {
-                    NetClient.Socket.Send_PartyDecline(World.Party.Inviter);
+                    AsyncNetClient.Socket.Send_PartyDecline(World.Party.Inviter);
                     World.Party.Inviter = 0;
                 }
 

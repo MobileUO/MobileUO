@@ -1,5 +1,6 @@
 ﻿using ClassicUO.Renderer.Effects;
 using ClassicUO.Utility.Logging;
+using FontStashSharp.Interfaces;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MobileUO.Profiling;
@@ -25,7 +26,7 @@ using XnaVector3 = Microsoft.Xna.Framework.Vector3;
 
 namespace ClassicUO.Renderer
 {
-    internal sealed class UltimaBatcher2D : IDisposable
+    public sealed class UltimaBatcher2D : IDisposable, IFontStashRenderer
     {
         private static readonly float[] _cornerOffsetX = new float[] { 0.0f, 1.0f, 0.0f, 1.0f };
         private static readonly float[] _cornerOffsetY = new float[] { 0.0f, 0.0f, 1.0f, 1.0f };
@@ -141,6 +142,45 @@ namespace ClassicUO.Renderer
             // MobileUO: pass Brightlight value to shader
             hueMaterial.SetFloat(Brightlight, f);
             _basicUOEffect.Brighlight.SetValue(f);
+        }
+
+        // For IFontStashRenderer
+        public void Draw
+        (
+            Texture2D texture, 
+            XnaVector2 position,
+            Rectangle? sourceRectangle,
+            Microsoft.Xna.Framework.Color color,
+            float rotation,
+            XnaVector2 scale,
+            float depth
+        )
+        {
+            int spriteIndex = _numSprites;
+
+            // generate the quad normally
+            Draw(texture,
+                position,
+                sourceRectangle,
+                new XnaVector3(0, ShaderHueTranslator.SHADER_TEXT_HUE, color.A / 255f),
+                rotation,
+                XnaVector2.Zero,
+                scale,
+                SpriteEffects.None,
+                depth);
+
+            // push the vertex color into Normals so text tint works
+            ref var sprite = ref _vertexInfo[spriteIndex];
+            sprite.UseMesh = true; // must use mesh
+
+            var rgb = new Vector3(color.R / 255f,
+                color.G / 255f,
+                color.B / 255f);
+
+            sprite.Normal0 = rgb;
+            sprite.Normal1 = rgb;
+            sprite.Normal2 = rgb;
+            sprite.Normal3 = rgb;
         }
 
         public void DrawString(SpriteFont spriteFont, ReadOnlySpan<char> text, int x, int y, XnaVector3 color)

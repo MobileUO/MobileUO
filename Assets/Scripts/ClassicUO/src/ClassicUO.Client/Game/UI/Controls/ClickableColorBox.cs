@@ -1,17 +1,18 @@
-﻿// SPDX-License-Identifier: BSD-2-Clause
+// SPDX-License-Identifier: BSD-2-Clause
 
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.UI.Gumps;
 using ClassicUO.Input;
-using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Controls
 {
-    internal class ClickableColorBox : ColorBox
+    public class ClickableColorBox : ColorBox
     {
         private readonly World _world;
+
+        private readonly bool useModernSelector;
 
         public ClickableColorBox
         (
@@ -20,7 +21,8 @@ namespace ClassicUO.Game.UI.Controls
             int y,
             int w,
             int h,
-            ushort hue
+            ushort hue,
+            bool useModernSelector = false
         ) : base(w, h, hue)
         {
             _world = world;
@@ -33,6 +35,7 @@ namespace ClassicUO.Game.UI.Controls
 
             Width = background.Width;
             Height = background.Height;
+            this.useModernSelector = useModernSelector;
         }
 
         public override bool Draw(UltimaBatcher2D batcher, int x, int y)
@@ -41,8 +44,6 @@ namespace ClassicUO.Game.UI.Controls
             {
                 Children[0].Draw(batcher, x, y);
             }
-
-            Vector3 hueVector = ShaderHueTranslator.GetHueVector(Hue);
 
             batcher.Draw
             (
@@ -65,18 +66,24 @@ namespace ClassicUO.Game.UI.Controls
             if (button == MouseButtonType.Left)
             {
                 UIManager.GetGump<ColorPickerGump>()?.Dispose();
-
-                ColorPickerGump pickerGump = new ColorPickerGump
-                (
-                    _world,
+                if (useModernSelector)
+                {
+                    UIManager.Add(new ModernColorPicker(_world, s => Hue = s));
+                }
+                else
+                {
+                    ColorPickerGump pickerGump = new ColorPickerGump
+                    (
+                        _world,
                     0,
-                    0,
-                    100,
-                    100,
-                    s => Hue = s
-                );
+                        0,
+                        100,
+                        100,
+                        s => Hue = s
+                    );
 
-                UIManager.Add(pickerGump);
+                    UIManager.Add(pickerGump);
+                }
             }
         }
     }

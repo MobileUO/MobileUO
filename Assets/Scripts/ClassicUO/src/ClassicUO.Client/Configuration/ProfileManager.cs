@@ -1,6 +1,7 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
 using System.IO;
+using ClassicUO.Game.UI.Gumps.GridHighLight;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
 
@@ -36,7 +37,7 @@ namespace ClassicUO.Configuration
 
         public static void Load(string servername, string username, string charactername)
         {
-            string path = FileSystemHelper.CreateFolderIfNotExists(RootPath, username, servername, charactername);
+            string path = FileSystemHelper.CreateFolderIfNotExists(RootPath, username.Trim(), servername.Trim(), charactername.Trim());
             string fileToLoad = Path.Combine(path, "profile.json");
 
             ProfilePath = path;
@@ -46,7 +47,15 @@ namespace ClassicUO.Configuration
             CurrentProfile.ServerName = servername;
             CurrentProfile.CharacterName = charactername;
 
+            if (CurrentProfile.GridHighlightSetup.Count == 0)
+            {
+                GridHighLightProfile.MigrateGridHighlightToSetup(CurrentProfile);
+                ConfigurationResolver.Save(CurrentProfile, Path.Combine(ProfilePath, "profile.json"), ProfileJsonContext.DefaultToUse.Profile);
+            }
+
             ValidateFields(CurrentProfile);
+
+            Client.Game?.SetVSync(CurrentProfile.EnableVSync);
 
             // MobileUO: added invoke
             ProfileLoaded?.Invoke();

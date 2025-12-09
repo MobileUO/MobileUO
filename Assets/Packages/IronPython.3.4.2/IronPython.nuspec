@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>IronPython</id>
+    <version>3.4.2</version>
+    <title>IronPython</title>
+    <authors>IronPython Contributors, Microsoft</authors>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="expression">Apache-2.0</license>
+    <licenseUrl>https://licenses.nuget.org/Apache-2.0</licenseUrl>
+    <icon>logo.png</icon>
+    <readme>README.md</readme>
+    <projectUrl>https://ironpython.net/</projectUrl>
+    <description>IronPython is an open-source implementation of the Python programming language that is tightly integrated with the .NET Framework. IronPython can use the .NET Framework and Python libraries, and other .NET languages can use Python code just as easily.
+
+This package contains the IronPython interpreter engine.</description>
+    <copyright>© IronPython Contributors</copyright>
+    <language>en-US</language>
+    <tags>ironpython python dynamic dlr</tags>
+    <repository type="git" url="https://github.com/IronLanguages/ironpython3.git" />
+    <dependencies>
+      <group targetFramework=".NETFramework4.6.2">
+        <dependency id="DynamicLanguageRuntime" version="1.3.5" />
+        <dependency id="System.Memory" version="4.5.5" />
+      </group>
+      <group targetFramework=".NETStandard2.0">
+        <dependency id="DynamicLanguageRuntime" version="1.3.5" />
+        <dependency id="System.Memory" version="4.5.5" />
+        <dependency id="System.Text.Encoding.CodePages" version="4.7.0" />
+        <dependency id="Microsoft.Win32.Registry" version="4.7.0" />
+        <dependency id="Mono.Unix" version="7.1.0-final.1.21458.1" />
+      </group>
+      <group targetFramework="net6.0">
+        <dependency id="DynamicLanguageRuntime" version="1.3.5" />
+        <dependency id="Mono.Unix" version="7.1.0-final.1.21458.1" />
+      </group>
+      <group targetFramework="net8.0">
+        <dependency id="DynamicLanguageRuntime" version="1.3.5" />
+        <dependency id="Mono.Unix" version="7.1.0-final.1.21458.1" />
+      </group>
+    </dependencies>
+  </metadata>
+</package>

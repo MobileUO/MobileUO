@@ -10,11 +10,12 @@ using ClassicUO.Renderer;
 using ClassicUO.Resources;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
-using SDL2;
+using SDL3;
+using System.Collections.Generic;
 
 namespace ClassicUO.Game.UI.Gumps.Login
 {
-    internal class LoginGump : Gump
+    public class LoginGump : Gump
     {
         private readonly ushort _buttonNormal;
         private readonly ushort _buttonOver;
@@ -26,8 +27,13 @@ namespace ClassicUO.Game.UI.Gumps.Login
 
         private float _time;
 
+        public static LoginGump Instance { get; private set; }
+
         public LoginGump(World world, LoginScene scene) : base(world, 0, 0)
         {
+            Instance?.Dispose();
+            Instance = this;
+
             CanCloseWithRightClick = false;
 
             AcceptKeyboardInput = false;
@@ -53,7 +59,7 @@ namespace ClassicUO.Game.UI.Gumps.Login
                 // Quit Button
                 Add
                 (
-                    new Button((int) Buttons.Quit, 0x1589, 0x158B, 0x158A)
+                    new Button((int)Buttons.Quit, 0x1589, 0x158B, 0x158A)
                     {
                         X = 555,
                         Y = 4,
@@ -119,7 +125,7 @@ namespace ClassicUO.Game.UI.Gumps.Login
                 // Arrow Button
                 Add
                 (
-                    _nextArrow0 = new Button((int) Buttons.NextArrow, 0x15A4, 0x15A6, 0x15A5)
+                    _nextArrow0 = new Button((int)Buttons.NextArrow, 0x15A4, 0x15A6, 0x15A5)
                     {
                         X = 610,
                         Y = 445,
@@ -143,7 +149,7 @@ namespace ClassicUO.Game.UI.Gumps.Login
 
                 Add
                 (
-                    new Label(string.Format(ResGumps.CUOVersion0, CUOEnviroment.Version), false, 0x034E, font: 9)
+                    new Label(string.Format("TazUO Version {0}", CUOEnviroment.Version), false, 0x034E, font: 9)
                     {
                         X = 286,
                         Y = 465
@@ -193,13 +199,12 @@ namespace ClassicUO.Game.UI.Gumps.Login
                 _buttonNormal = 0x5CD;
                 _buttonOver = 0x5CB;
 
-                // This is the "chest" of login gump
                 Add(new GumpPic(0, 0, 0x014E, 0));
 
                 //// Quit Button
                 Add
                 (
-                    new Button((int) Buttons.Quit, 0x05CA, 0x05C9, 0x05C8)
+                    new Button((int)Buttons.Quit, 0x05CA, 0x05C9, 0x05C8)
                     {
                         X = 25,
                         Y = 240,
@@ -221,7 +226,7 @@ namespace ClassicUO.Game.UI.Gumps.Login
                 // Arrow Button
                 Add
                 (
-                    _nextArrow0 = new Button((int) Buttons.NextArrow, 0x5CD, 0x5CC, 0x5CB)
+                    _nextArrow0 = new Button((int)Buttons.NextArrow, 0x5CD, 0x5CC, 0x5CB)
                     {
                         X = 280,
                         Y = 365,
@@ -245,7 +250,7 @@ namespace ClassicUO.Game.UI.Gumps.Login
 
                 Add
                 (
-                    new Label(string.Format(ResGumps.CUOVersion0, CUOEnviroment.Version), false, 0x0481, font: 9)
+                    new Label(string.Format("TazUO Version {0}", CUOEnviroment.Version), false, 0x0481, font: 9)
                     {
                         X = 286,
                         Y = 465
@@ -335,7 +340,8 @@ namespace ClassicUO.Game.UI.Gumps.Login
                     X = offsetX,
                     Y = offsetY,
                     Width = 190,
-                    Height = 25
+                    Height = 25,
+                    PlaceHolderText="Account Name"
                 }
             );
 
@@ -359,22 +365,38 @@ namespace ClassicUO.Game.UI.Gumps.Login
                 }
             );
 
+            string[] accts = SimpleAccountManager.GetAccounts();
+            if (accts.Length > 0)
+            {
+                _textboxAccount.ContextMenu = new ContextMenuControl(this);
+                foreach (string acct in accts)
+                {
+                    _textboxAccount.ContextMenu.Add(new ContextMenuItemEntry(acct, () => { _textboxAccount.SetText(acct); }));
+                }
+                _textboxAccount.SetTooltip("Right click to select another account.");
+                _textboxAccount.MouseUp += (s, e) =>
+                {
+                    if (e.Button == MouseButtonType.Right)
+                    {
+                        _textboxAccount.ContextMenu.Show();
+                        UIManager.ContextMenu.X = _textboxAccount.X + _textboxAccount.Width;
+                        UIManager.ContextMenu.Y = _textboxAccount.Y + _textboxAccount.Height;
+                    }
+                };
+            }
+
             _passwordFake.RealText = Crypter.Decrypt(Settings.GlobalSettings.Password);
 
             _checkboxSaveAccount.IsChecked = Settings.GlobalSettings.SaveAccount;
             _checkboxAutologin.IsChecked = Settings.GlobalSettings.AutoLogin;
-
-
-            int htmlX = 130;
-            int htmlY = 442;
 
             // MobileUO: commented out
             //Add
             //(
             //    new HtmlControl
             //    (
-            //        htmlX,
-            //        htmlY,
+            //        505,
+            //        420,
             //        150,
             //        15,
             //        false,
@@ -394,13 +416,13 @@ namespace ClassicUO.Game.UI.Gumps.Login
                 new HtmlControl
                 (
                     505,
-                    htmlY,
+                    440,
                     100,
                     15,
                     false,
                     false,
                     false,
-                    "<body link=\"#FF00FF00\" vlink=\"#FF00FF00\" ><a href=\"https://www.classicuo.eu\">Website",
+                    "<body link=\"#FF00FF00\" vlink=\"#FF00FF00\" ><a href=\"https://www.classicuo.eu\">CUO Website",
                     0x32,
                     true,
                     isunicode: true,
@@ -413,13 +435,13 @@ namespace ClassicUO.Game.UI.Gumps.Login
                 new HtmlControl
                 (
                     505,
-                    htmlY + 19,
+                    460,
                     100,
                     15,
                     false,
                     false,
                     false,
-                    "<body link=\"#FF00FF00\" vlink=\"#FF00FF00\" ><a href=\"https://discord.gg/VdyCpjQ\">Join Discord",
+                    "<body link=\"#FF00FF00\" vlink=\"#FF00FF00\" ><a href=\"https://discord.gg/VdyCpjQ\">CUO Discord",
                     0x32,
                     true,
                     isunicode: true,
@@ -427,6 +449,29 @@ namespace ClassicUO.Game.UI.Gumps.Login
                 )
             );
 
+            TextBox _;
+            HitBox _hit;
+            var options = TextBox.RTLOptions.Default();
+            options.Width = 200;
+            Add(_ = TextBox.GetOne("TazUO Wiki", TrueTypeLoader.EMBEDDED_FONT, 15, Color.Orange, options));
+            _.X = 30;
+            _.Y = 420;
+            _.AcceptMouseInput = true;
+            Add(_hit = new HitBox(_.X, _.Y, _.MeasuredSize.X, _.MeasuredSize.Y));
+            _hit.MouseUp += (s, e) =>
+            {
+                Utility.Platforms.PlatformHelper.LaunchBrowser("https://github.com/PlayTazUO/TazUO/wiki");
+            };
+
+            Add(_ = TextBox.GetOne("TazUO Discord", TrueTypeLoader.EMBEDDED_FONT, 15, Color.Orange, options));
+            _.X = 30;
+            _.Y = 440;
+            _.AcceptMouseInput = true;
+            Add(_hit = new HitBox(_.X, _.Y, _.MeasuredSize.X, _.MeasuredSize.Y));
+            _hit.MouseUp += (s, e) =>
+            {
+                Utility.Platforms.PlatformHelper.LaunchBrowser("https://discord.gg/QvqzkB95G4");
+            };
 
             Checkbox loginmusic_checkbox = new Checkbox
             (
@@ -503,6 +548,21 @@ namespace ClassicUO.Game.UI.Gumps.Login
             }
         }
 
+        protected override void OnControllerButtonUp(SDL.SDL_GamepadButton button)
+        {
+            base.OnControllerButtonUp(button);
+            if (button == SDL.SDL_GamepadButton.SDL_GAMEPAD_BUTTON_SOUTH)
+            {
+                SaveCheckboxStatus();
+                LoginScene ls = Client.Game.GetScene<LoginScene>();
+
+                if (ls.CurrentLoginStep == LoginSteps.Main)
+                {
+                    ls.Connect(_textboxAccount.Text, _passwordFake.RealText);
+                }
+            }
+        }
+
         public override void OnKeyboardReturn(int textID, string text)
         {
             SaveCheckboxStatus();
@@ -524,6 +584,12 @@ namespace ClassicUO.Game.UI.Gumps.Login
         {
             if (IsDisposed)
             {
+                return;
+            }
+
+            if (World.Instance != null && World.Instance.InGame)
+            {
+                Dispose();
                 return;
             }
 
@@ -566,7 +632,7 @@ namespace ClassicUO.Game.UI.Gumps.Login
 
         public override void OnButtonClick(int buttonID)
         {
-            switch ((Buttons) buttonID)
+            switch ((Buttons)buttonID)
             {
                 case Buttons.NextArrow:
                     SaveCheckboxStatus();

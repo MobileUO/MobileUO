@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: BSD-2-Clause
+// SPDX-License-Identifier: BSD-2-Clause
 
 using System;
 using System.Collections.Generic;
@@ -35,10 +35,9 @@ namespace ClassicUO.IO
 
         public override void Dispose()
         {
-            ClearHashes();
+             ClearHashes();
             base.Dispose();
         }
-
 
         public bool TryGetUOPData(ulong hash, out UOFileIndex data)
         {

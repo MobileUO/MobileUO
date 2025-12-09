@@ -15,7 +15,7 @@ using ClassicUO.Game.Scenes;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class HouseCustomizationGump : Gump
+    public class HouseCustomizationGump : Gump
     {
         private readonly HouseCustomizationManager _customHouseManager;
         private readonly DataBox _dataBox;
@@ -1928,7 +1928,7 @@ namespace ClassicUO.Game.UI.Gumps
 
                 case ID_GUMP_CUSTOM_HOUSE.ID_GCH_GO_FLOOR_1:
                     _customHouseManager.CurrentFloor = 1;
-                    NetClient.Socket.Send_CustomHouseGoToFloor(World, 1);
+                    AsyncNetClient.Socket.Send_CustomHouseGoToFloor(World, 1);
 
                     for (int i = 0; i < _customHouseManager.FloorVisionState.Length; i++)
                     {
@@ -1942,7 +1942,7 @@ namespace ClassicUO.Game.UI.Gumps
 
                 case ID_GUMP_CUSTOM_HOUSE.ID_GCH_GO_FLOOR_2:
                     _customHouseManager.CurrentFloor = 2;
-                    NetClient.Socket.Send_CustomHouseGoToFloor(World, 2);
+                    AsyncNetClient.Socket.Send_CustomHouseGoToFloor(World, 2);
 
                     for (int i = 0; i < _customHouseManager.FloorVisionState.Length; i++)
                     {
@@ -1956,7 +1956,7 @@ namespace ClassicUO.Game.UI.Gumps
 
                 case ID_GUMP_CUSTOM_HOUSE.ID_GCH_GO_FLOOR_3:
                     _customHouseManager.CurrentFloor = 3;
-                    NetClient.Socket.Send_CustomHouseGoToFloor(World, 3);
+                    AsyncNetClient.Socket.Send_CustomHouseGoToFloor(World, 3);
 
                     for (int i = 0; i < _customHouseManager.FloorVisionState.Length; i++)
                     {
@@ -1970,7 +1970,7 @@ namespace ClassicUO.Game.UI.Gumps
 
                 case ID_GUMP_CUSTOM_HOUSE.ID_GCH_GO_FLOOR_4:
                     _customHouseManager.CurrentFloor = 4;
-                    NetClient.Socket.Send_CustomHouseGoToFloor(World, 4);
+                    AsyncNetClient.Socket.Send_CustomHouseGoToFloor(World, 4);
 
                     for (int i = 0; i < _customHouseManager.FloorVisionState.Length; i++)
                     {
@@ -2012,32 +2012,32 @@ namespace ClassicUO.Game.UI.Gumps
                     break;
 
                 case ID_GUMP_CUSTOM_HOUSE.ID_GCH_MENU_BACKUP:
-                    NetClient.Socket.Send_CustomHouseBackup(World);
+                    AsyncNetClient.Socket.Send_CustomHouseBackup(World);
 
                     break;
 
                 case ID_GUMP_CUSTOM_HOUSE.ID_GCH_MENU_RESTORE:
-                    NetClient.Socket.Send_CustomHouseRestore(World);
+                    AsyncNetClient.Socket.Send_CustomHouseRestore(World);
 
                     break;
 
                 case ID_GUMP_CUSTOM_HOUSE.ID_GCH_MENU_SYNCH:
-                    NetClient.Socket.Send_CustomHouseSync(World);
+                    AsyncNetClient.Socket.Send_CustomHouseSync(World);
 
                     break;
 
                 case ID_GUMP_CUSTOM_HOUSE.ID_GCH_MENU_CLEAR:
-                    NetClient.Socket.Send_CustomHouseClear(World);
+                    AsyncNetClient.Socket.Send_CustomHouseClear(World);
 
                     break;
 
                 case ID_GUMP_CUSTOM_HOUSE.ID_GCH_MENU_COMMIT:
-                    NetClient.Socket.Send_CustomHouseCommit(World);
+                    AsyncNetClient.Socket.Send_CustomHouseCommit(World);
 
                     break;
 
                 case ID_GUMP_CUSTOM_HOUSE.ID_GCH_MENU_REVERT:
-                    NetClient.Socket.Send_CustomHouseRevert(World);
+                    AsyncNetClient.Socket.Send_CustomHouseRevert(World);
 
                     break;
 
@@ -2082,7 +2082,7 @@ namespace ClassicUO.Game.UI.Gumps
         {
             SetOtherHousesState(true);
             World.CustomHouseManager = null;
-            NetClient.Socket.Send_CustomHouseBuildingExit(World);
+            AsyncNetClient.Socket.Send_CustomHouseBuildingExit(World);
             World.TargetManager.CancelTarget();
 
             base.Dispose();

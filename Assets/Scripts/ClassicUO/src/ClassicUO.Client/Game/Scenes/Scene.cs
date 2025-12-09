@@ -5,16 +5,16 @@ using ClassicUO.Game.Managers;
 using ClassicUO.Input;
 using ClassicUO.Assets;
 using ClassicUO.Renderer;
-using SDL2;
+using SDL3;
 
 namespace ClassicUO.Game.Scenes
 {
-    internal abstract class Scene : IDisposable
+    public abstract class Scene : IDisposable
     {
         public bool IsDestroyed { get; private set; }
         public bool IsLoaded { get; private set; }
         public int RenderedObjectsCount { get; protected set; }
-        public Camera Camera { get; } = new Camera(0.5f, 2.5f, 0.1f);
+        public Camera Camera { get; } = new Camera(0.3f, 3.0f, 0.05f);
 
 
 
@@ -56,6 +56,9 @@ namespace ClassicUO.Game.Scenes
         internal virtual bool OnMouseDoubleClick(MouseButtonType button) => false;
         internal virtual bool OnMouseWheel(bool up) => false;
         internal virtual bool OnMouseDragging() => false;
+
+        internal virtual void OnControllerButtonDown(SDL.SDL_GamepadButtonEvent e) { }
+        internal virtual void OnControllerButtonUp(SDL.SDL_GamepadButtonEvent e) { }
 
         internal virtual void OnTextInput(string text)
         {

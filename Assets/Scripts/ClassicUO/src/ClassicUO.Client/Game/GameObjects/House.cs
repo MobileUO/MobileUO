@@ -1,15 +1,15 @@
-﻿// SPDX-License-Identifier: BSD-2-Clause
+// SPDX-License-Identifier: BSD-2-Clause
 
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ClassicUO.Configuration;
 using ClassicUO.Game.Managers;
-using ClassicUO.Utility.Collections;
 using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.GameObjects
 {
-    internal sealed class House : IEquatable<uint>
+    public sealed class House : IEquatable<uint>
     {
         private readonly World _world;
 
@@ -58,6 +58,14 @@ namespace ClassicUO.Game.GameObjects
             m.SetInWorldTile(x, y, z);
 
             Components.Add(m);
+
+            if (ProfileManager.CurrentProfile.ForceHouseTransparency)
+            {
+                var tile = _world.Map.GetTile(x, y);
+                tile.Hue = ProfileManager.CurrentProfile.ForcedTransparencyHouseTileHue;
+                Multi.ForcedTransparency = ProfileManager.CurrentProfile.ForcedHouseTransparency;
+                m.ForceTransparentHouse = true;
+            }
 
             return m;
         }

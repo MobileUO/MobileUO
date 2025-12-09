@@ -5,7 +5,7 @@ using ClassicUO.Utility;
 
 namespace ClassicUO.Game.UI.Gumps.Login
 {
-    internal class LoginBackground : Gump
+    public class LoginBackground : Gump
     {
         public LoginBackground(World world) : base(world, 0, 0)
         {
@@ -68,6 +68,15 @@ namespace ClassicUO.Game.UI.Gumps.Login
             LayerOrder = UILayer.Under;
         }
 
+        public override void Update()
+        {
+            base.Update();
+
+            if (World.Instance != null && World.Instance.InGame)
+            {
+                Dispose();
+            }
+        }
 
         public override void OnButtonClick(int buttonID)
         {

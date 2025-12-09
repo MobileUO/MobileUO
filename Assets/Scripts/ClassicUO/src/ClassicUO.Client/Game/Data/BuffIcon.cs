@@ -4,14 +4,15 @@ using System;
 
 namespace ClassicUO.Game.Data
 {
-    internal class BuffIcon : IEquatable<BuffIcon>
+    public class BuffIcon : IEquatable<BuffIcon>
     {
-        public BuffIcon(BuffIconType type, ushort graphic, long timer, string text)
+        public BuffIcon(BuffIconType type, ushort graphic, long timer, string text, string title = "")
         {
             Type = type;
             Graphic = graphic;
             Timer = (timer <= 0 ? 0xFFFF_FFFF : Time.Ticks + timer * 1000);
             Text = text;
+            Title = title;
         }
 
         public bool Equals(BuffIcon other)
@@ -26,5 +27,7 @@ namespace ClassicUO.Game.Data
         public readonly long Timer;
 
         public readonly BuffIconType Type;
+
+        public readonly string Title;
     }
 }

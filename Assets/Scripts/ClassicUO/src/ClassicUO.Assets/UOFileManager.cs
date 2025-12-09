@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: BSD-2-Clause
+// SPDX-License-Identifier: BSD-2-Clause
 
 using ClassicUO.IO;
 using ClassicUO.Utility;
@@ -190,6 +190,9 @@ namespace ClassicUO.Assets
             TileArt.Load();
             // MobileUO: TODO: getting a CRC error from zlib - revisit this later - it isn't currently used
             //StringDictionary.Load();
+
+            PNGLoader.Instance.Load();
+            TrueTypeLoader.Instance.Load();
 
             ReadArtDefFile();
 

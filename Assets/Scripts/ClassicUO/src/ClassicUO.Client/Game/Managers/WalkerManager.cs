@@ -5,7 +5,7 @@ using ClassicUO.Network;
 
 namespace ClassicUO.Game.Managers
 {
-    internal struct StepInfo
+    public struct StepInfo
     {
         public byte Direction;
         public byte OldDirection;
@@ -18,7 +18,7 @@ namespace ClassicUO.Game.Managers
         public sbyte Z;
     }
 
-    internal sealed class FastWalkStack
+    public sealed class FastWalkStack
     {
         private readonly uint[] _keys = new uint[Constants.MAX_FAST_WALK_STACK_SIZE];
 
@@ -61,7 +61,7 @@ namespace ClassicUO.Game.Managers
         }
     }
 
-    internal sealed class WalkerManager
+    public sealed class WalkerManager
     {
         private readonly PlayerMobile _player;
 
@@ -153,7 +153,7 @@ namespace ClassicUO.Game.Managers
             {
                 if (!ResendPacketResync)
                 {
-                    NetClient.Socket.Send_Resync();
+                    AsyncNetClient.Socket.Send_Resync();
                     ResendPacketResync = true;
                 }
 

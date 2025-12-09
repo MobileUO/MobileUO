@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: BSD-2-Clause
+// SPDX-License-Identifier: BSD-2-Clause
 
 using System.IO;
 using System.Text.Json;
@@ -47,8 +47,28 @@ namespace ClassicUO.Configuration
                     fileInfo.Directory.Create();
                 }
 
-                var json = JsonSerializer.Serialize(obj, ctx);
-                File.WriteAllText(file, json);
+                // Create temporary file in system temp directory
+                var tempFile = Path.GetTempFileName();
+
+                try
+                {
+                    var json = JsonSerializer.Serialize(obj, ctx);
+                    File.WriteAllText(tempFile, json);
+
+                    if (File.Exists(file))
+                        File.Delete(file);
+
+                    File.Move(tempFile, file);
+                }
+                catch
+                {
+                    // Clean up temp file if it exists
+                    if (File.Exists(tempFile))
+                    {
+                        File.Delete(tempFile);
+                    }
+                    throw; // Re-throw the original exception
+                }
             }
             catch (IOException e)
             {

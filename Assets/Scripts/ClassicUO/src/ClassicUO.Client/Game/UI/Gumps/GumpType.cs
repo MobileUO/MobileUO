@@ -2,7 +2,7 @@
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal enum GumpType
+    public enum GumpType
     {
         None,
 
@@ -29,10 +29,17 @@ namespace ClassicUO.Game.UI.Gumps
         NetStats,
 
         NameOverHeadHandler,
+        ScriptManager,
+        MacroButtonEditor = 6464,
+        DurabilityGump = 6465,
+        GridContainer = 8787,
+        NearbyCorpseLoot,
+        SpellBar,
+        MenuGump,
+        TextEntryDialogGump,
 
         // MobileUO: Assisstant buttons
         AssistantMacroButton,
         AssistantHotkeyButton
-
     }
 }

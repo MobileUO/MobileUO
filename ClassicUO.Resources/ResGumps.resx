@@ -1013,7 +1013,7 @@ Time left: {1:00}:{2:00}:{3:00}</value>
     <value>Real</value>
   </data>
   <data name="Base" xml:space="preserve">
-    <value>Base</value>
+    <value>Total</value>
   </data>
   <data name="Cap" xml:space="preserve">
     <value>Cap</value>
@@ -1276,6 +1276,9 @@ Min. Skill: {1}</value>
   </data>
   <data name="CreateMacroButton" xml:space="preserve">
     <value>+ Create macro button</value>
+  </data>
+  <data name="MacroButtonEditor" xml:space="preserve">
+    <value>Button Editor</value>
   </data>
   <data name="Add" xml:space="preserve">
     <value>Add</value>
@@ -1618,7 +1621,7 @@ Client version: '{0}'</value>
   <data name="StayActive" xml:space="preserve">
     <value>Stay active</value>
   </data>
-  <data name="DoubleClickForGridLoot" xml:space="preserve">
-    <value>Double click to loot for Grid Loot</value>
+  <data name="OverheadPartyMessages" xml:space="preserve">
+    <value>Show party messages overhead</value>
   </data>
 </root>

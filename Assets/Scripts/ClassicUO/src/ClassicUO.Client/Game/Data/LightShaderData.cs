@@ -4,7 +4,7 @@ using static ClassicUO.Game.Data.LightColors;
 
 namespace ClassicUO.Game.Data
 {
-    internal struct LightShaderData
+    public struct LightShaderData
     {
         public LightShaderData(uint rgb, LightShaderCurve redcurve = LightShaderCurve.Standard, LightShaderCurve greencurve = LightShaderCurve.Standard, LightShaderCurve bluecurve = LightShaderCurve.Standard)
         {

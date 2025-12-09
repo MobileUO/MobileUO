@@ -11,7 +11,7 @@ using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.Scenes;
 using ClassicUO.Utility.Logging;
-using SDL2;
+using SDL3;
 
 namespace ClassicUO.Utility.Platforms
 {

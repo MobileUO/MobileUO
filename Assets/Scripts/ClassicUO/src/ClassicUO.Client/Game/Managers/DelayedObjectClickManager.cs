@@ -5,7 +5,7 @@ using ClassicUO.Input;
 
 namespace ClassicUO.Game.Managers
 {
-    internal sealed class DelayedObjectClickManager
+    public sealed class DelayedObjectClickManager
     {
         private readonly World _world;
 

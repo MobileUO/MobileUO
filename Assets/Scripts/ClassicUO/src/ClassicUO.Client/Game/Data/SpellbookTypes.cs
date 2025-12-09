@@ -2,7 +2,7 @@
 
 namespace ClassicUO.Game.Data
 {
-    internal enum SpellBookType
+    public enum SpellBookType
     {
         Magery,
         Necromancy,

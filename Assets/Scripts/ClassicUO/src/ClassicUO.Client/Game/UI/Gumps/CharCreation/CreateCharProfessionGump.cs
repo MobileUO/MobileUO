@@ -10,7 +10,7 @@ using ClassicUO.Assets;
 
 namespace ClassicUO.Game.UI.Gumps.CharCreation
 {
-    internal class CreateCharProfessionGump : Gump
+    public class CreateCharProfessionGump : Gump
     {
         private readonly ProfessionInfo _Parent;
 
@@ -133,7 +133,7 @@ namespace ClassicUO.Game.UI.Gumps.CharCreation
         }
     }
 
-    internal class ProfessionInfoGump : Control
+    public class ProfessionInfoGump : Control
     {
         private readonly ProfessionInfo _info;
 

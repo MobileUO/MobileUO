@@ -8,7 +8,7 @@ using ClassicUO.Network;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class ProfileGump : Gump
+    public class ProfileGump : Gump
     {
         private const int _diffY = 22;
         private readonly DataBox _databox;
@@ -170,7 +170,6 @@ namespace ClassicUO.Game.UI.Gumps
             _databox.Y = _textBox.Bounds.Bottom + 3;
             _databox.WantUpdateSize = true;
             WantUpdateSize = true;
-
             base.Update();
         }
 
@@ -189,7 +188,6 @@ namespace ClassicUO.Game.UI.Gumps
                 20
             );
         }
-
 
         private void _hitBox_MouseUp(object sender, MouseEventArgs e)
         {
@@ -214,9 +212,9 @@ namespace ClassicUO.Game.UI.Gumps
 
         public override void Dispose()
         {
-            if (_originalText != _textBox.Text && World.Player != null && !World.Player.IsDestroyed && NetClient.Socket.IsConnected)
+            if (_originalText != _textBox.Text && World.Player != null && !World.Player.IsDestroyed && AsyncNetClient.Socket.IsConnected)
             {
-                NetClient.Socket.Send_ProfileUpdate(LocalSerial, _textBox.Text);
+                AsyncNetClient.Socket.Send_ProfileUpdate(LocalSerial, _textBox.Text);
             }
 
             base.Dispose();

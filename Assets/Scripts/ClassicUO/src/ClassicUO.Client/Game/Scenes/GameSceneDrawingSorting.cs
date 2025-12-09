@@ -2,23 +2,21 @@
 
 using System;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.Map;
-using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
-using ClassicUO.Utility.Logging;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
+using ClassicUO.Assets;
 
 namespace ClassicUO.Game.Scenes
 {
-    internal partial class GameScene
+    public partial class GameScene
     {
         private static GameObject[] _foliages = new GameObject[100];
         private static readonly TreeUnion[] _treeInfos =
@@ -356,7 +354,42 @@ namespace ClassicUO.Game.Scenes
         )
         {
             allowSelection = true;
-
+            if (ProfileManager.CurrentProfile.UseCircleOfTransparency && ProfileManager.CurrentProfile.CircleOfTransparencyType == 2)
+            {
+                if (Vector2.Distance(new Vector2(obj.RealScreenPosition.X, obj.RealScreenPosition.Y), playerPos) < ProfileManager.CurrentProfile.CircleOfTransparencyRadius)
+                {
+                    if (obj.Z >= _maxZ)
+                    {
+                        obj.AlphaHue = 0;
+                        //CalculateAlpha(ref obj.AlphaHue, 0);
+                    }
+                    else
+                    {
+                        if (itemData.IsWall || itemData.IsWindow)
+                        {
+                            obj.AlphaHue = 65;
+                            allowSelection = false;
+                            return true;
+                        }
+                        if (itemData.IsRoof && _noDrawRoofs)
+                        {
+                            return false;
+                        }
+                        if (itemData.IsDoor || itemData.IsRoof)
+                        {
+                            obj.AlphaHue = 65;
+                            allowSelection = itemData.IsDoor;
+                            return true;
+                        }
+                        if (itemData.IsFoliage || obj.Graphic == Constants.TREE_REPLACE_GRAPHIC || StaticFilters.IsTree(obj.Graphic, out var _) || (!itemData.IsMultiMovable && obj is Static stat && stat.IsVegetation) || (!itemData.IsMultiMovable && obj is Multi multi && multi.IsVegetation))
+                        {
+                            obj.AlphaHue = 65;
+                            allowSelection = true;
+                            return true;
+                        }
+                    }
+                }
+            }
             if (obj.Z >= _maxZ)
             {
                 bool changed;
@@ -628,7 +661,7 @@ namespace ClassicUO.Game.Scenes
             // Otherwise mobiles will walk on top of everything (roofs, walls, etc.)
          
             _renderListStatics.Add(obj);
-        }
+            }
 
         private unsafe bool AddTileToRenderList(
             GameObject obj,
@@ -638,6 +671,8 @@ namespace ClassicUO.Game.Scenes
             ref Vector2 playerScreePos
         )
         {
+            Profile profile = ProfileManager.CurrentProfile;
+
             for (; obj != null; obj = obj.TNext)
             {
                 if (UpdateDrawPosition || obj.IsPositionChanged)
@@ -714,7 +749,7 @@ namespace ClassicUO.Game.Scenes
                             }
 
                             //we avoid to hide impassable foliage or bushes, if present...
-                            if (itemData.IsFoliage && ProfileManager.CurrentProfile.TreeToStumps)
+                            if (itemData.IsFoliage && profile.TreeToStumps)
                             {
                                 continue;
                             }
@@ -722,7 +757,7 @@ namespace ClassicUO.Game.Scenes
                             if (
                                 !itemData.IsMultiMovable
                                 && staticc.IsVegetation
-                                && ProfileManager.CurrentProfile.HideVegetation
+                                && profile.HideVegetation
                             )
                             {
                                 continue;
@@ -749,8 +784,8 @@ namespace ClassicUO.Game.Scenes
 
                             // hacky way to render shadows without z-fight
                             if (
-                                ProfileManager.CurrentProfile.ShadowsEnabled
-                                && ProfileManager.CurrentProfile.ShadowsStatics
+                                profile.ShadowsEnabled
+                                && profile.ShadowsStatics
                                 && (
                                     StaticFilters.IsTree(obj.Graphic, out _)
                                     || itemData.IsFoliage
@@ -803,12 +838,12 @@ namespace ClassicUO.Game.Scenes
 
                             if (!itemData.IsMultiMovable)
                             {
-                                if (itemData.IsFoliage && ProfileManager.CurrentProfile.TreeToStumps)
+                                if (itemData.IsFoliage && profile.TreeToStumps)
                                 {
                                     continue;
                                 }
 
-                                if (multi.IsVegetation && ProfileManager.CurrentProfile.HideVegetation)
+                                if (multi.IsVegetation && profile.HideVegetation)
                                 {
                                     continue;
                                 }
@@ -835,8 +870,8 @@ namespace ClassicUO.Game.Scenes
 
                             // hacky way to render shadows without z-fight
                             if (
-                                ProfileManager.CurrentProfile.ShadowsEnabled
-                                && ProfileManager.CurrentProfile.ShadowsStatics
+                                profile.ShadowsEnabled
+                                && profile.ShadowsStatics
                                 && (
                                     StaticFilters.IsTree(obj.Graphic, out _)
                                     || itemData.IsFoliage
@@ -950,7 +985,7 @@ namespace ClassicUO.Game.Scenes
                             if (
                                 !itemData.IsMultiMovable
                                 && itemData.IsFoliage
-                                && ProfileManager.CurrentProfile.TreeToStumps
+                                && profile.TreeToStumps
                             )
                             {
                                 continue;
@@ -1051,8 +1086,8 @@ namespace ClassicUO.Game.Scenes
             int winGameHeight = Camera.Bounds.Height; //ProfileManager.CurrentProfile.GameWindowSize.Y;
             int winGameCenterX = winGamePosX + (winGameWidth >> 1);
             int winGameCenterY = winGamePosY + (winGameHeight >> 1) + (_world.Player.Z << 2);
-            winGameCenterX -= (int) _world.Player.Offset.X;
-            winGameCenterY -= (int) (_world.Player.Offset.Y - _world.Player.Offset.Z);
+            winGameCenterX -= (int)_world.Player.Offset.X;
+            winGameCenterY -= (int)(_world.Player.Offset.Y - _world.Player.Offset.Z);
             int winDrawOffsetX = (_world.Player.X - _world.Player.Y) * 22 - winGameCenterX;
             int winDrawOffsetY = (_world.Player.X + _world.Player.Y) * 22 - winGameCenterY;
 
@@ -1084,8 +1119,8 @@ namespace ClassicUO.Game.Scenes
             }
 
 
-            int width = (int) ((winGameWidth / 44 + 1) * zoom);
-            int height = (int) ((winGameHeight / 44 + 1) * zoom);
+            int width = (int)((winGameWidth / 44 + 1) * zoom);
+            int height = (int)((winGameHeight / 44 + 1) * zoom);
 
             winDrawOffsetX += winGameScaledOffsetX >> 1;
             winDrawOffsetY += winGameScaledOffsetY >> 1;
@@ -1143,16 +1178,16 @@ namespace ClassicUO.Game.Scenes
             if (maxBlockY >= Client.Game.UO.FileManager.Maps.MapsDefaultSize[_world.Map.Index, 1])
                 maxBlockY = Client.Game.UO.FileManager.Maps.MapsDefaultSize[_world.Map.Index, 1] - 1;
 
-            int drawOffset = (int) (zoom * 40.0);
-            float maxX = winGamePosX + winGameWidth ;
+            int drawOffset = (int)(zoom * 40.0);
+            float maxX = winGamePosX + winGameWidth;
             float maxY = winGamePosY + winGameHeight;
             float newMaxX = maxX * zoom + drawOffset;
             float newMaxY = maxY * zoom + drawOffset;
-            
-            int minPixelsX = (int) ((winGamePosX) * zoom /*- (newMaxX - maxX)*/ ) - drawOffset * 2;
-            int maxPixelsX = (int) newMaxX;
-            int minPixelsY = (int) ((winGamePosY) * zoom /*- (newMaxY - maxY)*/) - drawOffset * 2;
-            int maxPixlesY = (int) newMaxY;
+
+            int minPixelsX = (int)((winGamePosX) * zoom /*- (newMaxX - maxX)*/ ) - drawOffset * 2;
+            int maxPixelsX = (int)newMaxX;
+            int minPixelsY = (int)((winGamePosY) * zoom /*- (newMaxY - maxY)*/) - drawOffset * 2;
+            int maxPixlesY = (int)newMaxY;
 
             if (UpdateDrawPosition || oldDrawOffsetX != winDrawOffsetX || oldDrawOffsetY != winDrawOffsetY || _lastCamOffset != Camera.Offset)
             {
@@ -1162,10 +1197,10 @@ namespace ClassicUO.Game.Scenes
                 if (_world_render_target == null || _world_render_target.Width != (int)(winGameWidth * zoom) || _world_render_target.Height != (int)(winGameHeight * zoom))
                 {
                     _world_render_target?.Dispose();
-                    _lightRenderTarget?.Dispose();
+                    _light_render_target?.Dispose();
 
                     _world_render_target = new RenderTarget2D(Client.Game.GraphicsDevice, (int)(winGameWidth * zoom), (int)(winGameHeight * zoom), false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents);
-                    _lightRenderTarget = new RenderTarget2D(Client.Game.GraphicsDevice, (int)(winGameWidth * zoom), (int)(winGameHeight * zoom), false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents);
+                    _light_render_target = new RenderTarget2D(Client.Game.GraphicsDevice, (int)(winGameWidth * zoom), (int)(winGameHeight * zoom), false, SurfaceFormat.Color, DepthFormat.Depth24Stencil8, 0, RenderTargetUsage.DiscardContents);
                 }
             }
 

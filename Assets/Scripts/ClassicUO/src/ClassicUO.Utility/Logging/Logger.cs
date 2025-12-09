@@ -1,4 +1,4 @@
-﻿// SPDX-License-Identifier: BSD-2-Clause
+// SPDX-License-Identifier: BSD-2-Clause
 
 using System;
 using System.Collections.Generic;
@@ -16,7 +16,7 @@ namespace ClassicUO.Utility.Logging
                 LogTypes.Info, Tuple.Create(ConsoleColor.Green, "  Info    ")
             },
             {
-                LogTypes.Debug, Tuple.Create(ConsoleColor.DarkGreen, "  Debug   ")
+                LogTypes.Debug, Tuple.Create(ConsoleColor.DarkMagenta, "  Debug   ")
             },
             {
                 LogTypes.Trace, Tuple.Create(ConsoleColor.Green, "  Trace   ")

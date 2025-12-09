@@ -14,7 +14,7 @@ using ClassicUO.Utility;
 
 namespace ClassicUO.Game.UI.Gumps.CharCreation
 {
-    internal class CreateCharTradeGump : Gump
+    public class CreateCharTradeGump : Gump
     {
         private readonly HSliderBar[] _attributeSliders;
         private readonly PlayerMobile _character;

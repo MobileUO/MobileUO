@@ -11,7 +11,7 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Controls
 {
-    internal class Combobox : Control
+    public class Combobox : Control
     {
         private readonly byte _font;
         // MobileUO: removed readonly - for assistant

@@ -178,7 +178,10 @@
 	            else if (mode == HUE_TEXT)
 	            {
 		            // 31 is max red, so this is just selecting the color of the darkest pixel in the hue
-		            color.rgb = get_rgb(1.0f, hue);
+		            //color.rgb = get_rgb(1.0f, hue);
+
+                    // TazUO behavior: multiply grayscale glyph with vertex normal (text RGB)
+                    color.rgb = color.rgb * IN.Normal;
 	            }
 	            else if (mode == LAND)
 	            {

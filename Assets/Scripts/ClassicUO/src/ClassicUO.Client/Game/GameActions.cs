@@ -1,18 +1,19 @@
-﻿// SPDX-License-Identifier: BSD-2-Clause
-
+// SPDX-License-Identifier: BSD-2-Clause
 using System;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Data;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.Scenes;
+using ClassicUO.Game.UI;
 using ClassicUO.Game.UI.Gumps;
 using ClassicUO.Input;
+using ClassicUO.LegionScripting;
 using ClassicUO.Network;
 using ClassicUO.Resources;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
-using static ClassicUO.Network.NetClient;
+using static ClassicUO.Network.AsyncNetClient;
 
 namespace ClassicUO.Game
 {
@@ -22,12 +23,12 @@ namespace ClassicUO.Game
         public static int LastSkillIndex { get; set; } = 1;
 
 
-        public static void ToggleWarMode(PlayerMobile player)
+        internal static void ToggleWarMode(PlayerMobile player)
         {
             RequestWarMode(player, !player.InWarMode);
         }
 
-        public static void RequestWarMode(PlayerMobile player, bool war)
+        internal static void RequestWarMode(PlayerMobile player, bool war)
         {
             if (!player.IsDead)
             {
@@ -44,7 +45,73 @@ namespace ClassicUO.Game
             Socket.Send_ChangeWarMode(war);
         }
 
-        public static void OpenMacroGump(World world, string name)
+        /// <summary>
+        ///
+        /// </summary>
+        /// <returns>False if no durability gump was open</returns>
+        internal static bool CloseDurabilityGump()
+        {
+            Gump g = UIManager.GetGump<DurabilitysGump>();
+
+            if (g != null)
+            {
+                g.Dispose();
+                return true;
+            }
+
+            return false;
+        }
+
+        internal static void OpenDurabilityGump(World world)
+        {
+            UIManager.Add(new DurabilitysGump(world));
+        }
+
+        internal static void OpenLegionScriptingGump(World world)
+        {
+            UIManager.Add(new ScriptManagerGump());
+        }
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <returns>False if no nearby loot gump was open</returns>
+        internal static bool CloseLegionScriptingGump()
+        {
+            Gump g = UIManager.GetGump<ScriptManagerGump>();
+
+            if (g != null)
+            {
+                g.Dispose();
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <returns>False if no nearby loot gump was open</returns>
+        internal static bool CloseNearbyLootGump()
+        {
+            Gump g = UIManager.GetGump<NearbyLootGump>();
+
+            if (g != null)
+            {
+                g.Dispose();
+                return true;
+            }
+
+            return false;
+        }
+
+        internal static void OpenNearbyLootGump(World world)
+        {
+            UIManager.Add(new NearbyLootGump(world));
+        }
+
+        internal static void OpenMacroGump(World world, string name)
         {
             MacroGump macroGump = UIManager.GetGump<MacroGump>();
 
@@ -52,37 +119,88 @@ namespace ClassicUO.Game
             UIManager.Add(new MacroGump(world, name));
         }
 
-        public static void OpenPaperdoll(World world, uint serial)
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="serial"></param>
+        /// <returns>False if no paperdoll is open</returns>
+        internal static bool ClosePaperdoll(World world, uint? serial = null)
         {
-            PaperDollGump paperDollGump = UIManager.GetGump<PaperDollGump>(serial);
+            serial ??= world.Player.Serial;
+            Gump g;
+            if (ProfileManager.CurrentProfile.UseModernPaperdoll)
+                g = UIManager.GetGump<ModernPaperdoll>(serial);
+            else
+                g = UIManager.GetGump<PaperDollGump>(serial);
 
-            if (paperDollGump == null)
+            if (g != null)
             {
-                DoubleClick(world, serial | 0x80000000);
+                g.Dispose();
+                return true;
+            }
+            return false;
+        }
+
+        internal static void OpenPaperdoll(World world, uint serial)
+        {
+            if (ProfileManager.CurrentProfile.UseModernPaperdoll && serial == world.Player.Serial)
+            {
+                ModernPaperdoll modernPaperdoll = UIManager.GetGump<ModernPaperdoll>(serial);
+                if (modernPaperdoll == null)
+                    UIManager.Add(new ModernPaperdoll(world, serial));
+                else
+                {
+                    modernPaperdoll.SetInScreen();
+                    modernPaperdoll.BringOnTop();
+                }
             }
             else
             {
-                if (paperDollGump.IsMinimized)
-                {
-                    paperDollGump.IsMinimized = false;
-                }
+                PaperDollGump paperDollGump = UIManager.GetGump<PaperDollGump>(serial);
 
-                paperDollGump.SetInScreen();
-                paperDollGump.BringOnTop();
+                if (paperDollGump == null)
+                {
+                    // Bitwish ORing 0x8000_0000 signals to the server to send the
+                    // OpenPaperdoll packet for the player specifically.
+                    DoubleClickQueued(serial | 0x8000_0000);
+                }
+                else
+                {
+                    if (paperDollGump.IsMinimized)
+                    {
+                        paperDollGump.IsMinimized = false;
+                    }
+
+                    paperDollGump.SetInScreen();
+                    paperDollGump.BringOnTop();
+                }
             }
         }
 
-        public static void OpenSettings(World world, int page = 0)
+        /// <summary>
+        ///
+        /// </summary>
+        /// <returns>False if no settings are open</returns>
+        internal static bool CloseSettings()
         {
-            OptionsGump opt = UIManager.GetGump<OptionsGump>();
+            Gump g = UIManager.GetGump<ModernOptionsGump>();
+
+            if (g != null)
+            {
+                g.Dispose();
+                return true;
+            }
+
+            return false;
+        }
+
+        internal static void OpenSettings(World world, int page = 0)
+        {
+            ModernOptionsGump opt = UIManager.GetGump<ModernOptionsGump>();
 
             if (opt == null)
             {
-                OptionsGump optionsGump = new OptionsGump(world)
-                {
-                    X = (Client.Game.Window.ClientBounds.Width >> 1) - 300,
-                    Y = (Client.Game.Window.ClientBounds.Height >> 1) - 250
-                };
+                ModernOptionsGump optionsGump = new ModernOptionsGump(world);
 
                 UIManager.Add(optionsGump);
                 optionsGump.ChangePage(page);
@@ -95,58 +213,146 @@ namespace ClassicUO.Game
             }
         }
 
-        public static void OpenStatusBar(World world)
+        internal static void OpenStatusBar(World world)
         {
             Client.Game.Audio.StopWarMusic();
 
             if (StatusGumpBase.GetStatusGump() == null)
             {
-                UIManager.Add(StatusGumpBase.AddStatusGump(world, 100, 100));
+                UIManager.Add(StatusGumpBase.AddStatusGump(world, ProfileManager.CurrentProfile.StatusGumpPosition.X, ProfileManager.CurrentProfile.StatusGumpPosition.Y));
             }
         }
 
-        public static void OpenJournal(World world)
+        /// <summary>
+        ///
+        /// </summary>
+        /// <returns>False if no status gump open</returns>
+        internal static bool CloseStatusBar()
         {
-            if (ProfileManager.CurrentProfile.UseAlternateJournal)
+            Gump g = StatusGumpBase.GetStatusGump();
+            if (g != null)
             {
-                UIManager.Add(new ResizableJournal(world));
-                return;
+                g.Dispose();
+                return true;
             }
 
-            JournalGump journalGump = UIManager.GetGump<JournalGump>();
+            return false;
+        }
 
-            if (journalGump == null)
+        internal static void OpenJournal(World world)
+        {
+            UIManager.Add(new ResizableJournal(world));
+        }
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <returns>False if no journals were open</returns>
+        internal static bool CloseAllJournals()
+        {
+            Gump g = UIManager.GetGump<ResizableJournal>();
+
+            bool status = g != null;
+
+            while (g != null)
             {
-                UIManager.Add(new JournalGump(world) { X = 64, Y = 64 });
+                g.Dispose();
+                g = UIManager.GetGump<ResizableJournal>();
+            }
+
+            return status;
+        }
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="type"></param>
+        /// <returns>False if no spell books of that type were open</returns>
+        internal static bool CloseSpellBook(SpellBookType type)
+        {
+            SpellbookGump g = UIManager.GetGump<SpellbookGump>();
+
+            while (g != null)
+            {
+                if (g.SpellBookType == type)
+                {
+                    g.Dispose();
+                    return true;
+                }
+                g = UIManager.GetGump<SpellbookGump>();
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <returns>False if no skill gumps were open</returns>
+        internal static bool CloseSkills()
+        {
+            Gump g;
+            if (ProfileManager.CurrentProfile.StandardSkillsGump)
+
+                g = UIManager.GetGump<StandardSkillsGump>();
+            else
+                g = UIManager.GetGump<SkillGumpAdvanced>();
+
+            if (g != null)
+            {
+                g.Dispose();
+                return true;
+            }
+
+            return false;
+        }
+
+        internal static void OpenSkills(World world)
+        {
+            if (ProfileManager.CurrentProfile.StandardSkillsGump)
+            {
+                StandardSkillsGump skillsGump = UIManager.GetGump<StandardSkillsGump>();
+
+                if (skillsGump != null && skillsGump.IsMinimized)
+                {
+                    skillsGump.IsMinimized = false;
+                }
+                else
+                {
+                    world.SkillsRequested = true;
+                    Socket.Send_SkillsRequest(world.Player.Serial);
+                }
             }
             else
             {
-                journalGump.SetInScreen();
-                journalGump.BringOnTop();
+                SkillGumpAdvanced skillsGump = UIManager.GetGump<SkillGumpAdvanced>();
 
-                if (journalGump.IsMinimized)
+                if (skillsGump == null)
                 {
-                    journalGump.IsMinimized = false;
+                    world.SkillsRequested = true;
+                    Socket.Send_SkillsRequest(world.Player.Serial);
                 }
             }
         }
 
-        public static void OpenSkills(World world)
+        /// <summary>
+        ///
+        /// </summary>
+        /// <returns>False if no mini map open</returns>
+        internal static bool CloseMiniMap()
         {
-            StandardSkillsGump skillsGump = UIManager.GetGump<StandardSkillsGump>();
+            Gump g = UIManager.GetGump<MiniMapGump>();
 
-            if (skillsGump != null && skillsGump.IsMinimized)
+            if (g != null)
             {
-                skillsGump.IsMinimized = false;
+                g.Dispose();
+                return true;
             }
-            else
-            {
-                world.SkillsRequested = true;
-                Socket.Send_SkillsRequest(world.Player.Serial);
-            }
+
+            return false;
         }
 
-        public static void OpenMiniMap(World world)
+        internal static void OpenMiniMap(World world)
         {
             MiniMapGump miniMapGump = UIManager.GetGump<MiniMapGump>();
 
@@ -162,7 +368,39 @@ namespace ClassicUO.Game
             }
         }
 
-        public static void OpenWorldMap(World world)
+        internal static bool BandageSelf(World world)
+        {
+            Item bandage = world.Player.FindBandage();
+            if (bandage != null)
+            {
+                // Record action for script recording
+                ClassicUO.LegionScripting.ScriptRecorder.Instance.RecordBandageSelf();
+
+                Socket.Send_TargetSelectedObject(bandage.Serial, world.Player.Serial);
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        ///
+        /// </summary>
+        /// <returns>False if no world map is open</returns>
+        internal static bool CloseWorldMap()
+        {
+            Gump g = UIManager.GetGump<WorldMapGump>();
+
+            if (g != null)
+            {
+                g.Dispose();
+                return true;
+            }
+
+            return false;
+        }
+
+
+        internal static void OpenWorldMap(World world)
         {
             WorldMapGump worldMap = UIManager.GetGump<WorldMapGump>();
 
@@ -178,7 +416,22 @@ namespace ClassicUO.Game
             }
         }
 
-        public static void OpenChat(World world)
+        /// <summary>
+        ///
+        /// </summary>
+        /// <returns>False if no chat was open</returns>
+        internal static bool CloseChat()
+        {
+            Gump g = UIManager.GetGump<ChatGump>();
+            if (g != null)
+            {
+                g.Dispose();
+                return true;
+            }
+            return false;
+        }
+
+        internal static void OpenChat(World world)
         {
             if (world.ChatManager.ChatIsEnabled == ChatStatus.Enabled)
             {
@@ -210,7 +463,7 @@ namespace ClassicUO.Game
             }
         }
 
-        public static bool OpenCorpse(World world, uint serial)
+        internal static bool OpenCorpse(World world, uint serial)
         {
             if (!SerialHelper.IsItem(serial))
             {
@@ -230,7 +483,37 @@ namespace ClassicUO.Game
             return true;
         }
 
-        public static bool OpenBackpack(World world)
+        /// <summary>
+        ///
+        /// </summary>
+        /// <returns>False if no backpack was opened</returns>
+        internal static bool CloseBackpack(World world)
+        {
+            Gump g;
+
+            Item backpack = world.Player.FindItemByLayer(Layer.Backpack);
+
+            if (backpack == null)
+            {
+                return false;
+            }
+
+            // Record action for script recording
+            ClassicUO.LegionScripting.ScriptRecorder.Instance.RecordCloseContainer(backpack.Serial, "backpack");
+
+            g = UIManager.GetGump<ContainerGump>(backpack);
+            g ??= UIManager.GetGump<GridContainer>(backpack);
+
+            if (g != null)
+            {
+                g.Dispose();
+                return true;
+            }
+
+            return false;
+        }
+
+        internal static bool OpenBackpack(World world)
         {
             Item backpack = world.Player.FindItemByLayer(Layer.Backpack);
 
@@ -239,27 +522,32 @@ namespace ClassicUO.Game
                 return false;
             }
 
-            ContainerGump backpackGump = UIManager.GetGump<ContainerGump>(backpack);
-
+            Gump backpackGump = UIManager.GetGump<ContainerGump>(backpack);
             if (backpackGump == null)
             {
-                DoubleClick(world,backpack);
+                backpackGump = UIManager.GetGump<GridContainer>(backpack);
+                if (backpackGump == null)
+                {
+                    DoubleClick(world, backpack);
+                    return true;
+                }
+                else
+                {
+                    backpackGump.RequestUpdateContents();
+                    backpackGump.SetInScreen();
+                    backpackGump.BringOnTop();
+                }
             }
             else
             {
-                if (backpackGump.IsMinimized)
-                {
-                    backpackGump.IsMinimized = false;
-                }
-
+                ((ContainerGump)backpackGump).IsMinimized = false;
                 backpackGump.SetInScreen();
                 backpackGump.BringOnTop();
             }
-
             return true;
         }
 
-        public static void Attack(World world, uint serial)
+        internal static void Attack(World world, uint serial)
         {
             if (ProfileManager.CurrentProfile.EnabledCriminalActionQuery)
             {
@@ -281,31 +569,51 @@ namespace ClassicUO.Game
                     );
 
                     UIManager.Add(messageBox);
-
                     return;
                 }
             }
+
+            // Record action for script recording
+            ClassicUO.LegionScripting.ScriptRecorder.Instance.RecordAttack(serial);
+            ScriptingInfoGump.AddOrUpdateInfo("Last Attacked", serial);
 
             world.TargetManager.NewTargetSystemSerial = serial;
             world.TargetManager.LastAttack = serial;
             Socket.Send_AttackRequest(serial);
         }
 
-        public static void DoubleClickQueued(uint serial)
+        internal static void DoubleClickQueued(uint serial)
         {
             Client.Game.GetScene<GameScene>()?.DoubleClickDelayed(serial);
         }
 
-        public static void DoubleClick(World world, uint serial)
+        internal static void DoubleClick(World world, uint serial)
         {
+            // Record action for script recording (only for items)
+            if (SerialHelper.IsItem(serial))
+                ClassicUO.LegionScripting.ScriptRecorder.Instance.RecordUseItem(serial);
+
+            ScriptingInfoGump.AddOrUpdateInfo("Last Object", serial);
+
             if (serial != world.Player && SerialHelper.IsMobile(serial) && world.Player.InWarMode)
             {
-                RequestMobileStatus(world,serial);
+                RequestMobileStatus(world, serial);
                 Attack(world, serial);
             }
             else
             {
-                Socket.Send_DoubleClick(serial);
+                if (SerialHelper.IsItem(serial))
+                {
+                    Gump g = UIManager.GetGump<GridContainer>(serial);
+                    if (g != null)
+                    {
+                        g.SetInScreen();
+                        g.BringOnTop();
+                    }
+                    Socket.Send_DoubleClick(serial);
+                }
+                else
+                    Socket.Send_DoubleClick(serial);
             }
 
             if (SerialHelper.IsItem(serial) || (SerialHelper.IsMobile(serial) && (world.Mobiles.Get(serial)?.IsHuman ?? false)))
@@ -318,7 +626,7 @@ namespace ClassicUO.Game
             }
         }
 
-        public static void SingleClick(World world, uint serial)
+        internal static void SingleClick(World world, uint serial)
         {
             // add  request context menu
             Socket.Send_ClickRequest(serial);
@@ -331,8 +639,34 @@ namespace ClassicUO.Game
             }
         }
 
-        public static void Say(string message, ushort hue = 0xFFFF, MessageType type = MessageType.Regular, byte font = 3)
+        internal static void Say(string message, ushort hue = 0xFFFF, MessageType type = MessageType.Regular, byte font = 3)
         {
+            // Record action for script recording (only for regular speech)
+            switch (type)
+            {
+                case MessageType.Regular:
+                    ClassicUO.LegionScripting.ScriptRecorder.Instance.RecordSay(message);
+                    break;
+                case MessageType.Emote:
+                    ClassicUO.LegionScripting.ScriptRecorder.Instance.RecordEmoteMsg(message);
+                    break;
+                case MessageType.Whisper:
+                    ClassicUO.LegionScripting.ScriptRecorder.Instance.RecordWhisperMsg(message);
+                    break;
+                case MessageType.Yell:
+                    ClassicUO.LegionScripting.ScriptRecorder.Instance.RecordYellMsg(message);
+                    break;
+                case MessageType.Guild:
+                    ClassicUO.LegionScripting.ScriptRecorder.Instance.RecordGuildMsg(message);
+                    break;
+                case MessageType.Alliance:
+                    ClassicUO.LegionScripting.ScriptRecorder.Instance.RecordAllyMsg(message);
+                    break;
+                case MessageType.Party:
+                    ClassicUO.LegionScripting.ScriptRecorder.Instance.RecordPartyMsg(message);
+                    break;
+            }
+
             if (hue == 0xFFFF)
             {
                 hue = ProfileManager.CurrentProfile.SpeechHue;
@@ -356,8 +690,27 @@ namespace ClassicUO.Game
         }
 
 
-        public static void Print(World world, string message, ushort hue = 946, MessageType type = MessageType.Regular, byte font = 3, bool unicode = true)
+        internal static void Print(string message, ushort hue = 946, MessageType type = MessageType.Regular, byte font = 3, bool unicode = true) => Print(World.Instance, message, hue, type, font, unicode);
+
+        internal static void Print(World world, string message, ushort hue = 946, MessageType type = MessageType.Regular, byte font = 3, bool unicode = true)
         {
+            if (type == MessageType.ChatSystem)
+            {
+                world.MessageManager.HandleMessage
+                (
+                    null,
+                    message,
+                    "Chat",
+                    hue,
+                    type,
+                    font,
+                    TextType.OBJECT,
+                    unicode,
+                    Settings.GlobalSettings.Language
+                );
+                return;
+            }
+
             Print
             (
                 world,
@@ -370,7 +723,7 @@ namespace ClassicUO.Game
             );
         }
 
-        public static void Print
+        internal static void Print
         (
             World world,
             Entity entity,
@@ -395,44 +748,46 @@ namespace ClassicUO.Game
             );
         }
 
-        public static void SayParty(string message, uint serial = 0)
+        internal static void SayParty(string message, uint serial = 0)
         {
+            // Record action for script recording
+            ClassicUO.LegionScripting.ScriptRecorder.Instance.RecordPartyMsg(message);
             Socket.Send_PartyMessage(message, serial);
         }
 
-        public static void RequestPartyAccept(uint serial)
+        internal static void RequestPartyAccept(uint serial)
         {
             Socket.Send_PartyAccept(serial);
 
             UIManager.GetGump<PartyInviteGump>()?.Dispose();
         }
 
-        public static void RequestPartyRemoveMemberByTarget()
+        internal static void RequestPartyRemoveMemberByTarget()
         {
             Socket.Send_PartyRemoveRequest(0x00);
         }
 
-        public static void RequestPartyRemoveMember(uint serial)
+        internal static void RequestPartyRemoveMember(uint serial)
         {
             Socket.Send_PartyRemoveRequest(serial);
         }
 
-        public static void RequestPartyQuit(PlayerMobile player)
+        internal static void RequestPartyQuit(PlayerMobile player)
         {
             Socket.Send_PartyRemoveRequest(player.Serial);
         }
 
-        public static void RequestPartyInviteByTarget()
+        internal static void RequestPartyInviteByTarget()
         {
             Socket.Send_PartyInviteRequest();
         }
 
-        public static void RequestPartyLootState(bool isLootable)
+        internal static void RequestPartyLootState(bool isLootable)
         {
             Socket.Send_PartyChangeLootTypeRequest(isLootable);
         }
 
-        public static bool PickUp
+        internal static bool PickUp
         (
             World world,
             uint serial,
@@ -485,9 +840,11 @@ namespace ClassicUO.Game
             }
 
             Client.Game.UO.GameCursor.ItemHold.Clear();
-            Client.Game.UO.GameCursor.ItemHold.Set(item, (ushort) amount, offset);
+            Client.Game.UO.GameCursor.ItemHold.Set(item, (ushort)amount, offset);
             Client.Game.UO.GameCursor.ItemHold.IsGumpTexture = is_gump;
-            Socket.Send_PickUpRequest(item, (ushort) amount);
+            Socket.Send_PickUpRequest(item, (ushort)amount);
+            ScriptingInfoGump.AddOrUpdateInfo("Last Picked Up Item", item.Serial);
+
 
             if (item.OnGround)
             {
@@ -501,10 +858,14 @@ namespace ClassicUO.Game
             return true;
         }
 
-        public static void DropItem(uint serial, int x, int y, int z, uint container)
+        internal static void DropItem(uint serial, int x, int y, int z, uint container, bool force = false)
         {
-            if (Client.Game.UO.GameCursor.ItemHold.Enabled && !Client.Game.UO.GameCursor.ItemHold.IsFixedPosition && (Client.Game.UO.GameCursor.ItemHold.Serial != container || Client.Game.UO.GameCursor.ItemHold.ItemData.IsStackable))
+            if (force || (Client.Game.UO.GameCursor.ItemHold.Enabled && !Client.Game.UO.GameCursor.ItemHold.IsFixedPosition && (Client.Game.UO.GameCursor.ItemHold.Serial != container || Client.Game.UO.GameCursor.ItemHold.ItemData.IsStackable)))
             {
+                // Record action for script recording
+                var sourceSerial = Client.Game.UO.GameCursor.ItemHold.Enabled ? Client.Game.UO.GameCursor.ItemHold.Serial : serial;
+                int amount = Client.Game.UO.GameCursor.ItemHold.Enabled ? Client.Game.UO.GameCursor.ItemHold.Amount : -1;
+                ClassicUO.LegionScripting.ScriptRecorder.Instance.RecordDragDrop(sourceSerial, container, amount, x, y);
                 if (Client.Game.UO.Version >= ClientVersion.CV_6017)
                 {
                     Socket.Send_DropRequest(serial,
@@ -528,7 +889,7 @@ namespace ClassicUO.Game
             }
         }
 
-        public static void Equip(World world, uint container = 0)
+        internal static void Equip(World world, uint container = 0)
         {
             if (Client.Game.UO.GameCursor.ItemHold.Enabled && !Client.Game.UO.GameCursor.ItemHold.IsFixedPosition && Client.Game.UO.GameCursor.ItemHold.ItemData.IsWearable)
             {
@@ -537,43 +898,53 @@ namespace ClassicUO.Game
                     container = world.Player.Serial;
                 }
 
+                // Record action for script recording
+                ClassicUO.LegionScripting.ScriptRecorder.Instance.RecordEquipItem(Client.Game.UO.GameCursor.ItemHold.Serial, (Layer)Client.Game.UO.GameCursor.ItemHold.ItemData.Layer);
+
                 Socket.Send_EquipRequest(Client.Game.UO.GameCursor.ItemHold.Serial, (Layer)Client.Game.UO.GameCursor.ItemHold.ItemData.Layer, container);
 
                 Client.Game.UO.GameCursor.ItemHold.Enabled = false;
                 Client.Game.UO.GameCursor.ItemHold.Dropped = true;
+                Client.Game.UO.GameCursor.ItemHold.Clear();
             }
         }
 
-        public static void ReplyGump(uint local, uint server, int button, uint[] switches = null, Tuple<ushort, string>[] entries = null)
+        internal static void ReplyGump(World world, uint local, uint server, int button, uint[] switches = null, Tuple<ushort, string>[] entries = null)
         {
-            Socket.Send_GumpResponse(local,
+            // Record action for script recording
+            ClassicUO.LegionScripting.ScriptRecorder.Instance.RecordReplyGump(server, button, switches, entries);
+            ScriptingInfoGump.AddOrUpdateInfo("Last Gump Response", button);
+
+            Socket.Send_GumpResponse(world, local,
                                      server,
                                      button,
                                      switches,
                                      entries);
+            if (CUOEnviroment.Debug)
+                GameActions.Print(world, $"Gump Button: {button} for gump: {server}");
         }
 
-        public static void RequestHelp()
+        internal static void RequestHelp()
         {
             Socket.Send_HelpRequest();
         }
 
-        public static void RequestQuestMenu(World world)
+        internal static void RequestQuestMenu(World world)
         {
             Socket.Send_QuestMenuRequest(world);
         }
 
-        public static void RequestProfile(uint serial)
+        internal static void RequestProfile(uint serial)
         {
             Socket.Send_ProfileRequest(serial);
         }
 
-        public static void ChangeSkillLockStatus(ushort skillindex, byte lockstate)
+        internal static void ChangeSkillLockStatus(ushort skillindex, byte lockstate)
         {
             Socket.Send_SkillStatusChangeRequest(skillindex, lockstate);
         }
 
-        public static void RequestMobileStatus(World world, uint serial, bool force = false)
+        internal static void RequestMobileStatus(World world, uint serial, bool force = false)
         {
             if (world.InGame)
             {
@@ -605,7 +976,7 @@ namespace ClassicUO.Game
             }
         }
 
-        public static void SendCloseStatus(World world, uint serial, bool force = false)
+        internal static void SendCloseStatus(World world, uint serial, bool force = false)
         {
             if (Client.Game.UO.Version >= ClientVersion.CV_200 && world.InGame)
             {
@@ -626,49 +997,103 @@ namespace ClassicUO.Game
             }
         }
 
-        public static void CastSpellFromBook(int index, uint bookSerial)
+        internal static void CastSpellFromBook(int index, uint bookSerial)
         {
             if (index >= 0)
             {
                 LastSpellIndex = index;
+                SpellVisualRangeManager.Instance.ClearCasting();
                 Socket.Send_CastSpellFromBook(index, bookSerial);
             }
         }
 
-        public static void CastSpell(int index)
+        internal static void CastSpell(int index)
         {
             if (index >= 0)
             {
                 LastSpellIndex = index;
+                SpellVisualRangeManager.Instance.ClearCasting();
                 Socket.Send_CastSpell(index);
+
+                // Record action for script recording
+                var name = SpellDefinition.FullIndexGetSpell(index).Name;
+                ClassicUO.LegionScripting.ScriptRecorder.Instance.RecordCastSpell(name);
+                ScriptingInfoGump.AddOrUpdateInfo("Last Spell", name);
             }
         }
 
-        public static void OpenGuildGump(World world)
+        /// <summary>
+        ///
+        /// </summary>
+        /// <param name="name">Can be a partial match</param>
+        internal static bool CastSpellByName(string name)
+        {
+            name = name.Trim();
+
+            if (!string.IsNullOrEmpty(name) && SpellDefinition.TryGetSpellFromName(name, out var spellDef))
+            {
+                // Record action for script recording
+                ClassicUO.LegionScripting.ScriptRecorder.Instance.RecordCastSpell(name);
+                ScriptingInfoGump.AddOrUpdateInfo("Last Spell", name);
+
+                CastSpell(spellDef.ID);
+                return true;
+            }
+
+            return false;
+        }
+
+        internal static void OpenGuildGump(World world)
         {
             Socket.Send_GuildMenuRequest(world);
         }
 
-        public static void ChangeStatLock(byte stat, Lock state)
+        internal static void ChangeStatLock(byte stat, Lock state)
         {
             Socket.Send_StatLockStateRequest(stat, state);
         }
 
-        public static void Rename(uint serial, string name)
+        internal static void Rename(uint serial, string name)
         {
             Socket.Send_RenameRequest(serial, name);
         }
 
-        public static void UseSkill(int index)
+        public static void Logout(World world)
+        {
+            if ((world.ClientFeatures.Flags & CharacterListFlags.CLF_OWERWRITE_CONFIGURATION_BUTTON) != 0)
+            {
+                Client.Game.GetScene<GameScene>().DisconnectionRequested = true;
+                Socket.Send_LogoutNotification();
+            }
+            else
+            {
+                Client.Game.GetScene<GameScene>().DisconnectionRequested = true;
+                Client.Game.SetScene(new LoginScene(world));
+
+                Socket?.Disconnect();
+                Socket = new AsyncNetClient();
+            }
+
+            WorldMapGump.ClearMapCache();
+        }
+
+        internal static void UseSkill(int index)
         {
             if (index >= 0)
             {
+                // Record action for script recording
+                string skillName = "";
+                if (index < World.Instance.Player.Skills.Length)
+                    skillName = World.Instance.Player.Skills[index].Name;
+                ClassicUO.LegionScripting.ScriptRecorder.Instance.RecordUseSkill(skillName);
+                ScriptingInfoGump.AddOrUpdateInfo("Last Skill", skillName);
+
                 LastSkillIndex = index;
                 Socket.Send_UseSkill(index);
             }
         }
 
-        public static void OpenPopupMenu(uint serial, bool shift = false)
+        internal static void OpenPopupMenu(uint serial, bool shift = false)
         {
             shift = shift || Keyboard.Shift;
 
@@ -680,32 +1105,36 @@ namespace ClassicUO.Game
             Socket.Send_RequestPopupMenu(serial);
         }
 
-        public static void ResponsePopupMenu(uint serial, ushort index)
+        internal static void ResponsePopupMenu(uint serial, ushort index)
         {
+            // Record action for script recording
+            ClassicUO.LegionScripting.ScriptRecorder.Instance.RecordContextMenu(serial, index);
+            ScriptingInfoGump.AddOrUpdateInfo("Last Context Menu response", index);
+
             Socket.Send_PopupMenuSelection(serial, index);
         }
 
-        public static void MessageOverhead(World world, string message, uint entity)
+        internal static void MessageOverhead(World world, string message, uint entity)
         {
             Print(world, world.Get(entity), message);
         }
 
-        public static void MessageOverhead(World world, string message, ushort hue, uint entity)
+        internal static void MessageOverhead(World world, string message, ushort hue, uint entity)
         {
             Print(world, world.Get(entity), message, hue);
         }
 
-        public static void AcceptTrade(uint serial, bool accepted)
+        internal static void AcceptTrade(uint serial, bool accepted)
         {
             Socket.Send_TradeResponse(serial, 2, accepted);
         }
 
-        public static void CancelTrade(uint serial)
+        internal static void CancelTrade(uint serial)
         {
             Socket.Send_TradeResponse(serial, 1, false);
         }
 
-        public static void AllNames(World world)
+        internal static void AllNames(World world)
         {
             foreach (Mobile mobile in world.Mobiles.Values)
             {
@@ -724,23 +1153,25 @@ namespace ClassicUO.Game
             }
         }
 
-        public static void OpenDoor()
+        internal static void OpenDoor()
         {
             Socket.Send_OpenDoor();
         }
 
-        public static void EmoteAction(string action)
+        internal static void EmoteAction(string action)
         {
             Socket.Send_EmoteAction(action);
         }
 
-        public static void OpenAbilitiesBook(World world)
+        internal static void OpenAbilitiesBook(World world)
         {
             if (UIManager.GetGump<CombatBookGump>() == null)
             {
                 UIManager.Add(new CombatBookGump(world, 100, 100));
             }
         }
+
+
 
         private static void SendAbility(World world, byte idx, bool primary)
         {
@@ -757,15 +1188,15 @@ namespace ClassicUO.Game
             }
         }
 
-        public static void UsePrimaryAbility(World world)
+        internal static void UsePrimaryAbility(World world)
         {
             ref var ability = ref world.Player.Abilities[0];
 
-            if (((byte) ability & 0x80) == 0)
+            if (((byte)ability & 0x80) == 0)
             {
                 for (int i = 0; i < 2; i++)
                 {
-                    world.Player.Abilities[i] &= (Ability) 0x7F;
+                    world.Player.Abilities[i] &= (Ability)0x7F;
                 }
 
                 SendAbility(world, (byte)ability, true);
@@ -775,18 +1206,20 @@ namespace ClassicUO.Game
                 SendAbility(world, 0, true);
             }
 
-            ability ^= (Ability) 0x80;
+            ClassicUO.LegionScripting.ScriptRecorder.Instance.RecordAbility("primary");
+
+            ability ^= (Ability)0x80;
         }
 
-        public static void UseSecondaryAbility(World world)
+        internal static void UseSecondaryAbility(World world)
         {
             ref Ability ability = ref world.Player.Abilities[1];
 
-            if (((byte) ability & 0x80) == 0)
+            if (((byte)ability & 0x80) == 0)
             {
                 for (int i = 0; i < 2; i++)
                 {
-                    world.Player.Abilities[i] &= (Ability) 0x7F;
+                    world.Player.Abilities[i] &= (Ability)0x7F;
                 }
 
                 SendAbility(world, (byte)ability, false);
@@ -796,23 +1229,25 @@ namespace ClassicUO.Game
                 SendAbility(world, 0, true);
             }
 
-            ability ^= (Ability) 0x80;
+            ClassicUO.LegionScripting.ScriptRecorder.Instance.RecordAbility("secondary");
+
+            ability ^= (Ability)0x80;
         }
 
         // ===================================================
         [Obsolete("temporary workaround to not break assistants")]
-        public static void UsePrimaryAbility() => UsePrimaryAbility(ClassicUO.Client.Game.UO.World);
+        internal static void UsePrimaryAbility() => UsePrimaryAbility(ClassicUO.Client.Game.UO.World);
 
         [Obsolete("temporary workaround to not break assistants")]
-        public static void UseSecondaryAbility() => UseSecondaryAbility(ClassicUO.Client.Game.UO.World);
+        internal static void UseSecondaryAbility() => UseSecondaryAbility(ClassicUO.Client.Game.UO.World);
         // ===================================================
 
-        public static void QuestArrow(bool rightClick)
+        internal static void QuestArrow(bool rightClick)
         {
             Socket.Send_ClickQuestArrow(rightClick);
         }
 
-        public static void GrabItem(World world, uint serial, ushort amount, uint bag = 0)
+        internal static void GrabItem(World world, uint serial, ushort amount, uint bag = 0, bool stack = true)
         {
             //Socket.Send(new PPickUpRequest(serial, amount));
 
@@ -837,14 +1272,52 @@ namespace ClassicUO.Game
 
             PickUp(world, serial, 0, 0, amount);
 
-            DropItem
-            (
-                serial,
-                0xFFFF,
-                0xFFFF,
-                0,
-                bag
-            );
+            if (stack)
+                DropItem
+                (
+                    serial,
+                    0xFFFF,
+                    0xFFFF,
+                    0,
+                    bag
+                );
+            else
+                DropItem
+                (
+                    serial,
+                    0,
+                    0,
+                    0,
+                    bag
+                );
+        }
+
+        public static void RequestEquippedOPL(World world)
+        {
+            foreach (Layer layer in Enum.GetValues(typeof(Data.Layer)))
+            {
+                Item item = world.Player.FindItemByLayer(layer);
+                if (item == null) continue;
+
+                world.OPL.Contains(item); //Requests data if we don't have it
+            }
+        }
+
+        internal static bool Mount()
+        {
+            if (World.Instance == null) return false;
+
+            if (ProfileManager.CurrentProfile.SavedMountSerial == 0) return false;
+
+            Entity mount = World.Instance.Get(ProfileManager.CurrentProfile.SavedMountSerial);
+            if (mount != null)
+            {
+                DoubleClickQueued(ProfileManager.CurrentProfile.SavedMountSerial);
+                ScriptRecorder.Instance.RecordMount(mount);
+                return true;
+            }
+
+            return false;
         }
     }
 }

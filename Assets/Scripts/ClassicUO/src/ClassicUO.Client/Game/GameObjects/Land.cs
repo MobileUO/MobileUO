@@ -10,7 +10,7 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.GameObjects
 {
-    internal sealed partial class Land : GameObject
+    public sealed partial class Land : GameObject
     {
         //private static readonly QueuedPool<Land> _pool = new QueuedPool<Land>
         //(
@@ -34,7 +34,6 @@ namespace ClassicUO.Game.GameObjects
         public bool IsStretched;
         public sbyte MinZ;
         public Vector3 NormalTop, NormalRight, NormalLeft, NormalBottom;
-        public ushort OriginalGraphic;
         public UltimaBatcher2D.YOffsets YOffsets;
 
         private Land(World world) : base(world) { }
@@ -44,7 +43,6 @@ namespace ClassicUO.Game.GameObjects
             Land land = new Land(world); // _pool.GetOne();
             land.AlphaHue = 0xFF;
             land.Graphic = graphic;
-            land.OriginalGraphic = graphic;
             land.IsStretched = land.TileData.TexID == 0 && land.TileData.IsWet;
             land.AllowedToDraw = graphic > 2;
             land.UpdateGraphicBySeason();

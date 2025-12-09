@@ -1,24 +1,26 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
-using System.Collections.Generic;
+
+using ClassicUO.Assets;
 using ClassicUO.Configuration;
-using ClassicUO.Game.Data;
-using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.UI.Controls;
 using ClassicUO.Input;
-using ClassicUO.Assets;
 using ClassicUO.Network;
-using ClassicUO.Renderer;
 using ClassicUO.Resources;
 using ClassicUO.Utility;
 using ClassicUO.Utility.Logging;
 using Microsoft.Xna.Framework;
+using System.Collections.Generic;
+using ClassicUO.Game.UI.Gumps.SpellBar;
+using ClassicUO.Game.UI.ImGuiControls;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class TopBarGump : Gump
+    public class TopBarGump : Gump
     {
+        private RighClickableButton XmlGumps;
+
         private TopBarGump(World world) : base(world, 0, 0)
         {
             CanMove = true;
@@ -56,36 +58,24 @@ namespace ClassicUO.Game.UI.Gumps
 
             int[][] textTable =
             {
-                new[] { 0, (int)Buttons.Map },
-                new[] { 1, (int)Buttons.Paperdoll },
-                new[] { 1, (int)Buttons.Inventory },
-                new[] { 1, (int)Buttons.Journal },
-                new[] { 0, (int)Buttons.Chat },
-                new[] { 0, (int)Buttons.Help },
-                new[] { 1, (int)Buttons.WorldMap },
-                new[] { 0, (int)Buttons.Info },
-                new[] { 0, (int)Buttons.Debug },
-                new[] { 1, (int)Buttons.NetStats },
-                new[] { 1, (int)Buttons.UOStore },
-                new[] { 1, (int)Buttons.GlobalChat }
+                new[] { 1, (int) Buttons.Paperdoll },
+                new[] { 1, (int) Buttons.Inventory },
+                new[] { 1, (int) Buttons.Journal },
+                new[] { 0, (int) Buttons.Chat },
+                new[] { 1, (int) Buttons.WorldMap },
+                new[] { 1, (int) Buttons.UOStore },
             };
 
             var cliloc = Client.Game.UO.FileManager.Clilocs;
 
             string[] texts =
             {
-                cliloc.GetString(3000430, ResGumps.Map),
                 cliloc.GetString(3000133, ResGumps.Paperdoll),
                 cliloc.GetString(3000431, ResGumps.Inventory),
                 cliloc.GetString(3000129, ResGumps.Journal),
                 cliloc.GetString(3000131, ResGumps.Chat),
-                cliloc.GetString(3000134, ResGumps.Help),
                 StringHelper.CapitalizeAllWords(cliloc.GetString(1015233, ResGumps.WorldMap)),
-                cliloc.GetString(1079449, ResGumps.Info),
-                cliloc.GetString(1042237, ResGumps.Debug),
-                cliloc.GetString(3000169, ResGumps.NetStats),
                 cliloc.GetString(1158008, ResGumps.UOStore),
-                cliloc.GetString(1158390, ResGumps.GlobalChat)
             };
 
             bool hasUOStore = Client.Game.UO.Version >= ClientVersion.CV_706400;
@@ -140,6 +130,177 @@ namespace ClassicUO.Game.UI.Gumps
                 background.Width = startX;
             }
 
+            RighClickableButton assistant;
+            Add(assistant = new(998877,
+                0x098D,
+                0x098D,
+                0x098D,
+                "Assistant",
+                1,
+                true,
+                0,
+                0x0036
+            )
+            {
+                ButtonAction = ButtonAction.Activate,
+                X = startX,
+                Y = 1,
+                FontCenter = true
+            }, 1);
+            assistant.MouseUp += (s, e) => { AssistantWindow.Show(); };
+            startX += largeWidth + 1;
+
+            RighClickableButton lscript;
+            Add(lscript = new(998877,
+                0x098D,
+                0x098D,
+                0x098D,
+                "Legion Script",
+                1,
+                true,
+                0,
+                0x0036
+            )
+            {
+                ButtonAction = ButtonAction.Activate,
+                X = startX,
+                Y = 1,
+                FontCenter = true
+            }, 1);
+            lscript.MouseUp += (s, e) => {
+                UIManager.Add(new LegionScripting.ScriptManagerGump());
+                ScriptManagerWindow.Show();
+            };
+            startX += largeWidth + 1;
+
+            RighClickableButton moreMenu;
+            Add
+            (moreMenu =
+                new RighClickableButton
+                (
+                    998877,
+                    0x098D,
+                    0x098D,
+                    0x098D,
+                    "More +",
+                    1,
+                    true,
+                    0,
+                    0x0036
+                )
+                {
+                    ButtonAction = ButtonAction.Activate,
+                    X = startX,
+                    Y = 1,
+                    FontCenter = true
+                },
+                1
+            );
+            moreMenu.ContextMenu = new ContextMenuControl(this);
+            moreMenu.MouseUp += (s, e) => { moreMenu.ContextMenu?.Show(); };
+            moreMenu.ContextMenu.Add(new ContextMenuItemEntry(Language.Instance.TopBarGump.CommandsEntry, () =>
+            {
+                UIManager.Add(new CommandsGump(world));
+            }));
+            moreMenu.ContextMenu.Add(new ContextMenuItemEntry(cliloc.GetString(1079449, ResGumps.Info), () =>
+            {
+                if (World.TargetManager.IsTargeting)
+                {
+                    World.TargetManager.CancelTarget();
+                }
+
+                World.TargetManager.SetTargeting(CursorTarget.SetTargetClientSide, CursorType.Target, TargetType.Neutral);
+            }));
+            moreMenu.ContextMenu.Add(new ContextMenuItemEntry(cliloc.GetString(1042237, ResGumps.Debug), () =>
+            {
+                DebugGump debugGump = UIManager.GetGump<DebugGump>();
+
+                if (debugGump == null)
+                {
+                    debugGump = new DebugGump(World, 100, 100);
+                    UIManager.Add(debugGump);
+                }
+                else
+                {
+                    debugGump.IsVisible = !debugGump.IsVisible;
+                    debugGump.SetInScreen();
+                }
+            }));
+            moreMenu.ContextMenu.Add(new ContextMenuItemEntry(cliloc.GetString(3000169, ResGumps.NetStats), () =>
+            {
+                NetworkStatsGump netstatsgump = UIManager.GetGump<NetworkStatsGump>();
+
+                if (netstatsgump == null)
+                {
+                    netstatsgump = new NetworkStatsGump(World, 100, 100);
+                    UIManager.Add(netstatsgump);
+                }
+                else
+                {
+                    netstatsgump.IsVisible = !netstatsgump.IsVisible;
+                    netstatsgump.SetInScreen();
+                }
+            }));
+            moreMenu.ContextMenu.Add(new ContextMenuItemEntry(cliloc.GetString(3000134, ResGumps.Help), () => { GameActions.RequestHelp(); }));
+
+            moreMenu.ContextMenu.Add(new ContextMenuItemEntry("Toggle nameplates", () => { World.NameOverHeadManager.ToggleOverheads(); }));
+
+            // MobileUO: commented out Discord for now
+            //moreMenu.ContextMenu.Add(new ContextMenuItemEntry("Discord", () => { UIManager.Add(new DiscordGump(World)); }));
+
+            var submenu = new ContextMenuItemEntry("Tools");
+            submenu.Add(new ContextMenuItemEntry("Spell quick cast", () => { UIManager.Add(new SpellQuickSearch(World, 200, 200, (sp) => {if (sp != null) GameActions.CastSpell(sp.ID);})); }));
+            submenu.Add(new ContextMenuItemEntry("Open boat control", () => { UIManager.Add(new BoatControl(World) { X = 200, Y = 200 }); }));
+            submenu.Add(new ContextMenuItemEntry("Nearby loot", () => { UIManager.Add(new NearbyLootGump(World)); }));
+            submenu.Add(new ContextMenuItemEntry("Retrieve gumps", () =>
+            {
+                for (LinkedListNode<Gump> last = UIManager.Gumps.Last; last != null; last = last.Previous)
+                {
+                    Gump c = last.Value;
+
+                    if (!c.IsDisposed)
+                    {
+                        c.SetInScreen();
+                    }
+                }
+            }));
+            moreMenu.ContextMenu.Add(submenu);
+
+            startX += largeWidth + 1;
+
+            string[] xmls = XmlGumpHandler.GetAllXmlGumps();
+            if (xmls.Length > 0)
+            {
+                Add
+                (XmlGumps =
+                    new RighClickableButton
+                    (
+                        998877,
+                        0x098D,
+                        0x098D,
+                        0x098D,
+                        "Xml Gumps",
+                        1,
+                        true,
+                        0,
+                        0x0036
+                    )
+                    {
+                        ButtonAction = ButtonAction.Activate,
+                        X = startX,
+                        Y = 1,
+                        FontCenter = true
+                    },
+                    1
+                );
+
+                XmlGumps.MouseUp += (s, e) => { XmlGumps.ContextMenu?.Show(); };
+
+                RefreshXmlGumps();
+
+                startX += largeWidth + 1;
+            }
+
             background.Width = startX + 1;
 
             //layer
@@ -147,6 +308,44 @@ namespace ClassicUO.Game.UI.Gumps
         }
 
         public bool IsMinimized { get; private set; }
+
+        public void RefreshXmlGumps()
+        {
+            XmlGumps.ContextMenu?.Dispose();
+            if (XmlGumps.ContextMenu == null)
+            {
+                XmlGumps.ContextMenu = new ContextMenuControl(this);
+            }
+
+            string[] xmls = XmlGumpHandler.GetAllXmlGumps();
+
+            ContextMenuItemEntry ci = null;
+            foreach (var xml in xmls)
+            {
+                XmlGumps.ContextMenu.Add(ci = new ContextMenuItemEntry(xml, () =>
+                {
+                    if (Keyboard.Ctrl)
+                    {
+                        if (ProfileManager.CurrentProfile.AutoOpenXmlGumps.Contains(xml))
+                        {
+                            ProfileManager.CurrentProfile.AutoOpenXmlGumps.Remove(xml);
+                        }
+                        else
+                        {
+                            ProfileManager.CurrentProfile.AutoOpenXmlGumps.Add(xml);
+                        }
+                    }
+                    else
+                    {
+                        UIManager.Add(XmlGumpHandler.CreateGumpFromFile(World, System.IO.Path.Combine(XmlGumpHandler.XmlGumpPath, xml + ".xml")));
+                    }
+                    RefreshXmlGumps();
+                }, false, ProfileManager.CurrentProfile.AutoOpenXmlGumps.Contains(xml)));
+            }
+
+            ContextMenuItemEntry reload = new ContextMenuItemEntry("Reload", RefreshXmlGumps);
+            XmlGumps.ContextMenu.Add(reload);
+        }
 
         public static void Create(World world)
         {
@@ -208,11 +407,6 @@ namespace ClassicUO.Game.UI.Gumps
         {
             switch ((Buttons)buttonID)
             {
-                case Buttons.Map:
-                    GameActions.OpenMiniMap(World);
-
-                    break;
-
                 case Buttons.Paperdoll:
                     GameActions.OpenPaperdoll(World, World.Player);
 
@@ -233,59 +427,10 @@ namespace ClassicUO.Game.UI.Gumps
 
                     break;
 
-                case Buttons.GlobalChat:
-                    Log.Warn(ResGumps.ChatButtonPushedNotImplementedYet);
-                    GameActions.Print(
-                        World,
-                        ResGumps.GlobalChatNotImplementedYet,
-                        0x23,
-                        MessageType.System
-                    );
-
-                    break;
-
                 case Buttons.UOStore:
                     if (Client.Game.UO.Version >= ClientVersion.CV_706400)
                     {
-                        NetClient.Socket.Send_OpenUOStore();
-                    }
-
-                    break;
-
-                case Buttons.Help:
-                    GameActions.RequestHelp();
-
-                    break;
-
-                case Buttons.Debug:
-
-                    DebugGump debugGump = UIManager.GetGump<DebugGump>();
-
-                    if (debugGump == null)
-                    {
-                        debugGump = new DebugGump(World, 100, 100);
-                        UIManager.Add(debugGump);
-                    }
-                    else
-                    {
-                        debugGump.IsVisible = !debugGump.IsVisible;
-                        debugGump.SetInScreen();
-                    }
-
-                    break;
-
-                case Buttons.NetStats:
-                    NetworkStatsGump netstatsgump = UIManager.GetGump<NetworkStatsGump>();
-
-                    if (netstatsgump == null)
-                    {
-                        netstatsgump = new NetworkStatsGump(World, 100, 100);
-                        UIManager.Add(netstatsgump);
-                    }
-                    else
-                    {
-                        netstatsgump.IsVisible = !netstatsgump.IsVisible;
-                        netstatsgump.SetInScreen();
+                        AsyncNetClient.Socket.Send_OpenUOStore();
                     }
 
                     break;
@@ -299,7 +444,6 @@ namespace ClassicUO.Game.UI.Gumps
 
         private enum Buttons
         {
-            Map,
             Paperdoll,
             Inventory,
             Journal,
@@ -310,7 +454,6 @@ namespace ClassicUO.Game.UI.Gumps
             Debug,
             NetStats,
             UOStore,
-            GlobalChat
         }
 
         private class RighClickableButton : Button

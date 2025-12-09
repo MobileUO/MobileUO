@@ -5,7 +5,7 @@ using System;
 
 namespace ClassicUO.Network.Encryption
 {
-    internal enum EncryptionType
+    public enum EncryptionType
     {
         NONE,
         OLD_BFISH,
@@ -15,8 +15,9 @@ namespace ClassicUO.Network.Encryption
         TWOFISH_MD5
     }
 
-    internal sealed class EncryptionHelper
+    public sealed class EncryptionHelper
     {
+        public static EncryptionHelper Instance;
         private static readonly LoginCryptBehaviour _loginCrypt = new LoginCryptBehaviour();
         private static readonly BlowfishEncryption _blowfishEncryption = new BlowfishEncryption();
         private static readonly TwofishEncryption _twoFishBehaviour = new TwofishEncryption();
@@ -29,6 +30,7 @@ namespace ClassicUO.Network.Encryption
         {
             _clientVersion = clientVersion;
             (EncryptionType, _keys) = CalculateEncryption(clientVersion);
+            Instance = this;
         }
 
         public EncryptionType EncryptionType { get; }

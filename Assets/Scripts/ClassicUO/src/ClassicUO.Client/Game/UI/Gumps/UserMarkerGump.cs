@@ -11,7 +11,7 @@ using ClassicUO.Resources;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal sealed class UserMarkersGump : Gump
+    public sealed class UserMarkersGump : Gump
     {
         private readonly StbTextBox _textBoxX;
         private readonly StbTextBox _textBoxY;

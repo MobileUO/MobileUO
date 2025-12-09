@@ -7,7 +7,7 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Controls
 {
-    internal abstract class ScrollBarBase : Control
+    public abstract class ScrollBarBase : Control
     {
         private const int TIME_BETWEEN_CLICKS = 2;
 
@@ -84,7 +84,7 @@ namespace ClassicUO.Game.UI.Controls
 
                 if (_value > _maxValue)
                 {
-                    _value = _maxValue;
+                    Value = _maxValue;
                 }
             }
         }
@@ -205,6 +205,11 @@ namespace ClassicUO.Game.UI.Controls
             }
 
             return (int) Math.Round(GetScrollableArea() * ((Value - MinValue) / (float) (MaxValue - MinValue)));
+        }
+
+        public void ResetScrollPosition()
+        {
+            _value = _minValue;
         }
 
 

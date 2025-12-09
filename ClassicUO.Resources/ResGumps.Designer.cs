@@ -1195,15 +1195,6 @@ namespace ClassicUO.Resources {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to Double click to loot for Grid Loot.
-        /// </summary>
-        public static string DoubleClickForGridLoot {
-            get {
-                return ResourceManager.GetString("DoubleClickForGridLoot", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Looks up a localized string similar to Double click to loot items inside containers.
         /// </summary>
         public static string DoubleClickLootContainers {
@@ -2439,6 +2430,15 @@ namespace ClassicUO.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Button Editor.
+        /// </summary>
+        public static string MacroButtonEditor {
+            get {
+                return ResourceManager.GetString("MacroButtonEditor", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Do you want
         ///delete it?.
         /// </summary>
@@ -2896,6 +2896,15 @@ namespace ClassicUO.Resources {
         public static string OutOfRangeColor {
             get {
                 return ResourceManager.GetString("OutOfRangeColor", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Show party messages overhead.
+        /// </summary>
+        public static string OverheadPartyMessages {
+            get {
+                return ResourceManager.GetString("OverheadPartyMessages", resourceCulture);
             }
         }
         
@@ -3736,7 +3745,15 @@ namespace ClassicUO.Resources {
                 return ResourceManager.GetString("ShowTarRangeIndic", resourceCulture);
             }
         }
-        
+
+        public static string AutoAvoidObstacules
+        {
+            get
+            {
+                return ResourceManager.GetString("AutoAvoidObstacules", resourceCulture);
+            }
+        }
+
         /// <summary>
         ///   Looks up a localized string similar to Show your coordinates.
         /// </summary>

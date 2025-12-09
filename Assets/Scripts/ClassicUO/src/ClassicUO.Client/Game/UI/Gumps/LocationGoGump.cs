@@ -10,18 +10,18 @@ using Microsoft.Xna.Framework;
 namespace ClassicUO.Game.UI.Gumps
 {
 
-    internal partial class LocationGoGump : Gump
+    public partial class LocationGoGump : Gump
     {
         /**
          * Valid inputs:
          * 3123, 124
          * 123 4141
-         * 1331:745 
+         * 1331:745
          */
-        // MobileUO: TODO: GeneratedRegex feature is not available in Unity's C#
-        //[GeneratedRegex(@"^(?<X>\d+)\s*[,:\s]\s*(?<Y>\d+)$")]
-        //private static partial Regex PointCoordsRegex();
-        private static readonly Regex PointCoordsRegex = new Regex(@"^(?<X>\d+)\s*[,:\s]\s*(?<Y>\d+)$");
+            // MobileUO: TODO: GeneratedRegex feature is not available in Unity's C#
+            //[GeneratedRegex(@"^(?<X>\d+)\s*[,:\s]\s*(?<Y>\d+)$")]
+            //private static partial Regex PointCoordsRegex();
+            private static readonly Regex PointCoordsRegex = new Regex(@"^(?<X>\d+)\s*[,:\s]\s*(?<Y>\d+)$");
 
         private readonly World _world;
         private readonly Action<int, int> _goTo;
@@ -124,8 +124,8 @@ namespace ClassicUO.Game.UI.Gumps
             point = new Point(-1, -1);
             try
             {
-                // MobileUO: TODO: GeneratedRegex feature is not available in Unity's C#
-                var match = PointCoordsRegex.Match(text);
+                    // MobileUO: TODO: GeneratedRegex feature is not available in Unity's C#
+                    var match = PointCoordsRegex.Match(text);
 
                 if (!match.Success)
                 {
@@ -137,7 +137,7 @@ namespace ClassicUO.Game.UI.Gumps
                 point.Y = int.Parse(match.Groups["Y"].Value);
                 return true;
             }
-            catch (Exception e)
+            catch
             {
                 // do nothing
             }
@@ -170,12 +170,12 @@ namespace ClassicUO.Game.UI.Gumps
             switch (id)
             {
                 case 0:
-                    {
-                        if (Go())
-                            Dispose();
+                {
+                    if (Go())
+                        Dispose();
 
-                        break;
-                    }
+                    break;
+                }
             }
         }
 
@@ -184,12 +184,12 @@ namespace ClassicUO.Game.UI.Gumps
             switch (id)
             {
                 case 0:
-                    {
-                        if (Go())
-                            Dispose();
+                {
+                    if (Go())
+                        Dispose();
 
-                        break;
-                    }
+                    break;
+                }
             }
         }
     }

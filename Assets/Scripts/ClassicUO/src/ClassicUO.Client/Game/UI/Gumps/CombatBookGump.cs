@@ -12,7 +12,7 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class CombatBookGump : Gump
+    public class CombatBookGump : Gump
     {
         private readonly int _abilityCount = Constants.MAX_ABILITIES_COUNT;
         private int _dictionaryPagesCount = 3;

@@ -15,7 +15,7 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class ModernBookGump : Gump
+    public class ModernBookGump : Gump
     {
         internal const int MAX_BOOK_LINES = 8;
         private const int MAX_BOOK_CHARS_PER_LINE = 53;
@@ -122,7 +122,7 @@ namespace ClassicUO.Game.UI.Gumps
 
             _forwardGumpPic.MouseUp += (sender, e) =>
             {
-                if (e.Button == MouseButtonType.Left && sender is Control ctrl)
+                if (e.Button == MouseButtonType.Left)
                 {
                     SetActivePage(ActivePage + 1);
                 }
@@ -130,7 +130,7 @@ namespace ClassicUO.Game.UI.Gumps
 
             _forwardGumpPic.MouseDoubleClick += (sender, e) =>
             {
-                if (e.Button == MouseButtonType.Left && sender is Control ctrl)
+                if (e.Button == MouseButtonType.Left)
                 {
                     SetActivePage(MaxPage);
                 }
@@ -138,7 +138,7 @@ namespace ClassicUO.Game.UI.Gumps
 
             _backwardGumpPic.MouseUp += (sender, e) =>
             {
-                if (e.Button == MouseButtonType.Left && sender is Control ctrl)
+                if (e.Button == MouseButtonType.Left)
                 {
                     SetActivePage(ActivePage - 1);
                 }
@@ -146,7 +146,7 @@ namespace ClassicUO.Game.UI.Gumps
 
             _backwardGumpPic.MouseDoubleClick += (sender, e) =>
             {
-                if (e.Button == MouseButtonType.Left && sender is Control ctrl)
+                if (e.Button == MouseButtonType.Left)
                 {
                     SetActivePage(1);
                 }
@@ -230,6 +230,11 @@ namespace ClassicUO.Game.UI.Gumps
             ActivePage = 1;
             UpdatePageButtonVisibility();
 
+            // if(IsEditable)
+            // {
+            //     _bookPage.SetKeyboardFocus();
+            // }
+
             Client.Game.Audio.PlaySound(0x0055);
         }
 
@@ -287,12 +292,12 @@ namespace ClassicUO.Game.UI.Gumps
 
                 if (leftPage > 0 && !KnownPages.Contains(leftPage))
                 {
-                    NetClient.Socket.Send_BookPageDataRequest(LocalSerial, (ushort)leftPage);
+                    AsyncNetClient.Socket.Send_BookPageDataRequest(LocalSerial, (ushort)leftPage);
                 }
 
                 if (rightPage < MaxPage * 2 && !KnownPages.Contains(rightPage))
                 {
-                    NetClient.Socket.Send_BookPageDataRequest(LocalSerial, (ushort)rightPage);
+                    AsyncNetClient.Socket.Send_BookPageDataRequest(LocalSerial, (ushort)rightPage);
                 }
             }
             else
@@ -307,11 +312,11 @@ namespace ClassicUO.Game.UI.Gumps
                         {
                             if (UseNewHeader)
                             {
-                                NetClient.Socket.Send_BookHeaderChanged(LocalSerial, _titleTextBox.Text, _authorTextBox.Text);
+                                AsyncNetClient.Socket.Send_BookHeaderChanged(LocalSerial, _titleTextBox.Text, _authorTextBox.Text);
                             }
                             else
                             {
-                                NetClient.Socket.Send_BookHeaderChanged_Old(LocalSerial, _titleTextBox.Text, _authorTextBox.Text);
+                                AsyncNetClient.Socket.Send_BookHeaderChanged_Old(LocalSerial, _titleTextBox.Text, _authorTextBox.Text);
                             }
                         }
                         else
@@ -323,7 +328,7 @@ namespace ClassicUO.Game.UI.Gumps
                                 text[l] = BookLines[x];
                             }
 
-                            NetClient.Socket.Send_BookPageData(LocalSerial, text, i);
+                            AsyncNetClient.Socket.Send_BookPageData(LocalSerial, text, i);
                         }
                     }
                 }
@@ -580,6 +585,8 @@ namespace ClassicUO.Game.UI.Gumps
                 {
                     if (IsEditable)
                     {
+                        UIManager.KeyboardFocusControl = null;
+                        OnFocusEnter();
                         SetKeyboardFocus();
                     }
 

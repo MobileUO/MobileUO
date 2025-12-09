@@ -11,7 +11,7 @@ using ClassicUO.Utility.Logging;
 
 namespace ClassicUO.Game.Managers
 {
-    internal sealed class InfoBarManager
+    public sealed class InfoBarManager
     {
         private readonly World _world;
         private readonly List<InfoBarItem> infoBarItems;
@@ -122,7 +122,7 @@ namespace ClassicUO.Game.Managers
         }
     }
 
-    internal enum InfoBarVars
+    public enum InfoBarVars
     {
         HP = 0,
         Mana,
@@ -151,7 +151,7 @@ namespace ClassicUO.Game.Managers
         TithingPoints
     }
 
-    internal class InfoBarItem
+    public class InfoBarItem
     {
         public InfoBarItem(string label, InfoBarVars var, ushort labelColor)
         {

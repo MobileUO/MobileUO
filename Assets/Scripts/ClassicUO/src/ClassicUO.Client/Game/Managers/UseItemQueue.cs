@@ -5,42 +5,31 @@ using ClassicUO.Utility.Collections;
 
 namespace ClassicUO.Game.Managers
 {
-    internal sealed class UseItemQueue
+    public sealed class UseItemQueue
     {
-        private readonly Deque<uint> _actions = new Deque<uint>();
-        private long _timer;
-        private readonly World _world;
+        public static UseItemQueue Instance { get; private set; }
+        public bool IsEmpty => _isEmpty;
 
+        private bool _isEmpty = true;
+        private readonly Deque<uint> _actions = new Deque<uint>();
+        private readonly World _world;
 
         public UseItemQueue(World world)
         {
-            _timer = Time.Ticks + 1000;
+            Instance = this;
             _world = world;
         }
 
         public void Update()
         {
-            if (_timer < Time.Ticks)
-            {
-                _timer = Time.Ticks + 1000;
+            if (_isEmpty) return;
+            if (GlobalActionCooldown.IsOnCooldown) return;
 
-                if (_actions.Count == 0)
-                {
-                    return;
-                }
+            uint serial = _actions.RemoveFromFront();
+            GameActions.DoubleClick(_world, serial);
 
-                uint serial = _actions.RemoveFromFront();
-
-                if (_world.Get(serial) != null)
-                {
-                    if (SerialHelper.IsMobile(serial))
-                    {
-                        serial |= 0x8000_0000;
-                    }
-
-                    GameActions.DoubleClick(_world,serial);
-                }
-            }
+            GlobalActionCooldown.BeginCooldown();
+            _isEmpty = _actions.Count == 0;
         }
 
         public void Add(uint serial)
@@ -54,11 +43,13 @@ namespace ClassicUO.Game.Managers
             }
 
             _actions.AddToBack(serial);
+            _isEmpty = false;
         }
 
         public void Clear()
         {
             _actions.Clear();
+            _isEmpty = true;
         }
 
         public void ClearCorpses()
@@ -77,6 +68,7 @@ namespace ClassicUO.Game.Managers
                     _actions.RemoveAt(i--);
                 }
             }
+            _isEmpty = _actions.Count == 0;
         }
     }
 }

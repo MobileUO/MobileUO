@@ -62,15 +62,15 @@ namespace Assistant
 
     internal static class UOSObjects
     {
-        private static ClassicUO.Game.UI.Gumps.AssistantGump _Gump;
+        private static ClassicUO.Game.UI.Gumps.MobileUOAssistantGump _Gump;
 
-        internal static ClassicUO.Game.UI.Gumps.AssistantGump Gump
+        internal static ClassicUO.Game.UI.Gumps.MobileUOAssistantGump Gump
         {
             get
             {
                 if (_Gump == null || _Gump.IsDisposed)
                 {
-                    _Gump = new ClassicUO.Game.UI.Gumps.AssistantGump(Client.Game.UO.World);
+                    _Gump = new ClassicUO.Game.UI.Gumps.MobileUOAssistantGump(Client.Game.UO.World);
                     AfterBuild();
                 }
                 return _Gump;
@@ -79,7 +79,7 @@ namespace Assistant
             {
                 if (_Gump != value)
                 {
-                    ClassicUO.Game.UI.Gumps.AssistantGump old = _Gump;
+                    ClassicUO.Game.UI.Gumps.MobileUOAssistantGump old = _Gump;
                     _Gump = value;
                     old?.Dispose();
                     if(_Gump != null)

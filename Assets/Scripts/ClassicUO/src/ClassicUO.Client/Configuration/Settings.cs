@@ -1,6 +1,5 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
-using System;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -22,7 +21,7 @@ namespace ClassicUO.Configuration
             });
     }
 
-    internal sealed class Settings
+    public sealed class Settings
     {
         public const string SETTINGS_FILENAME = "settings.json";
         public static Settings GlobalSettings = new Settings();
@@ -33,7 +32,7 @@ namespace ClassicUO.Configuration
 
         [JsonPropertyName("password")] public string Password { get; set; } = string.Empty;
 
-        [JsonPropertyName("ip")] public string IP { get; set; } = "127.0.0.1";
+        [JsonPropertyName("ip")] public string IP { get; set; } = "";
 
         [JsonPropertyName("port"), JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)] public ushort Port { get; set; } = 2593;
 
@@ -56,12 +55,12 @@ namespace ClassicUO.Configuration
 
         [JsonPropertyName("fps")] public int FPS { get; set; } = 60;
 
-        [JsonConverter(typeof(NullablePoint2Converter))] [JsonPropertyName("window_position")] public Point? WindowPosition { get; set; }
-        [JsonConverter(typeof(NullablePoint2Converter))] [JsonPropertyName("window_size")] public Point? WindowSize { get; set; }
+        [JsonConverter(typeof(NullablePoint2Converter))][JsonPropertyName("window_position")] public Point? WindowPosition { get; set; }
+        [JsonConverter(typeof(NullablePoint2Converter))][JsonPropertyName("window_size")] public Point? WindowSize { get; set; }
 
         [JsonPropertyName("is_win_maximized")] public bool IsWindowMaximized { get; set; } = true;
 
-        [JsonPropertyName("saveaccount")] public bool SaveAccount { get; set; }
+        [JsonPropertyName("saveaccount")] public bool SaveAccount { get; set; } = true;
 
         [JsonPropertyName("autologin")] public bool AutoLogin { get; set; }
 
@@ -92,6 +91,19 @@ namespace ClassicUO.Configuration
         [JsonPropertyName("internal_assistant")]
         public bool EnableInternalAssistant { get; set; } = true;
 
+        public bool EnhancedPacketsEnabled = PacketsEnabled();
+
+        private static bool PacketsEnabled()
+        {
+            //Disable enhanced packets if the file exists
+            //Can't put it in user profile folder because we need it's value before we load profiles
+            //Can't put in this global settings JSON because it may mess up launchers
+            if (File.Exists(Path.Combine(CUOEnviroment.ExecutablePath, "Data", "DISABLE_ENHANCED_PACKETS")))
+                return false;
+
+            return true;
+        }
+        
         public static string GetSettingsFilepath()
         {
             if (CustomSettingsFilepath != null)

@@ -43,7 +43,7 @@ namespace Microsoft.Xna.Framework.Graphics
 {	
 	public abstract class GraphicsResource : IDisposable
 	{
-		protected readonly GraphicsDevice GraphicsDevice;
+		public readonly GraphicsDevice GraphicsDevice;
 		
 		protected GraphicsResource()
 		{

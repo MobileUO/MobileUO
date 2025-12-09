@@ -8,6 +8,7 @@ namespace ClassicUO.IO
     {
         // MobileUO: removed accessor for stream
         private readonly MemoryMappedViewStream _stream;
+        //private readonly MemoryMappedViewAccessor _accessor;
         private readonly MemoryMappedFile _mmf;
         private readonly BinaryReader _file;
 
@@ -29,6 +30,24 @@ namespace ClassicUO.IO
             // MobileUO: replaced unsafe call
             _stream = _mmf.CreateViewStream(0, Length, MemoryMappedFileAccess.Read);
             _file = new BinaryReader(_stream);
+
+            //_accessor = _mmf.CreateViewAccessor(0, Length, MemoryMappedFileAccess.Read);
+
+            //try
+            //{
+            //    unsafe
+            //    {
+            //        byte* ptr = null;
+            //        _accessor.SafeMemoryMappedViewHandle.AcquirePointer(ref ptr);
+            //        _file = new BinaryReader(new UnmanagedMemoryStream(ptr, Length));
+            //    }
+            //}
+            //catch
+            //{
+            //    _accessor.SafeMemoryMappedViewHandle.ReleasePointer();
+
+            //    throw new Exception("Something went wrong...");
+            //}
         }
 
         public override BinaryReader Reader => _file;
@@ -38,6 +57,8 @@ namespace ClassicUO.IO
             // MobileUO: added dispose
             _file?.Dispose();
             _stream?.Dispose();
+            //_accessor?.SafeMemoryMappedViewHandle.ReleasePointer();
+            //_accessor?.Dispose();
             _mmf?.Dispose();
 
             base.Dispose();

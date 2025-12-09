@@ -10,17 +10,18 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Xml;
+using ClassicUO.Utility.Logging;
 using Point = Microsoft.Xna.Framework.Point;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class ResizableJournal : ResizableGump
+    public class ResizableJournal : ResizableGump
     {
         #region VARS
         public static bool ReloadTabs { get; set; } = false;
 
         private static int BORDER_WIDTH = 4;
-        private static int MIN_WIDTH = (BORDER_WIDTH * 2) + (TAB_WIDTH * 4) + 20;
+        private static int MIN_WIDTH = (BORDER_WIDTH * 2) + (TAB_WIDTH * 4) + 40;
         private const int MIN_HEIGHT = 100;
         private const int SCROLL_BAR_WIDTH = 14;
         #region TABS
@@ -42,27 +43,38 @@ namespace ClassicUO.Game.UI.Gumps
         private JournalEntriesContainer _journalArea;
         private ScrollBar _scrollBarBase;
         private NiceButton _newTabButton;
+        private NiceButton _clearJournalButton;
         #endregion
 
         #region OTHER
         private static int _lastX = 100, _lastY = 100;
-        private static int _lastWidth = MIN_WIDTH, _lastHeight = 350;
+        private static int _lastWidth = MIN_WIDTH, _lastHeight = 300;
+        private readonly GumpPicTiled _backgroundTexture;
         private World _world;
         #endregion
         public ResizableJournal(World world) : base(world, _lastWidth, _lastHeight, MIN_WIDTH, MIN_HEIGHT, 0, 0)
         {
             _world = world;
+            AnchorType = ProfileManager.CurrentProfile.JournalAnchorEnabled ? ANCHOR_TYPE.NONE : ANCHOR_TYPE.DISABLED;
             CanMove = true;
+            _prevCanMove = true;
             AcceptMouseInput = true;
             WantUpdateSize = true;
             CanCloseWithRightClick = true;
+            _prevCloseWithRightClick = true;
+            if (ProfileManager.CurrentProfile != null)
+            {
+                _lastX = ProfileManager.CurrentProfile.JournalPosition.X;
+                _lastY = ProfileManager.CurrentProfile.JournalPosition.Y;
+                IsLocked = ProfileManager.CurrentProfile.JournalLocked;
+            }
             X = _lastX;
             Y = _lastY;
 
 
             #region Background
-            _background = new AlphaBlendControl(0.7f);
-            _background.Hue = 0x0000;
+            _background = new AlphaBlendControl((float)ProfileManager.CurrentProfile.JournalOpacity / 100);
+            _background.Hue = ProfileManager.CurrentProfile.AltJournalBackgroundHue;
             _background.Width = Width - (BORDER_WIDTH * 2);
             _background.Height = Height - (BORDER_WIDTH * 2);
             _background.X = BORDER_WIDTH;
@@ -73,6 +85,7 @@ namespace ClassicUO.Game.UI.Gumps
                 InvokeDragBegin(e.Location);
             };
 
+            _backgroundTexture = new GumpPicTiled(0);
             #endregion
 
             #region Journal Area
@@ -93,6 +106,7 @@ namespace ClassicUO.Game.UI.Gumps
             #endregion
 
             Add(_background);
+            Add(_backgroundTexture);
             Add(_scrollBarBase);
 
             Add(_journalArea);
@@ -103,18 +117,34 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 if (e.Button == MouseButtonType.Left)
                 {
-                    UIManager.Add(new EntryDialog(world, 250, 150, "Enter a tab name", (s) => {
-                         ProfileManager.CurrentProfile.JournalTabs.Add(s, new MessageType[] { MessageType.Regular });
-                         ReloadTabs = true;
-                    }));
+                    UIManager.Add(new InputRequest(World, "Enter a tab name", "Save", "Cancel", (r, entry) =>
+                    {
+                        if (r == InputRequest.Result.BUTTON1 && !string.IsNullOrEmpty(entry))
+                        {
+                            ProfileManager.CurrentProfile.JournalTabs.Add(entry, new MessageType[] { MessageType.Regular });
+                            ResizableJournal.ReloadTabs = true;
+                        }
+                    })
+                    { X = X, Y = Y });
+                }
+            };
+
+            Add(_clearJournalButton = new NiceButton(0, 0, 20, TAB_HEIGHT, ButtonAction.Activate, "X") { IsSelectable = false });
+            _clearJournalButton.SetTooltip("Clear journal entries");
+            _clearJournalButton.MouseUp += (s, e) =>
+            {
+                if (e.Button == MouseButtonType.Left)
+                {
+                    _journalArea.ClearEntries();
                 }
             };
 
             BuildTabs();
 
             InitJournalEntries();
-
-            world.Journal.EntryAdded += EventSink_EntryAdded;
+            ResizeWindow(ProfileManager.CurrentProfile.ResizeJournalSize);
+            BuildBorder();
+            EventSink.JournalEntryAdded += EventSink_EntryAdded; ;
         }
 
         private void EventSink_EntryAdded(object sender, JournalEntry e)
@@ -123,6 +153,20 @@ namespace ClassicUO.Game.UI.Gumps
         }
 
         public override GumpType GumpType => GumpType.Journal;
+
+        public enum BorderStyle
+        {
+            Default,
+            Style1,
+            Style2,
+            Style3,
+            Style4,
+            Style5,
+            Style6,
+            Style7,
+            Style8,
+            //Style9
+        }
 
         private void BuildTabs()
         {
@@ -139,13 +183,105 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 AddTab(tab.Key, tab.Value);
             }
+            if (ProfileManager.CurrentProfile.LastJournalTab < _tab.Count)
+            {
+                _tab[ProfileManager.CurrentProfile.LastJournalTab].IsSelected = true;
+                OnButtonClick(ProfileManager.CurrentProfile.LastJournalTab); //Simulate selecting a tab
+            }
 
             for (int i = 0; i < _tab.Count; i++)
                 Add(_tab[i]);
 
             _newTabButton.X = (_tab.Count * TAB_WIDTH) + 4;
+            _clearJournalButton.X = _newTabButton.X + _newTabButton.Width + 4;
+        }
 
-            MIN_WIDTH = (BORDER_WIDTH * 2) + (TAB_WIDTH * _tab.Count) + 20;
+        public void BuildBorder()
+        {
+            int graphic = 0, borderSize = 0;
+            switch ((BorderStyle)ProfileManager.CurrentProfile.JournalStyle)
+            {
+                case BorderStyle.Style1:
+                    graphic = 3500; borderSize = 26;
+                    break;
+                case BorderStyle.Style2:
+                    graphic = 5054; borderSize = 12;
+                    break;
+                case BorderStyle.Style3:
+                    graphic = 5120; borderSize = 10;
+                    break;
+                case BorderStyle.Style4:
+                    graphic = 9200; borderSize = 7;
+                    break;
+                case BorderStyle.Style5:
+                    graphic = 9270; borderSize = 10;
+                    break;
+                case BorderStyle.Style6:
+                    graphic = 9300; borderSize = 4;
+                    break;
+                case BorderStyle.Style7:
+                    graphic = 9260; borderSize = 17;
+                    break;
+                case BorderStyle.Style8:
+                    {
+                        if (Client.Game.UO.Gumps.GetGump(40303).Texture != null)
+                            graphic = 40303;
+                        else
+                            graphic = 83;
+                        borderSize = 16;
+                        break;
+                    }
+                //case BorderStyle.Style9:
+                //    {
+                //        if (Assets.GumpsLoader.Instance.GetGumpTexture(40313, out var bounds) != null)
+                //        {
+                //            graphic = 40313;
+                //            borderSize = 75;
+                //        }
+                //        else
+                //        {
+                //            graphic = 83;
+                //            borderSize = 16;
+                //        }
+                //        break;
+                //    }
+
+                default:
+                case BorderStyle.Default:
+                    BorderControl.DefaultGraphics();
+                    _backgroundTexture.IsVisible = false;
+                    _background.IsVisible = true;
+                    BORDER_WIDTH = 4;
+                    break;
+            }
+
+            if ((BorderStyle)ProfileManager.CurrentProfile.JournalStyle != BorderStyle.Default)
+            {
+                BorderControl.T_Left = (ushort)graphic;
+                BorderControl.H_Border = (ushort)(graphic + 1);
+                BorderControl.T_Right = (ushort)(graphic + 2);
+                BorderControl.V_Border = (ushort)(graphic + 3);
+
+                _backgroundTexture.Graphic = (ushort)(graphic + 4);
+                _backgroundTexture.IsVisible = true;
+                _backgroundTexture.Hue = _background.Hue;
+                BorderControl.Hue = _background.Hue;
+                BorderControl.Alpha = (float)ProfileManager.CurrentProfile.JournalOpacity / 100;
+                _background.IsVisible = false;
+
+                BorderControl.V_Right_Border = (ushort)(graphic + 5);
+                BorderControl.B_Left = (ushort)(graphic + 6);
+                BorderControl.H_Bottom_Border = (ushort)(graphic + 7);
+                BorderControl.B_Right = (ushort)(graphic + 8);
+                BorderControl.BorderSize = borderSize;
+                BORDER_WIDTH = borderSize;
+            }
+            Reposition();
+
+            if (ProfileManager.CurrentProfile.HideJournalBorder)
+                BorderControl.IsVisible = false;
+            else
+                BorderControl.IsVisible = true;
         }
 
         private void Reposition()
@@ -156,6 +292,13 @@ namespace ClassicUO.Game.UI.Gumps
             _background.Y = BORDER_WIDTH;
             _background.Width = Width - (BORDER_WIDTH * 2);
             _background.Height = Height - (BORDER_WIDTH * 2);
+
+            _backgroundTexture.X = _background.X;
+            _backgroundTexture.Y = _background.Y;
+            _backgroundTexture.Width = _background.Width;
+            _backgroundTexture.Height = _background.Height;
+            _backgroundTexture.Alpha = (float)ProfileManager.CurrentProfile.JournalOpacity / 100;
+            BorderControl.Alpha = (float)ProfileManager.CurrentProfile.JournalOpacity / 100;
 
             _journalArea.X = BORDER_WIDTH;
             _journalArea.Y = TAB_HEIGHT;
@@ -168,6 +311,25 @@ namespace ClassicUO.Game.UI.Gumps
             _scrollBarBase.X = Width - SCROLL_BAR_WIDTH - BORDER_WIDTH;
             _scrollBarBase.Y = _journalArea.Y;
             _scrollBarBase.Height = Height - BORDER_WIDTH - TAB_HEIGHT;
+            ProfileManager.CurrentProfile.ResizeJournalSize = new Point(Width, Height);
+        }
+
+        public void UpdateOptions()
+        {
+            _backgroundTexture.Alpha = (float)ProfileManager.CurrentProfile.JournalOpacity / 100;
+            BorderControl.Alpha = (float)ProfileManager.CurrentProfile.JournalOpacity / 100;
+            _background.Hue = ProfileManager.CurrentProfile.AltJournalBackgroundHue;
+            AnchorType = ProfileManager.CurrentProfile.JournalAnchorEnabled ? ANCHOR_TYPE.NONE : ANCHOR_TYPE.DISABLED;
+
+            BuildBorder();
+        }
+
+        public static void UpdateJournalOptions()
+        {
+            foreach (ResizableJournal j in UIManager.Gumps.OfType<ResizableJournal>())
+            {
+                j.UpdateOptions();
+            }
         }
 
         public override void Save(XmlTextWriter writer)
@@ -208,12 +370,14 @@ namespace ClassicUO.Game.UI.Gumps
             }
 
             ResizeWindow(savedSize);
+            BuildBorder();
         }
 
         protected override void OnMouseWheel(MouseEventType delta)
         {
             base.OnMouseWheel(delta);
-            _scrollBarBase?.InvokeMouseWheel(delta);
+            if (_scrollBarBase != null)
+                _scrollBarBase.InvokeMouseWheel(delta);
         }
 
         public override void OnButtonClick(int buttonID)
@@ -225,6 +389,7 @@ namespace ClassicUO.Game.UI.Gumps
                 _journalArea.CalculateScrollBarMaxValue();
                 _journalArea.Update();
                 _scrollBarBase.Value = _scrollBarBase.MaxValue;
+                ProfileManager.CurrentProfile.LastJournalTab = buttonID;
             }
         }
 
@@ -236,7 +401,7 @@ namespace ClassicUO.Game.UI.Gumps
                 ButtonParameter = _tab.Count,
                 IsSelectable = true,
                 CanCloseWithRightClick = false,
-                ContextMenu = new TabContextEntry(_world, this, Name)
+                ContextMenu = new TabContextEntry(this, Name)
             });
 
             nb.MouseUp += (sender, e) =>
@@ -254,11 +419,19 @@ namespace ClassicUO.Game.UI.Gumps
         {
             if (journalEntry == null)
                 return;
-
-            if (!string.IsNullOrEmpty(journalEntry.Name) && _world.IgnoreManager.IgnoredCharsList.Contains(journalEntry.Name))
+            if (!string.IsNullOrEmpty(journalEntry.Name) && World.IgnoreManager.IgnoredCharsList.Contains(journalEntry.Name))
                 return;
 
-            _journalArea.AddEntry(journalEntry);
+            string text;
+            if (string.IsNullOrEmpty(journalEntry.Name) || string.Equals(journalEntry.Name, journalEntry.Text.Trim())) //Text is apparently prepended with a space from servers.
+            {
+                text = journalEntry.Text;
+            }
+            else
+            {
+                text = $"{journalEntry.Name}: {journalEntry.Text}";
+            }
+            _journalArea.AddEntry(text, journalEntry.Hue, journalEntry.Time, journalEntry.TextType, journalEntry.MessageType);
         }
 
         private void InitJournalEntries()
@@ -271,17 +444,23 @@ namespace ClassicUO.Game.UI.Gumps
             }
         }
 
+        protected override void UpdateContents()
+        {
+            base.UpdateContents();
+            _background.Alpha = (float)ProfileManager.CurrentProfile.JournalOpacity / 100;
+        }
+
         public override void Update()
         {
             base.Update();
 
-            if (IsDisposed) return;
+            if (IsDisposed) { return; }
 
             if (X != _lastX || Y != _lastY)
             {
                 _lastX = X;
                 _lastY = Y;
-
+                ProfileManager.CurrentProfile.JournalPosition = Location;
             }
             if (((Width != _lastWidth || Height != _lastHeight) && !Mouse.LButtonPressed))
                 Reposition();
@@ -289,13 +468,15 @@ namespace ClassicUO.Game.UI.Gumps
             if (ReloadTabs)
             {
                 ReloadTabs = false;
+
                 BuildTabs();
             }
         }
 
         public override void Dispose()
         {
-            _world.Journal.EntryAdded -= EventSink_EntryAdded;
+            EventSink.JournalEntryAdded -= EventSink_EntryAdded;
+            _journalArea.Dispose();
             base.Dispose();
         }
 
@@ -328,12 +509,13 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 base.Draw(batcher, x, y);
                 int my = y;
+                bool hideTimestamp = ProfileManager.CurrentProfile.HideJournalTimestamp;
 
                 if (batcher.ClipBegin(x, y, Width, Height))
                 {
                     foreach (JournalData journalEntry in journalDatas)
                     {
-                        if (journalEntry == null || string.IsNullOrEmpty(journalEntry.EntryText.Text))
+                        if (journalEntry == null || journalEntry.EntryText == null || journalEntry.TimeStamp == null)
                             continue;
 
                         if (!CanBeDrawn(journalEntry.TextType, journalEntry.MessageType))
@@ -341,8 +523,9 @@ namespace ClassicUO.Game.UI.Gumps
 
                         if (my + journalEntry.EntryText.Height - y >= _scrollBar.Value && my - y <= _scrollBar.Value + _scrollBar.Height)
                         {
-                            journalEntry.TimeStamp.Draw(batcher, x, my - _scrollBar.Value);
-                            journalEntry.EntryText.Draw(batcher, x + (journalEntry.TimeStamp.Width + 5), my - _scrollBar.Value);
+                            if (!hideTimestamp)
+                                journalEntry.TimeStamp.Draw(batcher, x, my - _scrollBar.Value);
+                            journalEntry.EntryText.Draw(batcher, hideTimestamp ? x : x + (journalEntry.TimeStamp.Width + 5), my - _scrollBar.Value);
                         }
                         my += journalEntry.EntryText.Height;
                     }
@@ -367,8 +550,10 @@ namespace ClassicUO.Game.UI.Gumps
 
                     foreach (JournalData _ in journalDatas)
                     {
-                        _.EntryText.Width = Width - BORDER_WIDTH - _.TimeStamp.Width;
-                        _.EntryText.Update();
+                        if (_ is null)
+                            continue;
+                        _.EntryText.Width = Width - BORDER_WIDTH - (ProfileManager.CurrentProfile.HideJournalTimestamp ? 0 : _.TimeStamp.Width);
+                        _.EntryText.Update(); //Because this control isn't a child of any gump, it doesn't get updated
                     }
 
                     CalculateScrollBarMaxValue();
@@ -407,21 +592,23 @@ namespace ClassicUO.Game.UI.Gumps
                 }
             }
 
-            public void AddEntry(JournalEntry e)
+            public void AddEntry(string text, ushort hue, DateTime time, TextType text_type, MessageType messageType)
             {
                 bool maxScroll = _scrollBar.Value == _scrollBar.MaxValue;
 
-                while (journalDatas.Count > Constants.MAX_JOURNAL_HISTORY_COUNT)
+                while (journalDatas.Count > (ProfileManager.CurrentProfile == null ? 200 : ProfileManager.CurrentProfile.MaxJournalEntries))
                     journalDatas.RemoveFromFront().Destroy();
 
-                Label timeS = new Label($"{e.Time:t}", e.IsUnicode, e.Hue, font: e.Font);
+                TextBox timeS = TextBox.GetOne($"{time:t}", ProfileManager.CurrentProfile.SelectedTTFJournalFont, ProfileManager.CurrentProfile.SelectedJournalFontSize - 2, 1150, TextBox.RTLOptions.Default());
+                TextBox je = TextBox.GetOne(text, ProfileManager.CurrentProfile.SelectedTTFJournalFont, ProfileManager.CurrentProfile.SelectedJournalFontSize, hue,
+                    new TextBox.RTLOptions() { Width = Width - (ProfileManager.CurrentProfile.HideJournalTimestamp ? 0 : timeS.Width) });
 
                 journalDatas.AddToBack(
                     new JournalData(
-                        new Label($"{e.Name}: {e.Text}", e.IsUnicode, e.Hue, font: e.Font),
+                        je,
                         timeS,
-                        e.TextType,
-                        e.MessageType
+                        text_type,
+                        messageType
                     ));
 
                 if (maxScroll)
@@ -439,6 +626,9 @@ namespace ClassicUO.Game.UI.Gumps
                     {
                         MessageType currentfilter = _resizableJournal._currentFilter[i];
 
+                        if (messageType == MessageType.ChatSystem && currentfilter == MessageType.ChatSystem)
+                            return true;
+
                         if (type == TextType.SYSTEM && currentfilter == MessageType.System)
                             return true;
 
@@ -452,6 +642,12 @@ namespace ClassicUO.Game.UI.Gumps
                 }
 
                 return true;
+            }
+
+            public void ClearEntries()
+            {
+                Reset();
+                CalculateScrollBarMaxValue();
             }
 
             private void Reset()
@@ -471,7 +667,7 @@ namespace ClassicUO.Game.UI.Gumps
 
             public class JournalData
             {
-                public JournalData(Label textBox, Label timeStamp, TextType textType, MessageType messageType)
+                public JournalData(TextBox textBox, TextBox timeStamp, TextType textType, MessageType messageType)
                 {
                     EntryText = textBox;
                     TimeStamp = timeStamp;
@@ -485,8 +681,8 @@ namespace ClassicUO.Game.UI.Gumps
                     TimeStamp?.Dispose();
                 }
 
-                public Label EntryText { get; }
-                public Label TimeStamp { get; }
+                public TextBox EntryText { get; }
+                public TextBox TimeStamp { get; }
                 public TextType TextType { get; }
                 public MessageType MessageType { get; }
             }
@@ -494,13 +690,14 @@ namespace ClassicUO.Game.UI.Gumps
 
         private class TabContextEntry : ContextMenuControl
         {
-            public TabContextEntry(World world, Gump parent, string name) : base(parent)
+            public TabContextEntry(Gump gump, string name) : base(gump)
             {
                 if (ProfileManager.CurrentProfile.JournalTabs.ContainsKey(name))
                 {
                     MessageType[] selectedTypes = ProfileManager.CurrentProfile.JournalTabs[name];
 
-                    foreach (MessageType item in Enum.GetValues(typeof(MessageType)))
+                    // MobileUO: Enum.GetValues<T>() not available in Unity
+                    foreach (MessageType item in (MessageType[])Enum.GetValues(typeof(MessageType)))// Enum.GetValues<MessageType>())
                     {
                         string entryName = string.Empty;
                         switch (item)
@@ -544,8 +741,14 @@ namespace ClassicUO.Game.UI.Gumps
                             case MessageType.Encoded:
                                 entryName = "Encoded";
                                 break;
+                            case MessageType.ChatSystem:
+                                entryName = "Global Chat";
+                                break;
                             case MessageType.Party:
                                 entryName = "Party";
+                                break;
+                            case MessageType.Damage:
+                                entryName = "Damage";
                                 break;
                         }
 
@@ -575,14 +778,14 @@ namespace ClassicUO.Game.UI.Gumps
 
                 Add("X Delete Tab", () =>
                 {
-                    UIManager.Add(new QuestionGump(world, $"Delete [{name}] tab?", (yes) =>
+                    UIManager.Add(new QuestionGump(gump.World, $"Delete [{name}] tab?", (yes) =>
                     {
                         if (yes)
                         {
                             if (ProfileManager.CurrentProfile.JournalTabs.ContainsKey(name))
                             {
                                 ProfileManager.CurrentProfile.JournalTabs.Remove(name);
-                                ReloadTabs = true;
+                                ResizableJournal.ReloadTabs = true;
                             }
                         }
                     }));

@@ -6,15 +6,18 @@ using ClassicUO.Game.UI.Controls;
 using ClassicUO.Assets;
 using ClassicUO.Network;
 using ClassicUO.Resources;
+using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class PartyGump : Gump
+    public class PartyGump : NineSliceGump
     {
-        public PartyGump(World world, int x, int y, bool canloot) : base(world, 0, 0)
+        private const int GUMP_WIDTH = 450;
+        private const int GUMP_HEIGHT = 420;
+        private SimpleProgressBar[] _healthBars = new SimpleProgressBar[10];
+
+        public PartyGump(World world, int x, int y, bool canloot) : base(world, x, y, GUMP_WIDTH, GUMP_HEIGHT, ModernUIConstants.ModernUIPanel, ModernUIConstants.ModernUIPanel_BoderSize, true, GUMP_WIDTH, GUMP_HEIGHT)
         {
-            X = x;
-            Y = y;
             CanLoot = canloot;
 
             CanMove = true;
@@ -26,268 +29,226 @@ namespace ClassicUO.Game.UI.Gumps
 
         public bool CanLoot;
 
+        public override void Update()
+        {
+            base.Update();
+
+            // Update health bars for party members
+            for (int i = 0; i < 10; i++)
+            {
+                if (_healthBars[i] != null && World.Party.Members[i] != null)
+                {
+                    if (World.Mobiles.TryGetValue(World.Party.Members[i].Serial, out var mobile))
+                    {
+                        _healthBars[i].SetProgress(mobile.Hits, mobile.HitsMax);
+                    }
+                }
+            }
+        }
+
 
         protected override void UpdateContents()
         {
             Clear();
+            // Clear health bar references when rebuilding
+            for (int i = 0; i < 10; i++)
+            {
+                _healthBars[i] = null;
+            }
+            BuildGump();
+        }
+
+        protected override void OnResize(int oldWidth, int oldHeight, int newWidth, int newHeight)
+        {
+            base.OnResize(oldWidth, oldHeight, newWidth, newHeight);
+            Clear();
+            // Clear health bar references when rebuilding
+            for (int i = 0; i < 10; i++)
+            {
+                _healthBars[i] = null;
+            }
             BuildGump();
         }
 
         private void BuildGump()
         {
-            Add
-            (
-                new ResizePic(0x0A28)
-                {
-                    Width = 450,
-                    Height = 480
-                }
-            );
+            // Modern UI panel background is provided by NineSliceGump base class
 
-            Add
-            (
-                new Label(ResGumps.Tell, false, 0x0386, font: 1)
-                {
-                    X = 40,
-                    Y = 30
-                }
-            );
+            // Calculate button dimensions - 70% of gump width
+            int buttonWidth = (int)((Width - BorderSize * 2) * 0.7f);
+            int buttonX = BorderSize + (Width - BorderSize * 2 - buttonWidth) / 2;
 
-            Add
-            (
-                new Label(ResGumps.Kick, false, 0x0386, font: 1)
-                {
-                    X = 80,
-                    Y = 30
-                }
-            );
+            // Calculate player name field width based on available space
+            int nameFieldWidth = Width - BorderSize * 2 - 117; // Available space after Tell/Kick buttons
 
-            Add
-            (
-                new Label(ResGumps.PartyManifest, false, 0x0386, font: 2)
-                {
-                    X = 153,
-                    Y = 20
-                }
-            );
-
+            // Calculate header positioning to align with centered party entries
             bool isLeader = World.Party.Leader == 0 || World.Party.Leader == World.Player;
+            int entryAreaWidth = Width - BorderSize * 2;
+            int buttonAreaWidth = isLeader ? 90 : 60; // Space for Msg + Kick or just Msg
+            int nameAreaWidth = entryAreaWidth - buttonAreaWidth - 120; // Reserve 120 for health bar
+            int entryStartX = BorderSize + (entryAreaWidth - (buttonAreaWidth + nameAreaWidth + 120)) / 2;
+
+            // Header labels with TTF font and orange color aligned with buttons
+            var msgLabel = TextBox.GetOne("Msg", TrueTypeLoader.EMBEDDED_FONT, 14, Color.Orange, TextBox.RTLOptions.Default());
+            msgLabel.X = entryStartX;
+            msgLabel.Y = BorderSize + 17;
+            msgLabel.AcceptMouseInput = false;
+            Add(msgLabel);
+
+            if (isLeader)
+            {
+                var kickLabel = TextBox.GetOne(ResGumps.Kick, TrueTypeLoader.EMBEDDED_FONT, 14, Color.Orange, TextBox.RTLOptions.Default());
+                kickLabel.X = entryStartX + 30; // Same spacing as buttons
+                kickLabel.Y = BorderSize + 17;
+                kickLabel.AcceptMouseInput = false;
+                Add(kickLabel);
+            }
+
+            // Center Party Manifest label with larger font
+            var partyManifestLabel = TextBox.GetOne(ResGumps.PartyManifest, TrueTypeLoader.EMBEDDED_FONT, 18, Color.Orange, TextBox.RTLOptions.Default());
+            partyManifestLabel.AcceptMouseInput = false;
+            Add(partyManifestLabel);
+            // Center the label horizontally in the gump
+            partyManifestLabel.X = BorderSize + (Width - BorderSize * 2 - partyManifestLabel.Width) / 2;
+            partyManifestLabel.Y = BorderSize + 7;
+
             bool isMemeber = World.Party.Leader != 0 && World.Party.Leader != World.Player;
 
-            int yPtr = 48;
+            int yPtr = BorderSize + 35;
 
             for (int i = 0; i < 10; i++)
             {
+                int currentX = entryStartX;
+
+                // Msg button
                 Add
                 (
-                    new Button((int) (Buttons.TellMember + i), 0x0FAB, 0x0FAD, 0x0FAC)
+                    new NiceButton(currentX, yPtr + 2, 25, 20, ButtonAction.Activate, "Msg")
                     {
-                        X = 40,
-                        Y = yPtr + 2,
-                        ButtonAction = ButtonAction.Activate
+                        ButtonParameter = (int)(Buttons.TellMember + i),
+                        IsSelectable = false
                     }
                 );
+                currentX += 30;
 
+                // Kick button (only for leaders)
                 if (isLeader)
                 {
                     Add
                     (
-                        new Button((int) (Buttons.KickMember + i), 0x0FB1, 0x0FB3, 0x0FB2)
+                        new NiceButton(currentX, yPtr + 2, 25, 20, ButtonAction.Activate, "Kick", hue: 34)
                         {
-                            X = 80,
-                            Y = yPtr + 2,
-                            ButtonAction = ButtonAction.Activate
+                            ButtonParameter = (int)(Buttons.KickMember + i),
+                            IsSelectable = false
                         }
                     );
+                    currentX += 30;
+                }
+                else
+                {
+                    currentX += 30; // Add space even when no kick button for alignment
                 }
 
-                Add(new GumpPic(130, yPtr, 0x0475, 0));
+                // Name background
+                Add(new AlphaBlendControl(0.2f)
+                {
+                    X = currentX,
+                    Y = yPtr,
+                    Width = nameAreaWidth,
+                    Height = 23
+                });
 
                 string name = "";
-
                 if (World.Party.Members[i] != null && World.Party.Members[i].Name != null)
                 {
                     name = World.Party.Members[i].Name;
                 }
 
+                // Name label
                 Add
                 (
                     new Label
                     (
                         name,
                         false,
-                        0x0386,
-                        font: 2,
-                        maxwidth: 250,
+                        0xFFFF,
+                        font: 0,
+                        maxwidth: nameAreaWidth - 10,
                         align: TEXT_ALIGN_TYPE.TS_CENTER
                     )
                     {
-                        X = 140,
+                        X = currentX + 5,
                         Y = yPtr + 1
                     }
                 );
+                currentX += nameAreaWidth + 5;
+
+                // Health bar (only if party member exists in World.Mobiles)
+                if (World.Party.Members[i] != null)
+                {
+                    if (World.Mobiles.TryGetValue(World.Party.Members[i].Serial, out var mobile))
+                    {
+                        _healthBars[i] = new SimpleProgressBar("#FF1010", "#0000FF", 110, 18)
+                        {
+                            X = currentX,
+                            Y = yPtr + 3
+                        };
+                        _healthBars[i].SetProgress(mobile.Hits, mobile.HitsMax);
+                        Add(_healthBars[i]);
+                    }
+                }
 
                 yPtr += 25;
             }
 
             Add
             (
-                new Button((int) Buttons.SendMessage, 0x0FAB, 0x0FAD, 0x0FAC)
+                new NiceButton(buttonX, BorderSize + 294, buttonWidth, 25, ButtonAction.Activate, ResGumps.SendThePartyAMessage)
                 {
-                    X = 70,
-                    Y = 307,
-                    ButtonAction = ButtonAction.Activate
+                    ButtonParameter = (int)Buttons.SendMessage,
+                    IsSelectable = false
                 }
             );
 
+            string lootText = CanLoot ? ResGumps.PartyCanLootMe : ResGumps.PartyCannotLootMe;
             Add
             (
-                new Label(ResGumps.SendThePartyAMessage, false, 0x0386, font: 2)
+                new NiceButton(buttonX, BorderSize + 321, buttonWidth, 25, ButtonAction.Activate, lootText)
                 {
-                    X = 110,
-                    Y = 307
+                    ButtonParameter = (int)Buttons.LootType,
+                    IsSelectable = false
                 }
             );
 
-            if (CanLoot)
-            {
-                Add
-                (
-                    new Button((int) Buttons.LootType, 0x0FA2, 0x0FA2, 0x0FA2)
-                    {
-                        X = 70,
-                        Y = 334,
-                        ButtonAction = ButtonAction.Activate
-                    }
-                );
-
-                Add
-                (
-                    new Label(ResGumps.PartyCanLootMe, false, 0x0386, font: 2)
-                    {
-                        X = 110,
-                        Y = 334
-                    }
-                );
-            }
-            else
-            {
-                Add
-                (
-                    new Button((int) Buttons.LootType, 0x0FA9, 0x0FA9, 0x0FA9)
-                    {
-                        X = 70,
-                        Y = 334,
-                        ButtonAction = ButtonAction.Activate
-                    }
-                );
-
-                Add
-                (
-                    new Label(ResGumps.PartyCannotLootMe, false, 0x0386, font: 2)
-                    {
-                        X = 110,
-                        Y = 334
-                    }
-                );
-            }
-
-
+            string leaveText = isMemeber ? ResGumps.LeaveTheParty : ResGumps.DisbandTheParty;
             Add
             (
-                new Button((int) Buttons.Leave, 0x0FAE, 0x0FB0, 0x0FAF)
+                new NiceButton(buttonX, BorderSize + 347, buttonWidth, 25, ButtonAction.Activate, leaveText, hue: 32)
                 {
-                    X = 70,
-                    Y = 360,
-                    ButtonAction = ButtonAction.Activate
+                    ButtonParameter = (int)Buttons.Leave,
+                    IsSelectable = false
                 }
             );
-
-            if (isMemeber)
-            {
-                Add
-                (
-                    new Label(ResGumps.LeaveTheParty, false, 0x0386, font: 2)
-                    {
-                        X = 110,
-                        Y = 360
-                    }
-                );
-            }
-            else
-            {
-                Add
-                (
-                    new Label(ResGumps.DisbandTheParty, false, 0x0386, font: 2)
-                    {
-                        X = 110,
-                        Y = 360
-                    }
-                );
-            }
 
             if (isLeader)
             {
                 Add
                 (
-                    new Button((int) Buttons.Add, 0x0FA8, 0x0FAA, 0x0FA9)
+                    new NiceButton(buttonX, BorderSize + 372, buttonWidth, 25, ButtonAction.Activate, ResGumps.AddNewMember, hue: 66)
                     {
-                        X = 70,
-                        Y = 385,
-                        ButtonAction = ButtonAction.Activate
-                    }
-                );
-
-                Add
-                (
-                    new Label(ResGumps.AddNewMember, false, 0x0386, font: 2)
-                    {
-                        X = 110,
-                        Y = 385
+                        ButtonParameter = (int)Buttons.Add,
+                        IsSelectable = false
                     }
                 );
             }
 
-            Add
-            (
-                new Button((int) Buttons.OK, 0x00F9, 0x00F8, 0x00F7)
-                {
-                    X = 130,
-                    Y = 430,
-                    ButtonAction = ButtonAction.Activate
-                }
-            );
-
-            Add
-            (
-                new Button((int) Buttons.Cancel, 0x00F3, 0x00F1, 0x00F2)
-                {
-                    X = 236,
-                    Y = 430,
-                    ButtonAction = ButtonAction.Activate
-                }
-            );
+            // OK and Cancel buttons removed - not needed
         }
 
         public override void OnButtonClick(int buttonID)
         {
             switch ((Buttons) buttonID)
             {
-                case Buttons.OK:
-                    if (World.Party.Leader != 0 && World.Party.CanLoot != CanLoot)
-                    {
-                        World.Party.CanLoot = CanLoot;
-                        NetClient.Socket.Send_PartyChangeLootTypeRequest(CanLoot);
-                    }
-
-                    Dispose();
-
-                    break;
-
-                case Buttons.Cancel:
-                    Dispose();
-
-                    break;
 
                 case Buttons.SendMessage:
                     if (World.Party.Leader == 0)
@@ -304,6 +265,10 @@ namespace ClassicUO.Game.UI.Gumps
                     }
                     else
                     {
+                        if(!UIManager.SystemChat.IsActive)
+                            UIManager.SystemChat.IsActive = true;
+                        UIManager.SystemChat.TextBoxControl.ClearText();
+                        UIManager.SystemChat.Mode = ChatMode.Default;
                         UIManager.SystemChat.TextBoxControl.SetText("/");
                     }
 
@@ -311,6 +276,11 @@ namespace ClassicUO.Game.UI.Gumps
 
                 case Buttons.LootType:
                     CanLoot = !CanLoot;
+                    if (World.Party.Leader != 0)
+                    {
+                        World.Party.CanLoot = CanLoot;
+                        AsyncNetClient.Socket.Send_PartyChangeLootTypeRequest(CanLoot);
+                    }
                     RequestUpdateContents();
 
                     break;
@@ -346,7 +316,7 @@ namespace ClassicUO.Game.UI.Gumps
                 case Buttons.Add:
                     if (World.Party.Leader == 0 || World.Party.Leader == World.Player)
                     {
-                        NetClient.Socket.Send_PartyInviteRequest();
+                        AsyncNetClient.Socket.Send_PartyInviteRequest();
                     }
 
                     break;
@@ -370,8 +340,10 @@ namespace ClassicUO.Game.UI.Gumps
                         }
                         else
                         {
-                            //UIManager.SystemChat.textBox.SetText($"/{index + 1}");
-                            //UIManager.SystemChat.Mode = ChatMode.Party;
+                            if(!UIManager.SystemChat.IsActive)
+                                UIManager.SystemChat.IsActive = true;
+                            UIManager.SystemChat.TextBoxControl.ClearText();
+                            UIManager.SystemChat.Mode = ChatMode.Default;
                             UIManager.SystemChat.TextBoxControl.SetText($"/{index + 1} ");
                         }
                     }
@@ -393,7 +365,7 @@ namespace ClassicUO.Game.UI.Gumps
                         }
                         else
                         {
-                            NetClient.Socket.Send_PartyRemoveRequest(World.Party.Members[index].Serial);
+                            AsyncNetClient.Socket.Send_PartyRemoveRequest(World.Party.Members[index].Serial);
                         }
                     }
 
@@ -403,8 +375,6 @@ namespace ClassicUO.Game.UI.Gumps
 
         private enum Buttons
         {
-            OK,
-            Cancel,
             SendMessage,
             LootType,
             Leave,

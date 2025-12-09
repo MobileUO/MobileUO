@@ -33,6 +33,21 @@ namespace Microsoft.Xna.Framework.Graphics
             Data = vertexInfo;
         }
 
+        public void SetData<T>(
+            T[] data,
+            int startIndex,
+            int elementCount
+        ) where T : struct
+        {
+            //SetData(
+            //    0,
+            //    data,
+            //    startIndex,
+            //    elementCount,
+            //    MarshalHelper.SizeOf<T>()
+            //);
+        }
+
         public void SetDataPointerEXT(
             int offsetInBytes,
             IntPtr data,

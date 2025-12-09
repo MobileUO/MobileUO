@@ -3,18 +3,20 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ClassicUO.Assets;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.UI.Controls;
+using ClassicUO.Input;
 using ClassicUO.Renderer;
 using ClassicUO.Resources;
 using ClassicUO.Utility;
 using ClassicUO.Utility.Logging;
 using Microsoft.Xna.Framework;
-using SDL2;
+using SDL3;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class InspectorGump : Gump
+    public class InspectorGump : Gump
     {
         private const int WIDTH = 500;
         private const int HEIGHT = 400;
@@ -157,7 +159,8 @@ namespace ClassicUO.Game.UI.Gumps
                     {
                         X = startX + 200,
                         Y = startY,
-                        AcceptMouseInput = true
+                        AcceptMouseInput = true,
+                        CanMove = true
                     };
 
                     label.MouseUp += OnLabelClick;
@@ -214,13 +217,14 @@ namespace ClassicUO.Game.UI.Gumps
             }
         }
 
-        private void OnLabelClick(object sender, EventArgs e)
+        private void OnLabelClick(object sender, MouseEventArgs e)
         {
             Label l = (Label) sender;
 
-            if (l != null)
+            if (e.Button == MouseButtonType.Left && l != null)
             {
                 SDL.SDL_SetClipboardText(l.Text);
+                GameActions.Print(World, $"Copied to clipboard: {l.Text}");
             }
         }
 
@@ -228,18 +232,20 @@ namespace ClassicUO.Game.UI.Gumps
         {
             Dictionary<string, string> dict = new Dictionary<string, string>();
 
-            dict["Graphics"] = $"0x{obj.Graphic:X4}";
-            dict["Hue"] = $"0x{obj.Hue:X4}";
+            dict["Graphics"] = $"{obj.Graphic}";
+            dict["Hue"] = $"{obj.Hue}";
             dict["Position"] = $"X={obj.X}, Y={obj.Y}, Z={obj.Z}";
             dict["PriorityZ"] = obj.PriorityZ.ToString();
             dict["Distance"] = obj.Distance.ToString();
             dict["AllowedToDraw"] = obj.AllowedToDraw.ToString();
             dict["AlphaHue"] = obj.AlphaHue.ToString();
+            dict["HasLineOfSightFromPlayer"] = obj.HasLineOfSightFrom().ToString();
 
             switch (obj)
             {
                 case Mobile mob:
 
+                    dict["Type"] = "Mobile";
                     dict["Serial"] = $"0x{mob.Serial:X8}";
                     dict["Flags"] = mob.Flags.ToString();
                     dict["Notoriety"] = mob.NotorietyFlag.ToString();
@@ -260,6 +266,7 @@ namespace ClassicUO.Game.UI.Gumps
 
                 case Item it:
 
+                    dict["Type"] = "Item";
                     dict["Serial"] = $"0x{it.Serial:X8}";
                     dict["Flags"] = it.Flags.ToString();
                     dict["HP"] = $"{it.Hits}/{it.HitsMax}";
@@ -271,24 +278,32 @@ namespace ClassicUO.Game.UI.Gumps
                     dict["Direction"] = it.Direction.ToString();
                     dict["IsMulti"] = it.IsMulti.ToString();
                     dict["MultiGraphic"] = $"0x{it.MultiGraphic:X4}";
+                    dict["IsImpassable"] = it.ItemData.IsImpassable.ToString();
 
                     break;
 
                 case Static st:
-
+                    ref StaticTiles staticData = ref Client.Game.UO.FileManager.TileData.StaticData[st.OriginalGraphic];
+                    dict["Type"] = "Static";
                     dict["IsVegetation"] = st.IsVegetation.ToString();
+                    dict["IsWall"] = staticData.IsWall.ToString();
+                    dict["IsImpassable"] = staticData.IsImpassable.ToString();
 
                     break;
 
                 case Multi multi:
 
+                    dict["Type"] = "Multi";
                     dict["State"] = multi.State.ToString();
                     dict["IsMovable"] = multi.IsMovable.ToString();
+                    dict["IsImpassable"] = multi.ItemData.IsImpassable.ToString();
+                    dict["IsWall"] = multi.ItemData.IsWall.ToString();
 
                     break;
 
                 case Land land:
 
+                    dict["Type"] = "Land";
                     dict["IsFlat"] = (!land.IsStretched).ToString();
                     dict["NormalLeft"] = land.NormalLeft.ToString();
                     dict["NormalRight"] = land.NormalRight.ToString();
@@ -297,6 +312,7 @@ namespace ClassicUO.Game.UI.Gumps
                     dict["MinZ"] = land.MinZ.ToString();
                     dict["AvgZ"] = land.AverageZ.ToString();
                     dict["YOffsets"] = land.YOffsets.ToString();
+                    dict["IsImpassable"] = land.TileData.IsImpassable.ToString();
 
                     break;
             }

@@ -1,16 +1,16 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
-using System;
-using System.Collections.Generic;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.UI.Gumps;
 using ClassicUO.Input;
 using ClassicUO.Renderer;
 using Microsoft.Xna.Framework;
+using System;
+using System.Collections.Generic;
 
 namespace ClassicUO.Game.UI.Controls
 {
-    internal class ContextMenuControl
+    public class ContextMenuControl
     {
         private readonly List<ContextMenuItemEntry> _items;
         private readonly Gump _gump;
@@ -64,7 +64,7 @@ namespace ClassicUO.Game.UI.Controls
         }
     }
 
-    internal sealed class ContextMenuItemEntry
+    public class ContextMenuItemEntry
     {
         public ContextMenuItemEntry(string text, Action action = null, bool canBeSelected = false, bool defaultValue = false)
         {
@@ -74,11 +74,11 @@ namespace ClassicUO.Game.UI.Controls
             IsSelected = defaultValue;
         }
 
-        public readonly Action Action;
+        public Action Action;
         public readonly bool CanBeSelected;
         public bool IsSelected;
         public List<ContextMenuItemEntry> Items = new List<ContextMenuItemEntry>();
-        public readonly string Text;
+        public string Text;
 
         public void Add(ContextMenuItemEntry subEntry)
         {
@@ -87,7 +87,7 @@ namespace ClassicUO.Game.UI.Controls
     }
 
 
-    internal class ContextMenuShowMenu : Gump
+    public class ContextMenuShowMenu : Gump
     {
         private readonly AlphaBlendControl _background;
         private List<ContextMenuShowMenu> _subMenus;
@@ -107,6 +107,9 @@ namespace ClassicUO.Game.UI.Controls
             _background = new AlphaBlendControl(0.7f);
             Add(_background);
 
+            ScrollArea _scroll = new ScrollArea(0, 0, 0, 0, true);
+            Add(_scroll);
+
             int y = 0;
 
             for (int i = 0; i < list.Count; i++)
@@ -125,10 +128,18 @@ namespace ClassicUO.Game.UI.Controls
 
                 _background.Height += item.Height;
 
-                Add(item);
+                _scroll.Add(item);
 
                 y += item.Height;
             }
+
+            if(y >= Client.Game.Window.ClientBounds.Height >> 1)
+            {
+                y = Client.Game.Window.ClientBounds.Height >> 1;
+            }
+
+            _scroll.Height = Height = _background.Height = y;
+            _scroll.Width = _background.Width;
 
             X = Mouse.Position.X + 5;
             Y = Mouse.Position.Y - 20;
@@ -143,7 +154,12 @@ namespace ClassicUO.Game.UI.Controls
                 Y = Client.Game.Window.ClientBounds.Height - _background.Height;
             }
 
-            foreach (ContextMenuItem mitem in FindControls<ContextMenuItem>())
+            if (Y < Client.Game.Window.ClientBounds.Y)
+            {
+                Y = 0;
+            }
+
+            foreach (ContextMenuItem mitem in _scroll.FindControls<ContextMenuItem>())
             {
                 if (mitem.Width < _background.Width)
                 {
@@ -228,16 +244,13 @@ namespace ClassicUO.Game.UI.Controls
                 Add(_label);
 
 
-                if (entry.CanBeSelected)
+                _selectedPic = new GumpPic(3, 0, 0x838, 0)
                 {
-                    _selectedPic = new GumpPic(3, 0, 0x838, 0)
-                    {
-                        IsVisible = entry.IsSelected,
-                        IsEnabled = false
-                    };
+                    IsVisible = entry.IsSelected,
+                    IsEnabled = false
+                };
 
-                    Add(_selectedPic);
-                }
+                Add(_selectedPic);
 
                 Height = 25;
 
@@ -282,6 +295,11 @@ namespace ClassicUO.Game.UI.Controls
                 if (Width > _label.Width)
                 {
                     _label.Width = Width;
+                }
+
+                if (_selectedPic != null)
+                {
+                    _selectedPic.IsVisible = _entry.IsSelected;
                 }
 
                 if (_subMenu != null)

@@ -1,7 +1,9 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
+using ClassicUO.Configuration;
+using ClassicUO.Game;
 using Microsoft.Xna.Framework;
-using SDL2;
+using SDL3;
 
 namespace ClassicUO.Input
 {
@@ -41,7 +43,7 @@ namespace ClassicUO.Input
                     break;
             }
 
-            SDL.SDL_CaptureMouse(SDL.SDL_bool.SDL_TRUE);
+            SDL.SDL_CaptureMouse(true);
         }
 
         /* Log a button release event at the given time */
@@ -73,7 +75,7 @@ namespace ClassicUO.Input
 
             if (!(LButtonPressed || RButtonPressed || MButtonPressed))
             {
-                SDL.SDL_CaptureMouse(SDL.SDL_bool.SDL_FALSE);
+                SDL.SDL_CaptureMouse(false);
             }
         }
 
@@ -111,24 +113,42 @@ namespace ClassicUO.Input
 
         public static bool MouseInWindow { get; set; }
 
+        public static int ControllerSensativity { get; set; } = 10;
+
         public static void Update()
         {
             if (!MouseInWindow)
             {
-                SDL.SDL_GetGlobalMouseState(out int x, out int y);
+                SDL.SDL_GetGlobalMouseState(out float x, out float y);
                 SDL.SDL_GetWindowPosition(Client.Game.Window.Handle, out int winX, out int winY);
-                Position.X = x - winX;
-                Position.Y = y - winY;
+                Position.X = (int)x - winX;
+                Position.Y = (int)y - winY;
             }
             else
             {
-                SDL.SDL_GetMouseState(out Position.X, out Position.Y);
+                SDL.SDL_GetMouseState(out float x, out float y);
+                Position.X = (int)x;
+                Position.Y = (int)y;
+                Microsoft.Xna.Framework.Input.GamePadState gamePadState = Microsoft.Xna.Framework.Input.GamePad.GetState(PlayerIndex.One);
+
+                if (gamePadState.IsConnected && gamePadState.ThumbSticks.Right != Vector2.Zero)
+                {
+                    Position.X += (int)(ControllerSensativity * gamePadState.ThumbSticks.Right.X);
+                    Position.Y -= (int)(ControllerSensativity * gamePadState.ThumbSticks.Right.Y);
+                    SDL.SDL_WarpMouseInWindow(Client.Game.Window.Handle, Position.X, Position.Y);
+                }
             }
 
             // Scale the mouse coordinates for the faux-backbuffer
-            Position.X = (int) ((double) Position.X * Client.Game.GraphicManager.PreferredBackBufferWidth / Client.Game.Window.ClientBounds.Width);
+            Position.X = (int)((double)Position.X * Client.Game.GraphicManager.PreferredBackBufferWidth / Client.Game.Window.ClientBounds.Width);
 
-            Position.Y = (int) ((double) Position.Y * Client.Game.GraphicManager.PreferredBackBufferHeight / Client.Game.Window.ClientBounds.Height);
+            Position.Y = (int)((double)Position.Y * Client.Game.GraphicManager.PreferredBackBufferHeight / Client.Game.Window.ClientBounds.Height);
+
+            if (Client.Game.UO.World != null && Client.Game.UO.World.InGame && ProfileManager.CurrentProfile.GlobalScaling)
+            {
+                Position.X = (int)(Position.X / ProfileManager.CurrentProfile.GlobalScale);
+                Position.Y = (int)(Position.Y / ProfileManager.CurrentProfile.GlobalScale);
+            }
 
             IsDragging = LButtonPressed || RButtonPressed || MButtonPressed;
         }

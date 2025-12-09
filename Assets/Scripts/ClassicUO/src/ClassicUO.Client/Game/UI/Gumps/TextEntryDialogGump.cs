@@ -6,9 +6,11 @@ using ClassicUO.Network;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class TextEntryDialogGump : Gump
+    public class TextEntryDialogGump : Gump
     {
         private readonly StbTextBox _textBox;
+        public override bool ShouldBeSaved => false;
+        public override GumpType GumpType => GumpType.TextEntryDialogGump;
 
         public TextEntryDialogGump
         (
@@ -96,7 +98,7 @@ namespace ClassicUO.Game.UI.Gumps
             switch ((ButtonType) buttonID)
             {
                 case ButtonType.Ok:
-                    NetClient.Socket.Send_TextEntryDialogResponse(LocalSerial,
+                    AsyncNetClient.Socket.Send_TextEntryDialogResponse(LocalSerial,
                                                                   ParentID,
                                                                   ButtonID,
                                                                   _textBox.Text,
@@ -107,7 +109,7 @@ namespace ClassicUO.Game.UI.Gumps
                     break;
 
                 case ButtonType.Cancel:
-                    NetClient.Socket.Send_TextEntryDialogResponse(LocalSerial,
+                    AsyncNetClient.Socket.Send_TextEntryDialogResponse(LocalSerial,
                                                                   ParentID,
                                                                   ButtonID,
                                                                   _textBox.Text,

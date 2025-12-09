@@ -9,7 +9,7 @@ using ClassicUO.Renderer;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class UseAbilityButtonGump : AnchorableGump
+    public class UseAbilityButtonGump : AnchorableGump
     {
         private GumpPic _button;
 

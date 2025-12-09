@@ -234,25 +234,25 @@ namespace ClassicUO.Assets
 
             // --- build color lookup identical to your original logic ---
             Span<uint> colorTable = stackalloc uint[byte.MaxValue];
-            int colorOffset = 31 * maxPixelValue;
+                int colorOffset = 31 * maxPixelValue;
 
-            for (int i = 0; i < maxPixelValue; i++)
-            {
-                colorOffset -= 31;
+                for (int i = 0; i < maxPixelValue; i++)
+                {
+                    colorOffset -= 31;
                 int idx = colorOffset / maxPixelValue; // 0..31
                 if ((uint)idx >= 32u) 
                     idx = Math.Clamp(idx, 0, 31);
 
                 ushort c16 = ct[idx];
                 colorTable[i] = HuesHelper.Color16To32(c16) | 0xFF_00_00_00;
-            }
+                }
 
-            var pixels = new uint[mapSize];
-            for (int i = 0; i < mapSize; i++)
-            {
+                var pixels = new uint[mapSize];
+                for (int i = 0; i < mapSize; i++)
+                {
                 byte v = data[i];
                 pixels[i] = v != 0 ? colorTable[v - 1] : 0u;
-            }
+                }
 
             return new MultiMapInfo()
             {

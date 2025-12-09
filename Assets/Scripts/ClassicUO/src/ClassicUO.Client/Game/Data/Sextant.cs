@@ -13,11 +13,11 @@ namespace ClassicUO.Game.Data
     internal static partial class Sextant
     {
         public static readonly Point InvalidPoint = new(-1, -1);
-
-        // MobileUO: TODO: GeneratedRegex feature is not available in Unity's C#
-        //[GeneratedRegex()]
-        //private static partial Regex SextantCoordsRegex(@"(?<LatDegrees>\d{1,3})[°o\s]*(?<LatMinutes>\d{2})'(?<LatDirection>[NS])[\s,]*(?<LongDegrees>\d{1,3})[°o\s]*(?<LongMinutes>\d{2})'(?<LongDirection>[EW])");
-        private static readonly Regex SextantCoordsRegex = new Regex(@"(?<LatDegrees>\d{1,3})[°o\s]*(?<LatMinutes>\d{2})'(?<LatDirection>[NS])[\s,]*(?<LongDegrees>\d{1,3})[°o\s]*(?<LongMinutes>\d{2})'(?<LongDirection>[EW])");
+    
+            // MobileUO: TODO: GeneratedRegex feature is not available in Unity's C#
+            //[GeneratedRegex()]
+            //private static partial Regex SextantCoordsRegex(@"(?<LatDegrees>\d{1,3})[°o\s]*(?<LatMinutes>\d{2})'(?<LatDirection>[NS])[\s,]*(?<LongDegrees>\d{1,3})[°o\s]*(?<LongMinutes>\d{2})'(?<LongDirection>[EW])");
+            private static readonly Regex SextantCoordsRegex = new Regex(@"(?<LatDegrees>\d{1,3})[°o\s]*(?<LatMinutes>\d{2})'(?<LatDirection>[NS])[\s,]*(?<LongDegrees>\d{1,3})[°o\s]*(?<LongMinutes>\d{2})'(?<LongDirection>[EW])");
 
         /// <summary>
         /// Converts lat/long sextant coords into X,Y point coords
@@ -27,9 +27,9 @@ namespace ClassicUO.Game.Data
         /// <returns>Point representing the map X/Y on success, or an invalid point on failure</returns>
         public static bool Parse(Map.Map map, string coords, out Point point)
         {
-            // MobileUO: TODO: GeneratedRegex feature is not available in Unity's C#
-            Match match = SextantCoordsRegex.Match(coords.Trim());
-
+                // MobileUO: TODO: GeneratedRegex feature is not available in Unity's C#
+                Match match = SextantCoordsRegex.Match(coords.Trim());
+        
             point = InvalidPoint;
 
             try
@@ -51,11 +51,11 @@ namespace ClassicUO.Game.Data
 
                 return true;
             }
-            catch (Exception e)
+            catch(Exception e)
             {
                 Log.Trace($"Failed to parse sextant coords \"{coords}\": {e.Message}");
             }
-
+        
             return false;
         }
 
@@ -69,7 +69,7 @@ namespace ClassicUO.Game.Data
 
             var isTrammel = map.Index == 0 && mapWidth == 7168 && mapHeight == 4096;
             var isFelucca = map.Index == 1 && mapWidth == 7168 && mapHeight == 4096;
-
+        
             if (isTrammel || isFelucca)
             {
                 switch (x)
@@ -94,19 +94,19 @@ namespace ClassicUO.Game.Data
                 }
             }
             else switch (x)
-                {
-                    case >= 0 when y >= 0 && x < mapWidth && y < mapHeight:
-                        xCenter = 1323;
-                        yCenter = 1624;
+            {
+                case >= 0 when y >= 0 && x < mapWidth && y < mapHeight:
+                    xCenter = 1323;
+                    yCenter = 1624;
 
-                        break;
+                    break;
 
-                    default:
-                        xCenter = 0;
-                        yCenter = 0;
+                default:
+                    xCenter = 0;
+                    yCenter = 0;
 
-                        return false;
-                }
+                    return false;
+            }
 
             return true;
         }
@@ -195,5 +195,5 @@ namespace ClassicUO.Game.Data
             text = $"{yLat}o {yMins}'{(ySouth ? "S" : "N")}, {xLong}o {xMins}'{(xEast ? "E" : "W")}";
             return true;
         }
-    }
+}
 }

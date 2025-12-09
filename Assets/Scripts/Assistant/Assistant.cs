@@ -30,17 +30,18 @@ using ClassicUO.Utility;
 using ClassicUO.Utility.Collections;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using SDL2;
+using SDL3;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using ClassicUO.Input;
+using DressItem = Assistant.DressItem;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class AssistantGump : Gump
+    internal class MobileUOAssistantGump : Gump
     {
         public bool AssistantEnabled;
 
@@ -48,7 +49,7 @@ namespace ClassicUO.Game.UI.Gumps
         {
             internal MessageBoxGump(World world, string title, string body) : base(world, 0, 0)
             {
-                AssistantGump gump = UOSObjects.Gump;
+                MobileUOAssistantGump gump = UOSObjects.Gump;
                 if(gump == null || gump.IsDisposed || string.IsNullOrEmpty(body))
                 {
                     Dispose();
@@ -103,7 +104,7 @@ namespace ClassicUO.Game.UI.Gumps
 
             internal ObjectInspectorGump(World world, UOEntity inspected) : base(world, 0, 0)
             {
-                AssistantGump gump = UOSObjects.Gump;
+                MobileUOAssistantGump gump = UOSObjects.Gump;
                 if (gump == null || gump.IsDisposed || inspected == null)
                 {
                     Dispose();
@@ -215,30 +216,32 @@ namespace ClassicUO.Game.UI.Gumps
         internal class ChangeAssistantGump : Gump
         {
             Checkbox _control;
-            internal ChangeAssistantGump(World world, OptionsGump gump, Checkbox control) : base(world, 0, 0)
+
+            // MobileUO: OptionsGump no longer exists in TazUO
+            internal ChangeAssistantGump(World world, /*OptionsGump gump,*/ Checkbox control) : base(world, 0, 0)
             {
-                if (gump != null && !gump.IsDisposed && control != null && !control.IsDisposed)
-                {
-                    if(control.IsChecked == Settings.GlobalSettings.EnableInternalAssistant)
-                        return;
-                    _control = control;
-                    AcceptMouseInput = true;
-                    CanMove = false;
-                    CanCloseWithRightClick = true;
-                    CanCloseWithEsc = false;
-                    X = gump.X + (gump.Width >> 2);
-                    Y = gump.Y + (gump.Height >> 2);
-                    Width = 320;
-                    Height = 120;
-                    Add(new AlphaBlendControl(0.0f) { X = 1, Y = 1, Width = 318, Height = 118 });
-                    Line.CreateRectangleArea(this, 10, 10, 300, 100, 0, Color.Gray.PackedValue, 2, "Warning!");
-                    Add(new Label($"Changing to {(control.IsChecked ? "UOAssist" : "Razor")}!", true, ScriptTextBox.GRAY_HUE, 280, FONT, FontStyle.None, TEXT_ALIGN_TYPE.TS_CENTER) { X = 20, Y = 30 });
-                    Add(new Label("Click on OKAY to close ClassicUO!", true, ScriptTextBox.GRAY_HUE, 280, FONT, FontStyle.None, TEXT_ALIGN_TYPE.TS_CENTER) { X = 20, Y = 50 });
-                    Add(new NiceButton(40, 80, 80, 30, ButtonAction.Activate, "OKAY") { ButtonParameter = 123, IsSelectable = false });
-                    Add(new NiceButton(180, 80, 80, 30, ButtonAction.Activate, "CANCEL") { ButtonParameter = 321, IsSelectable = false });
-                    IsModal = true;
-                }
-                else
+                //if (gump != null && !gump.IsDisposed && control != null && !control.IsDisposed)
+                //{
+                //    if(control.IsChecked == Settings.GlobalSettings.EnableInternalAssistant)
+                //        return;
+                //    _control = control;
+                //    AcceptMouseInput = true;
+                //    CanMove = false;
+                //    CanCloseWithRightClick = true;
+                //    CanCloseWithEsc = false;
+                //    X = gump.X + (gump.Width >> 2);
+                //    Y = gump.Y + (gump.Height >> 2);
+                //    Width = 320;
+                //    Height = 120;
+                //    Add(new AlphaBlendControl(0.0f) { X = 1, Y = 1, Width = 318, Height = 118 });
+                //    Line.CreateRectangleArea(this, 10, 10, 300, 100, 0, Color.Gray.PackedValue, 2, "Warning!");
+                //    Add(new Label($"Changing to {(control.IsChecked ? "UOAssist" : "Razor")}!", true, ScriptTextBox.GRAY_HUE, 280, FONT, FontStyle.None, TEXT_ALIGN_TYPE.TS_CENTER) { X = 20, Y = 30 });
+                //    Add(new Label("Click on OKAY to close ClassicUO!", true, ScriptTextBox.GRAY_HUE, 280, FONT, FontStyle.None, TEXT_ALIGN_TYPE.TS_CENTER) { X = 20, Y = 50 });
+                //    Add(new NiceButton(40, 80, 80, 30, ButtonAction.Activate, "OKAY") { ButtonParameter = 123, IsSelectable = false });
+                //    Add(new NiceButton(180, 80, 80, 30, ButtonAction.Activate, "CANCEL") { ButtonParameter = 321, IsSelectable = false });
+                //    IsModal = true;
+                //}
+                //else
                     Dispose();
             }
 
@@ -252,7 +255,8 @@ namespace ClassicUO.Game.UI.Gumps
                         {
                             Settings.GlobalSettings.EnableInternalAssistant = _control.IsChecked;
                             Settings.GlobalSettings.Save();
-                            Network.NetClient.Socket.Disconnect();
+                            // MobileUO: TazUO switched to AsyncNetClient
+                            Network.AsyncNetClient.Socket.Disconnect();
                             Client.Game.Exit();
                         }
                         break;
@@ -777,7 +781,7 @@ namespace ClassicUO.Game.UI.Gumps
         private static int _buttonHeight = HEIGHT / 13;
         private static int _buttonWidth = WIDTH / 20;
 
-        public AssistantGump(World world) : base(world, 0, 0)
+        public MobileUOAssistantGump(World world) : base(world, 0, 0)
         {
             _controls.Add(_alphaBlend);
             Add(_alphaBlend);
@@ -3548,7 +3552,7 @@ namespace ClassicUO.Game.UI.Gumps
                         WIDTH = x;
                         HEIGHT = y;
                         XmlFileParser.SaveProfile();
-                        UIManager.Add(UOSObjects.Gump = new AssistantGump(World) { X = 200, Y = 200 });
+                        UIManager.Add(UOSObjects.Gump = new MobileUOAssistantGump(World) { X = 200, Y = 200 });
                     }
                     break;
                 }

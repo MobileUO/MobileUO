@@ -2,7 +2,7 @@
 
 namespace ClassicUO.Game.Managers
 {
-    internal enum ChatStatus : byte
+    public enum ChatStatus : byte
     {
         Disabled,
         Enabled,

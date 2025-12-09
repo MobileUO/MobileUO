@@ -10,7 +10,7 @@ using ClassicUO.Network;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class RacialAbilityButton : Gump
+    public class RacialAbilityButton : Gump
     {
         public RacialAbilityButton(World world, ushort graphic) : this(world)
         {
@@ -43,7 +43,7 @@ namespace ClassicUO.Game.UI.Gumps
         {
             if (Graphic == 0x5DDA && World.Player.Race == RaceType.GARGOYLE)
             {
-                NetClient.Socket.Send_ToggleGargoyleFlying();
+                AsyncNetClient.Socket.Send_ToggleGargoyleFlying();
 
                 return true;
             }

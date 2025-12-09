@@ -7,7 +7,7 @@ using ClassicUO.Network;
 
 using Assistant.Core;
 using UOScript;
-using AssistGump = ClassicUO.Game.UI.Gumps.AssistantGump;
+using AssistGump = ClassicUO.Game.UI.Gumps.MobileUOAssistantGump;
 using ClassicUO;
 
 namespace Assistant

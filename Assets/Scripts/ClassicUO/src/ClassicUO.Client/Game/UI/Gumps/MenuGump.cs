@@ -10,12 +10,14 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class MenuGump : Gump
+    public class MenuGump : Gump
     {
         private readonly ContainerHorizontal _container;
         private bool _isDown,
             _isLeft;
         private readonly HSliderBar _slider;
+        public override bool ShouldBeSaved => false;
+        public override GumpType GumpType => GumpType.MenuGump;
 
         public MenuGump(World world, uint serial, uint serv, string name) : base(world, serial, serv)
         {
@@ -113,7 +115,7 @@ namespace ClassicUO.Game.UI.Gumps
 
             view.MouseDoubleClick += (sender, e) =>
             {
-                NetClient.Socket.Send_MenuResponse(
+                AsyncNetClient.Socket.Send_MenuResponse(
                     LocalSerial,
                     (ushort)ServerSerial,
                     index,
@@ -136,7 +138,7 @@ namespace ClassicUO.Game.UI.Gumps
         {
             base.CloseWithRightClick();
 
-            NetClient.Socket.Send_MenuResponse(LocalSerial, (ushort)ServerSerial, 0, 0, 0);
+            AsyncNetClient.Socket.Send_MenuResponse(LocalSerial, (ushort)ServerSerial, 0, 0, 0);
         }
 
         class ItemView : Control
@@ -251,7 +253,7 @@ namespace ClassicUO.Game.UI.Gumps
         }
     }
 
-    internal class GrayMenuGump : Gump
+    public class GrayMenuGump : Gump
     {
         private readonly ResizePic _resizePic;
 
@@ -272,7 +274,7 @@ namespace ClassicUO.Game.UI.Gumps
             Height = l.Height;
         }
 
-        public void SetHeight(int h)
+        public new void SetHeight(int h)
         {
             _resizePic.Height = h;
             Width = _resizePic.Width;
@@ -297,7 +299,7 @@ namespace ClassicUO.Game.UI.Gumps
             switch (buttonID)
             {
                 case 0: // cancel
-                    NetClient.Socket.Send_GrayMenuResponse(LocalSerial, (ushort)ServerSerial, 0);
+                    AsyncNetClient.Socket.Send_GrayMenuResponse(LocalSerial, (ushort)ServerSerial, 0);
 
                     Dispose();
 
@@ -311,7 +313,7 @@ namespace ClassicUO.Game.UI.Gumps
                     {
                         if (radioButton.IsChecked)
                         {
-                            NetClient.Socket.Send_GrayMenuResponse(
+                            AsyncNetClient.Socket.Send_GrayMenuResponse(
                                 LocalSerial,
                                 (ushort)ServerSerial,
                                 index

@@ -5,7 +5,7 @@ using ClassicUO.Renderer;
 
 namespace ClassicUO.Game.UI.Controls
 {
-    internal class ArrowNumbersTextBox : Control
+    public class ArrowNumbersTextBox : Control
     {
         private const int TIME_BETWEEN_CLICKS = 250;
         private readonly int _Min, _Max;
@@ -140,7 +140,7 @@ namespace ClassicUO.Game.UI.Controls
             _textBox.SetText(val.ToString());
         }
 
-        public override void Update()
+        public override void PreDraw()
         {
             if (IsDisposed)
             {
@@ -157,7 +157,7 @@ namespace ClassicUO.Game.UI.Controls
                 }
             }
 
-            base.Update();
+            base.PreDraw();
         }
     }
 }

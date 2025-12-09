@@ -6,7 +6,7 @@ using ClassicUO.Utility;
 
 namespace ClassicUO.Game.UI.Controls
 {
-    internal class CroppedText : Control
+    public class CroppedText : Control
     {
         private readonly RenderedText _gameText;
 
@@ -19,7 +19,8 @@ namespace ClassicUO.Game.UI.Controls
                 (byte) (Client.Game.UO.Version >= ClientVersion.CV_305D ? 1 : 0),
                 true,
                 maxWidth > 0 ? FontStyle.BlackBorder | FontStyle.Cropped : FontStyle.BlackBorder,
-                maxWidth: maxWidth
+                maxWidth: maxWidth,
+                isHTML: true
             );
 
             AcceptMouseInput = false;

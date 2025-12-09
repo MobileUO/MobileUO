@@ -12,7 +12,7 @@ using ClassicUO.Utility;
 
 namespace ClassicUO.Game.UI.Gumps.CharCreation
 {
-    internal class CharCreationGump : Gump
+    public class CharCreationGump : Gump
     {
         private PlayerMobile _character;
         private int _cityIndex;

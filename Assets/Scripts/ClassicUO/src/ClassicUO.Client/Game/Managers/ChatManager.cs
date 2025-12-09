@@ -5,7 +5,7 @@ using ClassicUO.Resources;
 
 namespace ClassicUO.Game.Managers
 {
-    internal sealed class ChatManager
+    public sealed class ChatManager
     {
         private readonly World _world;
 

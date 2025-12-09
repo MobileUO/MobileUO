@@ -9,7 +9,7 @@ using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.GameObjects
 {
-    internal class DragEffect : GameEffect
+    public class DragEffect : GameEffect
     {
         private uint _lastMoveTime;
 

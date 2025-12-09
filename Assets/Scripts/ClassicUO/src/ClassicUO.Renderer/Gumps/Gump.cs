@@ -12,6 +12,8 @@ namespace ClassicUO.Renderer.Gumps
         private readonly PixelPicker _picker = new PixelPicker();
         private readonly GumpsLoader _gumpsLoader;
 
+        public GumpsLoader GetGumpsLoader => _gumpsLoader;
+
         public Gump(GumpsLoader gumpsLoader, GraphicsDevice device)
         {
             _gumpsLoader = gumpsLoader;
@@ -29,7 +31,13 @@ namespace ClassicUO.Renderer.Gumps
 
             if (spriteInfo.Texture == null)
             {
-                var gumpInfo = _gumpsLoader.GetGump(idx);
+                var gumpInfo = PNGLoader.Instance.LoadGumpTexture(idx);
+                bool loadedFromPNG = gumpInfo.Pixels != null && !gumpInfo.Pixels.IsEmpty;
+
+                if (gumpInfo.Pixels.IsEmpty)
+                {
+                    gumpInfo = _gumpsLoader.GetGump(idx);
+                }
                 if (!gumpInfo.Pixels.IsEmpty)
                 {
                     spriteInfo.Texture = _atlas.AddSprite(
@@ -40,13 +48,19 @@ namespace ClassicUO.Renderer.Gumps
                     );
 
                     _picker.Set(idx, gumpInfo.Width, gumpInfo.Height, gumpInfo.Pixels);
+
+                    // Clear the pixel cache from PNG Loader since it's now in the atlas
+                    if (loadedFromPNG)
+                    {
+                        PNGLoader.Instance.ClearGumpPixelCache(idx);
+                    }
                 }
             }
 
             return ref spriteInfo;
         }
 
-        public bool PixelCheck(uint idx, int x, int y) => _picker.Get(idx, x, y);
+        public bool PixelCheck(uint idx, int x, int y, double scale = 1f) => _picker.Get(idx, x, y, scale: scale);
 
         // MobileUO: added way to clear sprite arrays when toggling using sprite sheets or not
         public void ClearSpriteInfo()

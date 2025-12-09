@@ -2,7 +2,7 @@
 
 namespace ClassicUO.Game.Data
 {
-    internal enum WaypointsType : ushort
+    public enum WaypointsType : ushort
     {
         Corpse = 0x01,
         PartyMember = 0x02,

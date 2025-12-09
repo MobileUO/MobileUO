@@ -4,15 +4,12 @@ using ClassicUO.Assets;
 using ClassicUO.Configuration;
 using ClassicUO.Game;
 using ClassicUO.Game.Data;
-using ClassicUO.IO;
-using ClassicUO.Network;
-using ClassicUO.Network.Encryption;
+using ClassicUO.Game.Managers;
 using ClassicUO.Resources;
 using ClassicUO.Utility;
 using ClassicUO.Utility.Logging;
-using ClassicUO.Utility.Platforms;
 using Microsoft.Xna.Framework.Graphics;
-using SDL2;
+using SDL3;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -220,6 +217,7 @@ namespace ClassicUO
     {
         // MobileUO: removed private setter
         public static GameController Game { get; set; }
+        public static SQLSettingsManager Settings { get; private set; }
 
         // MobileUO: added variable
         public static event Action SceneChanged;
@@ -237,6 +235,10 @@ namespace ClassicUO
 
             Log.Trace("Running game...");
 
+            // Initialize SQLSettingsManager
+            Settings = new SQLSettingsManager();
+            Log.Trace("SQLSettingsManager initialized");
+
             using (Game = new GameController(pluginHost))
             {
                 // https://github.com/FNA-XNA/FNA/wiki/7:-FNA-Environment-Variables#fna_graphics_enable_highdpi
@@ -248,6 +250,17 @@ namespace ClassicUO
                 }
 
                 Game.Run();
+            }
+
+            // Dispose SQLSettingsManager
+            try
+            {
+                Settings?.Dispose();
+                Log.Trace("SQLSettingsManager disposed");
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"Failed to dispose SQLSettingsManager: {ex.Message}");
             }
 
             Log.Trace("Exiting game...");

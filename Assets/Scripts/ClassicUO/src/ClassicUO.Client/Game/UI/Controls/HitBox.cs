@@ -6,7 +6,7 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace ClassicUO.Game.UI.Controls
 {
-    internal class HitBox : Control
+    public class HitBox : Control
     {
         public HitBox
         (
@@ -32,7 +32,7 @@ namespace ClassicUO.Game.UI.Controls
             SetTooltip(tooltip);
         }
 
-
+        public ushort Hue { get; set; } = 0;
         public override ClickPriority Priority { get; set; } = ClickPriority.High;
         protected readonly Texture2D _texture;
 
@@ -48,7 +48,7 @@ namespace ClassicUO.Game.UI.Controls
             {
                 Vector3 hueVector = ShaderHueTranslator.GetHueVector
                                     (
-                                        0,
+                                        Hue,
                                         false,
                                         Alpha,
                                         true

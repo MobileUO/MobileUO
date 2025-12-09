@@ -11,7 +11,7 @@ using ClassicUO.Renderer;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class SkillButtonGump : AnchorableGump
+    public class SkillButtonGump : AnchorableGump
     {
         private Skill _skill;
 

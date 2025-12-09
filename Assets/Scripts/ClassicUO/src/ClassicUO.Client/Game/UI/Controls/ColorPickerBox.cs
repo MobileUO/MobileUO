@@ -1,10 +1,8 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
 using System;
-using System.Runtime.InteropServices;
 using ClassicUO.Game.UI.Gumps;
 using ClassicUO.Input;
-using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
@@ -12,7 +10,7 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace ClassicUO.Game.UI.Controls
 {
-    internal class ColorPickerBox : Gump
+    public class ColorPickerBox : Gump
     {
         private readonly int _cellHeight;
         private readonly int _cellWidth;
@@ -103,10 +101,14 @@ namespace ClassicUO.Game.UI.Controls
             }
         }
 
-        public ushort SelectedHue => SelectedIndex < 0 || SelectedIndex >= _hues.Length ? (ushort) 0 : _hues[SelectedIndex];
+        public ushort SelectedHue
+        {
+            get => SelectedIndex < 0 || SelectedIndex >= _hues.Length ? (ushort)0 : _hues[SelectedIndex];
+            set => SelectHue(value);
+        }
 
 
-        public override void Update()
+        public override void PreDraw()
         {
             if (IsDisposed)
             {
@@ -129,7 +131,7 @@ namespace ClassicUO.Game.UI.Controls
                 }
             }
 
-            base.Update();
+            base.PreDraw();
         }
 
         public override bool Draw(UltimaBatcher2D batcher, int x, int y)
@@ -162,7 +164,7 @@ namespace ClassicUO.Game.UI.Controls
 
             if (_hues.Length > 1)
             {
-                rect.X = (int) (x + Width / _columns * (SelectedIndex % _columns + .5f) - 1);
+                rect.X = (int)(x + Width / _columns * (SelectedIndex % _columns + .5f) - 1);
                 rect.Y = (int)(y + Height / _rows * (SelectedIndex / _columns + .5f) - 1);
                 rect.Width = 2;
                 rect.Height = 2;
@@ -216,13 +218,34 @@ namespace ClassicUO.Game.UI.Controls
             {
                 for (int x = 0; x < _columns; x++)
                 {
-                    ushort hue = (ushort) ((_customPallete?[y * _columns + x] ?? startColor) + 1);
+                    ushort hue = (ushort)((_customPallete?[y * _columns + x] ?? startColor) + 1);
 
                     _hues[y * _columns + x] = hue;
 
                     startColor += 5;
                 }
             }
+        }
+
+        private void SelectHue(ushort desiredHue)
+        {
+            // revert setting the Graduation later if it does not contain the desired color
+            int previousGraduation = Graduation;
+
+            // When calculating the color from the graduation, it's incremented twice by one in CreateTexture()
+            // To revert this we could subtract two but to avoid negative values, adding 3 does the same thing because of the modulo
+            Graduation = (desiredHue + 3) % 5;
+
+            for (int i = 0; i < Hues.Length; i++)
+            {
+                if (Hues[i] == desiredHue)
+                {
+                    SelectedIndex = i;
+                    return;
+                }
+            }
+
+            Graduation = previousGraduation;
         }
     }
 }

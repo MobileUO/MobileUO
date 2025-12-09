@@ -1,18 +1,25 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
+
 using System;
 using System.Collections.Generic;
 using ClassicUO.Game.GameObjects;
-using ClassicUO.Game.Scenes;
 using ClassicUO.Input;
 using ClassicUO.Resources;
 using ClassicUO.Utility.Logging;
+using System.Threading.Tasks;
+using ClassicUO.Game.Data;
+using ClassicUO.Game.UI.Gumps;
+using ClassicUO.Configuration;
+using ClassicUO.LegionScripting;
 
 namespace ClassicUO.Game.Managers
 {
-    internal sealed class CommandManager
+    public sealed class CommandManager
     {
         private readonly Dictionary<string, Action<string[]>> _commands = new Dictionary<string, Action<string[]>>();
+        public Dictionary<string, Action<string[]>> Commands => _commands;
+
         private readonly World _world;
 
         public CommandManager(World world)
@@ -22,6 +29,13 @@ namespace ClassicUO.Game.Managers
 
         public void Initialize()
         {
+            Register("sb", (s)=>UIManager.Add(new ScriptBrowser(_world)));
+
+            Register("updateapi", (s) =>
+            {
+                LegionScripting.LegionScripting.DownloadAPIPy();
+            });
+
             Register
             (
                 "info",
@@ -72,6 +86,200 @@ namespace ClassicUO.Game.Managers
 
                 }
             );
+
+            Register
+            (
+                "colorpicker",
+                s =>
+                {
+                    UIManager.Add(new UI.Gumps.ModernColorPicker(_world, null, 8787));
+
+                }
+            );
+
+            Register("cast", s =>
+            {
+                string spell = "";
+                for (int i = 1; i < s.Length; i++)
+                {
+                    spell += s[i] + " ";
+                }
+                spell = spell.Trim();
+
+                if (SpellDefinition.TryGetSpellFromName(spell, out var spellDef))
+                    GameActions.CastSpell(spellDef.ID);
+            });
+
+            List<Skill> sortSkills = new List<Skill>(_world.Player.Skills);
+
+            Register("skill", s =>
+            {
+                string skill = "";
+                for (int i = 1; i < s.Length; i++)
+                {
+                    skill += s[i] + " ";
+                }
+                skill = skill.Trim().ToLower();
+
+                if (skill.Length > 0)
+                {
+                    for (int i = 0; i < _world.Player.Skills.Length; i++)
+                    {
+                        if (_world.Player.Skills[i].Name.ToLower().Contains(skill))
+                        {
+                            GameActions.UseSkill(_world.Player.Skills[i].Index);
+                            break;
+                        }
+                    }
+                }
+            });
+
+            Register("version", s => { UIManager.Add(new VersionHistory(_world)); });
+            Register("rain", s => { _world.Weather.Generate(WeatherType.WT_RAIN, 30, 75); });
+
+            Register("marktile", s =>
+            {
+                if (s.Length > 1 && s[1] == "-r")
+                {
+                    if (s.Length == 2)
+                    {
+                        TileMarkerManager.Instance.RemoveTile(_world.Player.X, _world.Player.Y, _world.Map.Index);
+                    }
+                    else if (s.Length == 4)
+                    {
+                        if (int.TryParse(s[2], out var x))
+                            if (int.TryParse(s[3], out var y))
+                                TileMarkerManager.Instance.RemoveTile(x, y, _world.Map.Index);
+                    }
+                    else if (s.Length == 5)
+                    {
+                        if (int.TryParse(s[2], out var x))
+                            if (int.TryParse(s[3], out var y))
+                                if (int.TryParse(s[4], out var m))
+                                    TileMarkerManager.Instance.RemoveTile(x, y, m);
+                    }
+                }
+                else
+                {
+                    if (s.Length == 1)
+                    {
+                        TileMarkerManager.Instance.AddTile(_world.Player.X, _world.Player.Y, _world.Map.Index, 32);
+                    }
+                    else if (s.Length == 2)
+                    {
+                        if (ushort.TryParse(s[1], out ushort h))
+                            TileMarkerManager.Instance.AddTile(_world.Player.X, _world.Player.Y, _world.Map.Index, h);
+                    }
+                    else if (s.Length == 4)
+                    {
+                        if (int.TryParse(s[1], out var x))
+                            if (int.TryParse(s[2], out var y))
+                                if (ushort.TryParse(s[3], out var h))
+                                    TileMarkerManager.Instance.AddTile(x, y, _world.Map.Index, h);
+                    }
+                    else if (s.Length == 5)
+                    {
+                        if (int.TryParse(s[1], out var x))
+                            if (int.TryParse(s[2], out var y))
+                                if (int.TryParse(s[3], out var m))
+                                    if (ushort.TryParse(s[4], out var h))
+                                        TileMarkerManager.Instance.AddTile(x, y, m, h);
+                    }
+                }
+            });
+
+            Register("radius", s =>
+            {
+                ///-radius distance hue
+                if (s.Length == 1)
+                    ProfileManager.CurrentProfile.DisplayRadius ^= true;
+                if (s.Length > 1)
+                {
+                    if (int.TryParse(s[1], out var dist))
+                        ProfileManager.CurrentProfile.DisplayRadiusDistance = dist;
+                    ProfileManager.CurrentProfile.DisplayRadius = true;
+                }
+                if (s.Length > 2)
+                    if (ushort.TryParse(s[2], out var h))
+                        ProfileManager.CurrentProfile.DisplayRadiusHue = h;
+            });
+
+            Register("paperdoll", (s) =>
+            {
+                if (ProfileManager.CurrentProfile.UseModernPaperdoll)
+                {
+                    UIManager.Add(new PaperDollGump(_world, _world.Player, true));
+                }
+                else
+                {
+                    UIManager.Add(new ModernPaperdoll(_world, _world.Player));
+                }
+
+            });
+
+            Register("optlink", (s) =>
+            {
+                ModernOptionsGump g = UIManager.GetGump<ModernOptionsGump>();
+                if (s.Length > 1)
+                {
+                    if (g != null)
+                    {
+                        g.GoToPage(s[1]);
+                    }
+                    else
+                    {
+                        UIManager.Add(g = new ModernOptionsGump(_world));
+                        g.GoToPage(s[1]);
+                    }
+                }
+                else
+                {
+                    if (g != null)
+                    {
+                        GameActions.Print(_world, g.GetPageString());
+                    }
+                }
+            });
+
+            Register("genspelldef", (s) =>
+            {
+                Task.Run(() => SpellDefinition.SaveAllSpellsToJson(_world));
+            });
+
+            Register("setinscreen", (s) =>
+            {
+                for (LinkedListNode<Gump> last = UIManager.Gumps.Last; last != null; last = last.Previous)
+                {
+                    Gump c = last.Value;
+
+                    if (!c.IsDisposed)
+                    {
+                        c.SetInScreen();
+                    }
+                }
+            });
+
+            Register("updatedebug", (s) =>
+            {
+                UIManager.Add(new UI.Gumps.UpdateTimerViewer(_world));
+            });
+
+            Register("artbrowser", (s) => { UIManager.Add(new ArtBrowserGump(_world)); });
+
+            Register("animbrowser", (s) => { UIManager.Add(new AnimBrowser(_world)); });
+
+            Register("syncfps", (_) =>
+            {
+                Settings.GlobalSettings.FPS = GameController.SupportedRefreshRate;
+                Settings.GlobalSettings.Save();
+                Client.Game.SetRefreshRate(Settings.GlobalSettings.FPS);
+                GameActions.Print($"FPS Limit updated to: {Settings.GlobalSettings.FPS}", 62);
+            });
+
+            Register("dressagent", (s) => DressAgentManager.Instance?.DressAgentCommand(s));
+            Register("organize", (s) => OrganizerAgent.Instance?.OrganizerCommand(s));
+            Register("organizer", (s) => OrganizerAgent.Instance?.OrganizerCommand(s));
+            Register("organizerlist", (s) => OrganizerAgent.Instance?.ListOrganizers());
         }
 
 
@@ -114,6 +322,7 @@ namespace ClassicUO.Game.Managers
             }
             else
             {
+                GameActions.Print(_world, string.Format(Language.Instance.ErrorsLanguage.CommandNotFound, name));
                 Log.Warn($"Command: '{name}' not exists");
             }
         }
