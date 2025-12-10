@@ -1264,7 +1264,9 @@ namespace ClassicUO.Game.Scenes
             int posX = Camera.Bounds.X + 5;//ProfileManager.CurrentProfile.GameWindowPosition.X + 5;
             int posY = Camera.Bounds.Y + 5;//ProfileManager.CurrentProfile.GameWindowPosition.Y + 5;
 
-            if (profile.GlobalScaling)
+            // MobileUO: disabled Taz's global scaling for now
+            // MobileUO: TODO: TazUO: make my mobile scaling work with this
+            if (false)//profile.GlobalScaling)
             {
                 Camera.Zoom = 1f;
 
