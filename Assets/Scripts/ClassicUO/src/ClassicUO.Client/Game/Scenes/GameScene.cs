@@ -1141,7 +1141,8 @@ namespace ClassicUO.Game.Scenes
 
             EnsureRenderTargets(gd);
 
-            if (_use_render_target)
+            // MobileUO: TazUO: always use world render target for now
+            if (true)// _use_render_target)
             {
                 Profiler.EnterContext("DrawWorldRenderTarget");
                 can_draw_lights = DrawWorldRenderTarget(batcher, gd, camera_viewport);
@@ -1259,6 +1260,10 @@ namespace ClassicUO.Game.Scenes
             Matrix.Multiply(ref matTrans1, ref matTrans2, out Matrix temp1);
             Matrix.Multiply(ref temp1, ref matTrans3, out Matrix worldRTMatrix);
 
+            // MobileUO: fix game window being deattached from view port
+            int posX = Camera.Bounds.X + 5;//ProfileManager.CurrentProfile.GameWindowPosition.X + 5;
+            int posY = Camera.Bounds.Y + 5;//ProfileManager.CurrentProfile.GameWindowPosition.Y + 5;
+
             if (profile.GlobalScaling)
             {
                 Camera.Zoom = 1f;
@@ -1277,7 +1282,8 @@ namespace ClassicUO.Game.Scenes
                 gd.Viewport = camera_viewport;
 
                 srcRect = new Rectangle(0, 0, rtW, rtH);
-                destRect = new Rectangle(0, 0, (int)Math.Floor(vpW * scale), (int)Math.Floor(vpH * scale));
+                // MobileUO: fix game window being deattached from view port
+                destRect = new Rectangle(posX, posY, (int)Math.Floor(vpW * scale), (int)Math.Floor(vpH * scale));
             }
             else
             {
@@ -1292,7 +1298,8 @@ namespace ClassicUO.Game.Scenes
                 int srcX = (rtW - srcW) / 2;
                 int srcY = (rtH - srcH) / 2;
                 srcRect = new Rectangle(srcX, srcY, srcW, srcH);
-                destRect = new Rectangle(0, 0, vpW, vpH);
+                // MobileUO: fix game window being deattached from view port
+                destRect = new Rectangle(posX, posY, vpW, vpH);
             }
 
             UpdatePostProcessState(gd);
