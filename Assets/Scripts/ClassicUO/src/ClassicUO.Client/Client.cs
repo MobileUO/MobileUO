@@ -235,6 +235,17 @@ namespace ClassicUO
 
             Log.Trace("Running game...");
 
+            if (UserPreferences.UseProfiler.CurrentValue == (int)PreferenceEnums.UseProfiler.On)
+            {
+                Log.Trace("Profiler enabled!");
+                Profiler.Enabled = true;
+            }
+            else
+            {
+                Log.Trace("Profiler disabled!");
+                Profiler.Enabled = false;
+            }
+                
             // Initialize SQLSettingsManager
             Settings = new SQLSettingsManager();
             Log.Trace("SQLSettingsManager initialized");

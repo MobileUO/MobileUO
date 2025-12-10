@@ -150,4 +150,10 @@ namespace PreferenceEnums
         Medium = 2048,
         Large = 4096,
     }
+
+    public enum UseProfiler
+    {
+        Off = 0,
+        On = 1
+    }
 }
