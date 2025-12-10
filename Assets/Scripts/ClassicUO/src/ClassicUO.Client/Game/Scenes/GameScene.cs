@@ -137,7 +137,8 @@ namespace ClassicUO.Game.Scenes
 
         public void SetPostProcessingSettings()
         {
-            _use_render_target = ProfileManager.CurrentProfile.EnablePostProcessingEffects;
+            // MobileUO: TODO: TazUO: for now, we always want to keep this to true
+            //_use_render_target = ProfileManager.CurrentProfile.EnablePostProcessingEffects;
             switch (ProfileManager.CurrentProfile.PostProcessingType)
             {
                 case 1:
@@ -1110,12 +1111,164 @@ namespace ClassicUO.Game.Scenes
 
         public override bool Draw(UltimaBatcher2D batcher)
         {
+            // MobileUO: TODO: TazUO: we are using the Draw() from the CUO port
+            // we should instead try to implement Taz's version (see Draw_TazUO below)
+
             // MobileUO: Revert scaling during game scene drawing
             var originalBatcherScale = batcher.scale;
             batcher.scale = 1f;
 
             if (!_world.InGame)
             {
+                // MobileUO: Return to original scaling
+                batcher.scale = originalBatcherScale;
+                return false;
+            }
+
+            // MobileUO: fix game window being deattached from view port
+            int posX = Camera.Bounds.X + 5;//ProfileManager.CurrentProfile.GameWindowPosition.X + 5;
+            int posY = Camera.Bounds.Y + 5;//ProfileManager.CurrentProfile.GameWindowPosition.Y + 5;
+
+            if (CheckDeathScreen(batcher))
+            {
+                // MobileUO: Return to original scaling
+                batcher.scale = originalBatcherScale;
+                return true;
+            }
+
+            Viewport r_viewport = batcher.GraphicsDevice.Viewport;
+            Viewport camera_viewport = Camera.GetViewport();
+            Matrix matrix = _use_render_target ? Matrix.Identity : Camera.ViewTransformMatrix;
+
+            bool can_draw_lights = false;
+
+            if (!_use_render_target)
+            {
+                can_draw_lights = PrepareLightsRendering(batcher, ref matrix);
+                batcher.GraphicsDevice.Viewport = camera_viewport;
+            }
+
+            DrawWorld(batcher, ref matrix, _use_render_target);
+
+            // MobileUO: Return to original scaling
+            // MobileUO: TODO: probably need to move this lower after we bring back lights
+            batcher.scale = originalBatcherScale;
+
+            if (_use_render_target)
+            {
+                // MobileUO: TODO: commented out - get this working
+                //can_draw_lights = PrepareLightsRendering(batcher, ref matrix);
+                batcher.GraphicsDevice.Viewport = camera_viewport;
+            }
+
+            // draw world rt
+            Vector3 hue = Vector3.Zero;
+            hue.Z = 1f;
+
+            if (_use_render_target)
+            {
+                //switch (ProfileManager.CurrentProfile.FilterType)
+                //{
+                //    default:
+                //    case 0:
+                //        batcher.SetSampler(SamplerState.PointClamp);
+                //        break;
+                //    case 1:
+                //        batcher.SetSampler(SamplerState.AnisotropicClamp);
+                //        break;
+                //    case 2:
+                //        batcher.SetSampler(SamplerState.LinearClamp);
+                //        break;
+                //}
+
+                if (ProfileManager.CurrentProfile != null && ProfileManager.CurrentProfile.UseXBR)
+                {
+                    if (_xbr == null)
+                    {
+                        _xbr = new XBREffect(batcher.GraphicsDevice);
+                    }
+
+                    _xbr.TextureSize.SetValue(new Vector2(Camera.Bounds.Width, Camera.Bounds.Height));
+
+                    batcher.Begin(_xbr, Camera.ViewTransformMatrix);
+                }
+                else
+                    batcher.Begin(null, Camera.ViewTransformMatrix);
+
+                //Point p = Point.Zero;
+
+                //p = Camera.ScreenToWorld(p);
+                //int minPixelsX = p.X;
+                //int minPixelsY = p.Y;
+
+                //p.X = Camera.Bounds.Width;
+                //p.Y = Camera.Bounds.Height;
+                //p = Camera.ScreenToWorld(p);
+                //int maxPixelsX = p.X;
+                //int maxPixelsY = p.Y;
+
+
+                // MobileUO: fix game window being deattached from view port
+                batcher.Draw(
+                    _world_render_target,
+                    new Rectangle(posX, posY, Camera.Bounds.Width, Camera.Bounds.Height),
+                    hue
+                );
+
+                batcher.End();
+
+                //batcher.SetSampler(null);
+            }
+
+            // draw lights
+            if (can_draw_lights)
+            {
+                batcher.Begin();
+
+                if (UseAltLights)
+                {
+                    hue.Z = .5f;
+                    batcher.SetBlendState(_altLightsBlend.Value);
+                }
+                else
+                {
+                    batcher.SetBlendState(_darknessBlend.Value);
+                }
+
+                // MobileUO: fix game window being deattached from view port
+                batcher.Draw(
+                    _light_render_target,
+                    new Rectangle(posX, posY, Camera.Bounds.Width, Camera.Bounds.Height),
+                    hue
+                );
+
+                batcher.SetBlendState(null);
+                batcher.End();
+
+                hue.Z = 1f;
+            }
+
+            batcher.Begin();
+            DrawOverheads(batcher);
+            DrawSelection(batcher);
+            batcher.End();
+
+            batcher.GraphicsDevice.Viewport = r_viewport;
+
+            return base.Draw(batcher);
+        }
+
+        // MobileUO: TODO: TazUO: try and implement this later
+        public /*override*/ bool Draw_TazUO(UltimaBatcher2D batcher)
+        {
+            // MobileUO: Revert scaling during game scene drawing
+            var originalBatcherScale = batcher.scale;
+            batcher.scale = 1f;
+
+            if (!_world.InGame)
+            {
+                // MobileUO: Return to original scaling
+                batcher.scale = originalBatcherScale;
                 return false;
             }
 
@@ -1141,8 +1294,7 @@ namespace ClassicUO.Game.Scenes
 
             EnsureRenderTargets(gd);
 
-            // MobileUO: TazUO: always use world render target for now
-            if (true)// _use_render_target)
+            if (_use_render_target)
             {
                 Profiler.EnterContext("DrawWorldRenderTarget");
                 can_draw_lights = DrawWorldRenderTarget(batcher, gd, camera_viewport);
@@ -1343,11 +1495,12 @@ namespace ClassicUO.Game.Scenes
                 // MobileUO: NOTE: This extra Clear is important, otherwise hall-of-mirrors effects can happen in areas which are not drawn, such as black tiles surrounding caves
                 batcher.GraphicsDevice.Clear(ClearOptions.Stencil | ClearOptions.Target | ClearOptions.DepthBuffer, Color.Black, 0, 0);
             }
-
             batcher.SetSampler(SamplerState.PointClamp);
 
             batcher.Begin(null, matrix);
             batcher.SetBrightlight(ProfileManager.CurrentProfile.TerrainShadowsLevel * 0.1f);
+
+            // https://shawnhargreaves.com/blog/depth-sorting-alpha-blended-objects.html
             batcher.SetStencil(DepthStencilState.Default);
 
             Profiler.EnterContext("DrawObjects");
@@ -1388,6 +1541,21 @@ namespace ClassicUO.Game.Scenes
 
             batcher.SetStencil(null);
 
+            //var worldPoint = Camera.MouseToWorldPosition() + _offset;
+            //worldPoint.X += 22;
+            //worldPoint.Y += 22;
+
+            //var isoX = (int)(0.5f * (worldPoint.X / 22f + worldPoint.Y / 22f));
+            //var isoY = (int)(0.5f * (-worldPoint.X / 22f + worldPoint.Y / 22f));
+
+            //GameObject selectedObject = World.Map.GetTile(isoX, isoY, false);
+
+            //if (selectedObject != null)
+            //{
+            //    selectedObject.Hue = 0x44;
+            //}
+
+
             if (
                 _multi != null
                 && _world.TargetManager.IsTargeting
@@ -1406,6 +1574,8 @@ namespace ClassicUO.Game.Scenes
 
             batcher.SetSampler(null);
             batcher.SetStencil(null);
+
+            //batcher.DrawString(Fonts.Bold, $"Flushes: {batcher.FlushesDone}\nSwitches: {batcher.TextureSwitches}", 600, 200, new Vector3(0, 1, 0));
 
             // draw weather
             _world.Weather.Draw(batcher, 0, 0); // TODO: fix the depth
