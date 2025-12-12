@@ -64,6 +64,7 @@ public class MenuPresenter : MonoBehaviour
         GetOptionEnumViewInstance().Initialize(typeof(UseDrawTexture), UserPreferences.UseDrawTexture, "Use DrawTexture", false, false);
         GetOptionEnumViewInstance().Initialize(typeof(UseSpriteSheet), UserPreferences.UseSpriteSheet, "Use Sprite Sheets", false, false);
         GetOptionEnumViewInstance().Initialize(typeof(SpriteSheetSize), UserPreferences.SpriteSheetSize, "Sprite Sheet Size", false, false);
+        GetOptionEnumViewInstance().Initialize(typeof(UseProfiler), UserPreferences.UseProfiler, "Use Profiler", false, false);
 
         showConsoleButtonGameObject.transform.SetAsLastSibling();
 

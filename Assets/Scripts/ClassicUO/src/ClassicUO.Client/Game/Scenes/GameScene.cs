@@ -1071,6 +1071,9 @@ namespace ClassicUO.Game.Scenes
 
             batcher.GraphicsDevice.Viewport = r_viewport;
 
+            // Calculate flushes and texture switches per second
+            batcher.TickStats(UnityEngine.Time.unscaledTime);
+
             return base.Draw(batcher);
         }
 
@@ -1166,8 +1169,8 @@ namespace ClassicUO.Game.Scenes
 
             batcher.End();
 
-            int flushes = batcher.FlushesDone;
-            int switches = batcher.TextureSwitches;
+            //int flushes = batcher.FlushesDone;
+            //int switches = batcher.TextureSwitches;
 
             if (use_render_target)
             {

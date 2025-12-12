@@ -2245,7 +2245,7 @@ namespace ClassicUO.Renderer
 
         private readonly List<PositionNormalTextureColor4> _runQuads = new List<PositionNormalTextureColor4>();
         private readonly List<VertexData> _batchedMeshVertices = new List<VertexData>();
-        private DateTime _lastSampleTime = DateTime.UtcNow;
+        private float _lastSampleTime = UnityEngine.Time.unscaledTime;
 
         private PositionNormalTextureColor4[] _meshRun = new PositionNormalTextureColor4[MAX_SPRITES];
         private int _meshRunCount;
@@ -2336,7 +2336,7 @@ namespace ClassicUO.Renderer
                 for (int i = 0; i < batchSize; ++i)
                 {
                     Texture2D texture = _textureInfo[arrayOffset + i];
-                    PositionNormalTextureColor4 vertex = _vertexInfo[arrayOffset + i];
+                    ref PositionNormalTextureColor4 vertex = ref _vertexInfo[arrayOffset + i];
                     Vector3 hue = vertex.Hue0;
 
                     // draw with mesh if UseDrawTexture is off or if flagged to use mesh (draw stretched land or shadows)
@@ -2457,22 +2457,26 @@ namespace ClassicUO.Renderer
                 }
 
                 _numSprites = 0;
-
-                // Calculate flushes and texture switches per second
-                var now = DateTime.UtcNow;
-                if ((now - _lastSampleTime).TotalSeconds >= 1.0)
-                {
-                    FlushesPerSecond = FlushesDone;
-                    TextureSwitchesPerSecond = TextureSwitches;
-                    DrawTexturesPerSecond = DrawTextures;
-                    DrawMeshesPerSecond = DrawMeshes;
-                    FlushesDone = 0;
-                    TextureSwitches = 0;
-                    DrawTextures = 0;
-                    DrawMeshes = 0;
-                    _lastSampleTime = now;
-                }
             }
+        }
+
+        // Calculate flushes and texture switches per second
+        public void TickStats(float now)
+        {
+            if (now - _lastSampleTime < 1f) 
+                return;
+
+            FlushesPerSecond = FlushesDone;
+            TextureSwitchesPerSecond = TextureSwitches;
+            DrawTexturesPerSecond = DrawTextures;
+            DrawMeshesPerSecond = DrawMeshes;
+
+            FlushesDone = 0;
+            TextureSwitches = 0;
+            DrawTextures = 0;
+            DrawMeshes = 0;
+
+            _lastSampleTime = now;
         }
 
         public bool ClipBegin(int x, int y, int width, int height)
