@@ -2336,7 +2336,7 @@ namespace ClassicUO.Renderer
                 for (int i = 0; i < batchSize; ++i)
                 {
                     Texture2D texture = _textureInfo[arrayOffset + i];
-                    PositionNormalTextureColor4 vertex = _vertexInfo[arrayOffset + i];
+                    ref PositionNormalTextureColor4 vertex = ref _vertexInfo[arrayOffset + i];
                     Vector3 hue = vertex.Hue0;
 
                     // draw with mesh if UseDrawTexture is off or if flagged to use mesh (draw stretched land or shadows)
