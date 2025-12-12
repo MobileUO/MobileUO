@@ -84,14 +84,18 @@ public static class UserPreferences
     public static IntPreference EnlargeSmallButtons;
     public static IntPreference UseLegacyJoystick;
     public static IntPreference JoystickCancelsFollow;
+    public static IntPreference UseDrawTexture;
+    public static IntPreference UseSpriteSheet;
+    public static IntPreference SpriteSheetSize;
+    public static IntPreference UseProfiler;
 
     public static void Initialize()
     {
         ShowCloseButtons = new IntPreference(nameof(ShowCloseButtons), (int) PreferenceEnums.ShowCloseButtons.Off);
         UseMouseOnMobile = new IntPreference(nameof(UseMouseOnMobile), (int) PreferenceEnums.UseMouseOnMobile.Off);
-        ScaleSize = new IntPreference(nameof(ScaleSize), (int) ScaleSizes.Default);
+        ScaleSize = new IntPreference(nameof(ScaleSize), (int) ScaleSizes.OneTwentyFive);
         TextureFiltering = new IntPreference(nameof(TextureFiltering), (int) TextureFilterMode.Sharp);
-        TargetFrameRate = new IntPreference(nameof(TargetFrameRate), (int) TargetFrameRates.Sixty);
+        TargetFrameRate = new IntPreference(nameof(TargetFrameRate), (int) TargetFrameRates._60);
         JoystickSize = new IntPreference(nameof(JoystickSize), (int) JoystickSizes.Normal);
         JoystickOpacity = new IntPreference(nameof(JoystickOpacity), (int) PreferenceEnums.JoystickOpacity.Normal);
         CustomJoystickPositionAndSize = new Vector3Preference("customJoystickSizeAndPosition", new Vector3(-1,-1,-1));
@@ -107,5 +111,9 @@ public static class UserPreferences
         EnlargeSmallButtons = new IntPreference(nameof(EnlargeSmallButtons), (int) PreferenceEnums.EnlargeSmallButtons.Off);
         UseLegacyJoystick = new IntPreference(nameof(UseLegacyJoystick), (int) PreferenceEnums.UseLegacyJoystick.Off);
         JoystickCancelsFollow = new IntPreference(nameof(JoystickCancelsFollow), (int) PreferenceEnums.JoystickCancelsFollow.On);
+        UseDrawTexture = new IntPreference(nameof(UseDrawTexture), (int)PreferenceEnums.UseDrawTexture.On);
+        UseSpriteSheet = new IntPreference(nameof(UseSpriteSheet), (int)PreferenceEnums.UseSpriteSheet.On);
+        SpriteSheetSize = new IntPreference(nameof(SpriteSheetSize), (int)PreferenceEnums.SpriteSheetSize.Small);
+        UseProfiler = new IntPreference(nameof(UseProfiler), (int)PreferenceEnums.UseProfiler.Off);
     }
 }

@@ -1,1 +1,0 @@
-../../../../../../../external/ClassicUO/src/Game/UI/Gumps/InfoBarGump.cs

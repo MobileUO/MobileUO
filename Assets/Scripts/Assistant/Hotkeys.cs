@@ -1,7 +1,7 @@
 ﻿using ClassicUO.Game;
 using ClassicUO.Network;
 using ClassicUO.Game.Managers;
-using ClassicUO.IO.Resources;
+using ClassicUO.Assets;
 using ClassicUO.Game.UI.Controls;
 using SDL2;
 
@@ -13,6 +13,7 @@ using Assistant.Core;
 using Assistant.Scripts;
 
 using AssistGump = ClassicUO.Game.UI.Gumps.AssistantGump;
+using ClassicUO;
 
 namespace Assistant
 {
@@ -108,6 +109,7 @@ namespace Assistant
             _HotKeyContainer.Clear();
         }
 
+        // MobileUO: TODO: make this pass in world instead of using static one?
         internal static void AddHotkey(uint key, HotKeyOpts keyopt, AssistHotkeyBox box, ref string hkname, AssistGump gump, bool overwrite = false)
         {
             if (keyopt == null || string.IsNullOrEmpty(keyopt.Action) || !_HotKeyActions.ContainsKey(keyopt.Action))
@@ -121,7 +123,7 @@ namespace Assistant
             }
             if (!string.IsNullOrEmpty(oval) && oval != val && !overwrite)
             {
-                UIManager.Add(new AssistGump.OverWriteHKGump(key, keyopt, box, ref hkname, ops.Param ?? ops.Action));
+                UIManager.Add(new AssistGump.OverWriteHKGump(Client.Game.UO.World, key, keyopt, box, ref hkname, ops.Param ?? ops.Action));
             }
             else
             {
@@ -228,9 +230,9 @@ namespace Assistant
             {
                 _HotKeyActions["skills.last"] = (input) =>
                 {
-                    if (UOSObjects.Player.LastSkill >= 0 && UOSObjects.Player.LastSkill < SkillsLoader.Instance.Skills.Count)
+                    if (UOSObjects.Player.LastSkill >= 0 && UOSObjects.Player.LastSkill < Client.Game.UO.FileManager.Skills.Skills.Count)
                     {
-                        SkillEntry se = SkillsLoader.Instance.Skills[UOSObjects.Player.LastSkill];
+                        SkillEntry se = Client.Game.UO.FileManager.Skills.Skills[UOSObjects.Player.LastSkill];
                         if (se.HasAction)
                         {
                             Engine.Instance.SendToServer(new UseSkill(UOSObjects.Player.LastSkill));

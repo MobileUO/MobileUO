@@ -3,6 +3,7 @@ using ClassicUO.Game.UI.Controls;
 using ClassicUO.Game.Managers;
 using System;
 using System.Collections.Generic;
+using ClassicUO;
 
 namespace Assistant
 {
@@ -181,7 +182,7 @@ namespace Assistant
                         _Init = _Organizer.Items.Count > _Num;
                     if (_Init)
                     {
-                        var c = ContainerManager.Get(_Dest.Graphic);
+                        var c = Client.Game.UO.World.ContainerManager.Get(_Dest.Graphic);
                         x = c.Bounds.X;
                         endx = c.Bounds.X + c.Bounds.Width;
                         y = c.Bounds.Y;
@@ -276,12 +277,13 @@ namespace Assistant
         internal uint Amount { get; set; }
         internal bool Enabled { get; set; }
 
-        internal ItemDisplay(ushort graphic, string name, short hue = -1, bool enabled = true)
+        internal ItemDisplay(ushort graphic, string name, short hue = -1, bool enabled = true, uint amount = 0)
         {
             Graphic = graphic;
             Name = name;
             Hue = hue;
             Enabled = enabled;
+            Amount = amount;
         }
 
         public override bool Equals(object obj)

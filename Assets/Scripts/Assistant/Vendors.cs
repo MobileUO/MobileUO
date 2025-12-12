@@ -4,6 +4,7 @@ using ClassicUO.Network;
 using ClassicUO.Game;
 using System.Linq;
 using System;
+using ClassicUO;
 
 namespace Assistant
 {
@@ -264,7 +265,7 @@ namespace Assistant
                         VendorBuyItem vbi = buyList[0];
                         if (cost - vbi.TotalCost <= UOSObjects.Player.Gold)
                         {
-                            while (cost > World.Player.Gold && vbi.Amount > 0)
+                            while (cost > Client.Game.UO.World.Player.Gold && vbi.Amount > 0)
                             {
                                 cost -= vbi.Price;
                                 --vbi.Amount;

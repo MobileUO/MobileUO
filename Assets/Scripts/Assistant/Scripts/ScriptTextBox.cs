@@ -1,5 +1,5 @@
 ﻿using ClassicUO.Input;
-using ClassicUO.IO.Resources;
+using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using Microsoft.Xna.Framework;
 using System;
@@ -10,6 +10,7 @@ using System.Text;
 using UOScript;
 using Assistant;
 using ClassicUO.Game.Managers;
+using ClassicUO.Game.UI.Gumps;
 
 namespace ClassicUO.Game.UI.Controls
 {
@@ -22,36 +23,36 @@ namespace ClassicUO.Game.UI.Controls
         internal const ushort BLUE_HUE = 0x5A;
         internal const ushort YELLOW_HUE = 0x90;
         static Dictionary<ushort, List<Rectangle2D>> HuedText = new Dictionary<ushort, List<Rectangle2D>>();
+        private readonly Gump _gump;
 
         public override bool Draw(UltimaBatcher2D batcher, int x, int y)
         {
             Rectangle scissor = ScissorStack.CalculateScissors(Matrix.Identity, x, y, Width, Height);
 
-            if (ScissorStack.PushScissors(batcher.GraphicsDevice, scissor))
+            if (batcher.ClipBegin(x, y, Width, Height))
             {
-                batcher.EnableScissorTest(true);
 
                 DrawSelection(batcher, x, y);
 
                 _rendererText.Draw(batcher, x, y);
                 foreach (KeyValuePair<ushort, List<Rectangle2D>> kvp in HuedText)
                 {
-                    foreach(Rectangle2D r in kvp.Value)
+                    foreach (Rectangle2D r in kvp.Value)
                     {
                         _rendererText.Draw(batcher, x + r.X, y + r.Y, r.X, r.Y, r.Width, r.Height, kvp.Key);
                     }
                 }
                 DrawCaret(batcher, x, y);
 
-                batcher.EnableScissorTest(false);
-                ScissorStack.PopScissors(batcher.GraphicsDevice);
+                batcher.ClipEnd();
             }
 
             return true;
         }
 
-        public ScriptTextBox(byte font, int width) : base(font, -1, width - 28, true, FontStyle.BlackBorder, 1153, TEXT_ALIGN_TYPE.TS_LEFT)
+        public ScriptTextBox(Gump gump, byte font, int width) : base(font, -1, width - 28, true, FontStyle.BlackBorder, 1153, TEXT_ALIGN_TYPE.TS_LEFT)
         {
+            _gump = gump;
             Height = 40;
             Width = width - 14;
             Multiline = true;
@@ -88,7 +89,8 @@ namespace ClassicUO.Game.UI.Controls
                     ++len;
             }
             ContextMenu?.Dispose();
-            ContextMenu = new ContextMenuControl();
+            // MobileUO: TODO: verify this gump works
+            ContextMenu = new ContextMenuControl(_gump);
             foreach(string s in Interpreter.CmdArgs)
             {
                 ContextMenu.Add(new ContextMenuItemEntry(s, () => OnContextClicked(s, startidx, len), true));

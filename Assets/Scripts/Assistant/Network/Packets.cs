@@ -7,8 +7,9 @@ using ClassicUO.Game.Data;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Network;
-using ClassicUO.IO.Resources;
+using ClassicUO.Assets;
 using ClassicUO.Utility;
+using ClassicUO;
 
 namespace Assistant
 {
@@ -477,7 +478,7 @@ namespace Assistant
 	{
 		internal ClientUniEncodedCommandMessage(MessageType type, int hue, int font, string text, string lang = "ENU") : base(0xAD)
 		{
-			var entries = SpeechesLoader.Instance.GetKeywords(text);
+			var entries = Client.Game.UO.FileManager.Speeches.GetKeywords(text);
 
             bool encoded = entries != null && entries.Count != 0;
             if(encoded)
@@ -1434,7 +1435,7 @@ namespace Assistant
 				bool floor = false;
 				try
 				{
-					floor = (TileDataLoader.Instance.StaticData[mte.m_ItemID & (TileDataLoader.Instance.StaticData.Length - 1)].Height <= 0);
+					floor = (Client.Game.UO.FileManager.TileData.StaticData[mte.m_ItemID & (Client.Game.UO.FileManager.TileData.StaticData.Length - 1)].Height <= 0);
 				}
 				catch
 				{
