@@ -1190,7 +1190,7 @@ namespace ClassicUO.Game.UI.Gumps
                 // MobileUO: TazUO: don't set _mousePressedWhenEntered when using touch inputs because otherwise this will ALWAYS be true and won't let us drag an item in OnMouseExit()
                 // MobileUO: TODO: TazUO: implement a better solution as this removes the drag guard on touch input
                 // It probably won't happen often for a mobile user, but if they drag their finger from outside of the grid container and then into an item in the grid container, it will pick it up
-                if (!UnityEngine.Application.isMobilePlatform || UserPreferences.UseMouseOnMobile.CurrentValue == 1)
+                if (!UnityEngine.Application.isMobilePlatform || UserPreferences.UseMouseOnMobile.CurrentValue == (int)PreferenceEnums.UseMouseOnMobile.On)
                     _mousePressedWhenEntered = Mouse.LButtonPressed;
 
                 if (_item != null)
