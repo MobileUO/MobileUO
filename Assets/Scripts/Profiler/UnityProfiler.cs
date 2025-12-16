@@ -23,6 +23,16 @@ namespace MobileUO.Profiling
 
 #if ENABLE_PROFILER
         private static readonly Dictionary<string, ProfilerMarker> _cache = new();
+
+        static UnityProfiler()
+        {
+            UnityEngine.Debug.Log("Unity Profiler is ENABLED");
+        }
+#else
+        static UnityProfiler()
+        {
+            UnityEngine.Debug.Log("Unity Profiler is DISABLED");
+        }
 #endif
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
