@@ -12,7 +12,8 @@
 //
 // This program is distributed WITHOUT ANY WARRANTY. 
 // See <https://www.gnu.org> for details.
-#endregionusing Assistant;
+#endregion
+using Assistant;
 using Assistant.Scripts;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Managers;
