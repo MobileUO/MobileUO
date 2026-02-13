@@ -1,17 +1,17 @@
 ﻿#region license
+// Original interpreter logic by Jaedan (2022)
+// Heavily modified, rewritten and maintained by Sascha Puligheddu (2023-2025)
+// 
 // Copyright (C) 2022-2025 Sascha Puligheddu
 // 
-// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
-// Developed as a lightweight, native assistant.
-// 
-// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// This specific derivative work is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
 // 
 // SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
 // is permitted, provided that the integrated result remains publicly accessible 
 // and the AGPL-3.0 terms are respected for this specific module.
 //
 // This program is distributed WITHOUT ANY WARRANTY. 
-// See <https://www.gnu.org> for details.
+// See <https://www.gnu.org/licenses/agpl-3.0.html> for details.
 #endregion
 using System;
 using System.IO;
