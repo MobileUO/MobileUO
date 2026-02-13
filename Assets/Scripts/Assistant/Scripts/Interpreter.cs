@@ -1,4 +1,8 @@
-﻿using System;
+﻿// Original interpreter logic by Jaedan (2022)
+// Heavily modified, rewritten and maintained by Sascha Puligheddu (2023-2025)
+// 
+// This specific derivative work is licensed under GNU AGPLv3.
+using System;
 using System.Threading;
 using System.Linq;
 using System.Collections.Generic;
