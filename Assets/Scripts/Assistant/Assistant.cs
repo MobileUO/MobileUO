@@ -1,24 +1,18 @@
 ﻿#region license
-//  Copyright (C) 2019 ClassicUO Development Community on Github
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
 //
-//	This project is an alternative client for the game Ultima Online.
-//	The goal of this is to develop a lightweight client considering 
-//	new technologies.  
-//      
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org> for details.
 #endregion
-
 using Assistant;
 using Assistant.Scripts;
 using ClassicUO.Configuration;
