@@ -1,15 +1,28 @@
-﻿using System;
+﻿#region License
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org> for details.
+#endregion
+
+using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
-//using Assistant.Agents;
 using Assistant.Core;
-//using Assistant.Macros;
-//using Assistant.UI;
-using ClassicUO.Assets;
-using ClassicUO.Game;
-using ClassicUO.Configuration;
 using ClassicUO.Network;
+using ClassicUO.Game;
+using ClassicUO.Game.Data;
+using ClassicUO.Configuration;
 
 namespace Assistant
 {
@@ -36,73 +49,73 @@ namespace Assistant
     {
         internal static int Count = 55;
 
-        private LockType m_Lock;
-        private ushort m_Value;
-        private ushort m_Base;
-        private ushort m_Cap;
-        private short m_Delta;
-        private int m_Idx;
+        private LockType _Lock;
+        private ushort _Value;
+        private ushort _Base;
+        private ushort _Cap;
+        private short _Delta;
+        private int _Idx;
 
         internal Skill(int idx)
         {
-            m_Idx = idx;
+            _Idx = idx;
         }
 
         internal int Index
         {
-            get { return m_Idx; }
+            get { return _Idx; }
         }
 
         internal LockType Lock
         {
-            get { return m_Lock; }
-            set { m_Lock = value; }
+            get { return _Lock; }
+            set { _Lock = value; }
         }
 
         internal ushort FixedValue
         {
-            get { return m_Value; }
-            set { m_Value = value; }
+            get { return _Value; }
+            set { _Value = value; }
         }
 
         internal ushort FixedBase
         {
-            get { return m_Base; }
+            get { return _Base; }
             set
             {
-                m_Delta += (short)(value - m_Base);
-                m_Base = value;
+                _Delta += (short)(value - _Base);
+                _Base = value;
             }
         }
 
         internal ushort FixedCap
         {
-            get { return m_Cap; }
-            set { m_Cap = value; }
+            get { return _Cap; }
+            set { _Cap = value; }
         }
 
         internal double Value
         {
-            get { return m_Value / 10.0; }
-            set { m_Value = (ushort)(value * 10.0); }
+            get { return _Value / 10.0; }
+            set { _Value = (ushort)(value * 10.0); }
         }
 
         internal double Base
         {
-            get { return m_Base / 10.0; }
-            set { m_Base = (ushort)(value * 10.0); }
+            get { return _Base / 10.0; }
+            set { _Base = (ushort)(value * 10.0); }
         }
 
         internal double Cap
         {
-            get { return m_Cap / 10.0; }
-            set { m_Cap = (ushort)(value * 10.0); }
+            get { return _Cap / 10.0; }
+            set { _Cap = (ushort)(value * 10.0); }
         }
 
         internal double Delta
         {
-            get { return m_Delta / 10.0; }
-            set { m_Delta = (short)(value * 10); }
+            get { return _Delta / 10.0; }
+            set { _Delta = (short)(value * 10); }
         }
     }
 
@@ -270,32 +283,29 @@ namespace Assistant
             get { return VisRange + 5; }
         }
 
-        private int m_MaxWeight = -1;
+        private int _MaxWeight = -1;
 
-        private short m_FireResist, m_ColdResist, m_PoisonResist, m_EnergyResist, m_Luck;
-        private ushort m_DamageMin, m_DamageMax;
+        private short _FireResist, _ColdResist, _PoisonResist, _EnergyResist, _Luck;
+        private ushort _DamageMin, _DamageMax;
 
-        private ushort m_Str, m_Dex, m_Int;
-        private LockType m_StrLock, m_DexLock, m_IntLock;
-        private uint m_Gold;
-        private ushort m_Weight;
-        private Skill[] m_Skills;
-        private ushort m_AR;
-        private ushort m_StatCap;
-        private byte m_Followers;
-        private byte m_FollowersMax;
-        private int m_Tithe;
-        private sbyte m_LocalLight;
-        private byte m_GlobalLight;
-        private ushort m_Features;
-        private byte m_Season;
-        private byte m_DefaultSeason;
-        //private int[] m_MapPatches = new int[10];
+        private ushort _Str, _Dex, _Int;
+        private LockType _StrLock, _DexLock, _IntLock;
+        private uint _Gold;
+        private ushort _Weight;
+        private Skill[] _Skills;
+        private ushort _AR;
+        private ushort _StatCap;
+        private byte _Followers;
+        private byte _FollowersMax;
+        private int _Tithe;
+        private sbyte _LocalLight;
+        private byte _GlobalLight;
+        private ushort _Features;
+        private byte _Season;
+        private byte _DefaultSeason;
 
-
-        private bool m_SkillsSent;
-        //private Timer m_CriminalTime;
-        private DateTime m_CriminalStart = DateTime.MinValue;
+        private bool _SkillsSent;
+        private DateTime _CriminalStart = DateTime.MinValue;
         internal static Dictionary<string, int> BuffNames { get; } = new Dictionary<string, int>();
 
         internal List<BuffsDebuffs> BuffsDebuffs { get; } = new List<BuffsDebuffs>();
@@ -305,166 +315,165 @@ namespace Assistant
         internal PlayerData(uint serial) : base(serial)
         {
             Targeting.Instance = new Targeting.InternalSorter(this);
-            m_Skills = new Skill[Skill.Count];
-            for (int i = 0; i < m_Skills.Length; i++)
-                m_Skills[i] = new Skill(i);
+            Targeting.ContainedInstance = new Targeting.ContainedInternalSorter(this);
+            _Skills = new Skill[Skill.Count];
+            for (int i = 0; i < _Skills.Length; i++)
+                _Skills[i] = new Skill(i);
         }
 
         internal ushort Str
         {
-            get { return m_Str; }
-            set { m_Str = value; }
+            get { return _Str; }
+            set { _Str = value; }
         }
 
         internal ushort Dex
         {
-            get { return m_Dex; }
-            set { m_Dex = value; }
+            get { return _Dex; }
+            set { _Dex = value; }
         }
 
         internal ushort Int
         {
-            get { return m_Int; }
-            set { m_Int = value; }
+            get { return _Int; }
+            set { _Int = value; }
         }
 
         internal uint Gold
         {
-            get { return m_Gold; }
-            set { m_Gold = value; }
+            get { return _Gold; }
+            set { _Gold = value; }
         }
 
         internal ushort Weight
         {
-            get { return m_Weight; }
-            set { m_Weight = value; }
+            get { return _Weight; }
+            set { _Weight = value; }
         }
 
         internal ushort MaxWeight
         {
             get
             {
-                if (m_MaxWeight == -1)
-                    return (ushort)((m_Str * 3.5) + 40);
+                if (_MaxWeight == -1)
+                    return (ushort)((_Str * 3.5) + 40);
                 else
-                    return (ushort)m_MaxWeight;
+                    return (ushort)_MaxWeight;
             }
-            set { m_MaxWeight = value; }
+            set { _MaxWeight = value; }
         }
 
         internal short FireResistance
         {
-            get { return m_FireResist; }
-            set { m_FireResist = value; }
+            get { return _FireResist; }
+            set { _FireResist = value; }
         }
 
         internal short ColdResistance
         {
-            get { return m_ColdResist; }
-            set { m_ColdResist = value; }
+            get { return _ColdResist; }
+            set { _ColdResist = value; }
         }
 
         internal short PoisonResistance
         {
-            get { return m_PoisonResist; }
-            set { m_PoisonResist = value; }
+            get { return _PoisonResist; }
+            set { _PoisonResist = value; }
         }
 
         internal short EnergyResistance
         {
-            get { return m_EnergyResist; }
-            set { m_EnergyResist = value; }
+            get { return _EnergyResist; }
+            set { _EnergyResist = value; }
         }
 
         internal short Luck
         {
-            get { return m_Luck; }
-            set { m_Luck = value; }
+            get { return _Luck; }
+            set { _Luck = value; }
         }
 
         internal ushort DamageMin
         {
-            get { return m_DamageMin; }
-            set { m_DamageMin = value; }
+            get { return _DamageMin; }
+            set { _DamageMin = value; }
         }
 
         internal ushort DamageMax
         {
-            get { return m_DamageMax; }
-            set { m_DamageMax = value; }
+            get { return _DamageMax; }
+            set { _DamageMax = value; }
         }
 
         internal LockType StrLock
         {
-            get { return m_StrLock; }
-            set { m_StrLock = value; }
+            get { return _StrLock; }
+            set { _StrLock = value; }
         }
 
         internal LockType DexLock
         {
-            get { return m_DexLock; }
-            set { m_DexLock = value; }
+            get { return _DexLock; }
+            set { _DexLock = value; }
         }
 
         internal LockType IntLock
         {
-            get { return m_IntLock; }
-            set { m_IntLock = value; }
+            get { return _IntLock; }
+            set { _IntLock = value; }
         }
 
         internal ushort StatCap
         {
-            get { return m_StatCap; }
-            set { m_StatCap = value; }
+            get { return _StatCap; }
+            set { _StatCap = value; }
         }
 
         internal ushort AR
         {
-            get { return m_AR; }
-            set { m_AR = value; }
+            get { return _AR; }
+            set { _AR = value; }
         }
 
         internal byte Followers
         {
-            get { return m_Followers; }
-            set { m_Followers = value; }
+            get { return _Followers; }
+            set { _Followers = value; }
         }
 
         internal byte FollowersMax
         {
-            get { return m_FollowersMax; }
-            set { m_FollowersMax = value; }
+            get { return _FollowersMax; }
+            set { _FollowersMax = value; }
         }
 
         internal int Tithe
         {
-            get { return m_Tithe; }
-            set { m_Tithe = value; }
+            get { return _Tithe; }
+            set { _Tithe = value; }
         }
 
         internal Skill[] Skills
         {
-            get { return m_Skills; }
+            get { return _Skills; }
         }
 
         internal bool SkillsSent
         {
-            get { return m_SkillsSent; }
-            set { m_SkillsSent = value; }
+            get { return _SkillsSent; }
+            set { _SkillsSent = value; }
         }
 
         internal int CriminalTime
         {
             get
             {
-                if (m_CriminalStart != DateTime.MinValue)
+                if (_CriminalStart != DateTime.MinValue)
                 {
-                    int sec = (int)(DateTime.UtcNow - m_CriminalStart).TotalSeconds;
+                    int sec = (int)(DateTime.UtcNow - _CriminalStart).TotalSeconds;
                     if (sec > 300)
                     {
-                        /*if (m_CriminalTime != null)
-                            m_CriminalTime.Stop();*/
-                        m_CriminalStart = DateTime.MinValue;
+                        _CriminalStart = DateTime.MinValue;
                         return 0;
                     }
                     else
@@ -479,6 +488,7 @@ namespace Assistant
             }
         }
 
+        //Feature already present in CUO, so we don't really need it ATM
         /*public void TryOpenCorpses()
         {
             if (UOSObjects.Gump.OpenCorpses)
@@ -505,7 +515,7 @@ namespace Assistant
             if (!Engine.Instance.AllowBit(FeatureBit.AutoOpenDoors) || !UOSObjects.Gump.OpenDoors || (!Visible && (UOSObjects.Gump.OpenDoorsMode & 2) != 0) || (Targeting.ServerTarget && (UOSObjects.Gump.OpenDoorsMode & 1) != 0))
                 return;
 
-            if (Body != 0x03DB && !IsGhost && !Blessed && ((int)(Direction & Direction.Up)) % 2 == 0)
+            if (Body != 0x03DB && !IsGhost && !Blessed && ((int)(Direction & AssistDirection.Up)) % 2 == 0)
             {
                 int x = Position.X, y = Position.Y, z = Position.Z;
 
@@ -535,13 +545,15 @@ namespace Assistant
 
         private void RequestOpen(UOItem item)
         {
-            if(UOSObjects.Gump.UseDoors)
+            if (UOSObjects.Gump.UseDoors)
             {
                 if (item != null)
-                    Engine.Instance.SendToServer(new PDoubleClickRequest(item.Serial));
+                    NetClient.Socket.PSend_DoubleClick(item.Serial);
             }
             else
-                Engine.Instance.SendToServer(new OpenDoorMacro());
+            {
+                NetClient.Socket.PSend_OpenDoorMacro();
+            }
         }
 
         internal override void OnPositionChanging(Point3D oldPos)
@@ -559,8 +571,6 @@ namespace Assistant
                 {
                     if (!Utility.InRange(m.Position, Position, VisRange))
                         m.Remove();
-                    //else
-                      //  Targeting.CheckLastTargetRange(m);
                 }
             }
 
@@ -581,7 +591,7 @@ namespace Assistant
             base.OnPositionChanging(oldPos);
         }
 
-        internal override void OnDirectionChanging(Direction oldDir)
+        internal override void OnDirectionChanging(AssistDirection oldDir)
         {
             AutoOpenDoors(true);
         }
@@ -599,7 +609,6 @@ namespace Assistant
             list = null;
 
             UOSObjects.Items.Clear();
-            //Counter.Reset();
             for (int i = 0; i < Contains.Count; i++)
             {
                 UOItem item = (UOItem)Contains[i];
@@ -609,20 +618,13 @@ namespace Assistant
 
             if (UOSObjects.Gump.AutoSearchContainers && Backpack != null)
                 PlayerData.DoubleClick(Backpack.Serial);
-
-            //UOAssist.PostMapChange(cur);
         }
 
         protected override void OnNotoChange(byte old, byte cur)
         {
             if ((old == 3 || old == 4) && (cur != 3 && cur != 4))
             {
-                // grey is turning off
-                // SendMessage( "You are no longer a criminal." );
-                /*if (m_CriminalTime != null)
-                    m_CriminalTime.Stop();*/
-                m_CriminalStart = DateTime.MinValue;
-                //Engine.Instance.RequestTitlebarUpdate();
+                _CriminalStart = DateTime.MinValue;
             }
             else if ((cur == 3 || cur == 4) && (old != 3 && old != 4 && old != 0))
             {
@@ -633,64 +635,25 @@ namespace Assistant
 
         internal void ResetCriminalTimer()
         {
-            if (m_CriminalStart == DateTime.MinValue || DateTime.UtcNow - m_CriminalStart >= TimeSpan.FromSeconds(1))
+            if (_CriminalStart == DateTime.MinValue || DateTime.UtcNow - _CriminalStart >= TimeSpan.FromSeconds(1))
             {
-                m_CriminalStart = DateTime.UtcNow;
-                /*if (m_CriminalTime == null)
-                    m_CriminalTime = new CriminalTimer(this);
-                m_CriminalTime.Start();*/
-                //Engine.Instance.RequestTitlebarUpdate();
+                _CriminalStart = DateTime.UtcNow;
             }
         }
-
-        /*private class CriminalTimer : Timer
-        {
-            private PlayerData m_Player;
-
-            internal CriminalTimer(PlayerData player) : base(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1))
-            {
-                m_Player = player;
-            }
-
-            protected override void OnTick()
-            {
-                //Engine.Instance.RequestTitlebarUpdate();
-            }
-        }
-
-        internal void SendMessage(MsgLevel lvl, LocString loc, params object[] args)
-        {
-            SendMessage(lvl, Language.Format(loc, args));
-        }
-
-        internal void SendMessage(MsgLevel lvl, LocString loc)
-        {
-            SendMessage(lvl, Language.GetString(loc));
-        }
-
-        internal void SendMessage(LocString loc, params object[] args)
-        {
-            SendMessage(MsgLevel.Info, Language.Format(loc, args));
-        }
-
-        internal void SendMessage(LocString loc)
-        {
-            SendMessage(MsgLevel.Info, Language.GetString(loc));
-        }*/
 
         internal void SendMessage(int hue, string text)
         {
-            Engine.Instance.SendToClient(new UnicodeMessage(0xFFFFFFFF, -1, MessageType.Regular, hue, 3, "ENU", "System", text));
+            ClientPackets.PRecv_UnicodeMessage(0xFFFFFFFF, -1, MessageType.Regular, hue, 3, "ENU", "System", text);
         }
 
         internal void SendMessage(MsgLevel lvl, string format, params object[] args)
         {
-            SendMessage(lvl, String.Format(format, args));
+            SendMessage(lvl, string.Format(format, args));
         }
 
         internal void SendMessage(string format, params object[] args)
         {
-            SendMessage(MsgLevel.Info, String.Format(format, args));
+            SendMessage(MsgLevel.Info, string.Format(format, args));
         }
 
         internal void SendMessage(string text)
@@ -727,13 +690,13 @@ namespace Assistant
             {
                 int hue = GetColorCode(lvl);
 
-                Engine.Instance.SendToClient(new UnicodeMessage(0xFFFFFFFF, -1, MessageType.Regular, hue, 3, "ENU", "System", text));
+                ClientPackets.PRecv_UnicodeMessage(0xFFFFFFFF, -1, MessageType.Regular, hue, 3, "ENU", "System", text);
             }
         }
 
         internal void Say(int hue, string msg, MessageType msgtype = MessageType.Regular)
         {
-            Engine.Instance.SendToServer(new ClientUniEncodedCommandMessage(msgtype, (ushort)hue, 3, msgtype == MessageType.Emote ? $"*{msg}*" : msg));
+            NetClient.Socket.PSend_UniEncodedCommandMessage(msgtype, (ushort)hue, 3, msgtype == MessageType.Emote ? $"*{msg}*" : msg);
         }
 
         internal void Say(string msg)
@@ -756,10 +719,7 @@ namespace Assistant
         }
 
         internal Dictionary<uint, List<GumpData>> OpenedGumps = new Dictionary<uint, List<GumpData>>();//not saved, on logout all gumps are gone
-        //TODO: GumpResponseAction
-        //internal GumpResponseAction LastGumpResponseAction;
         internal delegate void ContextQueuedResponse(uint serial, int option);
-        internal List<ContextMenuResponse> ContextResponses = new List<ContextMenuResponse>();
         internal uint CurrentMenuS;
         internal ushort CurrentMenuI;
         internal bool HasMenu;
@@ -772,36 +732,36 @@ namespace Assistant
 
         internal void CancelPrompt()
         {
-            Engine.Instance.SendToServer(new PromptResponse(UOSObjects.Player.PromptSenderSerial, UOSObjects.Player.PromptID, 0, string.Empty));
+            NetClient.Socket.PSend_PromptResponse(UOSObjects.Player.PromptSenderSerial, UOSObjects.Player.PromptID, 0, string.Empty);
             UOSObjects.Player.HasPrompt = false;
         }
 
         internal void ResponsePrompt(string text)
         {
-            Engine.Instance.SendToServer(new PromptResponse(UOSObjects.Player.PromptSenderSerial, UOSObjects.Player.PromptID, 1, text));
+            NetClient.Socket.PSend_PromptResponse(UOSObjects.Player.PromptSenderSerial, UOSObjects.Player.PromptID, 1, text);
 
             PromptInputText = text;
             UOSObjects.Player.HasPrompt = false;
         }
 
-        private ushort m_SpeechHue;
+        private ushort _SpeechHue;
 
         internal ushort SpeechHue
         {
-            get { return m_SpeechHue; }
-            set { m_SpeechHue = value; }
+            get { return _SpeechHue; }
+            set { _SpeechHue = value; }
         }
 
         internal sbyte LocalLightLevel
         {
-            get { return m_LocalLight; }
-            set { m_LocalLight = value; }
+            get { return _LocalLight; }
+            set { _LocalLight = value; }
         }
 
         internal byte GlobalLightLevel
         {
-            get { return m_GlobalLight; }
-            set { m_GlobalLight = value; }
+            get { return _GlobalLight; }
+            set { _GlobalLight = value; }
         }
 
         internal enum SeasonFlag
@@ -815,14 +775,14 @@ namespace Assistant
 
         internal byte Season
         {
-            get { return m_Season; }
-            set { m_Season = value; }
+            get { return _Season; }
+            set { _Season = value; }
         }
 
         internal byte DefaultSeason
         {
-            get { return m_DefaultSeason; }
-            set { m_DefaultSeason = value; }
+            get { return _DefaultSeason; }
+            set { _DefaultSeason = value; }
         }
 
         /// <summary>
@@ -831,23 +791,11 @@ namespace Assistant
         /// <param name="defaultSeason"></param>
         internal void SetSeason(byte defaultSeason = 0)
         {
-            if (UOSObjects.Gump.FixedSeason < 5)
-            {
-                byte season = UOSObjects.Gump.FixedSeason;
-
-                UOSObjects.Player.Season = season;
-                UOSObjects.Player.DefaultSeason = defaultSeason;
-                if (!m_SeasonTimer.Running)
-                    m_SeasonTimer.Start();
-            }
-            else
-            {
-                UOSObjects.Player.Season = defaultSeason;
-                UOSObjects.Player.DefaultSeason = defaultSeason;
-            }
+            UOSObjects.Player.Season = defaultSeason;
+            UOSObjects.Player.DefaultSeason = defaultSeason;
         }
 
-        internal static Timer m_SeasonTimer = new SeasonTimer();
+        internal static Timer _SeasonTimer = new SeasonTimer();
 
         private class SeasonTimer : Timer
         {
@@ -857,43 +805,34 @@ namespace Assistant
 
             protected override void OnTick()
             {
-                Engine.Instance.SendToClient(new SeasonChange(UOSObjects.Player.Season, true));
-                m_SeasonTimer.Stop();
+                ClientPackets.PRecv_SeasonChange(UOSObjects.Player.Season, true);
+                _SeasonTimer.Stop();
             }
         }
 
         internal ushort Features
         {
-            get { return m_Features; }
-            set { m_Features = value; }
+            get { return _Features; }
+            set { _Features = value; }
         }
 
-        /*internal int[] MapPatches
-        {
-            get { return m_MapPatches; }
-            set { m_MapPatches = value; }
-        }*/
-
-        private int m_LastSkill = -1;
+        private int _LastSkill = -1;
 
         internal int LastSkill
         {
-            get { return m_LastSkill; }
-            set { m_LastSkill = value; }
+            get { return _LastSkill; }
+            set { _LastSkill = value; }
         }
 
         internal uint LastObject { get; set; } = 0;
 
-        private int m_LastSpell = -1;
+        private int _LastSpell = -1;
 
         internal int LastSpell
         {
-            get { return m_LastSpell; }
-            set { m_LastSpell = value; }
+            get { return _LastSpell; }
+            set { _LastSpell = value; }
         }
-
-        //private UOEntity m_LastCtxM = null;
-        //internal UOEntity LastContextMenu { get { return m_LastCtxM; } set { m_LastCtxM = value; } }
 
         internal bool UseItem(UOItem cont, ushort find)
         {
@@ -919,7 +858,7 @@ namespace Assistant
             return false;
         }
 
-        internal static bool DoubleClick(uint s, bool silent = true)
+        internal static bool DoubleClick(uint s, bool silent = true, bool force = false)
         {
             if (s != 0)
             {
@@ -930,8 +869,8 @@ namespace Assistant
                     if (i != null && i.IsPotion && i.ItemID != 3853) // dont unequip for exploison potions
                     {
                         // dont worry about uneqipping RuneBooks or SpellBooks
-                        UOItem left = UOSObjects.Player.GetItemOnLayer(Layer.LeftHand);
-                        UOItem right = UOSObjects.Player.GetItemOnLayer(Layer.RightHand);
+                        UOItem left = UOSObjects.Player.GetItemOnLayer(Layer.TwoHanded);
+                        UOItem right = UOSObjects.Player.GetItemOnLayer(Layer.OneHanded);
 
                         if (left != null && (right != null || left.IsTwoHanded))
                             free = left;
@@ -948,9 +887,12 @@ namespace Assistant
                     }
                 }
 
-                ActionQueue.DoubleClick(silent, s);
                 if (free != null)
                     DragDropManager.DragDrop(free, UOSObjects.Player, free.Layer, true);
+                if(!force)
+                    ActionQueue.DoubleClick(s, silent);
+                else
+                    NetClient.Socket.PSend_DoubleClick(s);
 
                 if (SerialHelper.IsItem(s))
                     UOSObjects.Player.LastObject = s;

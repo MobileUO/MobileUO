@@ -31,8 +31,8 @@ namespace ClassicUO.Game.UI.Gumps
         NameOverHeadHandler,
 
         // MobileUO: Assisstant buttons
+        Assistant,
         AssistantMacroButton,
         AssistantHotkeyButton
-
     }
 }

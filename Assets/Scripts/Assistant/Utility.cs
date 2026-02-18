@@ -1,6 +1,22 @@
-﻿using System;
+﻿#region License
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org> for details.
+#endregion
+
+using System;
 using System.IO;
-using System.Text;
+using System.Linq;
 using System.Globalization;
 
 using ClassicUO.Game.Data;
@@ -9,16 +25,31 @@ namespace Assistant
 {
 	internal class Utility
 	{
-		private static Random m_Random = new Random();
+        public const bool ISTANT_CASTING = true;
 
-		internal static int Random(int min, int max)
+		private static Random _Random = new Random();
+
+        internal static string StringAlphaNumberSpaceMinusUnderscore(string str)
+        {
+            if (string.IsNullOrWhiteSpace(str))
+                return null;
+            str = str.Trim();
+            char[] arr = str.Where(c => (char.IsLetterOrDigit(c) ||
+                             char.IsWhiteSpace(c) ||
+                             c == '-' || c == '_')).ToArray();
+
+            str = new string(arr);
+            return str;
+        }
+
+        internal static int Random(int min, int max)
 		{
-			return m_Random.Next(max - min + 1) + min;
+			return _Random.Next(max - min + 1) + min;
 		}
 
 		internal static int Random(int num)
 		{
-			return m_Random.Next(num);
+			return _Random.Next(num);
 		}
 
 		public static bool InRange(IPoint2D from, IPoint2D to, int range)
@@ -61,18 +92,18 @@ namespace Assistant
 			return Math.Sqrt(xDelta * xDelta + yDelta * yDelta);
 		}
 
-		internal static void Offset(Direction d, ref int x, ref int y)
+		internal static void Offset(AssistDirection d, ref int x, ref int y)
 		{
-			switch (d & Direction.Up)
+			switch (d & AssistDirection.Up)
 			{
-				case Direction.North: --y; break;
-				case Direction.South: ++y; break;
-				case Direction.West: --x; break;
-				case Direction.East: ++x; break;
-				case Direction.Right: ++x; --y; break;
-				case Direction.Left: --x; ++y; break;
-				case Direction.Down: ++x; ++y; break;
-				case Direction.Up: --x; --y; break;
+				case AssistDirection.North: --y; break;
+				case AssistDirection.South: ++y; break;
+				case AssistDirection.West: --x; break;
+				case AssistDirection.East: ++x; break;
+				case AssistDirection.Right: ++x; --y; break;
+				case AssistDirection.Left: --x; ++y; break;
+				case AssistDirection.Down: ++x; ++y; break;
+				case AssistDirection.Up: --x; --y; break;
 			}
 		}
 
@@ -82,9 +113,9 @@ namespace Assistant
 			if (path == null || path.Length <= maxLen || path.Length < 5)
 				return path;
 
-			int first = (maxLen - 3) / 2;
+			int first = (maxLen - 3) >> 1;
 			int last = path.LastIndexOfAny(pathChars);
-			if (last == -1 || last < maxLen / 4)
+			if (last == -1 || last < (maxLen >> 2))
 				last = path.Length - first;
 			first = maxLen - last - 3;
 			if (first < 0)
@@ -92,17 +123,17 @@ namespace Assistant
 			if (last < first)
 				last = first;
 
-			return String.Format("{0}...{1}", path.Substring(0, first), path.Substring(last));
+			return string.Format("{0}...{1}", path.Substring(0, first), path.Substring(last));
 		}
 
 		internal static string FormatSize(long size)
 		{
 			if (size < 1024) // 1 K
-				return String.Format("{0:#,##0} B", size);
+				return string.Format("{0:#,##0} B", size);
 			else if (size < 1048576) // 1 M
-				return String.Format("{0:#,###.0} KB", size / 1024.0);
+				return string.Format("{0:#,###.0} KB", size / 1024.0);
 			else
-				return String.Format("{0:#,###.0} MB", size / 1048576.0);
+				return string.Format("{0:#,###.0} MB", size / 1048576.0);
 		}
 
 		internal static string FormatTime(int sec)
@@ -110,7 +141,7 @@ namespace Assistant
 			int m = sec / 60;
 			int h = m / 60;
 			m = m % 60;
-			return String.Format("{0:#0}:{1:00}:{2:00}", h, m, sec % 60);
+			return string.Format("{0:#0}:{1:00}:{2:00}", h, m, sec % 60);
 		}
 
 		internal static string FormatTimeMS(int ms)
@@ -124,12 +155,12 @@ namespace Assistant
 			m = m % 60;
 
 			if (h > 0 || m > 55)
-				return String.Format("{0:#0}:{1:00}:{2:00}.{3:000}", h, m, s, ms);
+				return string.Format("{0:#0}:{1:00}:{2:00}.{3:000}", h, m, s, ms);
 			else
-				return String.Format("{0:00}:{1:00}.{2:000}", m, s, ms);
+				return string.Format("{0:00}:{1:00}.{2:000}", m, s, ms);
 		}
 
-		internal static int ToInt32(string str, int def)
+		internal static int ToInt32(string str, int def, NumberStyles style = NumberStyles.None)
 		{
 			if (str == null)
 				return def;
@@ -137,16 +168,16 @@ namespace Assistant
 			int val;
 			if(str.StartsWith("0x"))
 			{
-				if (int.TryParse(str.Substring(2), NumberStyles.HexNumber, UOScript.Interpreter.Culture, out val))
+				if (int.TryParse(str.Substring(2), style | NumberStyles.HexNumber, UOScript.Interpreter.Culture, out val))
 					return val;
 			}
-			else if (int.TryParse(str, out val))
+			else if (int.TryParse(str, style, UOScript.Interpreter.Culture, out val))
 				return val;
 
 			return def;
 		}
 
-		public static uint ToUInt32(string str, uint def)
+		public static uint ToUInt32(string str, uint def, NumberStyles style = NumberStyles.None)
 		{
 			if (str == null)
 				return def;
@@ -154,27 +185,27 @@ namespace Assistant
 			uint val;
 			if (str.StartsWith("0x"))
 			{
-				if (uint.TryParse(str.Substring(2), NumberStyles.HexNumber, UOScript.Interpreter.Culture, out val))
+				if (uint.TryParse(str.Substring(2), style | NumberStyles.HexNumber, UOScript.Interpreter.Culture, out val))
 					return val;
 			}
-			else if (uint.TryParse(str, out val))
+			else if (uint.TryParse(str, style, UOScript.Interpreter.Culture, out val))
 				return val;
 
 			return def;
 		}
 
-		public static double ToDouble(string str, double def)
+		public static double ToDouble(string str, double def, NumberStyles style = NumberStyles.None)
 		{
 			if (str == null)
 				return def;
 
-			if (double.TryParse(str, out double d))
+			if (double.TryParse(str, style, UOScript.Interpreter.Culture, out double d))
 				return d;
 
 			return def;
 		}
 
-		public static ushort ToUInt16(string str, ushort def)
+		public static ushort ToUInt16(string str, ushort def, NumberStyles style = NumberStyles.None)
 		{
 			if (str == null)
 				return def;
@@ -182,23 +213,23 @@ namespace Assistant
 			ushort val;
 			if (str.StartsWith("0x"))
 			{
-				if (ushort.TryParse(str.Substring(2), NumberStyles.HexNumber, UOScript.Interpreter.Culture, out val))
+				if (ushort.TryParse(str.Substring(2), style | NumberStyles.HexNumber, UOScript.Interpreter.Culture, out val))
 					return val;
 			}
-			else if (ushort.TryParse(str, out val))
+			else if (ushort.TryParse(str, style, UOScript.Interpreter.Culture, out val))
 				return val;
 
 			return def;
 		}
 
-		private static DateTime _NextMessageTime = DateTime.MinValue;
-		public static void SendTimedWarning(string message, MsgLevel level = MsgLevel.Warning)
+        private static DateTime _NextMessageTime = DateTime.MinValue;
+        public static void SendTimedWarning(string message, MsgLevel level = MsgLevel.Warning)
         {
-			if(DateTime.UtcNow >= _NextMessageTime)
+            if (DateTime.UtcNow >= _NextMessageTime)
             {
-				_NextMessageTime = DateTime.UtcNow.Add(TimeSpan.FromSeconds(20));
-				UOSObjects.Player?.SendMessage(level, message);
+                _NextMessageTime = DateTime.UtcNow.Add(TimeSpan.FromSeconds(20));
+                UOSObjects.Player?.SendMessage(level, message);
             }
         }
-	}
+    }
 }

@@ -1,30 +1,80 @@
-﻿using System.Collections.Generic;
+﻿#region License
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org> for details.
+#endregion
+
+using System.Collections.Generic;
 using ClassicUO.Utility.Collections;
 using ClassicUO.Network;
+using ClassicUO.Configuration;
 using ClassicUO.Game;
+using ClassicUO.Game.Data;
+using ClassicUO.IO;
 using System.Linq;
 using System;
-using ClassicUO;
 
 namespace Assistant
 {
+    internal class VendorBuyItem
+    {
+        internal VendorBuyItem(uint ser, int amount, int price)
+        {
+            Serial = ser;
+            Amount = amount;
+            Price = price;
+        }
+
+        internal readonly uint Serial;
+        internal int Amount;
+        internal int Price;
+
+        internal int TotalCost { get { return Amount * Price; } }
+    }
+
+    internal class SellListItem
+    {
+        internal uint Serial;
+        internal ushort Amount;
+
+        internal SellListItem(uint s, ushort a)
+        {
+            Serial = s;
+            Amount = a;
+        }
+    }
+
     internal class Vendors
     {
-        private static IEnumerable<TSource> ExceptImpl<TSource>(IEnumerable<TSource> first, IEnumerable<TSource> second, IEqualityComparer<TSource> comparer)
+        internal static readonly string[] Prepend = new string[] { "agents.vendors.buy.", "agents.vendors.sell." };
+
+        private static string GetOneGenericFree(ICollection<IBuySell> collection, string type)
         {
-            HashSet<TSource> bannedElements = new HashSet<TSource>(second, comparer);
-            foreach (TSource item in first)
+            HashSet<string> dls = new HashSet<string>();
+            foreach (IBuySell ibs in collection)
+                dls.Add(ibs.Name);
+            for (ushort us = 0; us < ushort.MaxValue; ++us)
             {
-                if (bannedElements.Add(item))
-                {
-                    yield return item;
-                }
+                if (!dls.Contains($"{type}-{us + 1}"))
+                    return $"{type}-{us + 1}";
             }
+            return null;
         }
 
         public class NumberIBuySellComparer : IComparer<IBuySell>
         {
-            public static NumberIBuySellComparer Instance = new NumberIBuySellComparer();
+            public static NumberIBuySellComparer Instance { get; } = new NumberIBuySellComparer();
+
             public int Compare(IBuySell a, IBuySell b)
             {
                 if (a.Num < b.Num)
@@ -39,7 +89,7 @@ namespace Assistant
         {
             bool Enabled { get; set; }
             IBuySell Selected { get; set; }
-            string Name { get; }
+            string Name { get; set; }
             bool Complete { get; set; }
             ushort MaxAmount { get; set; }
             
@@ -52,11 +102,7 @@ namespace Assistant
         {
             private class ItemXYComparer : IComparer<UOItem>
             {
-                public static readonly ItemXYComparer Instance = new ItemXYComparer();
-
-                private ItemXYComparer()
-                {
-                }
+                public static ItemXYComparer Instance { get; } = new ItemXYComparer();
 
                 public int Compare(UOItem x, UOItem y)
                 {
@@ -81,7 +127,7 @@ namespace Assistant
                 IBuySell bs = null;
                 if (BuyList.Count == 0)
                 {
-                    BuyList.Add(bs = new Buy(0), new List<BuySellEntry>());
+                    BuyList.Add(bs = new Buy(0, "Buy-1"), new List<BuySellEntry>());
                     return bs;
                 }
                 List<int> values = new List<int>();
@@ -89,11 +135,15 @@ namespace Assistant
                 {
                     values.Add(bsk.Num);
                 }
-                ushort? firstAvailable = (ushort)Enumerable.Range(0, int.MaxValue).Except(values).FirstOrDefault();
+                ushort? firstAvailable = (ushort)Enumerable.Range(0, ushort.MaxValue).Except(values).FirstOrDefault();
                 if (firstAvailable.HasValue && firstAvailable.Value < ushort.MaxValue)
                 {
-                    BuyList.Add(bs = new Buy(firstAvailable.Value), new List<BuySellEntry>());
-                    BuyList.SortKeys(NumberIBuySellComparer.Instance);
+                    string name = GetOneGenericFree(BuyList.Keys, "Buy");
+                    if (!string.IsNullOrEmpty(name))
+                    {
+                        BuyList.Add(bs = new Buy(firstAvailable.Value, name), new List<BuySellEntry>());
+                        BuyList.SortKeys(NumberIBuySellComparer.Instance);
+                    }
                 }
                 return bs;
             }
@@ -103,7 +153,7 @@ namespace Assistant
                 return Num + 1;
             }
 
-            internal static OrderedDictionary<IBuySell, List<BuySellEntry>> BuyList { get; } = new OrderedDictionary<IBuySell, List<BuySellEntry>>();
+            internal static ClassicUO.Utility.Collections.OrderedDictionary<IBuySell, List<BuySellEntry>> BuyList { get; } = new ClassicUO.Utility.Collections.OrderedDictionary<IBuySell, List<BuySellEntry>>();
 
             public static void Initialize()
             {
@@ -142,12 +192,13 @@ namespace Assistant
             internal static IBuySell BuySelected { get; set; }
             public ushort Num { get; }
 
-            public Buy(ushort num)
+            public Buy(ushort num, string name)
             {
                 Num = num;
+                Name = name;
             }
 
-            private static void DisplayBuy(Packet p, PacketHandlerEventArgs args)
+            private static void DisplayBuy(ref StackDataReader p, PacketHandlerEventArgs args)
             {
                 if (!BuyEnabled || !Engine.Instance.AllowBit(FeatureBit.BuyAgent) || BuySelected == null || !BuyList.TryGetValue(BuySelected, out var bentry))
                     return;
@@ -157,8 +208,8 @@ namespace Assistant
                     return;
                 }
 
-                uint serial = p.ReadUInt();
-                ushort gump = p.ReadUShort();
+                uint serial = p.ReadUInt32BE();
+                ushort gump = p.ReadUInt16BE();
 
                 if (gump != 0x30 || !SerialHelper.IsMobile(serial) || UOSObjects.Player == null)
                 {
@@ -171,7 +222,7 @@ namespace Assistant
                     return;
                 }
 
-                UOItem pack = vendor.GetItemOnLayer(Layer.ShopBuy);
+                UOItem pack = vendor.GetItemOnLayer(Layer.ShopBuyRestock);
                 if (pack == null || pack.Contains == null || pack.Contains.Count <= 0)
                 {
                     return;
@@ -265,7 +316,7 @@ namespace Assistant
                         VendorBuyItem vbi = buyList[0];
                         if (cost - vbi.TotalCost <= UOSObjects.Player.Gold)
                         {
-                            while (cost > Client.Game.UO.World.Player.Gold && vbi.Amount > 0)
+                            while (cost > ClassicUO.Client.Game.UO.World.Player.Gold && vbi.Amount > 0)
                             {
                                 cost -= vbi.Price;
                                 --vbi.Amount;
@@ -290,16 +341,24 @@ namespace Assistant
                 {
                     args.Block = true;
                     BuyLists[serial] = buyList;
-                    Engine.Instance.SendToServer(new VendorBuyResponse(serial, buyList));
+                    NetClient.Socket.PSend_VendorBuyResponse(serial, buyList);
                     UOSObjects.Player.SendMessage(MsgLevel.Friend, $"Buy: {total} item{(total > 1 ? "s" : "")} matching your list. Cost was {cost}");
+                    if (lowGoldWarn)
+                    {
+                        UOSObjects.Player.SendMessage(MsgLevel.Error, "Buy: did not attempt to buy some items in your buy list because you do not have enough gold.");
+                    }
                 }
                 else
                 {
-                    UOSObjects.Player.SendMessage(MsgLevel.Warning, $"Buy: No items matching your list were found.");
-                }
-                if (lowGoldWarn)
-                {
-                    UOSObjects.Player.SendMessage(MsgLevel.Error, "Buy: did not attempt to buy some items in your buy list because you do not have enough gold.");
+                    if (lowGoldWarn)
+                    {
+                        UOSObjects.Player.SendMessage(MsgLevel.Error, "Buy: did not attempt to buy items in your buy list because you do not have enough gold.");
+                        return;
+                    }
+                    else
+                    {
+                        UOSObjects.Player.SendMessage(MsgLevel.Warning, $"Buy: No items matching your list were found.");
+                    }
                 }
             }
 
@@ -310,18 +369,18 @@ namespace Assistant
 
             private static Dictionary<uint, List<VendorBuyItem>> BuyLists { get; } = new Dictionary<uint, List<VendorBuyItem>>();
 
-            private static void ExtBuyInfo(Packet p, PacketHandlerEventArgs args)
+            private static void ExtBuyInfo(ref StackDataReader p, PacketHandlerEventArgs args)
             {
                 if (!Engine.Instance.AllowBit(FeatureBit.BuyAgent))
                     return;
-                uint ser = p.ReadUInt();
+                uint ser = p.ReadUInt32BE();
                 UOItem pack = UOSObjects.FindItem(ser);
                 if (pack == null)
                 {
                     return;
                 }
 
-                byte count = p.ReadByte();
+                byte count = p.ReadUInt8();
                 if (count < pack.Contains.Count)
                 {
                     UOSObjects.Player.SendMessage(MsgLevel.Debug, "Buy: warning! Contains count {0} does not match ExtInfo {1}.", pack.Contains.Count, count);
@@ -332,18 +391,18 @@ namespace Assistant
                 for (int i = 0; i < pack.Contains.Count; ++i)
                 {
                     UOItem item = pack.Contains[i];
-                    item.Price = (int)p.ReadUInt();
-                    byte len = p.ReadByte();
+                    item.Price = (int)p.ReadUInt32BE();
+                    byte len = p.ReadUInt8();
                     item.BuyDesc = p.ReadASCII(len);
                 }
             }
 
             //this particular packet will confirm our buy, if we ended it correctly, we'll found it here, if ended incorrectly, this will be removed
-            private static void EndVendorBuy(Packet p, PacketHandlerEventArgs args)
+            private static void EndVendorBuy(ref StackDataReader p, PacketHandlerEventArgs args)
             {
                 if (!Engine.Instance.AllowBit(FeatureBit.BuyAgent))
                     return;
-                uint serial = p.ReadUInt();
+                uint serial = p.ReadUInt32BE();
                 if (BuyLists.TryGetValue(serial, out var list))
                 {
                     BuyLists.Remove(serial);
@@ -351,7 +410,7 @@ namespace Assistant
                     if (vendor == null)
                         return;
 
-                    UOItem pack = vendor.GetItemOnLayer(Layer.ShopBuy);
+                    UOItem pack = vendor.GetItemOnLayer(Layer.ShopBuyRestock);
                     if (pack == null || pack.Contains == null || pack.Contains.Count <= 0)
                         return;
 
@@ -368,7 +427,22 @@ namespace Assistant
                 }
             }
 
-            public string Name { get { return $"Buy-{Num + 1}"; } }
+            private string _Name = null;
+            public string Name
+            {
+                set
+                {
+                    if (value == _Name)
+                        return;
+                    value = Utility.StringAlphaNumberSpaceMinusUnderscore(value);
+                    if (!string.IsNullOrEmpty(value) && !BuyList.Keys.Any(key => key.Name == value))
+                        _Name = value;
+                }
+                get 
+                {
+                    return _Name; 
+                }
+            }
         }
 
         public class Sell : IBuySell
@@ -377,12 +451,13 @@ namespace Assistant
             internal static IBuySell SellSelected { get; set; }
             internal static uint HotBag { get; set; }
 
-            internal static OrderedDictionary<IBuySell, List<BuySellEntry>> SellList { get; } = new OrderedDictionary<IBuySell, List<BuySellEntry>>();
+            internal static ClassicUO.Utility.Collections.OrderedDictionary<IBuySell, List<BuySellEntry>> SellList { get; } = new ClassicUO.Utility.Collections.OrderedDictionary<IBuySell, List<BuySellEntry>>();
 
             public ushort Num { get; }
-            public Sell(ushort num)
+            public Sell(ushort num, string name)
             {
                 Num = num;
+                Name = name;
             }
 
             public bool Enabled
@@ -413,7 +488,7 @@ namespace Assistant
                 IBuySell bs = null;
                 if (SellList.Count == 0)
                 {
-                    SellList.Add(bs = new Sell(0), new List<BuySellEntry>());
+                    SellList.Add(bs = new Sell(0, "Sell-1"), new List<BuySellEntry>());
                     return bs;
                 }
                 List<int> values = new List<int>();
@@ -421,11 +496,15 @@ namespace Assistant
                 {
                     values.Add(bsk.Num);
                 }
-                ushort? firstAvailable = (ushort)Enumerable.Range(0, int.MaxValue).Except(values).FirstOrDefault();
+                ushort? firstAvailable = (ushort)Enumerable.Range(0, ushort.MaxValue).Except(values).FirstOrDefault();
                 if (firstAvailable.HasValue && firstAvailable.Value < ushort.MaxValue)
                 {
-                    SellList.Add(bs = new Sell(firstAvailable.Value), new List<BuySellEntry>());
-                    SellList.SortKeys(NumberIBuySellComparer.Instance);
+                    string name = GetOneGenericFree(SellList.Keys, "Sell");
+                    if (!string.IsNullOrEmpty(name))
+                    {
+                        SellList.Add(bs = new Sell(firstAvailable.Value, name), new List<BuySellEntry>());
+                        SellList.SortKeys(NumberIBuySellComparer.Instance);
+                    }
                 }
                 return bs;
             }
@@ -446,13 +525,13 @@ namespace Assistant
             {
                 if (item.Serial == HotBag)
                 {
-                    item.ObjPropList.Add("(Sell HotBag)");
+                    item.ObjPropList?.Add("(Sell HotBag)");
                 }
             }
 
-            private static void OnSingleClick(Packet pvSrc, PacketHandlerEventArgs args)
+            private static void OnSingleClick(ref StackDataReader reader, PacketHandlerEventArgs args)
             {
-                uint serial = pvSrc.ReadUInt();
+                uint serial = reader.ReadUInt32BE();
                 if (HotBag == serial)
                 {
                     ushort gfx = 0;
@@ -462,11 +541,11 @@ namespace Assistant
                         gfx = c.ItemID;
                     }
 
-                    Engine.Instance.SendToClient(new UnicodeMessage(HotBag, gfx, Assistant.MessageType.Label, 0x3B2, 3, "ENU", "", "(Sell HotBag)"));
+                    ClientPackets.PRecv_UnicodeMessage(HotBag, gfx, MessageType.Label, 0x3B2, 3, Settings.GlobalSettings.Language, "", "(Sell HotBag)");
                 }
             }
 
-            private static void OnVendorSell(Packet pvSrc, PacketHandlerEventArgs args)
+            private static void OnVendorSell(ref StackDataReader reader, PacketHandlerEventArgs args)
             {
                 if (!SellEnabled || !Engine.Instance.AllowBit(FeatureBit.SellAgent) || SellList.Count == 0)
                 {
@@ -485,27 +564,27 @@ namespace Assistant
 
                 int total = 0;
 
-                uint serial = pvSrc.ReadUInt();
+                uint serial = reader.ReadUInt32BE();
                 UOMobile vendor = UOSObjects.FindMobile(serial);
                 if (vendor == null)
                 {
                     UOSObjects.AddMobile(vendor = new UOMobile(serial));
                 }
 
-                int count = pvSrc.ReadUShort();
+                int count = reader.ReadUInt16BE();
                 var sell = SellSelected;
                 int maxSell = sell.MaxAmount;
                 int sold = 0;
                 List<SellListItem> list = new List<SellListItem>(count);
                 for (int i = 0; i < count && (sold < maxSell || maxSell <= 0); i++)
                 {
-                    uint ser = pvSrc.ReadUInt();
-                    ushort gfx = pvSrc.ReadUShort();
-                    ushort hue = pvSrc.ReadUShort();
-                    ushort amount = pvSrc.ReadUShort();
-                    ushort price = pvSrc.ReadUShort();
+                    uint ser = reader.ReadUInt32BE();
+                    ushort gfx = reader.ReadUInt16BE();
+                    ushort hue = reader.ReadUInt16BE();
+                    ushort amount = reader.ReadUInt16BE();
+                    ushort price = reader.ReadUInt16BE();
 
-                    pvSrc.ReadASCII(pvSrc.ReadUShort());//name
+                    reader.ReadASCII(reader.ReadUInt16BE());//name
 
                     UOItem item = UOSObjects.FindItem(ser);
                     if(item != null && item != hb && item.IsChildOf(hb))
@@ -532,43 +611,27 @@ namespace Assistant
 
                 if (list.Count > 0)
                 {
-                    Engine.Instance.SendToServer(new VendorSellResponse(vendor, list));
+                    NetClient.Socket.PSend_VendorSellResponse(vendor, list);
                     UOSObjects.Player.SendMessage(MsgLevel.Force, $"Sell: Selling {sold} item{(sold > 1 ? "s" : "")} for {total}");
                     args.Block = true;
                 }
             }
 
-            public string Name { get { return $"Sell-{Num + 1}"; } }
-
-            private void SetHotBag()
+            private string _Name = null;
+            public string Name
             {
-                UOSObjects.Player.SendMessage(MsgLevel.Force, "Target the Sell HotBag container");
-                Targeting.OneTimeTarget(new Targeting.TargetResponseCallback(OnHBTarget));
-            }
-
-            private void OnHBTarget(bool location, uint serial, Point3D loc, ushort gfx)
-            {
-                UOItem hb = UOSObjects.FindItem(HotBag);
-                if (hb != null)
+                set
                 {
-                    if (hb.ObjPropList.Remove("(Sell HotBag)"))
-                    {
-                        hb.OPLChanged();
-                    }
+                    if (value == _Name)
+                        return;
+                    value = Utility.StringAlphaNumberSpaceMinusUnderscore(value);
+                    if (!string.IsNullOrEmpty(value) && !SellList.Keys.Any(key => key.Name == value))
+                        _Name = value;
                 }
-
-                if (location && SerialHelper.IsItem(serial))
+                get
                 {
-                    HotBag = serial;
-                    hb = UOSObjects.FindItem(HotBag);
-                    if (hb != null)
-                    {
-                        hb.ObjPropList.Add("(Sell HotBag)");
-                        hb.OPLChanged();
-                    }
+                    return _Name ?? $"Sell-{Num + 1}";
                 }
-                else
-                    HotBag = 0;
             }
         }
     }

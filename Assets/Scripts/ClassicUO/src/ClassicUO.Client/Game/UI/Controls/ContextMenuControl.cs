@@ -42,19 +42,22 @@ namespace ClassicUO.Game.UI.Controls
             );
         }
 
-        public void Show()
+        public ContextMenuShowMenu Show()
         {
             UIManager.ShowContextMenu(null);
 
             if (_items.Count == 0)
             {
-                return;
+                return null;
             }
-
+            //MobileUO Addition for response from context MENU
+            var cmsm = new ContextMenuShowMenu(_gump.World, _items);
             UIManager.ShowContextMenu
             (
-                new ContextMenuShowMenu(_gump.World, _items)
+                cmsm
             );
+            return cmsm;
+            // END MobileUO
         }
 
         public void Dispose()

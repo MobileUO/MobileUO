@@ -1,4 +1,20 @@
-﻿using System;
+﻿#region License
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org> for details.
+#endregion
+
+using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Linq;
@@ -53,7 +69,7 @@ namespace Assistant
 
         public override string ToString()
         {
-            return String.Format("{0} (#{1})", SpellDefinition.FullIndexGetSpell(Number).Name, Number);
+            return string.Format("{0} (#{1})", SpellDefinition.FullIndexGetSpell(Number).Name, Number);
         }
 
         public int GetID()
@@ -61,39 +77,31 @@ namespace Assistant
             return Number;
         }
 
-        public void OnCast(PacketBase p)
+        public static void FullCast(int spellid)
         {
-            Cast();
-            Engine.Instance.SendToServer(p);
+            Cast(spellid);
+            NetClient.Socket.PSend_CastSpell(spellid);
         }
 
-        private void Cast()
+        private static void Cast(int spellid)
         {
             if (UOSObjects.Gump.HandsBeforeCasting && Engine.Instance.AllowBit(FeatureBit.UnequipBeforeCast))
             {
                 UOItem pack = UOSObjects.Player.Backpack;
                 if (pack != null)
                 {
-                    // dont worry about uneqipping RuneBooks or SpellBooks
-                    UOItem item = UOSObjects.Player.GetItemOnLayer(Layer.RightHand);
-#if DEBUG
-                    if (item != null && item.ItemID != 0x22C5 && item.ItemID != 0xE3B && item.ItemID != 0xEFA &&
-                        !item.IsVirtueShield)
-#else
+                    // dont worry about unequipping RuneBooks or SpellBooks
+                    UOItem item = UOSObjects.Player.GetItemOnLayer(Layer.OneHanded);
+
 					if ( item != null && item.ItemID != 0x22C5 && item.ItemID != 0xE3B && item.ItemID != 0xEFA )
-#endif
                     {
                         DragDropManager.Drag(item, item.Amount);
                         DragDropManager.Drop(item, pack);
                     }
 
-                    item = UOSObjects.Player.GetItemOnLayer(Layer.LeftHand);
-#if DEBUG
-                    if (item != null && item.ItemID != 0x22C5 && item.ItemID != 0xE3B && item.ItemID != 0xEFA &&
-                        !item.IsVirtueShield)
-#else
+                    item = UOSObjects.Player.GetItemOnLayer(Layer.TwoHanded);
+
 					if ( item != null && item.ItemID != 0x22C5 && item.ItemID != 0xE3B && item.ItemID != 0xEFA )
-#endif
                     {
                         DragDropManager.Drag(item, item.Amount);
                         DragDropManager.Drop(item, pack);
@@ -103,7 +111,7 @@ namespace Assistant
 
             if (UOSObjects.Player != null)
             {
-                UOSObjects.Player.LastSpell = GetID();
+                UOSObjects.Player.LastSpell = spellid;
                 LastCastTime = DateTime.UtcNow;
                 Targeting.SpellTargetID = 0;
             }
@@ -111,10 +119,8 @@ namespace Assistant
 
         public static DateTime LastCastTime = DateTime.MinValue;
 
-        internal static Dictionary<int, Spell> SpellsByID = new Dictionary<int, Spell>();
-        internal static Dictionary<string, Spell> SpellsByName = new Dictionary<string, Spell>();
-
-        //private static HotKeyCallbackState HotKeyCallback;
+        internal static Dictionary<int, Spell> SpellsByID { get; } = new Dictionary<int, Spell>();
+        internal static Dictionary<string, Spell> SpellsByName { get; } = new Dictionary<string, Spell>();
 
         static Spell()
         {
@@ -158,14 +164,13 @@ namespace Assistant
             {
                 if (UOSObjects.Player.Poisoned || UOSObjects.Player.Hits < UOSObjects.Player.HitsMax)
                     Targeting.TargetSelf(true);
-                Engine.Instance.SendToServer(new CastSpellFromMacro((ushort)s.GetID()));
-                s.Cast();
+                FullCast(s.Number);
             }
         }
 
         public static void MiniHealOrCureSelf()
         {
-            Spell s = null;
+            Spell s;
 
             if (!Engine.Instance.AllowBit(FeatureBit.BlockHealPoisoned))
             {
@@ -183,8 +188,7 @@ namespace Assistant
             {
                 if (UOSObjects.Player.Poisoned || UOSObjects.Player.Hits < UOSObjects.Player.HitsMax)
                     Targeting.TargetSelf(true);
-                Engine.Instance.SendToServer(new CastSpellFromMacro((ushort)s.GetID()));
-                s.Cast();
+                FullCast(s.Number);
             }
         }
 
@@ -208,8 +212,7 @@ namespace Assistant
             {
                 if (UOSObjects.Player.Poisoned || UOSObjects.Player.Hits < UOSObjects.Player.HitsMax)
                     Targeting.TargetSelf(true);
-                Engine.Instance.SendToServer(new CastSpellFromMacro((ushort)s.GetID()));
-                s.Cast();
+                FullCast(s.Number);
             }
         }
 
@@ -219,8 +222,8 @@ namespace Assistant
 
             if (item != null)
             {
-                Engine.Instance.SendToServer(new LiftRequest(item, 1)); // unequip
-                Engine.Instance.SendToServer(new EquipRequest(item.Serial, UOSObjects.Player, item.Layer)); // Equip
+                NetClient.Socket.PSend_LiftRequest(item.Serial, 1);
+                NetClient.Socket.PSend_EquipRequest(item.Serial, UOSObjects.Player.Serial, item.Layer);
             }
         }
 
@@ -238,7 +241,7 @@ namespace Assistant
             if (layeredItem != null)
                 return layeredItem;
 
-            layeredItem = UOSObjects.Player.GetItemOnLayer(Layer.Head);
+            layeredItem = UOSObjects.Player.GetItemOnLayer(Layer.Helmet);
             if (layeredItem != null)
                 return layeredItem;
 
@@ -250,7 +253,7 @@ namespace Assistant
             if (layeredItem != null)
                 return layeredItem;
 
-            layeredItem = UOSObjects.Player.GetItemOnLayer(Layer.Neck);
+            layeredItem = UOSObjects.Player.GetItemOnLayer(Layer.Necklace);
             if (layeredItem != null)
                 return layeredItem;
 
@@ -258,7 +261,7 @@ namespace Assistant
             if (layeredItem != null)
                 return layeredItem;
 
-            layeredItem = UOSObjects.Player.GetItemOnLayer(Layer.InnerTorso);
+            layeredItem = UOSObjects.Player.GetItemOnLayer(Layer.Torso);
             if (layeredItem != null)
                 return layeredItem;
 
@@ -266,7 +269,7 @@ namespace Assistant
             if (layeredItem != null)
                 return layeredItem;
 
-            layeredItem = UOSObjects.Player.GetItemOnLayer(Layer.MiddleTorso);
+            layeredItem = UOSObjects.Player.GetItemOnLayer(Layer.Tunic);
             if (layeredItem != null)
                 return layeredItem;
 
@@ -282,32 +285,27 @@ namespace Assistant
             if (layeredItem != null)
                 return layeredItem;
 
-            layeredItem = UOSObjects.Player.GetItemOnLayer(Layer.OuterTorso);
+            layeredItem = UOSObjects.Player.GetItemOnLayer(Layer.Robe);
             if (layeredItem != null)
                 return layeredItem;
 
-            layeredItem = UOSObjects.Player.GetItemOnLayer(Layer.OuterLegs);
+            layeredItem = UOSObjects.Player.GetItemOnLayer(Layer.Skirt);
             if (layeredItem != null)
                 return layeredItem;
 
-            layeredItem = UOSObjects.Player.GetItemOnLayer(Layer.InnerLegs);
+            layeredItem = UOSObjects.Player.GetItemOnLayer(Layer.Legs);
             if (layeredItem != null)
                 return layeredItem;
 
-            layeredItem = UOSObjects.Player.GetItemOnLayer(Layer.RightHand);
+            layeredItem = UOSObjects.Player.GetItemOnLayer(Layer.OneHanded);
             if (layeredItem != null)
                 return layeredItem;
 
-            layeredItem = UOSObjects.Player.GetItemOnLayer(Layer.LeftHand);
+            layeredItem = UOSObjects.Player.GetItemOnLayer(Layer.TwoHanded);
             if (layeredItem != null)
                 return layeredItem;
 
             return null;
-        }
-
-        public static void Initialize()
-        {
-            // no code, this is here to make sure out static ctor is init'd by the core
         }
 
         public static void OnHotKey(ushort id)
@@ -315,7 +313,7 @@ namespace Assistant
             Spell s = Spell.Get(id);
             if (s != null)
             {
-                s.OnCast(new CastSpellFromMacro(id));
+                Spell.FullCast(id);//.OnCast(new CastSpellFromMacro(id));
                 //if ( Macros.MacroManager.AcceptActions )
                 //	Macros.MacroManager.Action( new Macros.MacroCastSpellAction( s ) );
             }

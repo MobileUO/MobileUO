@@ -1,4 +1,20 @@
-﻿using System;
+﻿#region License
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org> for details.
+#endregion
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -18,7 +34,7 @@ namespace ClassicUO.Game.UI.Controls
         //so that when the parent is deactivated, all the child will be made non visible
         private readonly List<AssistMultiSelectionShrinkbox> _nestedBoxes = new List<AssistMultiSelectionShrinkbox>();
         private readonly GumpPic _arrow;
-        private NiceButton[] _buttons;
+        private AssistNiceButton[] _buttons;
         private readonly bool _useArrow2;
         private string[] _items;
         private bool _opened;
@@ -80,7 +96,6 @@ namespace ClassicUO.Game.UI.Controls
                         foreach (AssistMultiSelectionShrinkbox msb in _nestedBoxes)
                         {
                             msb.IsVisible = true;
-                            msb.OnPageChanged();
                         }
                     }
                     else
@@ -93,11 +108,11 @@ namespace ClassicUO.Game.UI.Controls
                         foreach (AssistMultiSelectionShrinkbox msb in _nestedBoxes)
                         {
                             msb.IsVisible = false;
-                            msb.OnPageChanged();
                         }
                     }
 
-                    Parent?.OnPageChanged();
+                    if (Parent is AssistScrollArea area)
+                        area.AreaChanged = true;
                 }
             }
         }
@@ -125,24 +140,17 @@ namespace ClassicUO.Game.UI.Controls
             if (_nestedBoxes.Contains(box))
                 return false;
 
-            Control c = Parent;
-
-            while (c != null)
+            if (Parent is AssistScrollArea area)
             {
-                if (c is AssistScrollArea area)
-                {
-                    _arrow.IsVisible = true;
-                    _nestedBoxes.Add(box);
-                    box.Width = Width - box.X;
-                    area.Add(box);
-                    if (!_opened) box.IsVisible = false;
-                    box.OnPageChanged();
-                    box.ParentBox = this;
+                _arrow.IsVisible = true;
+                _nestedBoxes.Add(box);
+                box.Width = Width - box.X;
+                area.Add(box);
+                if (!_opened) box.IsVisible = false;
+                box.ParentBox = this;
+                area.AreaChanged = true;
 
-                    return true;
-                }
-
-                c = c.Parent;
+                return true;
             }
 
             return false;
@@ -167,7 +175,7 @@ namespace ClassicUO.Game.UI.Controls
         private void GenerateButtons()
         {
             ClearButtons();
-            _buttons = new NiceButton[_items.Length];
+            _buttons = new AssistNiceButton[_items.Length];
 
             if (_buttonimg > 0)
                 _pics = new Button[_items.Length];
@@ -199,7 +207,7 @@ namespace ClassicUO.Game.UI.Controls
 
             foreach (var item in _items)
             {
-                var but = new NiceButton(20, index * height + lh, width, height, ButtonAction.Activate, item, _buttongroup, TEXT_ALIGN_TYPE.TS_LEFT) { Tag = index };
+                var but = new AssistNiceButton(20, index * height + lh, width, height, ButtonAction.Activate, item, _buttongroup, TEXT_ALIGN_TYPE.TS_LEFT) { Tag = index };
                 if (_buttonimg > 0)
                 {
                     Add(_pics[index] = new Button(index, _buttonimg, _pressedbuttonimg) { X = 6, Y = index * height + lh + 2, ButtonAction = (ButtonAction)0xBEEF, Tag = index });
@@ -216,7 +224,22 @@ namespace ClassicUO.Game.UI.Controls
 
             Height = totalHeight;
 
-            Parent.WantUpdateSize = true;
+            Control p = Parent;
+            while (p != null)
+            {
+                if (p is AssistScrollArea area)
+                {
+                    area.AreaChanged = true;
+                    break;
+                }
+                p = p.Parent;
+            }
+        }
+
+        public override T Add<T>(T c, int page = 0)
+        {
+            c.UpdateOffset(Offset.X, Offset.Y);
+            return base.Add(c, page);
         }
 
         private void ClearButtons()
@@ -238,6 +261,16 @@ namespace ClassicUO.Game.UI.Controls
                     _pics[i] = null;
                 }
             }
+            Control p = Parent;
+            while (p != null)
+            {
+                if (p is AssistScrollArea area)
+                {
+                    area.AreaChanged = true;
+                    break;
+                }
+                p = p.Parent;
+            }
         }
 
         private void Selection_MouseClick(object sender, MouseEventArgs e)
@@ -255,22 +288,17 @@ namespace ClassicUO.Game.UI.Controls
 
         private void OnGroupSelection()
         {
-            if (Parent != null && Parent.Parent is AssistScrollArea area)
+            if (Parent != null && Parent is AssistScrollArea area)
             {
-                foreach (Control sai in area.Children)
+                var list = area.FindControls<AssistMultiSelectionShrinkbox>();
+                foreach (AssistMultiSelectionShrinkbox msb in list)
                 {
-                    if (sai is ScrollAreaItem)
+                    if (msb._buttongroup == _buttongroup && msb != this && msb._buttons != null)
                     {
-                        foreach (Control c in sai.Children)
+                        foreach (AssistNiceButton button in msb._buttons)
                         {
-                            if (c is AssistMultiSelectionShrinkbox msb && msb._buttongroup == _buttongroup && msb != this && msb._buttons != null)
-                            {
-                                foreach (NiceButton button in msb._buttons)
-                                {
-                                    if (button != null)
-                                        button.IsSelected = false;
-                                }
-                            }
+                            if (button != null)
+                                button.IsSelected = false;
                         }
                     }
                 }
@@ -287,11 +315,6 @@ namespace ClassicUO.Game.UI.Controls
                 Opened = !_opened;
 
             return base.OnMouseDoubleClick(x, y, button);
-        }
-
-        public override void OnPageChanged()
-        {
-            Parent?.OnPageChanged();
         }
     }
 }

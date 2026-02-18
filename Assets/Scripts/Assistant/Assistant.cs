@@ -1,52 +1,120 @@
-﻿#region license
-//  Copyright (C) 2019 ClassicUO Development Community on Github
+﻿#region License
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
 //
-//	This project is an alternative client for the game Ultima Online.
-//	The goal of this is to develop a lightweight client considering 
-//	new technologies.  
-//      
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org> for details.
 #endregion
 
 using Assistant;
 using Assistant.Scripts;
 using ClassicUO.Configuration;
+using ClassicUO.Game.Data;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.UI.Controls;
+using ClassicUO.Input;
 using ClassicUO.Assets;
+using ClassicUO.Resources;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
 using ClassicUO.Utility.Collections;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
 using SDL2;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using ClassicUO.Input;
 
 namespace ClassicUO.Game.UI.Gumps
 {
     internal class AssistantGump : Gump
     {
-        public bool AssistantEnabled;
+        public override GumpType GumpType => GumpType.Assistant;
+
+        internal class TimersGump : Gump
+        {
+            private Dictionary<string, uint> _Timers { get; } = new Dictionary<string, uint>();
+            private AssistScrollArea _Area;
+            internal TimersGump() : base(ClassicUO.Client.Game.UO.World, 0, 0)
+            {
+                AssistantGump gump = UOSObjects.Gump;
+                if (gump == null || gump.IsDisposed)
+                {
+                    Dispose();
+                    return;
+                }
+                
+                AcceptMouseInput = true;
+                CanMove = true;
+                CanCloseWithRightClick = true;
+                CanCloseWithEsc = false;
+                UOScript.Interpreter.GetTimersInDict(_Timers);
+                X = gump.X + (gump.Width >> 1);
+                Y = gump.Y + (gump.Height >> 2);
+                int w = gump.Width >> 1;
+                int h = gump.Height;
+                Width = w;
+                Height = h;
+                Add(new AlphaBlendControl(gump.Alpha) { X = 1, Y = 1, Width = w - 2, Height = h - 2 });
+                CreateRectangleArea(this, 4, 4, w - 8, h - 8, 0, Color.Gray.PackedValue, 2, "Active Timers");
+                _Area = new AssistScrollArea(15, 20, w - 30, h - 40);
+                foreach(var kvp in _Timers)
+                {
+                    _Buttons.Add(CreateSingleTextSelection(_Area, 1, TEXT_ALIGN_TYPE.TS_LEFT, w - 40, $"{kvp.Key}", $"{kvp.Value}", ScriptTextBox.GRAY_HUE));
+                }
+                Add(_Area);
+                _NextUpdate = Time.Ticks + 100;
+            }
+
+            private uint _NextUpdate;
+            private List<AssistDoubleNiceLabelButton> _Buttons = new List<AssistDoubleNiceLabelButton>();
+            public override void Update()
+            {
+                base.Update();
+                if(_NextUpdate < Time.Ticks)
+                {
+                    UOScript.Interpreter.GetTimersInDict(_Timers);
+                    List<AssistDoubleNiceLabelButton> toRemove = _Buttons.FindAll(b => !_Timers.ContainsKey(b.TextLabel.Text));
+                    foreach(var but in toRemove)
+                    {
+                        _Buttons.Remove(but);
+                        _Area.Remove(but);
+                    }
+                    List<string> toAdd = _Timers.Keys.Where(s => _Buttons.All(b => b.TextLabel.Text != s)).ToList();
+                    foreach (var s in toAdd)
+                    {
+                        _Buttons.Add(CreateSingleTextSelection(_Area, 1, TEXT_ALIGN_TYPE.TS_LEFT, Width - 40, $"{s}", $"{_Timers[s]}", ScriptTextBox.GRAY_HUE));
+                    }
+                    foreach(var but in _Buttons)
+                    {
+                        but.SecondLabel.Text = $"{_Timers[but.TextLabel.Text]}";
+                    }
+                    _NextUpdate = Time.Ticks + 100;
+                }
+            }
+
+            private AssistDoubleNiceLabelButton CreateSingleTextSelection(AssistScrollArea area, int y, TEXT_ALIGN_TYPE align, int width, string text, string extra, ushort hue)
+            {
+                AssistDoubleNiceLabelButton but = new AssistDoubleNiceLabelButton(0, y, width, _buttonHeight - (_buttonHeight >> 2), ButtonAction.Activate, text, extra, (int)ButtonType.SetLinkedProfile, align, hue, true);
+                area.Add(but);
+                return but;
+            }
+        }
 
         internal class MessageBoxGump : Gump
         {
-            internal MessageBoxGump(World world, string title, string body) : base(world, 0, 0)
+            public override GumpType GumpType => GumpType.Assistant;
+
+            internal MessageBoxGump(string title, string body) : base(ClassicUO.Client.Game.UO.World, 0, 0)
             {
                 AssistantGump gump = UOSObjects.Gump;
                 if(gump == null || gump.IsDisposed || string.IsNullOrEmpty(body))
@@ -67,10 +135,10 @@ namespace ClassicUO.Game.UI.Gumps
                 h = Math.Max(80, h + 60);
                 Width = w;
                 Height = h;
-                Add(new AlphaBlendControl(0.0f) { X = 1, Y = 1, Width = w - 2, Height = h - 2 });
-                Line.CreateRectangleArea(this, 10, 10, w - 20, h - 20, 0, Color.Gray.PackedValue, 2, $"{title}");
+                Add(new AlphaBlendControl(gump.Alpha) { X = 1, Y = 1, Width = w - 2, Height = h - 2 });
+                CreateRectangleArea(this, 10, 10, w - 20, h - 20, 0, Color.Gray.PackedValue, 2, $"{title}");
                 Add(new Label($"{body}", true, ScriptTextBox.GRAY_HUE, w - 40, FONT, FontStyle.None, TEXT_ALIGN_TYPE.TS_CENTER) { X = 20, Y = 20, Height = h - 40 });
-                Add(new NiceButton((w >> 1) - 29, h - 32, 60, 20, ButtonAction.Activate, "OKAY") { ButtonParameter = 222, IsSelectable = false });
+                Add(new AssistNiceButton((w >> 1) - 29, h - 32, 60, 20, ButtonAction.Activate, "OKAY") { ButtonParameter = 222, IsSelectable = false });
             }
 
             public override void Dispose()
@@ -87,9 +155,12 @@ namespace ClassicUO.Game.UI.Gumps
             }
         }
 
+        #region Object Inspector
         internal class ObjectInspectorGump : Gump
         {
-            enum NotorietyFlag : byte
+            public override GumpType GumpType => GumpType.Assistant;
+
+            private enum NotorietyFlag : byte
             {
                 any = 0x00,
                 innocent = 0x01,
@@ -101,7 +172,7 @@ namespace ClassicUO.Game.UI.Gumps
                 invulnerable = 0x07,
             }
 
-            internal ObjectInspectorGump(World world, UOEntity inspected) : base(world, 0, 0)
+            internal ObjectInspectorGump(UOEntity inspected) : base(ClassicUO.Client.Game.UO.World, 0, 0)
             {
                 AssistantGump gump = UOSObjects.Gump;
                 if (gump == null || gump.IsDisposed || inspected == null)
@@ -119,8 +190,8 @@ namespace ClassicUO.Game.UI.Gumps
                 int h = inspected is UOMobile ? 400 : 300;
                 Width = w;
                 Height = h;
-                Add(new AlphaBlendControl(0.0f) { X = 1, Y = 1, Width = w - 2, Height = h - 2 });
-                Line.CreateRectangleArea(this, 10, 10, w - 20, h - 20, 0, Color.Gray.PackedValue, 2, "Object Inspector");
+                Add(new AlphaBlendControl(gump.Alpha) { X = 1, Y = 1, Width = w - 2, Height = h - 2 });
+                CreateRectangleArea(this, 10, 10, w - 20, h - 20, 0, Color.Gray.PackedValue, 2, "Object Inspector");
                 int x = 20, y = 20, mw = 110, mh;
                 Label l;
                 Add(l = new Label("Serial:", true, ScriptTextBox.GRAY_HUE, mw) { X = x, Y = y });
@@ -134,9 +205,7 @@ namespace ClassicUO.Game.UI.Gumps
                 Add(new SelectableReadOnlyBox(FONT, -1, 0, true, FontStyle.None, ScriptTextBox.GREEN_HUE) { X = x + mw, Y = y, Width = w - (40 + mw), Text = $"{inspected.Hue}" });
                 if (inspected.Hue > 0 && inspected.Hue <= Client.Game.UO.FileManager.Hues.HuesCount)
                 {
-                    // MobileUO: TODO: ColorBox dropped a parameter in CUO 0.1.9.0, this may need to be revisited
-                    for(ushort i = 0; i < 32; ++i)
-                        Add(new ColorBox(3, 14, inspected.Hue/*, HuesLoader.Instance.GetPolygoneColor(i, inspected.Hue)*/) { X = 190 + (3 * i), Y = y + 3 });
+                    Add(new AssistIntegralColorBox(96, 14, inspected.Hue) { X = 193, Y = y + 3 });
                 }
                 y += mh + 2;
                 Add(new Label("Position (X Y Z):", true, ScriptTextBox.GRAY_HUE, mw) { X = x, Y = y });
@@ -162,7 +231,7 @@ namespace ClassicUO.Game.UI.Gumps
                     Add(new SelectableReadOnlyBox(FONT, -1, 0, true, FontStyle.None, ScriptTextBox.GREEN_HUE) { X = x + mw, Y = y, Width = w - (40 + mw), Text = $"{mob.Notoriety} - {(NotorietyFlag)mob.Notoriety}" });
                     y += mh + 2;
                     Add(new Label("Direction:", true, ScriptTextBox.GRAY_HUE, mw) { X = x, Y = y });
-                    Add(new SelectableReadOnlyBox(FONT, -1, 0, true, FontStyle.None, ScriptTextBox.GREEN_HUE) { X = x + mw, Y = y, Width = w - (40 + mw), Text = $"{(int)(mob.Direction & Direction.Up)} - {(mob.Direction & Direction.Up).ToString().ToLower(XmlFileParser.Culture)}" });
+                    Add(new SelectableReadOnlyBox(FONT, -1, 0, true, FontStyle.None, ScriptTextBox.GREEN_HUE) { X = x + mw, Y = y, Width = w - (40 + mw), Text = $"{(int)(mob.Direction & AssistDirection.Up)} - {(mob.Direction & AssistDirection.Up).ToString().ToLower(XmlFileParser.Culture)}" });
                     y += mh + 5;
                     Add(new Label("Flags", true, ScriptTextBox.GRAY_HUE, mw) { X = x, Y = y });
                     Add(new SelectableReadOnlyBox(FONT, -1, 0, true, FontStyle.None, ScriptTextBox.GREEN_HUE) { X = x + mw, Y = y, Width = w - (40 + mw), Text = $"0x{mob.GetPacketFlags():X2}" });
@@ -211,73 +280,19 @@ namespace ClassicUO.Game.UI.Gumps
                 }
             }
         }
+        #endregion
 
-        internal class ChangeAssistantGump : Gump
-        {
-            Checkbox _control;
-            internal ChangeAssistantGump(World world, OptionsGump gump, Checkbox control) : base(world, 0, 0)
-            {
-                if (gump != null && !gump.IsDisposed && control != null && !control.IsDisposed)
-                {
-                    if(control.IsChecked == Settings.GlobalSettings.EnableInternalAssistant)
-                        return;
-                    _control = control;
-                    AcceptMouseInput = true;
-                    CanMove = false;
-                    CanCloseWithRightClick = true;
-                    CanCloseWithEsc = false;
-                    X = gump.X + (gump.Width >> 2);
-                    Y = gump.Y + (gump.Height >> 2);
-                    Width = 320;
-                    Height = 120;
-                    Add(new AlphaBlendControl(0.0f) { X = 1, Y = 1, Width = 318, Height = 118 });
-                    Line.CreateRectangleArea(this, 10, 10, 300, 100, 0, Color.Gray.PackedValue, 2, "Warning!");
-                    Add(new Label($"Changing to {(control.IsChecked ? "UOAssist" : "Razor")}!", true, ScriptTextBox.GRAY_HUE, 280, FONT, FontStyle.None, TEXT_ALIGN_TYPE.TS_CENTER) { X = 20, Y = 30 });
-                    Add(new Label("Click on OKAY to close ClassicUO!", true, ScriptTextBox.GRAY_HUE, 280, FONT, FontStyle.None, TEXT_ALIGN_TYPE.TS_CENTER) { X = 20, Y = 50 });
-                    Add(new NiceButton(40, 80, 80, 30, ButtonAction.Activate, "OKAY") { ButtonParameter = 123, IsSelectable = false });
-                    Add(new NiceButton(180, 80, 80, 30, ButtonAction.Activate, "CANCEL") { ButtonParameter = 321, IsSelectable = false });
-                    IsModal = true;
-                }
-                else
-                    Dispose();
-            }
-
-            public override void OnButtonClick(int buttonID)
-            {
-                switch (buttonID)
-                {
-                    case 123:
-                    {
-                        if (_control != null && !_control.IsDisposed)
-                        {
-                            Settings.GlobalSettings.EnableInternalAssistant = _control.IsChecked;
-                            Settings.GlobalSettings.Save();
-                            Network.NetClient.Socket.Disconnect();
-                            Client.Game.Exit();
-                        }
-                        break;
-                    }
-                    case 321:
-                    {
-                        if (_control != null && !_control.IsDisposed)
-                        {
-                            _control.IsChecked = Settings.GlobalSettings.EnableInternalAssistant;
-                        }
-                        Dispose();
-                        break;
-                    }
-                }
-            }
-        }
 
         #region newprofile
         internal class NewProfileGump : Gump
         {
-            private StbTextBox _box;
+            public override GumpType GumpType => GumpType.Assistant;
+
+            private AssistStbTextBox _box;
             private Label _warning;
             private Line[] _lines;
             private AlphaBlendControl _alpha;
-            internal NewProfileGump(World world) : base(world, 0, 0)
+            internal NewProfileGump() : base(Client.Game.UO.World, 0, 0)
             {
                 AcceptMouseInput = true;
                 CanMove = false;
@@ -287,14 +302,14 @@ namespace ClassicUO.Game.UI.Gumps
                 Y = UOSObjects.Gump.Y + (UOSObjects.Gump.Height >> 2);
                 Width = 300;
                 Height = 100;
-                Add(_alpha = new AlphaBlendControl(0.0f) { X = 1, Y = 1, Width = 298, Height = 98});
-                _lines = Line.CreateRectangleArea(this, 10, 10, 280, 80, 0, Color.Gray.PackedValue, 2, "Enter the New Profile Name");
+                Add(_alpha = new AlphaBlendControl(UOSObjects.Gump.Alpha) { X = 1, Y = 1, Width = 298, Height = 98});
+                _lines = CreateRectangleArea(this, 10, 10, 280, 80, 0, Color.Gray.PackedValue, 2, "Enter the New Profile Name");
                 //Add(new Label("Enter the New Profile Name", true, ScriptTextBox.GRAY_HUE, font: FONT) { X = 60, Y = 10 });
                 Add(new GumpPicTiled(15, 30, 270, 23, 0x52));
                 Add(new GumpPicTiled(16, 31, 269, 21, 0xBBC));
-                Add(_box = new StbTextBox(FONT, 30, 260, true) { X = 20, Y = 30, Width = 260, Height = 21 });
-                Add(new NiceButton(_box.X + 15, _box.Y + _box.Height + 5, 80, 30, ButtonAction.Activate, "OKAY") {ButtonParameter = 123, IsSelectable = false});
-                Add(new NiceButton(_box.X + 170, _box.Y + _box.Height + 5, 80, 30, ButtonAction.Activate, "CANCEL") { ButtonParameter = 321, IsSelectable = false });
+                Add(_box = new AssistStbTextBox(FONT, 30, 260, true) { X = 20, Y = 30, Width = 260, Height = 21 });
+                Add(new AssistNiceButton(_box.X + 15, _box.Y + _box.Height + 5, 80, 30, ButtonAction.Activate, "OKAY") {ButtonParameter = 123, IsSelectable = false});
+                Add(new AssistNiceButton(_box.X + 170, _box.Y + _box.Height + 5, 80, 30, ButtonAction.Activate, "CANCEL") { ButtonParameter = 321, IsSelectable = false });
                 Add(_warning = new Label("", true, 37, 265, FONT, FontStyle.None, TEXT_ALIGN_TYPE.TS_CENTER) { X = 15, Y = 90, Height = 40, IsVisible = false });
                 //ControlInfo.IsModal = true;
                 UOSObjects.Gump.IsEnabled = false;
@@ -331,7 +346,7 @@ namespace ClassicUO.Game.UI.Gumps
                 {
                     case 123:
                     {
-                        if (!Engine.UOSteamClient.Validate(_box.Text, 3, 24, true, true, _box.Text.Length >> 1))
+                        if (!Engine.Validate(_box.Text, 3, 24, true, true, _box.Text.Length >> 1))
                         {
                             _warning.Text = "Invalid name (only alphanumeric or '-_ ', between 3 and 24 chars length)";
                             Resize();
@@ -339,7 +354,7 @@ namespace ClassicUO.Game.UI.Gumps
                         }
                         else
                         {
-                            FileInfo info = new FileInfo(Path.Combine(Profile.ProfilePath, $"{_box.Text}.xml"));
+                            FileInfo info = new FileInfo(Path.Combine(Engine.ProfilePath, $"{_box.Text}.xml"));
                             bool success = false;
                             if (info.Exists)
                             {
@@ -347,12 +362,17 @@ namespace ClassicUO.Game.UI.Gumps
                                 Resize();
                                 return;
                             }
-                            else if (UOSObjects.Gump._loadLinkedProfile.IsChecked)
+                            else if (UOSObjects.Gump._SetLinkedProfile)
                             {
                                 if (!XmlFileParser.SaveProfile(_box.Text))
+                                {
                                     UOSObjects.Player.SendMessage(MsgLevel.Error, "Cannot save profile!");
+                                }
                                 else
+                                {
                                     success = true;
+                                }
+                                UOSObjects.Gump.SetLinkedClicked(this, UOSObjects.Gump._linkSelectedProfile);
                             }
                             else
                             {
@@ -360,7 +380,7 @@ namespace ClassicUO.Game.UI.Gumps
                                 {
                                     using (StreamWriter w = new StreamWriter(info.FullName, false))
                                     {
-                                        w.Write(Assistant.Resources.defaultProfile);
+                                        w.Write(XmlFileParser.DEFPROF);
                                         w.Flush();
                                     }
                                     success = true;
@@ -372,8 +392,12 @@ namespace ClassicUO.Game.UI.Gumps
                             }
                             if (success)
                             {
+                                UOSObjects.Gump.OnRecordMacroButton(true);
+                                XmlFileParser.SaveProfile();
                                 UOSObjects.Gump.LoadProfiles(_box.Text);
+                                UOSObjects.GumpIsLoading = true;
                                 XmlFileParser.LoadProfile(UOSObjects.Gump, _box.Text);
+                                UOSObjects.GumpIsLoading = false;
                             }
                         }
                         break;
@@ -389,11 +413,13 @@ namespace ClassicUO.Game.UI.Gumps
         #region newmacro
         internal class NewMacroGump : Gump
         {
-            private StbTextBox _box;
+            public override GumpType GumpType => GumpType.Assistant;
+
+            private AssistStbTextBox _box;
             private Label _warning;
             private Line[] _lines;
             private AlphaBlendControl _alpha;
-            internal NewMacroGump(World world) : base(world, 0, 0)
+            internal NewMacroGump() : base(Client.Game.UO.World, 0, 0)
             {
                 AcceptMouseInput = true;
                 CanMove = false;
@@ -403,13 +429,13 @@ namespace ClassicUO.Game.UI.Gumps
                 Y = UOSObjects.Gump.Y + (UOSObjects.Gump.Height >> 2);
                 Width = 300;
                 Height = 100;
-                Add(_alpha = new AlphaBlendControl(1.0f) { X = 1, Y = 1, Width = 298, Height = 98 });
-                _lines = Line.CreateRectangleArea(this, 10, 10, 280, 80, 0, Color.Gray.PackedValue, 2, "Enter the New Macro Name");
+                Add(_alpha = new AlphaBlendControl(UOSObjects.Gump.Alpha) { X = 1, Y = 1, Width = 298, Height = 98 });
+                _lines = CreateRectangleArea(this, 10, 10, 280, 80, 0, Color.Gray.PackedValue, 2, "Enter the New Macro Name");
                 Add(new GumpPicTiled(15, 30, 270, 23, 0x52));
                 Add(new GumpPicTiled(16, 31, 269, 21, 0xBBC));
-                Add(_box = new StbTextBox(FONT, 30, 260, true) { X = 20, Y = 30, Width = 260, Height = 21 });
-                Add(new NiceButton(_box.X + 15, _box.Y + _box.Height + 5, 80, 30, ButtonAction.Activate, "OKAY") { ButtonParameter = 123, IsSelectable = false });
-                Add(new NiceButton(_box.X + 170, _box.Y + _box.Height + 5, 80, 30, ButtonAction.Activate, "CANCEL") { ButtonParameter = 321, IsSelectable = false });
+                Add(_box = new AssistStbTextBox(FONT, 30, 260, true) { X = 20, Y = 30, Width = 260, Height = 21 });
+                Add(new AssistNiceButton(_box.X + 15, _box.Y + _box.Height + 5, 80, 30, ButtonAction.Activate, "OKAY") { ButtonParameter = 123, IsSelectable = false });
+                Add(new AssistNiceButton(_box.X + 170, _box.Y + _box.Height + 5, 80, 30, ButtonAction.Activate, "CANCEL") { ButtonParameter = 321, IsSelectable = false });
                 Add(_warning = new Label("", true, 37, 265, FONT, FontStyle.None, TEXT_ALIGN_TYPE.TS_CENTER) { X = 15, Y = 90, Height = 40, IsVisible = false });
                 //ControlInfo.IsModal = true;
                 UOSObjects.Gump.IsEnabled = false;
@@ -446,7 +472,7 @@ namespace ClassicUO.Game.UI.Gumps
                 {
                     case 123:
                     {
-                        if (!Engine.UOSteamClient.Validate(_box.Text, 3, 24, true, true, _box.Text.Length >> 1, true, new char[]{' '}))
+                        if (!Engine.Validate(_box.Text, 3, 24, true, true, _box.Text.Length >> 1, true, new char[]{' '}))
                         {
                             _warning.Text = "Invalid name, only alphanumeric chars allowed (minimum 3 and maximum 24 char length)";
                             Resize();
@@ -464,6 +490,7 @@ namespace ClassicUO.Game.UI.Gumps
                             {
                                 ScriptManager.MacroDictionary.Add(_box.Text, new HotKeyOpts(MacroAction.None, "macro.play", _box.Text));
                                 UOSObjects.Gump.UpdateMacroListGump(_box.Text);
+                                XmlFileParser.SaveData();
                             }
                         }
                         break;
@@ -479,11 +506,13 @@ namespace ClassicUO.Game.UI.Gumps
         #region hotkey overwrite
         internal class OverWriteHKGump : Gump
         {
+            public override GumpType GumpType => GumpType.Assistant;
+
             private uint _num;
             private HotKeyOpts _hotkeyOpts;
             private AssistHotkeyBox _hkbox;
             private string _selHK;
-            internal OverWriteHKGump(World world, uint num, HotKeyOpts hkopts, AssistHotkeyBox box, ref string selHK, string oldHKname) : base(world, 0, 0)
+            internal OverWriteHKGump(uint num, HotKeyOpts hkopts, AssistHotkeyBox box, ref string selHK, string oldHKname) : base(Client.Game.UO.World, 0, 0)
             {
                 if (!string.IsNullOrEmpty(selHK) && hkopts != null && !string.IsNullOrEmpty(hkopts.Action))
                 {
@@ -500,12 +529,12 @@ namespace ClassicUO.Game.UI.Gumps
                     Y = UOSObjects.Gump.Y + (UOSObjects.Gump.Height >> 2);
                     Width = 320;
                     Height = 120;
-                    Add(new AlphaBlendControl(0.0f) { X = 1, Y = 1, Width = 318, Height = 118 });
-                    Line.CreateRectangleArea(this, 10, 10, 300, 100, 0, Color.Gray.PackedValue, 2, "Warning!");
+                    Add(new AlphaBlendControl(UOSObjects.Gump.Alpha) { X = 1, Y = 1, Width = 318, Height = 118 });
+                    CreateRectangleArea(this, 10, 10, 300, 100, 0, Color.Gray.PackedValue, 2, "Warning!");
                     Add(new Label($"Existant HotKey ({split[split.Length - 1]})!", true, ScriptTextBox.GRAY_HUE, 280, FONT, FontStyle.None, TEXT_ALIGN_TYPE.TS_CENTER){ X = 20, Y = 30 });
                     Add(new Label("Click on OKAY to overwrite it!", true, ScriptTextBox.GRAY_HUE, 280, FONT, FontStyle.None, TEXT_ALIGN_TYPE.TS_CENTER) { X = 20, Y = 50 });
-                    Add(new NiceButton(40, 80, 80, 30, ButtonAction.Activate, "OKAY") { ButtonParameter = 123, IsSelectable = false });
-                    Add(new NiceButton(180, 80, 80, 30, ButtonAction.Activate, "CANCEL") { ButtonParameter = 321, IsSelectable = false });
+                    Add(new AssistNiceButton(40, 80, 80, 30, ButtonAction.Activate, "OKAY") { ButtonParameter = 123, IsSelectable = false });
+                    Add(new AssistNiceButton(180, 80, 80, 30, ButtonAction.Activate, "CANCEL") { ButtonParameter = 321, IsSelectable = false });
                     IsModal = true;
                 }
                 else
@@ -546,7 +575,7 @@ namespace ClassicUO.Game.UI.Gumps
         #endregion
 
         internal static StringBuilder _InstanceSB = new StringBuilder();
-        private const int _RiseConst = 64;//63 buttons max for every page or tab...modulus _RiseConst to get the button, RightShift six (>> 6) to get the correct section
+        private const int RISECONST = 64;//63 buttons max for every page or tab...modulus _RiseConst to get the button, RightShift six (>> 6) to get the correct section
         internal enum PageType
         {
             Invalid = 0,
@@ -569,33 +598,7 @@ namespace ClassicUO.Game.UI.Gumps
             Scavenger,
             Vendors,
             LastAgents,
-            Minimized = LastMain * _RiseConst
-        }
-
-        private enum ContainersType
-        {
-            Backpack = 0x00000001,
-            Bag = 0x00000002,
-            Barrel = 0x00000004,
-            Basket = 0x00000008,
-            FinishedWoodenChest = 0x00000010,
-            GildedWoodenChest = 0x00000020,
-            LargeBagBall = 0x00000040,
-            LargeCrate = 0x00000080,
-            MediumCrate = 0x00000100,
-            MetalBox = 0x00000200,
-            MetalChest = 0x00000400,
-            MetalGoldenChest = 0x00000800,
-            OrnateWoodenChest = 0x00001000,
-            PicnicBasket = 0x00002000,
-            PlainWoodenChest = 0x00004000,
-            Pouch = 0x00008000,
-            Quiver = 0x00010000,
-            SmallBagBall = 0x00020000,
-            SmallCrate = 0x00040000,
-            WoodenBox = 0x00080000,
-            WoodenChest = 0x00100000,
-            WoodenFootLocker = 0x00200000
+            Minimized = LastMain * RISECONST
         }
 
         private enum ActionExclusion
@@ -611,29 +614,29 @@ namespace ClassicUO.Game.UI.Gumps
             //Main section that comprises every button above the window
             Invalid = 0,
             // * General *
-            AddNewProfile = 1 * _RiseConst,
-            SaveCurrentProfile,
+            AddNewProfile = 1 * RISECONST,
+            //SaveCurrentProfile,
             SetLinkedProfile,
             ApplySizeChange,
             // * Options *
             // General Tab
-            ExemptionsContSearch = 2 * _RiseConst,
+            ExemptionsContSearch = 2 * RISECONST,
             BoneCutSetBlade,
             // Combat Tab
-            RemountSetMount = 3 * _RiseConst,
+            RemountSetMount = 3 * RISECONST,
             // Friends Tab
-            RemoveFriend = 4 * _RiseConst,
+            RemoveFriend = 4 * RISECONST,
             InsertFriend,
             FriendsList,
             // SpellGrid Tab
-            RemoveGridProfile = 5 * _RiseConst,
+            RemoveGridProfile = 5 * RISECONST,
             AddNewGridProfile,
             // * Hotkeys *
-            ClearHotkey = 6 * _RiseConst,
+            ClearHotkey = 6 * RISECONST,
             SaveHotkey,
             HotKeyList,
             // * Macros *
-            PlayMacro = 7 * _RiseConst,
+            PlayMacro = 7 * RISECONST,
             RecordMacro,
             RemoveMacro,
             NewMacro,
@@ -643,13 +646,13 @@ namespace ClassicUO.Game.UI.Gumps
             ActiveObjectsHelper,
             MacroList,
             // * Skills *
-            ResetSkillModCount = 8 * _RiseConst,
+            ResetSkillModCount = 8 * RISECONST,
             CopySingleSkillVal,
             CopyAllSkillVal,
             SetAllSkillLocks,
             // * Agents *
             // AutoLoot Tab
-            SetAutolootContainer = 9 * _RiseConst,
+            SetAutolootContainer = 9 * RISECONST,
             RemoveAutolootItem,
             InsertAutolootItem,
             AutolootList,
@@ -657,7 +660,7 @@ namespace ClassicUO.Game.UI.Gumps
             InsertPropertySearch,
             CopyPropertySearch,
             // Dress Tab
-            DressList = 10 * _RiseConst,
+            DressList = 10 * RISECONST,
             RemoveDressList,
             CreateDressList,
             SetUndressContainer,
@@ -670,7 +673,7 @@ namespace ClassicUO.Game.UI.Gumps
             DressListItem,
             DressTypeOrSerial,
             // Organizer Tab
-            OrganizerList = 11 * _RiseConst,
+            OrganizerList = 11 * RISECONST,
             PlaySelectedOrganizer,
             RemoveOrganizerList,
             CreateOrganizerList,
@@ -679,33 +682,37 @@ namespace ClassicUO.Game.UI.Gumps
             InsertItemIntoOrganizer,
             OrganizerListItem,
             // Scavenger Tab
-            InsertScavengeItem = 12 * _RiseConst,
+            InsertScavengeItem = 12 * RISECONST,
             RemoveScavengeItem,
             ClearScavengeItems,
             ScavengeDestinationCont,
             ScavengerListItem,
             // Vendors Tab
-            BuySellList = 13 * _RiseConst,
+            BuySellList = 13 * RISECONST,
             RemoveBuySellList,
             NewBuySellList,
             RemoveBuySellItem,
             InsertBuySellItem,
             BuySellItemList,
+            RenameBuySellList,
             // * Minimized Gump Page * 
-            MinimizeGump = _RiseConst * _RiseConst
+            MinimizeGump = RISECONST * RISECONST
         }
 
         internal static int InsertFriendButton => (int)ButtonType.InsertFriend;
-        internal static readonly byte FONT = (byte)(Client.Game.UO.Version >= ClassicUO.Utility.ClientVersion.CV_305D ? 1 : 0);
+        internal static readonly byte FONT = (byte)(ClassicUO.Client.Game.UO.FileManager.Version >= ClassicUO.Utility.ClientVersion.CV_305D ? 1 : 0);
         //WARNING, MINIMUM WIDTH IS 500, HEIGHT IS 325, if you go lower than this, the items won't fit inside the gump! YOU HAVE BEEN WARNED!
-        private static int _width = 500;
-        private static int _height = 325;
+        private static readonly int minwidth = (ClassicUO.Client.Game.UO.FileManager.Version > ClassicUO.Utility.ClientVersion.CV_200 ? 500 : 600);
+        private static readonly int minheight = (ClassicUO.Client.Game.UO.FileManager.Version > ClassicUO.Utility.ClientVersion.CV_200 ? 325 : 380);
+
+        private static int _width = minwidth;
+        private static int _height = minheight;
         private static int WIDTH
         {
             get { return _width; }
             set
             {
-                if(value >= 500 && value <= 800)
+                if(value >= minwidth && value <= 800)
                 {
                     _width = value;
                     _buttonWidth = _width / 20;
@@ -717,7 +724,7 @@ namespace ClassicUO.Game.UI.Gumps
             get { return _height; }
             set
             {
-                if (value >= 325 && value <= 600)
+                if (value >= minheight && value <= 600)
                 {
                     _height = value;
                     _buttonHeight = _height / 13;
@@ -725,20 +732,9 @@ namespace ClassicUO.Game.UI.Gumps
             }
         }
 
-        private readonly AlphaBlendControl _alphaBlend = new AlphaBlendControl(1.0f)
-        {
-            X = 1,
-            Y = 1,
-            Width = WIDTH - 2,
-            Height = HEIGHT - 2
-        };
-        private readonly AlphaBlendControl _alphaMinimizedBlend = new AlphaBlendControl(1.0f)
-        {
-            X = 1,
-            Y = 1,
-            Width = 85,
-            Height = 30,
-        };
+        private AlphaBlendControl _alphaBlend;
+        private AlphaBlendControl _alphaMinimizedBlend;
+        public float Alpha => _alphaBlend?.Alpha ?? 1.0f;
 
         private readonly Button _prevbutton = new Button(0, 5537, 5539, 5538)
         {
@@ -776,11 +772,19 @@ namespace ClassicUO.Game.UI.Gumps
 
         private static int _buttonHeight = HEIGHT / 13;
         private static int _buttonWidth = WIDTH / 20;
+        internal const float TRANSPARENCY = 0.25f;
 
-        public AssistantGump(World world) : base(world, 0, 0)
+        //PRIMARY GUMP, EVERYTHING STARTS HERE
+        public AssistantGump() : base(Client.Game.UO.World, 0, 0)
         {
+            Add(_alphaBlend = new AlphaBlendControl(1.0f)
+            {
+                X = 1,
+                Y = 1,
+                Width = WIDTH - 2,
+                Height = HEIGHT - 2
+            });
             _controls.Add(_alphaBlend);
-            Add(_alphaBlend);
             AcceptMouseInput = true;
             CanMove = true;
             CanCloseWithRightClick = false;
@@ -788,9 +792,18 @@ namespace ClassicUO.Game.UI.Gumps
             int diffy = ((_buttonHeight - (_buttonHeight >> 3)) >> 2);
             int width = (WIDTH >> 3) + (WIDTH >> 4);
             Control c;
+            _controls.Add(c = new Line(0, 0, WIDTH, 2, Color.Gray.PackedValue));
+            Add(c);
+            _controls.Add(c = new Line(0, 0, 2, HEIGHT, Color.Gray.PackedValue));
+            Add(c);
+            _controls.Add(c = new Line(WIDTH - 1, 0, 2, HEIGHT, Color.Gray.PackedValue));
+            Add(c);
+            _controls.Add(c = new Line(0, HEIGHT - 1, WIDTH, 2, Color.Gray.PackedValue));
+            Add(c);
+
             for (int x = (_buttonWidth - (_buttonWidth >> 3)) + 1, y = _buttonHeight >> 3, page = 1; page < (int)PageType.LastMain; x += width + (width >> 5), page++)
             {
-                _controls.Add(c = new NiceButton(x, y, width, _buttonHeight, ButtonAction.SwitchPage, ((PageType)page).ToString(), (int)PageType.LastMain) { IsSelected = page == 1, ButtonParameter = page });
+                _controls.Add(c = new AssistNiceButton(x, y, width, _buttonHeight, ButtonAction.SwitchPage, ((PageType)page).ToString(), (int)PageType.LastMain) { IsSelected = page == 1, ButtonParameter = page });
                 Add(c);
             }
             _controls.Add(c = new Button(0, 5540, 5542, 5541)
@@ -801,34 +814,48 @@ namespace ClassicUO.Game.UI.Gumps
                 Y = diffy
             });
             Add(c);
-            _controls.Add(c = new Line(1, _buttonHeight + diffy, WIDTH - 2, 1, Color.Gray.PackedValue));
+            _controls.Add(c = new Line(1, _buttonHeight + diffy, WIDTH - 2, 2, Color.Gray.PackedValue));
             Add(c);
             //Minimized status
-            Add(_alphaMinimizedBlend, (int)PageType.Minimized);
+            Add(_alphaMinimizedBlend = new AlphaBlendControl(1.0f)
+            {
+                X = 1,
+                Y = 1,
+                Width = 85,
+                Height = 30
+            }, (int)PageType.Minimized);
             Add(_prevbutton, (int)PageType.Minimized);
             Add(new Label("Assistant", true, ScriptTextBox.GRAY_HUE, font: FONT) { X = 26, Y = 5 }, (int)PageType.Minimized);
-
+            //End of Minimized status
+            
+            //SECTIONS OF RELEVANCE
             BuildGeneral((int)PageType.General);
             BuildOptions();
             BuildHotkeys((int)PageType.Hotkeys);
             BuildMacros((int)PageType.Macros);
             //BuildSkills((int)PageType.Skills);//is this page really needed?
             BuildAgents();
-            
-            var isMinimized = UserPreferences.AssistantMinimized.CurrentValue == (int) PreferenceEnums.AssistantMinimized.On;
+
+#if UNITY_2017_1_OR_NEWER
+            var isMinimized = UserPreferences.AssistantMinimized.CurrentValue == (int)PreferenceEnums.AssistantMinimized.On;
             //NOTE: It seems to be necessary to switch to 1st page first before setting the page to Minimized
             ChangePage(1);
-            
+
             if (isMinimized)
             {
-                ChangePage((int) PageType.Minimized);
+                ChangePage((int)PageType.Minimized);
             }
+#else
+            ChangePage(1);
+#endif
         }
 
         public override void OnPageChanged()
         {
             base.OnPageChanged();
+#if UNITY_2017_1_OR_NEWER
             var minimized = false;
+#endif
             switch ((PageType)ActivePage)
             {
                 case PageType.Options:
@@ -867,27 +894,32 @@ namespace ClassicUO.Game.UI.Gumps
                     _subAgentsPageNiceButtons[_selectedSubAgentsPage - (int)PageType.Autoloot].IsSelected = true;
                     break;
                 }
+#if UNITY_2017_1_OR_NEWER
                 case PageType.Minimized:
                     minimized = true;
                     break;
+#endif
             }
-
-            UserPreferences.AssistantMinimized.CurrentValue = (int) (minimized ? PreferenceEnums.AssistantMinimized.On : PreferenceEnums.AssistantMinimized.Off);
+#if UNITY_2017_1_OR_NEWER
+            UserPreferences.AssistantMinimized.CurrentValue = (int)(minimized ? PreferenceEnums.AssistantMinimized.On : PreferenceEnums.AssistantMinimized.Off);
+#endif
         }
 
-        #region GENERAL_TAB
+#region GENERAL_TAB
         // general
         private HSliderBar _opacity;//_lightLevel, 
         private AssistCheckbox _loadLinkedProfile;//, _negotiateFeatures;
-        private Combobox _profileSelected;//_lootSystem, 
-        internal string ProfileSelected => _profileSelected.GetSelectedItem;
+        private AssistCombobox _profileSelected;//_lootSystem, 
+        private AssistNiceButton _linkSelectedProfile;
+        internal AssistCombobox ProfileCombobox => _profileSelected;
+        internal string ProfileSelected => _profileSelected.GetItem(_profileSelected.SelectedIndex);
         private AssistArrowNumbersTextBox _assistSizeX, _assistSizeY;
 
         private void OnOpacityChanged(object sender, EventArgs e)
         {
-            float val = (_opacity.Value) * 0.01f;
-            _alphaBlend.Alpha = val;
-            _alphaMinimizedBlend.Alpha = val;
+            float val = (99 - _opacity.Value) * 0.01f;
+            _alphaBlend.Alpha = 1.0f - val;
+            _alphaMinimizedBlend.Alpha = 1.0f - val;
             WantUpdateSize = true;
         }
 
@@ -905,9 +937,22 @@ namespace ClassicUO.Game.UI.Gumps
         {
             if (_profileSelected != null)
             {
-                if (_currentProfileIndex != _profileSelected.SelectedIndex)
+                if (_currentProfileIndex != _profileSelected.SelectedIndex && !UOSObjects.GumpIsLoading)
                 {
-                    XmlFileParser.LoadProfile(this, _profileSelected.GetSelectedItem);
+                    UOSObjects.Gump.OnRecordMacroButton(true);
+                    string oldprofile = _profileSelected.GetItem(_currentProfileIndex);
+                    if(!string.IsNullOrWhiteSpace(oldprofile))
+                        XmlFileParser.SaveProfile(oldprofile);
+
+                    UOSObjects.GumpIsLoading = true;
+                    if(UOSObjects.Player != null && SerialHelper.IsMobile(UOSObjects.Player.Serial))
+                    {
+                        LinkedProfiles[UOSObjects.Player.Serial] = _profileSelected.GetItem(_profileSelected.SelectedIndex);
+                    }
+
+                    XmlFileParser.LoadProfile(this, _profileSelected.GetItem(_profileSelected.SelectedIndex));
+                    UOSObjects.GumpIsLoading = false;
+
                     XmlFileParser.SaveConfig(this);
                 }
             }
@@ -918,17 +963,16 @@ namespace ClassicUO.Game.UI.Gumps
             SetMacroText(null);
         }
 
-        protected override void OnMove(int x, int y)
+        protected override void OnDragEnd(int x, int y)
         {
-            base.OnMove(x, y);
+            base.OnDragEnd(x, y);
             XmlFileParser.SaveConfig(this);
         }
 
         private static bool _updated = false;
+
         public override void Update()
         {
-            AssistantEnabled = UserPreferences.EnableAssistant.CurrentValue == (int)PreferenceEnums.EnableAssistant.On;
-
             base.Update();
             if(!_updated)
             {
@@ -939,23 +983,34 @@ namespace ClassicUO.Game.UI.Gumps
 
         internal void LoadConfig()
         {
-            FileSystemHelper.CreateFolderIfNotExists(Profile.DataPath);
-            FileInfo info = new FileInfo(Path.Combine(Profile.DataPath, "assistant.xml"));
+            FileSystemHelper.CreateFolderIfNotExists(Engine.DataPath);
+            FileInfo info = new FileInfo(Path.Combine(Engine.DataPath, "assistant.xml"));
             if (!info.Exists)
             {
-                using (StreamWriter w = new StreamWriter(Path.Combine(Profile.DataPath, info.FullName), false))
+                const string DEFCONF = @"<?xml version=""1.0"" encoding=""utf-8"" standalone=""yes""?>
+<config>
+ <data name=""LastProfile"">Default.xml</data>
+ <data name=""SmartProfile"">True</data>
+ <snapshots>
+  <ownDeath>False</ownDeath>
+  <othersDeath>False</othersDeath>
+ </snapshots>
+ <gump x=""300"" y=""300"" />
+</config>
+";
+                using (StreamWriter w = new StreamWriter(Path.Combine(Engine.DataPath, info.FullName), false))
                 {
-                    w.Write(Assistant.Resources.defaultConfig);
+                    w.Write(DEFCONF);
                     w.Flush();
                 }
             }
             XmlFileParser.LoadConfig(info, this);
         }
 
-        //data directory will be in Profile.DataPath + "Data", yes, it could be confusing, but it's to allow for backward compatibility with UOSteam
+        //data directory will be in Engine.DataPath + "Data", yes, it could be confusing, but it's to allow for backward compatibility with UOSteam
         private void LoadData()
         {
-            string datadir = Path.Combine(Profile.DataPath, "Data");
+            string datadir = Path.Combine(Engine.DataPath, "Data");
             FileSystemHelper.CreateFolderIfNotExists(datadir);
             XmlFileParser.LoadSpellDef(new FileInfo(Path.Combine(datadir, "spells.xml")), this);
             XmlFileParser.LoadSkillDef(new FileInfo(Path.Combine(datadir, "skills.xml")), this);
@@ -966,14 +1021,14 @@ namespace ClassicUO.Game.UI.Gumps
 
         private void LoadProfiles(string selected = null)
         {
-            string path = FileSystemHelper.CreateFolderIfNotExists(Profile.ProfilePath);
+            string path = FileSystemHelper.CreateFolderIfNotExists(Engine.ProfilePath);
             _profiles = Directory.GetFiles(path, "*.xml", SearchOption.TopDirectoryOnly);
             if (_profiles.Length < 1)
             {
                 _profiles = new[] { Path.Combine(path, "Default.xml") };
                 using (StreamWriter w = new StreamWriter(_profiles[0], false))
                 {
-                    w.Write(Assistant.Resources.defaultProfile);
+                    w.Write(XmlFileParser.DEFPROF);
                     w.Flush();
                 }
             }
@@ -991,14 +1046,14 @@ namespace ClassicUO.Game.UI.Gumps
                             index = i;
                         }
                     }
-                    else if (newnames[i] == _profileSelected.GetSelectedItem)
+                    else if (newnames[i] == _profileSelected.GetItem(_profileSelected.SelectedIndex))
                     {
                         index = i;
                         selected = newnames[i];
                     }
                 }
                 _profileSelected.SetItemsValue(newnames);
-                if (index >= 0 && selected != _profileSelected.GetSelectedItem)
+                if (index >= 0 && selected != _profileSelected.GetItem(_profileSelected.SelectedIndex))
                 {
                     _profileSelected.SelectedIndex = Math.Min(newnames.Length - 1, index);
                 }
@@ -1014,8 +1069,8 @@ namespace ClassicUO.Game.UI.Gumps
         private void BuildGeneral(int page)
         {
             int starty = (_buttonHeight * 2) - (_buttonHeight >> 2), startx = (WIDTH >> 5) * 13, diffx = (_buttonWidth - (_buttonWidth >> 3)) >> 2, diffy = ((_buttonHeight - (_buttonHeight >> 3)) >> 2);
-            AssistScrollArea leftArea = new AssistScrollArea(8, _buttonHeight * 2, (_buttonWidth >> 2) * 30, diffy * 45, true);
-            Line.CreateRectangleArea(this, 3, starty, startx, leftArea.Height + (_buttonHeight >> 1), page, Color.Gray.PackedValue, 1, "Filters");
+            AssistScrollArea leftArea = new AssistScrollArea(8, _buttonHeight * 2, (_buttonWidth >> 2) * 30, diffy * 45);
+            CreateRectangleArea(this, 3, starty, startx, leftArea.Height + (_buttonHeight >> 1), page, Color.Gray.PackedValue, 1, "Filters");
             FiltersCB = new AssistCheckbox[Filter.List.Count];
             for(int i = 0; i < Filter.List.Count; i++)
             {
@@ -1060,34 +1115,35 @@ namespace ClassicUO.Game.UI.Gumps
             }
             //these profiles are loaded as a string array
             starty += _buttonHeight * 2;
-            Line.CreateRectangleArea(this, startx - (_buttonWidth >> 3), starty - (_buttonHeight >> 2), _buttonWidth * 10 + (_buttonWidth >> 2), diffy * 13, page, Color.Gray.PackedValue, 1, "Profiles");
+            CreateRectangleArea(this, startx - (_buttonWidth >> 3), starty - (_buttonHeight >> 2), _buttonWidth * 10 + (_buttonWidth >> 2), diffy * 13, page, Color.Gray.PackedValue, 1, "Profiles");
             starty += 2;
-            _profileSelected = new Combobox(startx, starty, _buttonWidth * 10, newnames, mode, HEIGHT >> 1);
+            _profileSelected = new AssistCombobox(startx, starty, _buttonWidth * 10, newnames, mode, HEIGHT >> 1);
             _profileSelected.OnBeforeContextMenu += OnBeforeProfileList;
             _profileSelected.OnOptionSelected += OnProfileSelected;
             Add(_profileSelected, page);
             starty += _buttonHeight + 5;
             int height = (_buttonHeight >> 1) + 5;
-            NiceButton nb = new NiceButton(startx + diffx, starty, diffx * 14, height, ButtonAction.Activate, "New")
+            AssistNiceButton nb = new AssistNiceButton(startx + diffx, starty, diffx * 16, height, ButtonAction.Activate, "Create New")
             {
                 IsSelectable = false,
                 ButtonParameter = (int)ButtonType.AddNewProfile
             };
             Add(nb, page);
-            nb = new NiceButton(nb.X + nb.Width + (_buttonWidth >> 1), starty, diffx * 14, height, ButtonAction.Activate, "Save")
+            /*nb = new AssistNiceButton(nb.X + nb.Width + (_buttonWidth >> 1), starty, diffx * 12, height, ButtonAction.Activate, "Save")
             {
                 IsSelectable = false,
                 ButtonParameter = (int)ButtonType.SaveCurrentProfile
             };
-            Add(nb, page);
-            nb = new NiceButton(nb.X + nb.Width + (_buttonWidth >> 1), starty, diffx * 14, height, ButtonAction.Activate, "Link")
+            Add(nb, page);*/
+            _linkSelectedProfile = new AssistNiceButton(nb.X + nb.Width + (_buttonWidth >> 1), starty, diffx * 29, height, ButtonAction.Activate, "Copy this on New")
             {
                 IsSelectable = false,
-                ButtonParameter = (int)ButtonType.SetLinkedProfile
+                //ButtonParameter = (int)ButtonType.SetLinkedProfile
             };
-            Add(nb, page);
+            _linkSelectedProfile.LeftClicked += SetLinkedClicked;
+            Add(_linkSelectedProfile, page);
             starty += _buttonHeight * 2;
-            Line.CreateRectangleArea(this, startx - (_buttonWidth >> 3), starty - (_buttonHeight >> 2), _buttonWidth * 10 + (_buttonWidth >> 2), diffy * 13, page, Color.Gray.PackedValue, 1, "Assistant Window Size");
+            CreateRectangleArea(this, startx - (_buttonWidth >> 3), starty - (_buttonHeight >> 2), _buttonWidth * 10 + (_buttonWidth >> 2), diffy * 13, page, Color.Gray.PackedValue, 1, "Assistant Window Size");
             starty += diffy;
             Control c;
             Add(c = new Label("X: ", true, ScriptTextBox.GRAY_HUE, font: FONT) { X = startx, Y = starty }, page);
@@ -1098,17 +1154,27 @@ namespace ClassicUO.Game.UI.Gumps
             Add(_assistSizeY = new AssistArrowNumbersTextBox(startx + c.Width + (diffx * 2), starty, _buttonWidth * 3, 10, 325, 600, FONT, 4), page);
             _assistSizeY.Text = _height.ToString();
             startx += _buttonWidth * 6;
-            Add(new NiceButton(startx, starty - _buttonHeight, _buttonWidth * 3, _buttonHeight * 2, ButtonAction.Activate, "Apply")
+            Add(new AssistNiceButton(startx, starty - _buttonHeight, _buttonWidth * 3, _buttonHeight * 2, ButtonAction.Activate, "Apply")
             { IsSelectable = false, ButtonParameter = (int)ButtonType.ApplySizeChange }, page);
+        }
+
+        private void SetLinkedClicked(object sender, AssistNiceButton e)
+        {
+            _SetLinkedProfile = !_SetLinkedProfile;
+            if (_SetLinkedProfile)
+            {
+                e.TextLabel.Hue = ScriptTextBox.GREEN_HUE;
+                e.TextLabel.Text = "Waiting for New Profile";
+            }
+            else
+            {
+                e.TextLabel.Hue = ScriptTextBox.GRAY_HUE;
+                e.TextLabel.Text = "Copy this on New";
+            }
         }
         #endregion
 
         #region OPTIONS_TAB
-        internal Dictionary<uint, string> FriendDictionary { get; } = new Dictionary<uint, string>();
-        public bool IsFriend(uint serial)
-        {
-            return FriendDictionary.ContainsKey(serial) || (!FriendsListOnly && ((FriendsParty && PacketHandlers.Party.Contains(serial)) || PacketHandlers.Faction.Contains(serial)));
-        }
 
         /*private enum SpellDisplayMode
         {
@@ -1117,7 +1183,7 @@ namespace ClassicUO.Game.UI.Gumps
             Both = 3
         }*/
 
-        private enum ParalyzePoisonHighlight
+        private enum ParalyzePoisonHighlight : byte
         {
             Disabled = 0,
             Aura = 1,
@@ -1125,29 +1191,37 @@ namespace ClassicUO.Game.UI.Gumps
             Both
         }
 
-        private enum ShareTargetTo
+        internal enum ShareTargetTo : byte
         {
-            None = 0x0000,
-            Party = 0x0001,
-            Guild = 0x0002,
-            Alliance = 0x0004,
-            PartyGuild = 0x0003,
-            AllianceGuild = 0x0006,
-            AllianceParty = 0x0005,
-            All = 0x0007
+            None = 0x00,
+            Party = 0x01,
+            Faction = 0x02,
+            Alliance = 0x04,
+            Guild = 0x08,
+            PartyFaction = 0x03,
+            PartyAlliance = 0x05,
+            PartyGuild = 0x09,
+            AllianceGuild = 0x0C,
+            FactionGuild = 0x0A,
+            FactionAlliance = 0x06,
+            PartyFactionGuild = 0x0B,
+            PartyFactionAlliance = 0x07,
+            PartyAllianceGuild = 0x0D,
+            FactionAllianceGuild = 0x0E,
+            All = 0x0F
         }
 
-        private enum HealingOptsTarget
+        private enum HealingOptsTarget : byte
         {
-            Self = 0x0001,
-            Last = 0x0002,
-            LastFriend = 0x0004,
-            AnyFriend = 0x0008,
-            FriendsListOnly = 0x0010,
-            Mount = 0x0020,
+            Self = 0x01,
+            Last = 0x02,
+            LastFriend = 0x04,
+            AnyFriend = 0x08,
+            FriendsListOnly = 0x10,
+            Mount = 0x20,
         }
 
-        private enum SmartTargetFor
+        internal enum SmartTargetFor : byte
         {
             None = 0,
             Friend = 1,
@@ -1156,19 +1230,19 @@ namespace ClassicUO.Game.UI.Gumps
         }
 
         private int _selectedSubOptionsPage = -1;
-        private readonly NiceButton[] _subOptionsPageNiceButtons = new NiceButton[(int)PageType.LastOptions - (int)PageType.Generic];
-        private AssistArrowNumbersTextBox _delayBetweenActions, _limitOpenRange,//Generic _maxQueuedItems, 
+        private readonly AssistNiceButton[] _subOptionsPageNiceButtons = new AssistNiceButton[(int)PageType.LastOptions - (int)PageType.Generic];
+        private AssistArrowNumbersTextBox _delayBetweenActions,//Generic _maxQueuedItems, _limitOpenRange
             _limitTargetRangeTiles,//Combat
             _startBelowValue, _bandageActionDelay;//Friends
         private AssistCheckbox _useObjectsQueue, _alwaysAcceptsPartyInvites, _displayNewCorpsesName, _countStealthSteps, _snapOnSelfDeath, _snapOnOthersDeath, 
-            _searchNewContainers, _gauntletBoneCutter, _bandageTimerStart, _bandageTimerEnd, _bandageTimerOverhead, _openDoors, _doubleClickToOpenDoors, _openCorpses,//Generic
-            _clearHandsBeforeCasting, _checkHandsBeforePotions, _healthAbovePeopleAndCreatures, _flagsAbovePeopleAndCreatures,
-            _highlightCurrentTarget, _limitTargetRange, _blockHealIfPoisonedOrYellowHits, _automaticallyRemount, _preventDuringWarmode, _useTargetQueue,//Combat
+            _searchNewContainers, /*_gauntletBoneCutter,*/ _bandageTimerStart, _bandageTimerEnd, _bandageTimerOverhead, _openDoors, _doubleClickToOpenDoors, //_openCorpses,//Generic
+            _clearHandsBeforeCasting, _checkHandsBeforePotions, /*_healthAbovePeopleAndCreatures,*/ _flagsAbovePeopleAndCreatures,
+            _highlightCurrentTarget, _limitTargetRange, _blockHealIfPoisonedOrYellowHits, _automaticallyRemount, _preventDuringWarmode, _useSharedTarget,//_useTargetQueue,//Combat
             _includePartyMembers, _considerOnlyThisAsValidFriends, _preventAttackingFriendsInWarmode, _healingEnabled, _scalePriorityBasedOnHits,
             _countSecondsUntilFinishes, _startBelowCheck, _allowHealingWhileHidden, _useDexterityFormulaDelay;//Friends
-        private ClickableColorBox _highlightCurrentTargetHue;
-        private Combobox _openDoorsOptions, _openCorpsesOptions, //_commandPrefix,//Generic
-            _spellShareTargetOn, _smartLastTarget, _shareEnemyTargetOn,//Combat
+        private AssistClickableColorBox _highlightCurrentTargetHue;
+        private AssistCombobox _openDoorsOptions,//Generic  _commandPrefix, _openCorpsesOptions,
+            _smartLastTarget, _shareEnemyTargetOn, _spellShareTargetOn, //Combat
             _friendHealSelection;//Friends
         private AssistScrollArea _friendListArea;//Friends
         private uint _friendSelected;//Friends
@@ -1184,7 +1258,7 @@ namespace ClassicUO.Game.UI.Gumps
                 string name = StringHelper.AddSpaceBeforeCapital(((PageType)page).ToString());
                 for (int subpage = (int)PageType.Generic; subpage < (int)PageType.LastOptions; subpage++)
                 {
-                    NiceButton but = new NiceButton(pagex, starty, width, _buttonHeight, ButtonAction.SwitchPage, name, (int)PageType.LastOptions) { ButtonParameter = page };
+                    AssistNiceButton but = new AssistNiceButton(pagex, starty, width, _buttonHeight, ButtonAction.SwitchPage, name, (int)PageType.LastOptions) { ButtonParameter = page };
                     if (page == subpage)
                     {
                         _subOptionsPageNiceButtons[subpage - (int)PageType.Generic] = but;
@@ -1194,13 +1268,13 @@ namespace ClassicUO.Game.UI.Gumps
                 }
                 switch ((PageType)page)
                 {
-                    #region GENERIC_PAGE
+#region GENERIC_PAGE
                     case PageType.Generic:
                     {
                         int buttondiffx = _buttonWidth - (_buttonWidth >> 3), buttondiffy = _buttonHeight - (_buttonHeight >> 3);
-                        int x = startx - ((buttondiffx >> 2) * 2), y = starty + _buttonHeight + (_buttonHeight >> 1), devx = buttondiffx >> 2;
+                        int x = startx - ((buttondiffx >> 2) * 3), y = starty + _buttonHeight + (_buttonHeight >> 1), devx = buttondiffx >> 2;
                         //Add(new Label("Commands prefix", true, ScriptTextBox.GRAY_HUE, font: FONT) { X = x, Y = y }, page);
-                        /*_commandPrefix = new Combobox(x + devx * 30, y, devx * 11, _commandprefixes, 0, font: 2);
+                        /*_commandPrefix = new AssistCombobox(x + devx * 30, y, devx * 11, _commandprefixes, 0, font: 2);
                         Add(_commandPrefix, page);
                         y += _buttonHeight;*/
                         Add(new Label("Delay between Actions", true, ScriptTextBox.GRAY_HUE, font: FONT) { X = x, Y = y }, page);
@@ -1227,13 +1301,13 @@ namespace ClassicUO.Game.UI.Gumps
                         y += _buttonHeight;
                         _searchNewContainers = new AssistCheckbox(0x00D2, 0x00D3, "Search new containers", FONT, ScriptTextBox.GRAY_HUE, true) { X = x, Y = y };
                         Add(_searchNewContainers, page);
-                        NiceButton button;
-                        Add(button = new NiceButton(x + devx * 32, y, devx * 22, buttondiffy, ButtonAction.Activate, "Exemptions") { IsSelectable = false, ButtonParameter = (int)ButtonType.ExemptionsContSearch }, page);
+                        AssistNiceButton button;
+                        Add(button = new AssistNiceButton(x + _searchNewContainers.Width + 2, y, devx * 20, buttondiffy, ButtonAction.Activate, "Exemptions") { IsSelectable = false, ButtonParameter = (int)ButtonType.ExemptionsContSearch }, page);
                         y += _buttonHeight;
-                        _gauntletBoneCutter = new AssistCheckbox(0x00D2, 0x00D3, "Gauntlet bone cutter", FONT, ScriptTextBox.GRAY_HUE, true) { X = x, Y = y };
+                        /*_gauntletBoneCutter = new AssistCheckbox(0x00D2, 0x00D3, "Gauntlet bone cutter", FONT, ScriptTextBox.GRAY_HUE, true) { X = x, Y = y };
                         Add(_gauntletBoneCutter, page);
-                        Add(button = new NiceButton(x + devx * 32, y, devx * 22, buttondiffy, ButtonAction.Activate, "Set Blade") { IsSelectable = false, ButtonParameter = (int)ButtonType.BoneCutSetBlade }, page);
-                        y += _buttonHeight;
+                        Add(button = new AssistNiceButton(x +_searchNewContainers.Width + 2, y, devx * 20, buttondiffy, ButtonAction.Activate, "Set Blade") { IsSelectable = false, ButtonParameter = (int)ButtonType.BoneCutSetBlade }, page);
+                        y += _buttonHeight;*/
                         Label l = new Label("Show Bandage Timer: ", true, ScriptTextBox.GRAY_HUE, font: FONT) { X = x, Y = y };
                         Add(l, page);
                         Add(_bandageTimerStart = new AssistCheckbox(0x00D2, 0x00D3, "Start ", FONT, ScriptTextBox.GRAY_HUE, true) { X = x + l.Width, Y = y }, page);
@@ -1245,38 +1319,39 @@ namespace ClassicUO.Game.UI.Gumps
                         Add(_snapOnOthersDeath = new AssistCheckbox(0x00D2, 0x00D3, "Snap other players death", FONT, ScriptTextBox.GRAY_HUE, true) { X = x, Y = y }, page);
                         //from right up
                         y = starty + _buttonHeight + (_buttonHeight >> 3);
-                        x = WIDTH >> 1;
-                        Line.CreateRectangleArea(this, x - (buttondiffx >> 2), y, devx * 46, _buttonHeight * 2 + (_buttonHeight >> 1), page, Color.Gray.PackedValue, 1, "Open Doors");
+                        x = (WIDTH >> 1) + buttondiffx;
+                        CreateRectangleArea(this, x - (buttondiffx >> 2), y, devx * 46, _buttonHeight * 2 + (_buttonHeight >> 1), page, Color.Gray.PackedValue, 1, "Open Doors");
                         y += (buttondiffy >> 2) * 2;
                         _openDoors = new AssistCheckbox(0x00D2, 0x00D3, "Enabled", FONT, ScriptTextBox.GRAY_HUE, true) { X = x, Y = y };
                         Add(_openDoors, page);
                         string[] excluders = Enum.GetNames(typeof(ActionExclusion));
                         StringHelper.AddSpaceBeforeCapital(excluders);
-                        _openDoorsOptions = new Combobox(x + devx * 18, y, devx * 25, excluders, 0);
+                        _openDoorsOptions = new AssistCombobox(x + devx * 18, y, devx * 25, excluders, 0);
                         Add(_openDoorsOptions, page);
                         y += _buttonHeight;
                         _doubleClickToOpenDoors = new AssistCheckbox(0x00D2, 0x00D3, "Use double click to open doors", FONT, ScriptTextBox.GRAY_HUE, true) { X = x, Y = y };
                         Add(_doubleClickToOpenDoors, page);
                         y += _buttonHeight * 2 - (_buttonHeight >> 3);
-                        Line.CreateRectangleArea(this, x - 5, y, devx * 46, _buttonHeight * 2 + (_buttonHeight >> 1), page, Color.Gray.PackedValue, 1, "Open Corpses");
+                        /*CreateRectangleArea(this, x - 5, y, devx * 46, _buttonHeight * 2 + (_buttonHeight >> 1), page, Color.Gray.PackedValue, 1, "Open Corpses");
                         y += (buttondiffy >> 2) * 2;
                         _openCorpses = new AssistCheckbox(0x00D2, 0x00D3, "Enabled", FONT, ScriptTextBox.GRAY_HUE, true) { X = x, Y = y };
                         Add(_openCorpses, page);
-                        Add(_openCorpsesOptions = new Combobox(x + devx * 18, y, devx * 25, excluders, 0), page);
+                        Add(_openCorpsesOptions = new AssistCombobox(x + devx * 18, y, devx * 25, excluders, 0), page);
                         y += _buttonHeight;
                         Add(new Label("Limit open range to", true, ScriptTextBox.GRAY_HUE, font: FONT) { X = x, Y = y }, page);
                         _limitOpenRange = new AssistArrowNumbersTextBox(x + _buttonWidth * 5, y, devx * 12, 1, 0, 10, FONT, 2);
                         _limitOpenRange.ValueChanged += (sender, e) => _openCorpsesRange = (byte)e;
                         Add(_limitOpenRange, page);
-                        Add(new Label("tiles", true, ScriptTextBox.GRAY_HUE, font: FONT) { X = _limitOpenRange.X + _limitOpenRange.Width + (_buttonWidth >> 3), Y = y }, page);
+                        Add(new Label("tiles", true, ScriptTextBox.GRAY_HUE, font: FONT) { X = _limitOpenRange.X + _limitOpenRange.Width + (_buttonWidth >> 3), Y = y }, page);*/
                         break;
                     }
-                    #endregion
-                    #region COMBAT_PAGE
+#endregion
+
+#region COMBAT_PAGE
                     case PageType.Combat:
                     {
                         int x = startx - ((_buttonWidth >> 1) + (diffx >> 1)), buttondiffy = _buttonHeight - (_buttonHeight >> 3), y = starty + _buttonHeight + (_buttonHeight >> 2);
-                        Line.CreateRectangleArea(this, x - (_buttonWidth >> 3), y, (_buttonWidth * 6 + diffx * 24) - diffx, _buttonHeight * 3, page, Color.Gray.PackedValue, 1, "Casting");
+                        CreateRectangleArea(this, x - (_buttonWidth >> 3), y, (_buttonWidth * 6 + diffx * 24) - diffx, _buttonHeight * 3, page, Color.Gray.PackedValue, 1, "Casting");
                         y += (_buttonHeight / 3);
                         Add(new Label("Share spell target on", true, ScriptTextBox.GRAY_HUE, font: FONT) { X = x, Y = y }, page);
                         string[] displaymodes = new string[(int)ShareTargetTo.All + 1];
@@ -1284,27 +1359,28 @@ namespace ClassicUO.Game.UI.Gumps
                         {
                             displaymodes[i] = StringHelper.AddSpaceBeforeCapital(((ShareTargetTo)i).ToString());
                         }
-                        _spellShareTargetOn = new Combobox(x + _buttonWidth * 5 + (_buttonWidth >> 1) + (_buttonWidth >> 3), y, diffx * 24, displaymodes, 0);
+                        _spellShareTargetOn = new AssistCombobox(x + _buttonWidth * 5 + (_buttonWidth >> 1) + (_buttonWidth >> 3), y, diffx * 24, displaymodes, 0);
                         Add(_spellShareTargetOn, page);
                         y += buttondiffy;
                         _clearHandsBeforeCasting = new AssistCheckbox(0x00D2, 0x00D3, "Clear hands before casting", FONT, ScriptTextBox.GRAY_HUE, true) { X = x, Y = y };
                         Add(_clearHandsBeforeCasting, page);
                         y += _buttonHeight * 2 + (_buttonHeight >> 3);
                         //end first rect
-                        Line.CreateRectangleArea(this, x - (_buttonWidth >> 3), y, (_buttonWidth * 6 + diffx * 24) - diffx, (_buttonHeight >> 1) * 14 + 2, page, Color.Gray.PackedValue, 1, "Targeting");
+                        CreateRectangleArea(this, x - (_buttonWidth >> 3), y, (_buttonWidth * 6 + diffx * 24) - diffx, (_buttonHeight >> 1) * 14 + 2, page, Color.Gray.PackedValue, 1, "Targeting");
                         y += _buttonHeight / 3;
                         Add(new Label("Smart last Target", true, ScriptTextBox.GRAY_HUE, font: FONT) { X = x, Y = y }, page);
-                        _smartLastTarget = new Combobox(x + _buttonWidth * 5 + (_buttonWidth >> 1) + (_buttonWidth >> 3), y, diffx * 24, Enum.GetNames(typeof(SmartTargetFor)), 0);
+                        _smartLastTarget = new AssistCombobox(x + _buttonWidth * 5 + (_buttonWidth >> 1) + (_buttonWidth >> 3), y, diffx * 24, Enum.GetNames(typeof(SmartTargetFor)), 0);
                         Add(_smartLastTarget, page);
                         y += buttondiffy + (_buttonHeight >> 3);
                         Add(new Label("Share enemy target on", true, ScriptTextBox.GRAY_HUE, font: FONT) { X = x, Y = y }, page);
-                        _shareEnemyTargetOn = new Combobox(x + _buttonWidth * 5 + (_buttonWidth >> 1) + (_buttonWidth >> 3), y, diffx * 24, displaymodes, 0);
+                        _shareEnemyTargetOn = new AssistCombobox(x + _buttonWidth * 5 + (_buttonWidth >> 1) + (_buttonWidth >> 3), y, diffx * 24, displaymodes, 0);
                         Add(_shareEnemyTargetOn, page);
                         y += buttondiffy;
                         _highlightCurrentTarget = new AssistCheckbox(0x00D2, 0x00D3, "Highlight current target", FONT, ScriptTextBox.GRAY_HUE, true) { X = x, Y = y };
                         Add(_highlightCurrentTarget, page);
                         y += buttondiffy;
-                        _highlightCurrentTargetHue = CreateClickableColorBox(x + _buttonWidth, y, 0, "Highlight Color", page);
+                        _highlightCurrentTargetHue = CreateClickableColorBox(x + _buttonWidth, y, 53, "Highlight Color", page);
+                        _highlightCurrentTargetHue.ValueChanged += _highlightTargetHue_ValueChanged;
                         _highlightCurrentTarget.ValueChanged += _highlightTargetHue_ValueChanged;
                         y += buttondiffy + (buttondiffy >> 3);
                         _limitTargetRange = new AssistCheckbox(0x00D2, 0x00D3, "Limit target range to", FONT, ScriptTextBox.GRAY_HUE, true) { X = x, Y = y };
@@ -1316,45 +1392,46 @@ namespace ClassicUO.Game.UI.Gumps
                         _blockHealIfPoisonedOrYellowHits = new AssistCheckbox(0x00D2, 0x00D3, "Block heal if poisoned or yellow hits", FONT, ScriptTextBox.GRAY_HUE, true) { X = x, Y = y };
                         Add(_blockHealIfPoisonedOrYellowHits, page);
                         y += buttondiffy;
-                        _useTargetQueue = new AssistCheckbox(0x00D2, 0x00D3, "Use Target Queue", FONT, ScriptTextBox.GRAY_HUE, true) { X = x, Y = y };
-                        Add(_useTargetQueue, page);
+                        _useSharedTarget = new AssistCheckbox(0x00D2, 0x00D3, "Set 'shared' Target alias in 'enemy'", FONT, ScriptTextBox.GRAY_HUE, true) { X = x, Y = y };
+                        Add(_useSharedTarget, page);
                         y = starty + _buttonHeight + (_buttonHeight >> 2);
                         x = _buttonWidth * 6 + diffx * 24 + 3;
-                        Line.CreateRectangleArea(this, x - (_buttonWidth >> 3), y, WIDTH - x, _buttonHeight * 4, page, Color.Gray.PackedValue, 1, "Dismount");
+                        CreateRectangleArea(this, x - (_buttonWidth >> 3), y, WIDTH - x, _buttonHeight * 4, page, Color.Gray.PackedValue, 1, "Dismount");
                         y += 10;
-                        Add(new NiceButton(x + _buttonWidth, y, 120, buttondiffy, ButtonAction.Activate, "Set Mount") { IsSelectable = false, ButtonParameter = (int)ButtonType.RemountSetMount }, page);
+                        Add(new AssistNiceButton(x + _buttonWidth, y, 120, buttondiffy, ButtonAction.Activate, "Set Mount") { IsSelectable = false, ButtonParameter = (int)ButtonType.RemountSetMount }, page);
                         y += buttondiffy;
                         _automaticallyRemount = new AssistCheckbox(0x00D2, 0x00D3, "Automatically remount", FONT, ScriptTextBox.GRAY_HUE, true) { X = x, Y = y };
                         Add(_automaticallyRemount, page);
                         y += _buttonHeight;
-                        _preventDuringWarmode = new AssistCheckbox(0x00D2, 0x00D3, "Prevent during warmode", FONT, ScriptTextBox.GRAY_HUE, true) { X = x, Y = y };
+                        _preventDuringWarmode = new AssistCheckbox(0x00D2, 0x00D3, "Prevent dismount in warmode", FONT, ScriptTextBox.GRAY_HUE, true) { X = x, Y = y };
                         Add(_preventDuringWarmode, page);
                         x -= _buttonWidth >> 3;
                         y += _buttonHeight * 2;
                         _checkHandsBeforePotions = new AssistCheckbox(0x00D2, 0x00D3, "Check hands before potions", FONT, ScriptTextBox.GRAY_HUE, true) { X = x, Y = y };
                         Add(_checkHandsBeforePotions, page);
                         y += buttondiffy;
-                        _healthAbovePeopleAndCreatures = new AssistCheckbox(0x00D2, 0x00D3, "Health above people and creatures", FONT, ScriptTextBox.GRAY_HUE, true) { X = x, Y = y };
+                        /*_healthAbovePeopleAndCreatures = new AssistCheckbox(0x00D2, 0x00D3, "Health above people and creatures", FONT, ScriptTextBox.GRAY_HUE, true) { X = x, Y = y };
                         Add(_healthAbovePeopleAndCreatures, page);
-                        y += buttondiffy;
+                        y += buttondiffy;*/
                         _flagsAbovePeopleAndCreatures = new AssistCheckbox(0x00D2, 0x00D3, "Flags above people and creatures", FONT, ScriptTextBox.GRAY_HUE, true) { X = x, Y = y };
                         Add(_flagsAbovePeopleAndCreatures, page);
                         break;
                     }
-                    #endregion
-                    #region FRIENDS_PAGE
+#endregion
+
+#region FRIENDS_PAGE
                     case PageType.Friends:
                     {
                         int diffy = _buttonHeight - (_buttonHeight >> 2), buttondiffx = _buttonWidth - (_buttonWidth >> 2);
                         int x = startx - (_buttonWidth >> 1), y = starty + _buttonHeight + (_buttonHeight >> 3) + 2;
-                        Line.CreateRectangleArea(this, x - (_buttonWidth >> 3), y, (WIDTH >> 1) - (_buttonWidth >> 2), HEIGHT - (_buttonHeight * 6 + (diffy >> 3)), page, Color.Gray.PackedValue, 1, "Friends List");
+                        CreateRectangleArea(this, x - (_buttonWidth >> 3), y, (WIDTH >> 1) - (_buttonWidth >> 2), HEIGHT - (_buttonHeight * 6 + (diffy >> 3)), page, Color.Gray.PackedValue, 1, "Friends List");
                         y += (_buttonHeight >> 3) + (diffy >> 3);
                         //The FRIENDLIST is created here, but only for dimensional and positioning handling, the list is populated later on
-                        _friendListArea = new AssistScrollArea(x, y, (WIDTH >> 1) - (_buttonHeight >> 1), HEIGHT - ((_buttonHeight * 6) + (diffy >> 1)), true);
+                        _friendListArea = new AssistScrollArea(x, y, (WIDTH >> 1) - (_buttonHeight >> 1), HEIGHT - ((_buttonHeight * 6) + (diffy >> 1)));
                         Add(_friendListArea, page);
                         y += _friendListArea.Height + (_buttonHeight >> 3);
-                        Add(new NiceButton(x, y, (_friendListArea.Width >> 1) - buttondiffx, diffy, ButtonAction.Activate, "Remove Friend") { IsSelectable = false, ButtonParameter = (int)ButtonType.RemoveFriend }, page);
-                        Add(new NiceButton(x + (_friendListArea.Width >> 1) + buttondiffx, y, (_friendListArea.Width >> 1) - buttondiffx, diffy, ButtonAction.Activate, "Insert Friend") { IsSelectable = false, ButtonParameter = (int)ButtonType.InsertFriend }, page);
+                        Add(new AssistNiceButton(x, y, (_friendListArea.Width >> 1) - buttondiffx, diffy, ButtonAction.Activate, "Remove Friend") { IsSelectable = false, ButtonParameter = (int)ButtonType.RemoveFriend }, page);
+                        Add(new AssistNiceButton(x + (_friendListArea.Width >> 1) + buttondiffx, y, (_friendListArea.Width >> 1) - buttondiffx, diffy, ButtonAction.Activate, "Insert Friend") { IsSelectable = false, ButtonParameter = (int)ButtonType.InsertFriend }, page);
                         x -= _buttonHeight >> 3;
                         diffy += _buttonHeight >> 3;
                         buttondiffx += _buttonWidth >> 3;
@@ -1366,12 +1443,12 @@ namespace ClassicUO.Game.UI.Gumps
                         Add(_preventAttackingFriendsInWarmode = new AssistCheckbox(0x00D2, 0x00D3, "Prevent attacking friends in warmode", FONT, ScriptTextBox.GRAY_HUE, true) { X = x, Y = y }, page);
                         x = _buttonWidth * 6 + diffx * 21;
                         y = starty + _buttonHeight + (_buttonHeight >> 1);
-                        Line.CreateRectangleArea(this, x - (_buttonHeight >> 3), y, WIDTH - x, HEIGHT - (_buttonHeight * 4 + (diffy >> 3)), page, Color.Gray.PackedValue, 1, "Healing Options");
+                        CreateRectangleArea(this, x - (_buttonHeight >> 3), y, WIDTH - x, HEIGHT - (_buttonHeight * 4 + (diffy >> 3)), page, Color.Gray.PackedValue, 1, "Healing Options");
                         y += (_buttonHeight >> 3) + (diffy >> 2);
                         Add(_healingEnabled = new AssistCheckbox(0x00D2, 0x00D3, "Enabled", FONT, ScriptTextBox.GRAY_HUE, true) { X = x, Y = y }, page);
                         string[] names = Enum.GetNames(typeof(HealingOptsTarget));
                         StringHelper.AddSpaceBeforeCapital(names);
-                        Add(_friendHealSelection = new Combobox(x + _healingEnabled.Width + buttondiffx, y, _buttonWidth * 6, names, 0), page);
+                        Add(_friendHealSelection = new AssistCombobox(x + _healingEnabled.Width + buttondiffx, y, _buttonWidth * 6, names, 0), page);
                         y += diffy * 2;
                         Add(_scalePriorityBasedOnHits = new AssistCheckbox(0x00D2, 0x00D3, "Scale priority based on hits", FONT, ScriptTextBox.GRAY_HUE, true) { X = x, Y = y }, page);
                         y += diffy;
@@ -1392,7 +1469,7 @@ namespace ClassicUO.Game.UI.Gumps
                         _bandageActionDelay.ValueChanged += (sender, e) => _AutoBandageDelay = (uint)e;
                         break;
                     }
-                    #endregion
+#endregion
                 }
             }
         }
@@ -1405,7 +1482,7 @@ namespace ClassicUO.Game.UI.Gumps
                 UOMobile m = UOSObjects.FindMobile(Targeting.LastTargetInfo.Serial);
                 if(m != null)
                 {
-                    Engine.Instance.SendToClient(new MobileIncoming(m));
+                    ClientPackets.PRecv_MobileIncoming(m);//Engine.Instance.SendToClient(new MobileIncoming(m));
                 }
             }
         }
@@ -1413,16 +1490,16 @@ namespace ClassicUO.Game.UI.Gumps
         internal void UpdateFriendListGump(uint serial = 0)
         {
             _friendListArea.Clear();
-            foreach (KeyValuePair<uint, string> kvp in FriendDictionary)
+            foreach (KeyValuePair<uint, string> kvp in FriendsManager.FriendDictionary)
             {
                 var b = CreateSelection(_friendListArea, $"{kvp.Value}: 0x{kvp.Key:X}", 2, (int)ButtonType.FriendsList, (int)ButtonType.FriendsList, kvp.Key);
                 if (serial > 0 && kvp.Key == serial)
                     b.IsSelected = true;
             }
         }
-        #endregion
+#endregion
 
-        #region HOTKEYS_TAB
+#region HOTKEYS_TAB
         private AssistMultiSelectionShrinkbox _mainHK,
             _actionsHK, _actionsUseHK, _actionShowNamesHK, _actionCreaturesHK,
             _agentsHK, _agentsDressHK, _agentsUndressHK, _agentsOrganizerHK, _agentsVendorsHK, _agentsVendorsBuyHK, _agentsVendorsSellHK,
@@ -1432,7 +1509,7 @@ namespace ClassicUO.Game.UI.Gumps
             _skillsHK,
             _spellsHK, _spellsBigHealHK, _spellsMiniHealHK, 
             _targetingHK, _targetingAttackHK, _targetingFriendsHK, 
-                          _targetingGetHK, //_targetingGetEnemyHK, 
+                          _targetingGetHK, _targetingGetEnemyHK, _targetingGetFriendsHK,
                           _targetingSetHK, 
                           //_targetingTargetHK,
             _macrosHK;
@@ -1445,7 +1522,7 @@ namespace ClassicUO.Game.UI.Gumps
             Spell s = Spell.GetByName(input);
             if (s != null)
             {
-                s.OnCast(new CastSpellFromMacro((ushort)s.Number));
+                Spell.FullCast(s.Number);//.OnCast(new CastSpellFromMacro((ushort)s.Number));
             }
             return true;
         }
@@ -1460,14 +1537,15 @@ namespace ClassicUO.Game.UI.Gumps
             }
         }
 
+        //Hokeys for standardized commands and added Key shortcuts/activaction button for Actions (also Macros/Scripts)
         private void BuildHotkeys(int page)
         {
             //PAGE 3
             int x = _buttonWidth >> 3, y = _buttonHeight + (_buttonHeight >> 1);
-            Line.CreateRectangleArea(this, x, y, WIDTH - (y + _buttonWidth * 6), HEIGHT - (y + (_buttonHeight >> 3)), page, Color.Gray.PackedValue, 1, "Controllable Elements", ScriptTextBox.GRAY_HUE, FONT);
+            CreateRectangleArea(this, x, y, WIDTH - (y + _buttonWidth * 6), HEIGHT - (y + (_buttonHeight >> 3)), page, Color.Gray.PackedValue, 1, "Controllable Elements", ScriptTextBox.GRAY_HUE, FONT);
             x += _buttonWidth >> 3;
             y += _buttonHeight >> 2;
-            AssistScrollArea leftArea = new AssistScrollArea(x, y, WIDTH - (y + _buttonWidth * 6), HEIGHT - (y + (_buttonHeight >> 2)), true);
+            AssistScrollArea leftArea = new AssistScrollArea(x, y, WIDTH - (y + _buttonWidth * 6), HEIGHT - (y + (_buttonHeight >> 2)));
             Add(leftArea, page);
             _mainHK = CreateMultiSelection(leftArea, "Main", new string[] { "Ping", "Resyncronize", "Toggle Hotkeys", "Snapshot" }, 2, (int)ButtonType.HotKeyList, 0x93A, 0x939);
             _mainHK.OnOptionSelected += HotKey_OnOptionSelected;
@@ -1517,7 +1595,7 @@ namespace ClassicUO.Game.UI.Gumps
             _combatConsumeHK = new AssistMultiSelectionShrinkbox(20, 2, 0, "Consume", _emptyStrArr, ScriptTextBox.GRAY_HUE, true, FONT, (int)ButtonType.HotKeyList, 0x93A, 0x939);
             //_combatConsumeHK.OnOptionSelected += HotKey_OnOptionSelected;
             _combatHK.NestBox(_combatConsumeHK);
-            _combatConsumePotionsHK = new AssistMultiSelectionShrinkbox(40, 2, 0, "Potions", new string[] {"Agility", "Cure", "Explosion", "Heal", "Refresh", "Strength", "Nightsight" }, ScriptTextBox.GRAY_HUE, true, FONT, (int)ButtonType.HotKeyList, 0x93A, 0x939);
+            _combatConsumePotionsHK = new AssistMultiSelectionShrinkbox(40, 2, 0, "Potions", new string[] {"Agility", "Cure", "Explosion", "Heal", "Refresh", "Strength", "Nightsight", "Mana", "Invisibility", "Urticant", "Stone to Flesh", "Speed Potion" }, ScriptTextBox.GRAY_HUE, true, FONT, (int)ButtonType.HotKeyList, 0x93A, 0x939);
             _combatConsumePotionsHK.OnOptionSelected += HotKey_OnOptionSelected;
             _combatConsumeHK.NestBox(_combatConsumePotionsHK);
             _combatConsumeMiscellaneousHK = new AssistMultiSelectionShrinkbox(40, 2, 0, "Miscellaneous", new string[] { "Enchanted Apple", "Orange Petals", "Wrath Grapes", "Rose of Trinsic", "Smoke Bomb", "Spell Stone", "Healing Stone" }, ScriptTextBox.GRAY_HUE, true, FONT, (int)ButtonType.HotKeyList, 0x93A, 0x939);
@@ -1554,6 +1632,12 @@ namespace ClassicUO.Game.UI.Gumps
             _targetingGetHK = new AssistMultiSelectionShrinkbox(20, 2, 0, "Get", _emptyStrArr, ScriptTextBox.GRAY_HUE, true, FONT, (int)ButtonType.HotKeyList, 0x93A, 0x939);
             //_targetingGetHK.OnOptionSelected += HotKey_OnOptionSelected;
             _targetingHK.NestBox(_targetingGetHK);
+            _targetingGetEnemyHK = new AssistMultiSelectionShrinkbox(30, 2, 0, "Enemy", _emptyStrArr, ScriptTextBox.GRAY_HUE, true, FONT, (int)ButtonType.HotKeyList, 0x93A, 0x939);
+            _targetingGetHK.NestBox(_targetingGetEnemyHK);
+            _generateGetData(_targetingGetEnemyHK, true);
+            _targetingGetFriendsHK = new AssistMultiSelectionShrinkbox(30, 2, 0, "Friend", _emptyStrArr, ScriptTextBox.GRAY_HUE, true, FONT, (int)ButtonType.HotKeyList, 0x93A, 0x939);
+            _targetingGetHK.NestBox(_targetingGetFriendsHK);
+            _generateGetData(_targetingGetFriendsHK, false);
             _targetingSetHK = new AssistMultiSelectionShrinkbox(20, 2, 0, "Set", new string[] { "Enemy", "Friend" }, ScriptTextBox.GRAY_HUE, true, FONT, (int)ButtonType.HotKeyList, 0x93A, 0x939);
             _targetingSetHK.OnOptionSelected += HotKey_OnOptionSelected;
             _targetingHK.NestBox(_targetingSetHK);
@@ -1561,7 +1645,7 @@ namespace ClassicUO.Game.UI.Gumps
             _macrosHK.OnOptionSelected += MacroHotKey_OnOptionSelected;
             //all the principal data for our server
             x = WIDTH - (y + _buttonWidth * 6) + (_buttonWidth >> 1);
-            Line.CreateRectangleArea(this, x, y, WIDTH - (x + (_buttonWidth >> 3)), HEIGHT - (y + _buttonHeight * 8), page, Color.Gray.PackedValue, 1, "Hotkey", ScriptTextBox.GRAY_HUE, FONT);
+            CreateRectangleArea(this, x, y, WIDTH - (x + (_buttonWidth >> 3)), HEIGHT - (y + _buttonHeight * 8), page, Color.Gray.PackedValue, 1, "Hotkey", ScriptTextBox.GRAY_HUE, FONT);
             x += _buttonWidth >> 3;
             y += _buttonHeight >> 2;
             Add(_keyName = new AssistHotkeyBox(x, y, WIDTH - (x + (_buttonWidth >> 3) + 5), HEIGHT - (y + _buttonHeight * 8), FONT, ScriptTextBox.GRAY_HUE) { IsEnabled = false }, page);
@@ -1569,18 +1653,79 @@ namespace ClassicUO.Game.UI.Gumps
             _keyName.HotkeyChanged += _keyName_HotkeyChanged;
             _keyName.HotkeyCleared += _keyName_HotkeyCleared;
         }
-        
+
         private void _keyName_AddButton(object sender, EventArgs e)
         {
-            UIManager.Gumps.OfType<AssistantHotkeyButtonGump>().FirstOrDefault(s => s._hotkeyName == _selectedHK)?.Dispose();
-            var hotkeyButtonGump = new AssistantHotkeyButtonGump(World, _selectedHK, Mouse.Position.X, Mouse.Position.Y);
-            UIManager.Add(hotkeyButtonGump);
+            if (!string.IsNullOrEmpty(_selectedHK))
+            {
+                if (_selectedHK.IndexOf('.') < 0)//macro, not an actual hotkey
+                {
+                    _macroRoutine(_selectedHK);
+                }
+                else
+                {
+                    UIManager.Gumps.OfType<AssistHotkeyButtonGump>().FirstOrDefault(s => s._hotkeyName == _selectedHK)?.Dispose();
+                    var hotkeyButtonGump = new AssistHotkeyButtonGump(_selectedHK, PrettySelHK, Mouse.Position.X, Mouse.Position.Y);
+                    UIManager.Add(hotkeyButtonGump);
+                }
+            }
+        }
+
+        private void _generateGetData(AssistMultiSelectionShrinkbox box, bool enemy)
+        {
+            Dictionary<string, Targeting.TargetType> targpairs = new Dictionary<string, Targeting.TargetType>()
+            {
+                { "Criminal", Targeting.TargetType.Criminal },
+                { "Enemy", Targeting.TargetType.Enemy },
+                { "Gray", Targeting.TargetType.Gray },
+                { "Innocent", Targeting.TargetType.Innocent },
+                { "Murderer", Targeting.TargetType.Murderer },
+                { "Non-Friendly", Targeting.TargetType.Any & ~Targeting.TargetType.Friend },
+                { "Friend", Targeting.TargetType.Friend }
+            };
+            Dictionary<string, Targeting.FilterType> formpairs = new Dictionary<string, Targeting.FilterType>()
+            {
+                { "Any", Targeting.FilterType.Next },
+                { "Both", Targeting.FilterType.AnyForm },
+                { "Humanoid", Targeting.FilterType.Humanoid },
+                { "Transformation", Targeting.FilterType.Transformation }
+            };
+            for(int ft = 0; ft < 3; ++ft)
+            {
+                Targeting.FilterType filter = (Targeting.FilterType)ft;
+                AssistMultiSelectionShrinkbox inbox = new AssistMultiSelectionShrinkbox(40, 2, 0, $"{filter}", _emptyStrArr, ScriptTextBox.GRAY_HUE, true, FONT, (int)ButtonType.HotKeyList, 0x93A, 0x939);
+                box.NestBox(inbox);
+                foreach(KeyValuePair<string, Targeting.TargetType> kvp in targpairs)
+                {
+                    AssistMultiSelectionShrinkbox ttbox = new AssistMultiSelectionShrinkbox(50, 2, 0, $"{kvp.Key}", formpairs.Keys.ToArray(), ScriptTextBox.GRAY_HUE, true, FONT, (int)ButtonType.HotKeyList, 0x93A, 0x939);
+                    inbox.NestBox(ttbox);
+                    foreach (KeyValuePair<string, Targeting.FilterType> fkvp in formpairs)
+                    {
+                        _InstanceSB.AppendFormat("{0}.{1}", kvp.Key, fkvp.Key);
+                        AssistMultiSelectionShrinkbox msb = ttbox;
+                        while ((msb = msb.ParentBox) != null && msb.Name != null)
+                        {
+                            _InstanceSB.Insert(0, '.');
+                            _InstanceSB.Insert(0, msb.Name);
+                        }
+                        HotKeys.AddHotKeyFunc(_InstanceSB.ToString().ToLower(XmlFileParser.Culture), (input) =>
+                        {
+                            Targeting.GetTarget(kvp.Value, filter | fkvp.Value, enemy, false);
+                            return true;
+                        });
+                        _InstanceSB.Clear();
+                    }
+                    ttbox.OnOptionSelected += HotKey_OnOptionSelected;
+                }
+            }
         }
 
         private void _keyName_HotkeyCleared(object sender, EventArgs e)
         {
             if (!string.IsNullOrEmpty(_selectedHK))
-                HotKeys.RemoveHotKey(_selectedHK);
+            {
+                HotKeys.RemoveHotKey(_selectedHK, onlyclear: true);
+            }
         }
 
         private void _keyName_HotkeyChanged(object sender, EventArgs e)
@@ -1592,20 +1737,24 @@ namespace ClassicUO.Game.UI.Gumps
         }
 
         private string _selectedHK;
+        internal string PrettySelHK { get; private set; }
         internal string SelectedHK
         {
             get => _selectedHK;
             set
             {
-                _selectedHK = value;
-                if (!string.IsNullOrEmpty(_selectedHK))
+                if (!string.IsNullOrEmpty(value))
                 {
+                    int idx = value.LastIndexOf('.');
+                    PrettySelHK = value.Substring(idx < 0 ? 0 : idx);
+                    _selectedHK = idx < 0 ? value : value.ToLower(XmlFileParser.Culture);
                     _keyName.IsEnabled = true;
                     HotKeys.GetSDLKeyCodes(_selectedHK, out int key, out int mod);
                     _keyName.SetKey((SDL.SDL_Keycode)key, (SDL.SDL_Keymod)mod);
                 }
                 else
                 {
+                    PrettySelHK = _selectedHK = value;
                     _keyName.IsEnabled = false;
                     _keyName.SetKey(SDL.SDL_Keycode.SDLK_UNKNOWN, SDL.SDL_Keymod.KMOD_NONE);
                 }
@@ -1614,14 +1763,14 @@ namespace ClassicUO.Game.UI.Gumps
 
         private void SkillsHotKey_OnOptionSelected(object sender, Control c)
         {
-            if (!(sender is AssistMultiSelectionShrinkbox msb) || msb.Name == null)
+            if (sender is not AssistMultiSelectionShrinkbox msb || msb.Name == null)
             {
                 SelectedHK = null;
             }
             else
             {
                 _InstanceSB.AppendFormat("{0}.{1}", msb.Name, msb.SelectedName);
-                SelectedHK = _InstanceSB.ToString().ToLower(XmlFileParser.Culture);
+                SelectedHK = _InstanceSB.ToString();//.ToLower(XmlFileParser.Culture);
                 _InstanceSB.Clear();
                 if (c is Button)
                     HotKeys.PlayFunc(SelectedHK);
@@ -1638,7 +1787,7 @@ namespace ClassicUO.Game.UI.Gumps
                     _InstanceSB.Insert(0, '.');
                     _InstanceSB.Insert(0, msb.Name);
                 }
-                SelectedHK = _InstanceSB.Replace(" ", "").ToString().ToLower(XmlFileParser.Culture);
+                SelectedHK = _InstanceSB.Replace(" ", "").ToString();//.ToLower(XmlFileParser.Culture);
                 _InstanceSB.Clear();
                 if (c is Button)
                     HotKeys.PlayFunc(SelectedHK);
@@ -1658,7 +1807,7 @@ namespace ClassicUO.Game.UI.Gumps
                     _InstanceSB.Insert(0, '.');
                     _InstanceSB.Insert(0, msb.Name);
                 }
-                SelectedHK = _InstanceSB.Replace(" ", "").ToString().ToLower(XmlFileParser.Culture);
+                SelectedHK = _InstanceSB.Replace(" ", "").ToString();//.ToLower(XmlFileParser.Culture);
                 _InstanceSB.Clear();
                 if (c is Button)
                     HotKeys.PlayFunc(SelectedHK, selname);
@@ -1693,19 +1842,19 @@ namespace ClassicUO.Game.UI.Gumps
             else
                 SelectedHK = null;
         }
-        #endregion
+#endregion
 
-        #region Macros
+#region Macros
         private AssistScrollArea _macroListArea;
-        private NiceButton _playMacro, _recordMacro, _newMacro, _delMacro, _saveMacro;
-        internal NiceButton PlayMacro => _playMacro;
-        internal NiceButton RecordMacro => _recordMacro;
+        private AssistNiceButton _playMacro, _recordMacro, _newMacro, _delMacro, _saveMacro;
+        internal AssistNiceButton PlayMacro => _playMacro;
+        internal AssistNiceButton RecordMacro => _recordMacro;
 
         private AreaContainer _macroArea;
         private GumpPicTiled _macroPicTiled;
         internal AssistHotkeyBox _macrokeyName;
-        internal StbTextBox MacroBox { get; private set; }
-        private AssistCheckbox _loopMacro, _noautoInterrupt, _recordAsType, _returnToParent;
+        internal AssistStbTextBox MacroBox { get; private set; }
+        private AssistCheckbox _loopMacro, _noautoInterrupt, _recordAsType, _returnToParent, _StartStopMacroMessages;
         internal bool RecordTypeUse => _recordAsType.IsChecked;
         private string _macroSelected = null;//Macro selected
         internal string MacroSelected
@@ -1719,43 +1868,54 @@ namespace ClassicUO.Game.UI.Gumps
         private void BuildMacros(int page)
         {
             int x = _buttonWidth >> 3, y = _buttonHeight + (_buttonHeight >> 1);
-            Line.CreateRectangleArea(this, x, y, (WIDTH >> 2) + _buttonWidth + (_buttonWidth >> 1), HEIGHT - (y + _buttonHeight * 2) + (_buttonHeight >> 3), page, Color.Gray.PackedValue, 1, "Macro Names", ScriptTextBox.GRAY_HUE, FONT);
+            CreateRectangleArea(this, x, y, (WIDTH >> 2) + _buttonWidth + (_buttonWidth >> 1), HEIGHT - (y + _buttonHeight * 2) + (_buttonHeight >> 3), page, Color.Gray.PackedValue, 1, "Macro Names", ScriptTextBox.GRAY_HUE, FONT);
             x += _buttonWidth >> 4;
             y += _buttonHeight >> 2;
-            _macroListArea = new AssistScrollArea(x, y, (WIDTH >> 2) + _buttonWidth + (_buttonWidth >> 2) + (_buttonWidth >> 3), HEIGHT - (y + _buttonHeight * 2), true);
+            _macroListArea = new AssistScrollArea(x, y, (WIDTH >> 2) + _buttonWidth + (_buttonWidth >> 2) + (_buttonWidth >> 3), HEIGHT - (y + _buttonHeight * 2));
             Add(_macroListArea, page);
             y += _macroListArea.Height + (_buttonHeight >> 3);
             x = _buttonWidth >> 3;
             Control b;
-            Add(b = _delMacro = new NiceButton(x, y, (_macroListArea.Width >> 2) + (_buttonWidth >> 1), HEIGHT - (y + (_buttonHeight >> 2)), ButtonAction.Activate, "Remove") { IsSelectable = false, ButtonParameter = (int)ButtonType.RemoveMacro }, page);
+            Add(b = _delMacro = new AssistNiceButton(x, y, (_macroListArea.Width >> 2) + (_buttonWidth >> 1), HEIGHT - (y + (_buttonHeight >> 2)), ButtonAction.Activate, "Remove") { IsSelectable = false, ButtonParameter = (int)ButtonType.RemoveMacro }, page);
             x += b.Width + (_buttonWidth >> 3);
-            Add(b = _newMacro = new NiceButton(x, y, (_macroListArea.Width >> 2), HEIGHT - (y + (_buttonHeight >> 2)), ButtonAction.Activate, "New") { IsSelectable = false, ButtonParameter = (int)ButtonType.NewMacro }, page);
+            Add(b = _newMacro = new AssistNiceButton(x, y, (_macroListArea.Width >> 2), HEIGHT - (y + (_buttonHeight >> 2)), ButtonAction.Activate, "New") { IsSelectable = false, ButtonParameter = (int)ButtonType.NewMacro }, page);
             x += b.Width + (_buttonWidth >> 3);
-            Add(_saveMacro = new NiceButton(x, y, (_macroListArea.Width >> 2) + (_buttonWidth >> 1), HEIGHT - (y + (_buttonHeight >> 2)), ButtonAction.Activate, "Save") { IsSelectable = false, ButtonParameter = (int)ButtonType.SaveMacro }, page);
+            Add(_saveMacro = new AssistNiceButton(x, y, (_macroListArea.Width >> 2) + (_buttonWidth >> 1), HEIGHT - (y + (_buttonHeight >> 2)), ButtonAction.Activate, "Save") { IsSelectable = false, ButtonParameter = (int)ButtonType.SaveMacro }, page);
             x = (_buttonWidth >> 3) * 2 + (WIDTH >> 2) + _buttonWidth + (_buttonWidth >> 1);
             y = _buttonHeight + (_buttonHeight >> 1);
             Add(_macroPicTiled = new GumpPicTiled(x, y, (WIDTH >> 1) - _buttonWidth, HEIGHT - (y + _buttonHeight * 2), 0xBBC), page);
-            Line.CreateRectangleArea(this, x, y, _macroPicTiled.Width, _macroPicTiled.Height, page, Color.Red.PackedValue, 1, null);
-            _macroArea = new AreaContainer(_macroPicTiled.X + 2, _macroPicTiled.Y + 2, _macroPicTiled.Width - 4, _macroPicTiled.Height - 4, MacroBox = new ScriptTextBox(this, FONT, _macroPicTiled.Width));
+            CreateRectangleArea(this, x, y, _macroPicTiled.Width, _macroPicTiled.Height, page, Color.Red.PackedValue, 1, null);
+            _macroArea = new AreaContainer(_macroPicTiled.X + 2, _macroPicTiled.Y + 2, _macroPicTiled.Width - 4, _macroPicTiled.Height - 4, MacroBox = new ScriptTextBox(FONT, _macroPicTiled.Width));
+            //MacroBox.TextChanged += MacroBox_TextChanged;
             Add(_macroArea, page);
-            Add(b = new NiceButton(x, _macroPicTiled.Y + _macroPicTiled.Height + (_buttonHeight >> 2), _buttonWidth * 5, _buttonHeight, ButtonAction.Activate, "Object Inspector") { IsSelectable = false, ButtonParameter = (int)ButtonType.ObjectInspector }, page);
-            Add(_returnToParent = new AssistCheckbox(0x00D2, 0x00D3, "playmacro Returns to Parent", FONT, ScriptTextBox.GRAY_HUE, true) { X = b.X + b.Width + (_buttonWidth >> 3), Y = b.Y }, page);
+            Add(b = new AssistNiceButton(x, _macroPicTiled.Y + _macroPicTiled.Height + (_buttonHeight >> 1), _buttonWidth * 5, _buttonHeight, ButtonAction.Activate, "Object Inspector") { IsSelectable = false, ButtonParameter = (int)ButtonType.ObjectInspector }, page);
+            Add(_returnToParent = new AssistCheckbox(0x00D2, 0x00D3, "playmacro Returns to Parent", FONT, ScriptTextBox.GRAY_HUE, true) { X = b.X + b.Width + (_buttonWidth >> 3), Y = b.Y + 3 }, page);
             x += _macroPicTiled.Width + (_buttonHeight >> 3);
-            Add(b = _playMacro = new NiceButton(x, y, ((WIDTH - x) >> 1) - (_buttonWidth >> 3), _buttonHeight, ButtonAction.Activate, "Play") { IsSelectable = false, ButtonParameter = (int)ButtonType.PlayMacro, IsEnabled = false }, page);
-            Add(b = _recordMacro = new NiceButton(x + b.Width + (_buttonWidth >> 3), y, b.Width, _buttonHeight, ButtonAction.Activate, "Record") { IsSelectable = false, ButtonParameter = (int)ButtonType.RecordMacro, IsEnabled = false }, page);
+            Add(b = _playMacro = new AssistNiceButton(x, y, ((WIDTH - x) >> 1) - (_buttonWidth >> 3), _buttonHeight, ButtonAction.Activate, "Play") { IsSelectable = false, ButtonParameter = (int)ButtonType.PlayMacro, IsEnabled = false }, page);
+            Add(b = _recordMacro = new AssistNiceButton(x + b.Width + (_buttonWidth >> 3), y, b.Width, _buttonHeight, ButtonAction.Activate, "Record") { IsSelectable = false, ButtonParameter = (int)ButtonType.RecordMacro, IsEnabled = false }, page);
             Add(b = _recordAsType = new AssistCheckbox(0x00D2, 0x00D3, "Rec Type Use", FONT, ScriptTextBox.GRAY_HUE, true) { X = x, Y = b.Y + b.Height + (_buttonHeight >> 3), IsEnabled = false, IsVisible = false}, page);
             Add(b = _loopMacro = new AssistCheckbox(0x00D2, 0x00D3, "Loop", FONT, ScriptTextBox.GRAY_HUE, true) { X = x, Y = b.Y + b.Height + (_buttonHeight >> 3), IsEnabled = false }, page);
             Add(b = _noautoInterrupt = new AssistCheckbox(0x00D2, 0x00D3, "No Interrupt", FONT, ScriptTextBox.GRAY_HUE, true) { X = x, Y = b.Y + b.Height + (_buttonHeight >> 3), IsEnabled = false }, page);
             Add(_macrokeyName = new AssistHotkeyBox(x, b.Y + b.Height + (_buttonHeight >> 2), (WIDTH - x) - (_buttonWidth >> 3), HEIGHT - (y + _buttonHeight * 8), FONT, ScriptTextBox.GRAY_HUE) { IsEnabled = false }, page);
-            //NOTE: Forward mouse events from macroPicTiled to macroBox so that clicking anywhere on the macroPicTiled control will focus on macroBox
-            _macroArea.ControlToForwardMouseEventsTo = MacroBox;
-            //NOTE: Listen to custom AddButton event to create on-screen macro button
+            Add(_StartStopMacroMessages = new AssistCheckbox(0x00D2, 0x00D3, "Init Messages", FONT, ScriptTextBox.YELLOW_HUE, true) { X = x, Y = _macrokeyName.Y + _macrokeyName.Height }, page);
+            AssistNiceButton anb;
+            Add(anb = new AssistNiceButton(x, _StartStopMacroMessages.Y + _StartStopMacroMessages.Height + 1, _macrokeyName.Width, _StartStopMacroMessages.Height, ButtonAction.Activate, "Display Timers") { IsSelectable = false }, page);
+            anb.LeftClicked += TimersButtonClicked;
             _macrokeyName.AddButton += _macrokeyName_AddButton;
             _macrokeyName.HotkeyChanged += _macrokeyName_HotkeyChanged;
             _macrokeyName.HotkeyCleared += _macrokeyName_HotkeyCleared;
             _loopMacro.ValueChanged += _loopMacro_ValueChanged;
             _noautoInterrupt.ValueChanged += _noautoInterrupt_ValueChanged;
             UpdateMacroListGump();
+        }
+
+        private void TimersButtonClicked(object sender, AssistNiceButton e)
+        {
+            var g = UIManager.GetGump<TimersGump>();
+            if (g == null || g.IsDisposed)
+            {
+                UIManager.Add(new TimersGump());
+            }
         }
 
         internal void DisableLoop()
@@ -1768,8 +1928,16 @@ namespace ClassicUO.Game.UI.Gumps
 
         private void _macrokeyName_AddButton(object sender, EventArgs e)
         {
-            UIManager.Gumps.OfType<AssistantMacroButtonGump>().FirstOrDefault(s => s._macroName == _macroSelected)?.Dispose();
-            var macroButtonGump = new AssistantMacroButtonGump(World, _macroSelected, Mouse.Position.X, Mouse.Position.Y);
+            if (!string.IsNullOrEmpty(_macroSelected))
+            {
+                _macroRoutine(_macroSelected);
+            }
+        }
+
+        private void _macroRoutine(string selected)
+        {
+            UIManager.Gumps.OfType<AssistMacroButtonGump>().FirstOrDefault(s => s._macroName == selected)?.Dispose();
+            var macroButtonGump = new AssistMacroButtonGump(selected, Mouse.Position.X, Mouse.Position.Y);
             UIManager.Add(macroButtonGump);
         }
 
@@ -1792,7 +1960,9 @@ namespace ClassicUO.Game.UI.Gumps
         private void _macrokeyName_HotkeyCleared(object sender, EventArgs e)
         {
             if (!string.IsNullOrEmpty(_macroSelected))
+            {
                 HotKeys.RemoveHotKey(_macroSelected);
+            }
         }
 
         private void _macrokeyName_HotkeyChanged(object sender, EventArgs e)
@@ -1809,18 +1979,19 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 if (!ScriptManager.MacroDictionary.TryGetValue(macroselected, out HotKeyOpts opts))
                     ScriptManager.MacroDictionary[macroselected] = new HotKeyOpts(box.PassToCUO, "macro.play", macroselected);
-                if (opts.Macro != _macroArea._textBox.Text)
+                if (_macroSelected == macroselected && opts.Macro != _macroArea._textBox.Text)
                     opts.Macro = _macroArea._textBox.Text;
-                HotKeys.AddHotkey(vkey, new HotKeyOpts(box.PassToCUO, "macro.play", macroselected), box, ref macroselected, this);
+                if(vkey > 0)
+                    HotKeys.AddHotkey(vkey, new HotKeyOpts(box.PassToCUO, "macro.play", macroselected), box, ref macroselected, this);
             }
-            else
+            else if (vkey > 0)
                 HotKeys.AddHotkey(vkey, new HotKeyOpts(box.PassToCUO, macroselected), box, ref macroselected, this);
         }
 
         private class AreaContainer : AssistScrollArea
         {
-            internal StbTextBox _textBox;
-            internal AreaContainer(int x, int y, int w, int h, StbTextBox box) : base(x, y, w, h, true)
+            internal AssistStbTextBox _textBox;
+            internal AreaContainer(int x, int y, int w, int h, AssistStbTextBox box) : base(x, y, w, h)
             {
                 Add(_textBox = box);
                 _textBox.IsEditable = false;
@@ -1831,28 +2002,13 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 _textBox.Height = _textBox.TotalHeight;
 
-                foreach (Control c in Children)
+                base.OnPageChanged();
+                /*foreach (Control c in Children)
                 {
-                    if (c is ScrollAreaItem)
+                    if (c is AssistChildType)
                         c.OnPageChanged();
-                }
+                }*/
             }
-
-            /*public override void Update(double totalMS, double frameMS)
-            {
-                if (!_textBox.IsDisposed && _textBox.)
-                {
-                    _textBox.Height = Math.Max(FontsLoader.Instance.GetHeightUnicode(1, _textBox.Text, 220, TEXT_ALIGN_TYPE.TS_LEFT, 0x0) + 5, 20);
-
-                    foreach (Control c in Children)
-                    {
-                        if (c is ScrollAreaItem)
-                            c.OnPageChanged();
-                    }
-                }
-
-                base.Update(totalMS, frameMS);
-            }*/
 
             protected override void OnMouseUp(int x, int y, Input.MouseButtonType button)
             {
@@ -1930,9 +2086,10 @@ namespace ClassicUO.Game.UI.Gumps
                 _recordMacro.IsEnabled = true;
             }
         }
-        #endregion
+#endregion
 
-        /*#region Skills
+#region Skills
+        /*
         private void BuildSkills(int page)
         {
             int x = _buttonWidth >> 3, y = _buttonHeight + (_buttonHeight >> 1);
@@ -1942,26 +2099,28 @@ namespace ClassicUO.Game.UI.Gumps
             //y += _buttonHeight >> 2;
             Line.CreateRectangleArea(this, x, y, WIDTH >> 2)
         }
-        #endregion*/
+*/
+#endregion
 
-        #region Agents
+#region Agents
         private int _selectedSubAgentsPage = -1;
-        private readonly NiceButton[] _subAgentsPageNiceButtons = new NiceButton[(int)PageType.LastAgents - (int)PageType.Autoloot];
+        private readonly AssistNiceButton[] _subAgentsPageNiceButtons = new AssistNiceButton[(int)PageType.LastAgents - (int)PageType.Autoloot];
         private AssistCheckbox _enableAutoLoot, _disableInGuardZone, //autoloot
             _moveConflictingItems,//dress
             _organizerComplete, _organizerLoop, _organizerStack,//organizer
-            _enableScavenger,//scavenger
+            _enableScavenger, _stackAtFeet,//scavenger
             _enableBuySell, _buyComplete;//vendors
         internal AssistCheckbox EnabledScavenger => _enableScavenger;
+        internal AssistCheckbox StackOresAtFeet => _stackAtFeet;
         internal AssistCheckbox EnableBuySell => _enableBuySell;
         internal int SelectedBuyOrSell => _BuySellCombo.SelectedIndex;
-        private NiceButton _autolootContainer, _insertautolootItem, _removeautolootItem, //autoloot
+        private AssistNiceButton _autolootContainer, _insertautolootItem, _removeautolootItem, //autoloot
             _removeDressList, _dressButton, _undressButton, _importDress, _newItemDress, _removeItemDress, _clearAllDress, _typeOrSerialDress, _setUndressCont,//dress
             _playOrganizer, _removeOrganizer, _organizerSetCont, _removeOrganizerItem, _insertOrganizerItem, _newOrganizer,//organizer
             _insertScavenged, _removeScavenged, _clearScavenged, _setScavengedContainer,//scavenger
             _newBuySellList, _removeBuySellList, _removeBuySellItem, _insertBuySellItem;
-        private Combobox _BuySellCombo;
-        internal NiceButton PlayOrganizer { get { return _playOrganizer; } }
+        private AssistCombobox _BuySellCombo;
+        internal AssistNiceButton PlayOrganizer { get { return _playOrganizer; } }
         private AssistScrollArea _autolootArea, //autoloot
             _dressItemsArea, _dressListsArea,//dress
             _organizerListArea,//organizer
@@ -2000,7 +2159,7 @@ namespace ClassicUO.Game.UI.Gumps
                 string name = StringHelper.AddSpaceBeforeCapital(((PageType)page).ToString());
                 for (int subpage = (int)PageType.Autoloot; subpage < (int)PageType.LastAgents; subpage++)
                 {
-                    NiceButton but = new NiceButton(pagex, starty, width, _buttonHeight, ButtonAction.SwitchPage, name, (int)PageType.LastAgents) { ButtonParameter = page };
+                    AssistNiceButton but = new AssistNiceButton(pagex, starty, width, _buttonHeight, ButtonAction.SwitchPage, name, (int)PageType.LastAgents) { ButtonParameter = page };
                     if (page == subpage)
                     {
                         _subAgentsPageNiceButtons[subpage - (int)PageType.Autoloot] = but;
@@ -2010,7 +2169,7 @@ namespace ClassicUO.Game.UI.Gumps
                 }
                 switch ((PageType)page)
                 {
-                    #region AUTOLOOT_PAGE
+#region AUTOLOOT_PAGE
                     case PageType.Autoloot:
                     {
                         int buttondiffx = _buttonWidth - (_buttonWidth >> 3), buttondiffy = _buttonHeight - (_buttonHeight >> 3);
@@ -2022,7 +2181,7 @@ namespace ClassicUO.Game.UI.Gumps
                             Y = y
                         };
                         Add(_enableAutoLoot, page);
-                        Add(_autolootContainer = new NiceButton(_enableAutoLoot.X + _enableAutoLoot.Width + _buttonWidth, y, devx * 30, _enableAutoLoot.Height, ButtonAction.Activate, "Set Container", (int)ButtonType.SetAutolootContainer, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.SetAutolootContainer }, page);
+                        Add(_autolootContainer = new AssistNiceButton(_enableAutoLoot.X + _enableAutoLoot.Width + _buttonWidth, y, devx * 30, _enableAutoLoot.Height, ButtonAction.Activate, "Set Container", (int)ButtonType.SetAutolootContainer, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.SetAutolootContainer }, page);
                         y += _buttonHeight + (_buttonHeight >> 3);
                         _disableInGuardZone = new AssistCheckbox(0x00D2, 0x00D3, "Disable inside guards zone", FONT, ScriptTextBox.GRAY_HUE, true)
                         {
@@ -2032,15 +2191,15 @@ namespace ClassicUO.Game.UI.Gumps
                         Add(_disableInGuardZone, page);
                         y += _buttonHeight + (_buttonHeight >> 2);
                         x -= (buttondiffx >> 2);
-                        Line[] l = Line.CreateRectangleArea(this, x, y, _autolootContainer.Width + _autolootContainer.X + (buttondiffx >> 2), HEIGHT - (_disableInGuardZone.Y + (_buttonHeight * 3)) , page, Color.Gray.PackedValue, 1, "Loot Items", ScriptTextBox.GRAY_HUE, FONT);
+                        Line[] l = CreateRectangleArea(this, x, y, _autolootContainer.Width + _autolootContainer.X + (buttondiffx >> 2), HEIGHT - (_disableInGuardZone.Y + (_buttonHeight * 3)) , page, Color.Gray.PackedValue, 1, "Loot Items", ScriptTextBox.GRAY_HUE, FONT);
                         y += (buttondiffy >> 1);
                         x += 2;
-                        _autolootArea = new AssistScrollArea(x, y, l[2].Width - 6, l[0].Height - ((buttondiffy >> 2) * 3), true);
+                        _autolootArea = new AssistScrollArea(x, y, l[2].Width - 6, l[0].Height - ((buttondiffy >> 2) * 3));
                         Add(_autolootArea, page);
                         y = l[2].Y + (_buttonHeight >> 2);
                         x -= 2;
-                        Add(_removeautolootItem = new NiceButton(x, y, (_autolootArea.Width >> 1) - (_buttonWidth >> 2), _buttonHeight - (_buttonHeight >> 2), ButtonAction.Activate, "Remove Item") { IsSelectable = false, ButtonParameter = (int)ButtonType.RemoveAutolootItem }, page);
-                        Add(_insertautolootItem = new NiceButton(x + (_autolootArea.Width >> 1) + (buttondiffx >> 1), y, (_autolootArea.Width >> 1) - (_buttonWidth >> 2), (_buttonHeight - (_buttonHeight >> 2)), ButtonAction.Activate, "Insert Item") { IsSelectable = false, ButtonParameter = (int)ButtonType.InsertAutolootItem }, page);
+                        Add(_removeautolootItem = new AssistNiceButton(x, y, (_autolootArea.Width >> 1) - (_buttonWidth >> 2), _buttonHeight - (_buttonHeight >> 2), ButtonAction.Activate, "Remove Item") { IsSelectable = false, ButtonParameter = (int)ButtonType.RemoveAutolootItem }, page);
+                        Add(_insertautolootItem = new AssistNiceButton(x + (_autolootArea.Width >> 1) + (buttondiffx >> 1), y, (_autolootArea.Width >> 1) - (_buttonWidth >> 2), (_buttonHeight - (_buttonHeight >> 2)), ButtonAction.Activate, "Insert Item") { IsSelectable = false, ButtonParameter = (int)ButtonType.InsertAutolootItem }, page);
                         x = l[2].X + l[2].Width + 4;
                         Label lb;
                         Add(lb = new Label("Limit", true, ScriptTextBox.GRAY_HUE, font: FONT) { X = x, Y = y }, page);
@@ -2053,9 +2212,9 @@ namespace ClassicUO.Game.UI.Gumps
                         }
                         break;
                     }
-                    #endregion
+#endregion
 
-                    #region DRESS_PAGE
+#region DRESS_PAGE
                     case PageType.Dress:
                     {
                         int buttondiffx = _buttonWidth - (_buttonWidth >> 3), buttondiffy = _buttonHeight - (_buttonHeight >> 3);
@@ -2068,61 +2227,61 @@ namespace ClassicUO.Game.UI.Gumps
                         };
                         Add(_moveConflictingItems, page);
                         y += _buttonHeight + (_buttonHeight >> 3);
-                        Line[] l = Line.CreateRectangleArea(this, x, y, _buttonWidth * 7, HEIGHT - (_buttonHeight * 5), page, Color.Gray.PackedValue, 1, "Dress Lists", ScriptTextBox.GRAY_HUE, FONT);
+                        Line[] l = CreateRectangleArea(this, x, y, _buttonWidth * 7, HEIGHT - (_buttonHeight * 5), page, Color.Gray.PackedValue, 1, "Dress Lists", ScriptTextBox.GRAY_HUE, FONT);
                         y += (buttondiffy >> 1);
                         x += 2;
-                        _dressListsArea = new AssistScrollArea(x, y, l[2].Width - 6, l[0].Height - ((buttondiffy >> 2) * 3), true);
+                        _dressListsArea = new AssistScrollArea(x, y, l[2].Width - 6, l[0].Height - ((buttondiffy >> 2) * 3));
                         Add(_dressListsArea, page);
                         x -= 2;
                         y += l[0].Height;
-                        Add(_removeDressList = new NiceButton(x, y, (l[2].Width >> 2) + (_buttonWidth >> 1), _buttonHeight, ButtonAction.Activate, "Remove", (int)ButtonType.RemoveDressList, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.RemoveDressList, IsEnabled = false }, page);
+                        Add(_removeDressList = new AssistNiceButton(x, y, (l[2].Width >> 2) + (_buttonWidth >> 1), _buttonHeight, ButtonAction.Activate, "Remove", (int)ButtonType.RemoveDressList, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.RemoveDressList, IsEnabled = false }, page);
                         _removeDressList.TextLabel.Hue = ScriptTextBox.RED_HUE;
                         x = l[2].X + l[2].Width - ((l[2].Width >> 2) + (_buttonWidth >> 1));
-                        Add(new NiceButton(x, y, (l[2].Width >> 2) + (_buttonWidth >> 1), _buttonHeight, ButtonAction.Activate, "New", (int)ButtonType.CreateDressList, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.CreateDressList }, page);
+                        Add(new AssistNiceButton(x, y, (l[2].Width >> 2) + (_buttonWidth >> 1), _buttonHeight, ButtonAction.Activate, "New", (int)ButtonType.CreateDressList, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.CreateDressList }, page);
                         x = l[2].X + l[2].Width + (_buttonWidth >> 1);
                         y = starty + _buttonHeight + (_buttonHeight >> 2);
-                        l = Line.CreateRectangleArea(this, x, y, WIDTH - (x + _buttonWidth * 4), HEIGHT - (_buttonHeight * 4), page, Color.Gray.PackedValue, 1, "Dress Items", ScriptTextBox.GRAY_HUE, FONT);
+                        l = CreateRectangleArea(this, x, y, WIDTH - (x + _buttonWidth * 4), HEIGHT - (_buttonHeight * 4), page, Color.Gray.PackedValue, 1, "Dress Items", ScriptTextBox.GRAY_HUE, FONT);
                         y += (buttondiffy >> 1);
                         x += 2;
-                        _dressItemsArea = new AssistScrollArea(x, y, l[2].Width - 6, l[0].Height - ((buttondiffy >> 2) * 3), true);
+                        _dressItemsArea = new AssistScrollArea(x, y, l[2].Width - 6, l[0].Height - ((buttondiffy >> 2) * 3));
                         Add(_dressItemsArea, page);
                         y = l[2].Y + (_buttonHeight >> 2);
                         x -= 2;
-                        Add(_setUndressCont = new NiceButton(x, y, _dressItemsArea.Width, _buttonHeight - (_buttonHeight >> 2), ButtonAction.Activate, "Set Undress Container") { IsSelectable = false, ButtonParameter = (int)ButtonType.SetUndressContainer, IsEnabled = false }, page);
+                        Add(_setUndressCont = new AssistNiceButton(x, y, _dressItemsArea.Width, _buttonHeight - (_buttonHeight >> 2), ButtonAction.Activate, "Set Undress Container") { IsSelectable = false, ButtonParameter = (int)ButtonType.SetUndressContainer, IsEnabled = false }, page);
                         _setUndressCont.TextLabel.Hue = ScriptTextBox.RED_HUE;
                         x = l[0].X + l[2].Width + (_buttonWidth >> 2);
                         y = l[0].Y;
-                        Add(_dressButton = new NiceButton(x, y, WIDTH - (x + (_buttonWidth >> 2)), _setUndressCont.Height + (_buttonHeight >> 1), ButtonAction.Activate, "Dress") { IsSelectable = false, ButtonParameter = (int)ButtonType.DressSelectedList, IsEnabled = false }, page);
+                        Add(_dressButton = new AssistNiceButton(x, y, WIDTH - (x + (_buttonWidth >> 2)), _setUndressCont.Height + (_buttonHeight >> 1), ButtonAction.Activate, "Dress") { IsSelectable = false, ButtonParameter = (int)ButtonType.DressSelectedList, IsEnabled = false }, page);
                         _dressButton.TextLabel.Hue = ScriptTextBox.RED_HUE;
                         y += _dressButton.Height + (_buttonHeight >> 2);
-                        Add(_undressButton = new NiceButton(x, y, _dressButton.Width, _dressButton.Height, ButtonAction.Activate, "Undress") { IsSelectable = false, ButtonParameter = (int)ButtonType.UndressSelectedList, IsEnabled = false }, page);
+                        Add(_undressButton = new AssistNiceButton(x, y, _dressButton.Width, _dressButton.Height, ButtonAction.Activate, "Undress") { IsSelectable = false, ButtonParameter = (int)ButtonType.UndressSelectedList, IsEnabled = false }, page);
                         _undressButton.TextLabel.Hue = ScriptTextBox.RED_HUE;
                         y += _dressButton.Height + (_buttonHeight >> 2);
-                        Add(_importDress = new NiceButton(x, y, _dressButton.Width, _dressButton.Height, ButtonAction.Activate, "Import") { IsSelectable = false, ButtonParameter = (int)ButtonType.ImportCurrentlyDressed, IsEnabled = false }, page);
+                        Add(_importDress = new AssistNiceButton(x, y, _dressButton.Width, _dressButton.Height, ButtonAction.Activate, "Import") { IsSelectable = false, ButtonParameter = (int)ButtonType.ImportCurrentlyDressed, IsEnabled = false }, page);
                         _importDress.TextLabel.Hue = ScriptTextBox.RED_HUE;
                         y += _dressButton.Height + (_buttonHeight >> 2);
-                        Add(_newItemDress = new NiceButton(x, y, _dressButton.Width, _dressButton.Height, ButtonAction.Activate, "New Item") { IsSelectable = false, ButtonParameter = (int)ButtonType.AddItemToDressList, IsEnabled = false }, page);
+                        Add(_newItemDress = new AssistNiceButton(x, y, _dressButton.Width, _dressButton.Height, ButtonAction.Activate, "New Item") { IsSelectable = false, ButtonParameter = (int)ButtonType.AddItemToDressList, IsEnabled = false }, page);
                         _newItemDress.TextLabel.Hue = ScriptTextBox.RED_HUE;
                         y += _dressButton.Height + (_buttonHeight >> 2);
-                        Add(_removeItemDress = new NiceButton(x, y, _dressButton.Width, _dressButton.Height, ButtonAction.Activate, "Remove") { IsSelectable = false, ButtonParameter = (int)ButtonType.RemoveItemFromDressList, IsEnabled = false }, page);
+                        Add(_removeItemDress = new AssistNiceButton(x, y, _dressButton.Width, _dressButton.Height, ButtonAction.Activate, "Remove") { IsSelectable = false, ButtonParameter = (int)ButtonType.RemoveItemFromDressList, IsEnabled = false }, page);
                         _removeItemDress.TextLabel.Hue = ScriptTextBox.RED_HUE;
                         y += _dressButton.Height + (_buttonHeight >> 1);
-                        Add(_clearAllDress = new NiceButton(x, y, _dressButton.Width, _dressButton.Height, ButtonAction.Activate, "Clear All") { IsSelectable = false, ButtonParameter = (int)ButtonType.ClearSelectedDressList, IsEnabled = false }, page);
+                        Add(_clearAllDress = new AssistNiceButton(x, y, _dressButton.Width, _dressButton.Height, ButtonAction.Activate, "Clear All") { IsSelectable = false, ButtonParameter = (int)ButtonType.ClearSelectedDressList, IsEnabled = false }, page);
                         _clearAllDress.TextLabel.Hue = ScriptTextBox.RED_HUE;
                         y += _dressButton.Height + (_buttonHeight >> 1);
-                        Add(_typeOrSerialDress = new NiceButton(x, y, _dressButton.Width, _buttonHeight, ButtonAction.Activate, "Use Serial") { IsSelectable = false, ButtonParameter = (int)ButtonType.DressTypeOrSerial }, page);
+                        Add(_typeOrSerialDress = new AssistNiceButton(x, y, _dressButton.Width, _buttonHeight, ButtonAction.Activate, "Use Serial") { IsSelectable = false, ButtonParameter = (int)ButtonType.DressTypeOrSerial }, page);
                         _typeOrSerialDress.TextLabel.Hue = ScriptTextBox.BLUE_HUE;
                         break;
                     }
-                    #endregion
+#endregion
 
-                    #region ORGANIZER_PAGE
+#region ORGANIZER_PAGE
                     case PageType.Organizer:
                     {
                         int buttondiffx = _buttonWidth - (_buttonWidth >> 3), buttondiffy = _buttonHeight - (_buttonHeight >> 3);
                         int x = startx - ((buttondiffx >> 2) * 3), y = starty + _buttonHeight;
 
-                        Add(_playOrganizer = new NiceButton(x, y, _buttonWidth + (_buttonWidth >> 2), _buttonHeight * 2, ButtonAction.Activate, "Play", (int)ButtonType.PlaySelectedOrganizer, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.PlaySelectedOrganizer, IsEnabled = false }, page);
+                        Add(_playOrganizer = new AssistNiceButton(x, y, _buttonWidth + (_buttonWidth >> 2), _buttonHeight * 2, ButtonAction.Activate, "Play", (int)ButtonType.PlaySelectedOrganizer, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.PlaySelectedOrganizer, IsEnabled = false }, page);
                         _playOrganizer.TextLabel.Hue = ScriptTextBox.RED_HUE;
                         Add(_organizerComplete = new AssistCheckbox(0x00D2, 0x00D3, "Complete", FONT, ScriptTextBox.GRAY_HUE, true) { X = x + _playOrganizer.Width + (_buttonWidth >> 3), Y = y + 2, IsEnabled = false }, page);
                         _organizerComplete.Hue = ScriptTextBox.RED_HUE;
@@ -2136,104 +2295,109 @@ namespace ClassicUO.Game.UI.Gumps
                         _organizerStack.Hue = ScriptTextBox.RED_HUE;
                         _organizerStack.ValueChanged += OrganizerStack_ValueChanged;
                         y += _buttonHeight + (_buttonHeight >> 3);
-                        Line[] l = Line.CreateRectangleArea(this, x, y, _buttonWidth * 5 + (_buttonWidth >> 1), HEIGHT - (_buttonHeight * 6), page, Color.Gray.PackedValue, 1, "Organizer Lists", ScriptTextBox.GRAY_HUE, FONT);
+                        Line[] l = CreateRectangleArea(this, x, y, _buttonWidth * 5 + (_buttonWidth >> 1), HEIGHT - (_buttonHeight * 6), page, Color.Gray.PackedValue, 1, "Organizer Lists", ScriptTextBox.GRAY_HUE, FONT);
                         y += (buttondiffy >> 1);
                         x += 2;
-                        _organizerListArea = new AssistScrollArea(x, y, l[2].Width - 6, l[0].Height - ((buttondiffy >> 2) * 3), true);
+                        _organizerListArea = new AssistScrollArea(x, y, l[2].Width - 6, l[0].Height - ((buttondiffy >> 2) * 3));
                         Add(_organizerListArea, page);
                         x -= 2;
                         y += l[0].Height;
-                        Add(_removeOrganizer = new NiceButton(x + 4, y - 4, (l[2].Width >> 2) + (_buttonWidth >> 1), _buttonHeight, ButtonAction.Activate, "Remove", (int)ButtonType.RemoveOrganizerList, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.RemoveOrganizerList, IsEnabled = false }, page);
+                        Add(_removeOrganizer = new AssistNiceButton(x + 4, y - 4, (l[2].Width >> 2) + (_buttonWidth >> 1), _buttonHeight, ButtonAction.Activate, "Remove", (int)ButtonType.RemoveOrganizerList, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.RemoveOrganizerList, IsEnabled = false }, page);
                         _removeOrganizer.TextLabel.Hue = ScriptTextBox.RED_HUE;
                         x = l[2].X + l[2].Width - ((l[2].Width >> 2) + (_buttonWidth >> 1));
-                        Add(_newOrganizer = new NiceButton(x - 4, y - 4, (l[2].Width >> 2) + (_buttonWidth >> 1), _buttonHeight, ButtonAction.Activate, "New", (int)ButtonType.CreateOrganizerList, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.CreateOrganizerList }, page);
+                        Add(_newOrganizer = new AssistNiceButton(x - 4, y - 4, (l[2].Width >> 2) + (_buttonWidth >> 1), _buttonHeight, ButtonAction.Activate, "New", (int)ButtonType.CreateOrganizerList, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.CreateOrganizerList }, page);
                         x = l[2].X + l[2].Width + (_buttonWidth >> 2);
                         y = starty + _buttonHeight + (_buttonHeight >> 2);
-                        l = Line.CreateRectangleArea(this, x, y, WIDTH - (x + (_buttonWidth * 8)), HEIGHT - (_buttonHeight * 4), page, Color.Gray.PackedValue, 1, "Item", ScriptTextBox.GRAY_HUE, FONT);
+                        l = CreateRectangleArea(this, x, y, WIDTH - (x + (_buttonWidth * 8)), HEIGHT - (_buttonHeight * 4), page, Color.Gray.PackedValue, 1, "Item", ScriptTextBox.GRAY_HUE, FONT);
                         _organizerItemsWidth = new int[4];
                         _organizerItemsWidth[0] = l[2].Width - 4;
                         int tmpx = x;
-                        Add(_organizerSetCont = new NiceButton(x + 4, y + l[0].Height + ((buttondiffy >> 1) - 4), l[2].Width - 8, _buttonHeight, ButtonAction.Activate, "Set Containers", (int)ButtonType.SetOrganizerContainers, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.SetOrganizerContainers, IsEnabled = false }, page);
+                        Add(_organizerSetCont = new AssistNiceButton(x + 4, y + l[0].Height + ((buttondiffy >> 1) - 4), l[2].Width - 8, _buttonHeight, ButtonAction.Activate, "Set Containers", (int)ButtonType.SetOrganizerContainers, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.SetOrganizerContainers, IsEnabled = false }, page);
                         _organizerSetCont.TextLabel.Hue = ScriptTextBox.RED_HUE;
                         x += l[2].Width - 1;
-                        l = Line.CreateRectangleArea(this, x, l[0].Y, _buttonWidth * 2 + (buttondiffx >> 1), l[0].Height, page, Color.Gray.PackedValue, 1, "Graphic", ScriptTextBox.GRAY_HUE, FONT);
+                        l = CreateRectangleArea(this, x, l[0].Y, _buttonWidth * 2 + (buttondiffx >> 1), l[0].Height, page, Color.Gray.PackedValue, 1, "Graphic", ScriptTextBox.GRAY_HUE, FONT);
                         _organizerItemsWidth[1] = l[2].Width - 2;
-                        Add(_removeOrganizerItem = new NiceButton(x + _buttonWidth, _organizerSetCont.Y, (l[2].Width - 8) + _buttonWidth, _buttonHeight, ButtonAction.Activate, "Remove", (int)ButtonType.RemoveItemFromOrganizer, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.RemoveItemFromOrganizer, IsEnabled = false }, page);
+                        Add(_removeOrganizerItem = new AssistNiceButton(x + _buttonWidth, _organizerSetCont.Y, (l[2].Width - 8) + _buttonWidth, _buttonHeight, ButtonAction.Activate, "Remove", (int)ButtonType.RemoveItemFromOrganizer, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.RemoveItemFromOrganizer, IsEnabled = false }, page);
                         _removeOrganizerItem.TextLabel.Hue = ScriptTextBox.RED_HUE;
                         x += l[2].Width - 1;
-                        l = Line.CreateRectangleArea(this, x, l[0].Y, _buttonWidth * 2 + (buttondiffx >> 1), l[0].Height, page, Color.Gray.PackedValue, 1, "Hue", ScriptTextBox.GRAY_HUE, FONT);
+                        l = CreateRectangleArea(this, x, l[0].Y, _buttonWidth * 2 + (buttondiffx >> 1), l[0].Height, page, Color.Gray.PackedValue, 1, "Hue", ScriptTextBox.GRAY_HUE, FONT);
                         _organizerItemsWidth[2] = l[2].Width - 2;
                         x += l[2].Width - 1;
-                        l = Line.CreateRectangleArea(this, x, l[0].Y, _buttonWidth * 2 + (buttondiffx >> 1), l[0].Height, page, Color.Gray.PackedValue, 1, "Amount", ScriptTextBox.GRAY_HUE, FONT);
+                        l = CreateRectangleArea(this, x, l[0].Y, _buttonWidth * 2 + (buttondiffx >> 1), l[0].Height, page, Color.Gray.PackedValue, 1, "Amount", ScriptTextBox.GRAY_HUE, FONT);
                         _organizerItemsWidth[3] = l[2].Width - 2;
-                        Add(_insertOrganizerItem = new NiceButton((x + 4) - _buttonWidth, _organizerSetCont.Y, (l[2].Width - 8) + _buttonWidth, _buttonHeight, ButtonAction.Activate, "Insert", (int)ButtonType.InsertItemIntoOrganizer, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.InsertItemIntoOrganizer, IsEnabled = false }, page);
+                        Add(_insertOrganizerItem = new AssistNiceButton((x + 4) - _buttonWidth, _organizerSetCont.Y, (l[2].Width - 8) + _buttonWidth, _buttonHeight, ButtonAction.Activate, "Insert", (int)ButtonType.InsertItemIntoOrganizer, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.InsertItemIntoOrganizer, IsEnabled = false }, page);
                         _insertOrganizerItem.TextLabel.Hue = ScriptTextBox.RED_HUE;
                         x += l[2].Width - 1;
-                        l = Line.CreateRectangleArea(this, x, l[0].Y, 16, l[0].Height, page, Color.Gray.PackedValue, 1, "", ScriptTextBox.GRAY_HUE, FONT);
-                        Add(_organizerItems = new AssistScrollArea(tmpx, y + (buttondiffy >> 1), (_organizerItemsWidth.Sum() + (2 * _organizerItemsWidth.Length) + 12), l[0].Height - ((buttondiffy >> 2) * 3), true), page);
+                        l = CreateRectangleArea(this, x, l[0].Y, 16, l[0].Height, page, Color.Gray.PackedValue, 1, "", ScriptTextBox.GRAY_HUE, FONT);
+                        Add(_organizerItems = new AssistScrollArea(tmpx, y + (buttondiffy >> 1), (_organizerItemsWidth.Sum() + (2 * _organizerItemsWidth.Length) + 12), l[0].Height - ((buttondiffy >> 2) * 3)), page);
                         break;
                     }
-                    #endregion
+#endregion
 
-                    #region SCAVENGER_PAGE
+#region SCAVENGER_PAGE
                     case PageType.Scavenger:
                     {
                         int buttondiffx = _buttonWidth - (_buttonWidth >> 3), buttondiffy = _buttonHeight - (_buttonHeight >> 3);
                         int x = startx - ((buttondiffx >> 2) * 3) + 2, y = starty + _buttonHeight + 6;
                         int tmpy = y;
-                        Add(_enableScavenger = new AssistCheckbox(0x00D2, 0x00D3, "Enable", FONT, ScriptTextBox.GRAY_HUE, true) { X = x, Y = tmpy }, page);
+                        _enableScavenger = new AssistCheckbox(0x00D2, 0x00D3, "Enable", FONT, ScriptTextBox.GRAY_HUE, true) { X = x, Y = tmpy };
                         _enableScavenger.ValueChanged += EnableScavenger_ValueChanged;
+                        Add(_enableScavenger, page);
                         int temp = _buttonHeight + (_buttonHeight >> 1);
                         tmpy += temp;
-                        Add(_insertScavenged = new NiceButton(x, tmpy, _buttonWidth * 4, _buttonHeight, ButtonAction.Activate, "Insert", (int)ButtonType.InsertScavengeItem, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.InsertScavengeItem }, page);
+                        Add(_insertScavenged = new AssistNiceButton(x, tmpy, _buttonWidth * 4, _buttonHeight, ButtonAction.Activate, "Insert", (int)ButtonType.InsertScavengeItem, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.InsertScavengeItem }, page);
                         tmpy += temp;
-                        Add(_removeScavenged = new NiceButton(x, tmpy, _buttonWidth * 4, _buttonHeight, ButtonAction.Activate, "Remove", (int)ButtonType.RemoveScavengeItem, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.RemoveScavengeItem }, page);
+                        Add(_removeScavenged = new AssistNiceButton(x, tmpy, _buttonWidth * 4, _buttonHeight, ButtonAction.Activate, "Remove", (int)ButtonType.RemoveScavengeItem, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.RemoveScavengeItem }, page);
                         tmpy += temp;
-                        Add(_clearScavenged = new NiceButton(x, tmpy, _buttonWidth * 4, _buttonHeight, ButtonAction.Activate, "Clear All", (int)ButtonType.ClearScavengeItems, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.ClearScavengeItems }, page);
+                        Add(_clearScavenged = new AssistNiceButton(x, tmpy, _buttonWidth * 4, _buttonHeight, ButtonAction.Activate, "Clear All", (int)ButtonType.ClearScavengeItems, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.ClearScavengeItems }, page);
                         tmpy += temp;
-                        Add(_setScavengedContainer = new NiceButton(x, tmpy, _buttonWidth * 4, _buttonHeight, ButtonAction.Activate, "Set Container", (int)ButtonType.ScavengeDestinationCont, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.ScavengeDestinationCont }, page);
+                        Add(_setScavengedContainer = new AssistNiceButton(x, tmpy, _buttonWidth * 4, _buttonHeight, ButtonAction.Activate, "Set Container", (int)ButtonType.ScavengeDestinationCont, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.ScavengeDestinationCont }, page);
                         x += _setScavengedContainer.Width + 4;
                         temp = x;
-                        Line[] l = Line.CreateRectangleArea(this, x, y, WIDTH - (x + (_buttonWidth * 7)), HEIGHT - (_buttonHeight * 3), page, Color.Gray.PackedValue, 1, "Item", ScriptTextBox.GRAY_HUE, FONT);
+                        Line[] l = CreateRectangleArea(this, x, y, WIDTH - (x + (_buttonWidth * 7)), HEIGHT - (_buttonHeight * 4), page, Color.Gray.PackedValue, 1, "Item", ScriptTextBox.GRAY_HUE, FONT);
                         x += l[2].Width - 1;
                         _scavengerItemsWidth = new int[3];
                         _scavengerItemsWidth[0] = l[2].Width - 4;
-                        l = Line.CreateRectangleArea(this, x, y, _buttonWidth * 3, l[0].Height, page, Color.Gray.PackedValue, 1, "Graphic", ScriptTextBox.GRAY_HUE, FONT);
+                        l = CreateRectangleArea(this, x, y, _buttonWidth * 3, l[0].Height, page, Color.Gray.PackedValue, 1, "Graphic", ScriptTextBox.GRAY_HUE, FONT);
                         x += l[2].Width - 1;
                         _scavengerItemsWidth[1] = l[2].Width - 2;
-                        l = Line.CreateRectangleArea(this, x, y, _buttonWidth * 3, l[0].Height, page, Color.Gray.PackedValue, 1, "Hue", ScriptTextBox.GRAY_HUE, FONT);
+                        l = CreateRectangleArea(this, x, y, _buttonWidth * 3, l[0].Height, page, Color.Gray.PackedValue, 1, "Hue", ScriptTextBox.GRAY_HUE, FONT);
                         _scavengerItemsWidth[2] = l[2].Width - 2;
                         x += l[2].Width - 1;
-                        l = Line.CreateRectangleArea(this, x, y, 16, l[0].Height, page, Color.Gray.PackedValue, 1, "", ScriptTextBox.GRAY_HUE, FONT);
-                        Add(_scavengerItems = new AssistScrollArea(temp, y + (buttondiffy >> 1), (_scavengerItemsWidth.Sum() + (2 * _scavengerItemsWidth.Length) + 12), l[0].Height - ((buttondiffy >> 2) * 3), true), page);
+                        l = CreateRectangleArea(this, x, y, 16, l[0].Height, page, Color.Gray.PackedValue, 1, "", ScriptTextBox.GRAY_HUE, FONT);
+                        Add(_scavengerItems = new AssistScrollArea(temp, y + (buttondiffy >> 1), (_scavengerItemsWidth.Sum() + (2 * _scavengerItemsWidth.Length) + 12), l[0].Height - ((buttondiffy >> 2) * 3)), page);
+
+                        _stackAtFeet = new AssistCheckbox(0x00D2, 0x00D3, "Stack resources at your feet (when not scavenged)", FONT, ScriptTextBox.GRAY_HUE, true) { X = temp - _setScavengedContainer.Width - 4, Y = l[0].Y + l[0].Height + (buttondiffy >> 1) };
+                        _stackAtFeet.ValueChanged += StackScavenger_ValueChanged;
+                        Add(_stackAtFeet, page);
                         break;
                     }
-                    #endregion
+#endregion
 
-                    #region VENDORS_PAGE
+#region VENDORS_PAGE
                     case PageType.Vendors:
                     {
                         int buttondiffx = _buttonWidth - (_buttonWidth >> 3), buttondiffy = _buttonHeight - (_buttonHeight >> 3);
                         int x = startx - ((buttondiffx >> 2) * 3), y = starty + _buttonHeight;
-                        Add(_BuySellCombo = new Combobox(x, y, _buttonWidth * 2 + (_buttonWidth >> 1), new[] { "Buy", "Sell" }, 0, HEIGHT >> 2), page);
+                        Add(_BuySellCombo = new AssistCombobox(x, y, _buttonWidth * 2 + (_buttonWidth >> 1), new[] { "Buy", "Sell" }, 0, HEIGHT >> 2), page);
                         _BuySellCombo.OnOptionSelected += BuySellCombo_OnOptionSelected;
                         Add(_enableBuySell = new AssistCheckbox(0x00D2, 0x00D3, "Enabled", FONT, ScriptTextBox.GRAY_HUE, true) { X = _BuySellCombo.X + _BuySellCombo.Width + (_buttonWidth >> 3), Y = y + 2 }, page);
                         _enableBuySell.ValueChanged += EnableBuySell_ValueChanged;
                         Add(_disableBuySellLabel = new Label("DISABLED!", true, ScriptTextBox.RED_HUE) { X = _enableBuySell.X, Y = _enableBuySell.Y, IsVisible = false }, page);
                         y += _BuySellCombo.Height + (_buttonHeight >> 2);
-                        Line[] l = Line.CreateRectangleArea(this, x, y, _buttonWidth * 5 + (_buttonWidth >> 1), HEIGHT - (_buttonHeight * 5), page, Color.Gray.PackedValue, 1, "Lists", ScriptTextBox.GRAY_HUE, FONT);
+                        Line[] l = CreateRectangleArea(this, x, y, _buttonWidth * 5 + (_buttonWidth >> 1), HEIGHT - (_buttonHeight * 5), page, Color.Gray.PackedValue, 1, "Lists", ScriptTextBox.GRAY_HUE, FONT);
                         y += (buttondiffy >> 1);
                         x += 2;
-                        Add(_vendorsListArea = new AssistScrollArea(x, y, l[2].Width - 6, l[0].Height - ((buttondiffy >> 2) * 3), true), page);
+                        Add(_vendorsListArea = new AssistScrollArea(x, y, l[2].Width - 6, l[0].Height - ((buttondiffy >> 2) * 3)), page);
                         x -= 2;
                         y += l[0].Height;
-                        Add(_removeBuySellList = new NiceButton(x + 4, y - 4, (l[2].Width >> 2) + (_buttonWidth >> 1), _buttonHeight, ButtonAction.Activate, "Remove", (int)ButtonType.RemoveBuySellList, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.RemoveBuySellList }, page);
+                        Add(_removeBuySellList = new AssistNiceButton(x + 4, y - 4, (l[2].Width >> 2) + (_buttonWidth >> 1), _buttonHeight, ButtonAction.Activate, "Remove", (int)ButtonType.RemoveBuySellList, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.RemoveBuySellList }, page);
                         _removeBuySellList.TextLabel.Hue = ScriptTextBox.RED_HUE;
                         x = l[2].X + l[2].Width - ((l[2].Width >> 2) + (_buttonWidth >> 1));
-                        Add(_newBuySellList = new NiceButton(x - 4, y - 4, (l[2].Width >> 2) + (_buttonWidth >> 1), _buttonHeight, ButtonAction.Activate, "New", (int)ButtonType.NewBuySellList, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.NewBuySellList }, page);
+                        Add(_newBuySellList = new AssistNiceButton(x - 4, y - 4, (l[2].Width >> 2) + (_buttonWidth >> 1), _buttonHeight, ButtonAction.Activate, "New", (int)ButtonType.NewBuySellList, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.NewBuySellList }, page);
                         x = l[2].X + l[2].Width + (_buttonWidth >> 2);
                         y = starty + _buttonHeight + (_buttonHeight >> 2);
-                        l = Line.CreateRectangleArea(this, x, y, WIDTH - (x + (_buttonWidth * 10) + (_buttonWidth >> 1)), HEIGHT - (_buttonHeight * 4), page, Color.Gray.PackedValue, 1, "Graphic", ScriptTextBox.GRAY_HUE, FONT);
+                        l = CreateRectangleArea(this, x, y, WIDTH - (x + (_buttonWidth * 10) + (_buttonWidth >> 1)), HEIGHT - (_buttonHeight * 4), page, Color.Gray.PackedValue, 1, "Graphic", ScriptTextBox.GRAY_HUE, FONT);
                         _BuySellItemsWidth = new int[3];
                         _BuySellItemsWidth[0] = l[2].Width - 4;
                         int tmpx = x;
@@ -2244,21 +2408,21 @@ namespace ClassicUO.Game.UI.Gumps
                         _sellMaxAmount.ValueChanged += SellMaxAmount_ValueChanged;
                         _buyComplete.Hue = ScriptTextBox.RED_HUE;
                         x += l[2].Width - 1;
-                        l = Line.CreateRectangleArea(this, x, l[0].Y, _buttonWidth * 3 + (_buttonWidth >> 1), l[0].Height, page, Color.Gray.PackedValue, 1, "Amount", ScriptTextBox.GRAY_HUE, FONT);
+                        l = CreateRectangleArea(this, x, l[0].Y, _buttonWidth * 3 + (_buttonWidth >> 1), l[0].Height, page, Color.Gray.PackedValue, 1, "Amount", ScriptTextBox.GRAY_HUE, FONT);
                         _BuySellItemsWidth[1] = l[2].Width - 2;
-                        Add(_removeBuySellItem = new NiceButton(x + _buttonWidth * 3 + (_buttonWidth >> 2), _buyComplete.Y, _buttonWidth * 3, _buttonHeight, ButtonAction.Activate, "Remove", (int)ButtonType.RemoveBuySellItem, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.RemoveBuySellItem, IsEnabled = false }, page);
+                        Add(_removeBuySellItem = new AssistNiceButton(x + _buttonWidth * 3 + (_buttonWidth >> 2), _buyComplete.Y, _buttonWidth * 3, _buttonHeight, ButtonAction.Activate, "Remove", (int)ButtonType.RemoveBuySellItem, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.RemoveBuySellItem, IsEnabled = false }, page);
                         _removeBuySellItem.TextLabel.Hue = ScriptTextBox.RED_HUE;
                         x += l[2].Width - 1;
-                        l = Line.CreateRectangleArea(this, x, l[0].Y, _buttonWidth * 6 + (_buttonWidth >> 2), l[0].Height, page, Color.Gray.PackedValue, 1, "Item", ScriptTextBox.GRAY_HUE, FONT);
+                        l = CreateRectangleArea(this, x, l[0].Y, _buttonWidth * 6 + (_buttonWidth >> 2), l[0].Height, page, Color.Gray.PackedValue, 1, "Item", ScriptTextBox.GRAY_HUE, FONT);
                         _BuySellItemsWidth[2] = l[2].Width - 2;
-                        Add(_insertBuySellItem = new NiceButton(x + _buttonWidth * 3 + (_buttonWidth >> 1), _buyComplete.Y, _buttonWidth * 3, _buttonHeight, ButtonAction.Activate, "Insert", (int)ButtonType.InsertBuySellItem, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.InsertBuySellItem, IsEnabled = false }, page);
+                        Add(_insertBuySellItem = new AssistNiceButton(x + _buttonWidth * 3 + (_buttonWidth >> 1), _buyComplete.Y, _buttonWidth * 3, _buttonHeight, ButtonAction.Activate, "Insert", (int)ButtonType.InsertBuySellItem, TEXT_ALIGN_TYPE.TS_CENTER) { IsSelectable = false, ButtonParameter = (int)ButtonType.InsertBuySellItem, IsEnabled = false }, page);
                         _insertBuySellItem.TextLabel.Hue = ScriptTextBox.RED_HUE;
                         x += l[2].Width - 1;
-                        l = Line.CreateRectangleArea(this, x, l[0].Y, 16, l[0].Height, page, Color.Gray.PackedValue, 1, "", ScriptTextBox.GRAY_HUE, FONT);
-                        Add(_vendorsItemsArea = new AssistScrollArea(tmpx, y + (buttondiffy >> 1), (_BuySellItemsWidth.Sum() + (2 * _BuySellItemsWidth.Length) + 12), l[0].Height - ((buttondiffy >> 2) * 3), true), page);
+                        l = CreateRectangleArea(this, x, l[0].Y, 16, l[0].Height, page, Color.Gray.PackedValue, 1, "", ScriptTextBox.GRAY_HUE, FONT);
+                        Add(_vendorsItemsArea = new AssistScrollArea(tmpx, y + (buttondiffy >> 1), (_BuySellItemsWidth.Sum() + (2 * _BuySellItemsWidth.Length) + 12), l[0].Height - ((buttondiffy >> 2) * 3)), page);
                         break;
                     }
-                    #endregion
+#endregion
                 }
             }
         }
@@ -2291,11 +2455,12 @@ namespace ClassicUO.Game.UI.Gumps
             }
         }
 
-        internal void UpdateVendorsListGump(Vendors.IBuySell selected = null)
+        internal void UpdateVendorsListGump(Vendors.IBuySell selected = null, bool noclear = false)
         {
-            _vendorsListArea.Clear();
+            if(!noclear)
+                _vendorsListArea.Clear();
             bool found = false;
-            OrderedDictionary<Vendors.IBuySell, List<BuySellEntry>> buysell = null;
+            Utility.Collections.OrderedDictionary<Vendors.IBuySell, List<BuySellEntry>> buysell = null;
             if(_BuySellCombo.SelectedIndex == 1)
             {
                 if (!DisableBuySell(Engine.Instance.AllowBit(FeatureBit.SellAgent)))
@@ -2330,13 +2495,40 @@ namespace ClassicUO.Game.UI.Gumps
             }
             if (buysell != null)
             {
-                foreach (var key in buysell.Keys)
+                if (!noclear)
                 {
-                    var b = CreateSelection(_vendorsListArea, key.Name, 2, (int)ButtonType.BuySellList, (int)ButtonType.BuySellList, key);
-                    if (selected != null && key == selected)
+                    foreach (var key in buysell.Keys)
                     {
-                        b.IsSelected = found = true;
-                        key.Selected = key;
+                        var b = CreateSingleTextSelection(_vendorsListArea, 2, (int)ButtonType.BuySellList, (int)ButtonType.BuySellList, key, TEXT_ALIGN_TYPE.TS_CENTER, _vendorsListArea.Width, key.Name, ScriptTextBox.GRAY_HUE, 30);
+                        b.TextBoxes[0].Tag = key;
+                        b.TextBoxes[0].TextChanged += SABSODVTextBox_TextChanged;
+                        b.TextBoxes[0].FocusLost += BuySellList_FocusLost; ;
+                        if (selected != null && key == selected)
+                        {
+                            b.IsSelected = found = true;
+                            key.Selected = key;
+                            b.TextBoxes[0].Priority = ClickPriority.High;
+                        }
+                    }
+                }
+                else
+                {
+                    List<NiceButtonStbText> list = new List<NiceButtonStbText>(_vendorsListArea.FindControls<NiceButtonStbText>());//.SelectMany(s => s.Children.OfType<NiceButtonStbText>()));
+                    foreach (NiceButtonStbText b in list)
+                    {
+                        if (b.TextBoxes[0].Tag is Vendors.IBuySell key)
+                        {
+                            if (selected != null && key == selected)
+                            {
+                                b.IsSelected = found = true;
+                                key.Selected = key;
+                                b.TextBoxes[0].Priority = ClickPriority.High;
+                            }
+                            else
+                            {
+                                b.IsSelected = false;
+                            }
+                        }
                     }
                 }
             }
@@ -2355,6 +2547,83 @@ namespace ClassicUO.Game.UI.Gumps
                 _buyComplete.IsEnabled = _buyComplete.IsVisible;
                 _enableBuySell.IsEnabled = _removeBuySellList.IsEnabled = true;
                 _sellLimitLabel.Hue = _buyComplete.Hue = _removeBuySellList.TextLabel.Hue = ScriptTextBox.GRAY_HUE;
+            }
+        }
+
+        private void BuySellList_FocusLost(object sender, EventArgs e)
+        {
+            if (_changedPlaceHolder != null && sender == _changedPlaceHolder && _changedPlaceHolder.Tag is Vendors.IBuySell ibs)
+            {
+                if (string.IsNullOrEmpty(_changedPlaceHolder.Text))
+                {
+                    _changedPlaceHolder.Text = ibs.Name;
+                }
+                else
+                {
+                    string oldname = ibs.Name;
+                    ibs.Name = _changedPlaceHolder.Text;
+                    //_changedPlaceHolder.Text = ibs.Name;
+                    AddVendorsListToHotkeys();
+                    OnAgentNameChanged(Vendors.Prepend, oldname, ibs.Name);
+                }
+            }
+            KeyboardFocusFix(sender);
+            _changedPlaceHolder = null;
+        }
+
+        private void DressList_FocusLost(object sender, EventArgs e)
+        {
+            if (_changedPlaceHolder != null && sender == _changedPlaceHolder && _changedPlaceHolder.Tag is DressList dl)
+            {
+                if (string.IsNullOrEmpty(_changedPlaceHolder.Text))
+                {
+                    _changedPlaceHolder.Text = dl.Name;
+                }
+                else
+                {
+                    string oldname = dl.Name;
+                    dl.Name = _changedPlaceHolder.Text;
+                    //_changedPlaceHolder.Text = dl.Name;
+                    AddDressListToHotkeys();
+                    OnAgentNameChanged(DressList.Prepend, oldname, dl.Name);
+                }
+            }
+            KeyboardFocusFix(sender);
+            _changedPlaceHolder = null;
+        }
+
+        private void OrganizerList_FocusLost(object sender, EventArgs e)
+        {
+            if (_changedPlaceHolder != null && sender == _changedPlaceHolder && _changedPlaceHolder.Tag is Organizer or)
+            {
+                if (string.IsNullOrEmpty(_changedPlaceHolder.Text))
+                {
+                    _changedPlaceHolder.Text = or.Name;
+                }
+                else
+                {
+                    string oldname = or.Name.ToLower(XmlFileParser.Culture);
+                    or.Name = _changedPlaceHolder.Text;
+                    //_changedPlaceHolder.Text = or.Name;
+                    AddOrganizerListToHotkeys();
+                    OnAgentNameChanged(Organizer.Prepend, oldname, or.Name.ToLower(XmlFileParser.Culture));
+                }
+            }
+            KeyboardFocusFix(sender);
+            _changedPlaceHolder = null;
+        }
+
+        private void OnAgentNameChanged(string[] prepend, string oldname, string newname)
+        {
+            foreach (string s in prepend)
+            {
+                (uint vk, HotKeyOpts opts, bool key) vo = HotKeys.RemoveHotKey($"{s}{oldname}", true);
+                if (vo.vk > 0 && vo.opts != null)
+                {
+                    HotKeys.AddHotkey(vo.vk, new HotKeyOpts(vo.opts.Options, $"{s}{newname}", vo.opts.Param), null, ref newname, this, true);
+                    if (vo.key)
+                        UOSObjects.Gump.SelectedHK = $"{s}{newname}";
+                }
             }
         }
 
@@ -2391,7 +2660,7 @@ namespace ClassicUO.Game.UI.Gumps
                         b.TextBoxes[0].NumbersOnly = true;
                         b.TextBoxes[1].IsEditable = false;
                         b.TextBoxes[0].Tag = b.TextBoxes[1].Tag = bsl;
-                        b.TextBoxes[0].TextChanged += AgentsTextBox_TextChanged;
+                        b.TextBoxes[0].TextChanged += SABSODVTextBox_TextChanged;
                         b.TextBoxes[0].FocusLost += VendorsItemAmount_FocusLost;
                         if (itemselected < ushort.MaxValue && i == itemselected)
                         {
@@ -2431,6 +2700,7 @@ namespace ClassicUO.Game.UI.Gumps
                     _changedPlaceHolder.Text = (bse.Amount = Math.Min(amount, (ushort)999)).ToString();
                 }
             }
+            KeyboardFocusFix(sender);
             _changedPlaceHolder = null;
         }
 
@@ -2457,7 +2727,7 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 names.Add(ibs.Name);
                 //"agents.vendors.buy.buy-2"
-                HotKeys.AddHotKeyFunc($"agents.vendors.buy.{ibs.Name.ToLower(XmlFileParser.Culture)}", (input) =>
+                HotKeys.AddHotKeyFunc($"{Vendors.Prepend[0]}{ibs.Name.ToLower(XmlFileParser.Culture)}", (input) =>
                 {
                     UpdateVendorsListGump(ibs);
                     return true;
@@ -2468,7 +2738,7 @@ namespace ClassicUO.Game.UI.Gumps
             foreach (Vendors.IBuySell ibs in Vendors.Sell.SellList.Keys)
             {
                 names.Add(ibs.Name);
-                HotKeys.AddHotKeyFunc($"agents.vendors.sell.{ibs.Name.ToLower(XmlFileParser.Culture)}", (input) =>
+                HotKeys.AddHotKeyFunc($"{Vendors.Prepend[1]}{ibs.Name.ToLower(XmlFileParser.Culture)}", (input) =>
                 {
                     UpdateVendorsListGump(ibs);
                     return true;
@@ -2488,6 +2758,11 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 UOSObjects.Player.SendMessage(MsgLevel.Friend, "Scavenger Enabled");
             }
+        }
+
+        private void StackScavenger_ValueChanged(object sender, EventArgs e)
+        {
+            Scavenger.OnStackChanged();
         }
 
         private void OrganizerStack_ValueChanged(object sender, EventArgs e)
@@ -2517,10 +2792,14 @@ namespace ClassicUO.Game.UI.Gumps
                 Organizer or = Organizer.Organizers[i];
                 if (or != null)
                 {
-                    var b = CreateSelection(_organizerListArea, $"Organizer-{i + 1}", 2, (int)ButtonType.OrganizerList, (int)ButtonType.OrganizerList, i);
+                    var b = CreateSingleTextSelection(_organizerListArea, 2, (int)ButtonType.OrganizerList, (int)ButtonType.OrganizerList, i, TEXT_ALIGN_TYPE.TS_CENTER, _organizerListArea.Width, or.Name, ScriptTextBox.GRAY_HUE, 30);
+                    b.TextBoxes[0].Tag = or;
+                    b.TextBoxes[0].TextChanged += SABSODVTextBox_TextChanged;
+                    b.TextBoxes[0].FocusLost += OrganizerList_FocusLost;
                     if (selected < ushort.MaxValue && i == selected)
                     {
                         b.IsSelected = found = true;
+                        b.TextBoxes[0].Priority = ClickPriority.High;
                         UpdateOrganizerCheckbuttons(or);
                     }
                 }
@@ -2555,7 +2834,7 @@ namespace ClassicUO.Game.UI.Gumps
                 if (ol != null)
                 {
                     names.Add(ol.Name);
-                    HotKeys.AddHotKeyFunc($"agents.organizer.{ol.Name.ToLower(XmlFileParser.Culture)}", (input) => 
+                    HotKeys.AddHotKeyFunc($"{Organizer.Prepend[0]}{ol.Name.ToLower(XmlFileParser.Culture)}", (input) => 
                     { 
                         if(ol.Items.Count > 0) 
                             ol.Organize(); 
@@ -2564,6 +2843,18 @@ namespace ClassicUO.Game.UI.Gumps
                 }
             }
             _agentsOrganizerHK.SetItemsValue(names.ToArray());
+        }
+
+        private void KeyboardFocusFix(object sender)
+        {
+            if (sender != null && UIManager.KeyboardFocusControl == sender)
+            {
+                UIManager.KeyboardFocusControl = null;
+                if (sender is AssistStbTextBox stb)
+                {
+                    stb.Priority = ClickPriority.Default;
+                }
+            }
         }
 
         internal void UpdateOrganizerItemsGump(ushort selected = ushort.MaxValue)
@@ -2589,9 +2880,9 @@ namespace ClassicUO.Game.UI.Gumps
                             //b.TextBoxes[0].IsEditable = false;
                             b.TextBoxes[1].NumbersOnly = b.TextBoxes[2].NumbersOnly = true;
                             b.TextBoxes[0].Tag = b.TextBoxes[1].Tag = b.TextBoxes[2].Tag = oi;
-                            b.TextBoxes[0].TextChanged += AgentsTextBox_TextChanged;
-                            b.TextBoxes[1].TextChanged += AgentsTextBox_TextChanged;
-                            b.TextBoxes[2].TextChanged += AgentsTextBox_TextChanged;
+                            b.TextBoxes[0].TextChanged += SABSODVTextBox_TextChanged;
+                            b.TextBoxes[1].TextChanged += SABSODVTextBox_TextChanged;
+                            b.TextBoxes[2].TextChanged += SABSODVTextBox_TextChanged;
                             b.TextBoxes[0].FocusLost += OrganizerName_FocusLost;
                             b.TextBoxes[1].FocusLost += OrganizerHue_FocusLost;
                             b.TextBoxes[2].FocusLost += OrganizerAmount_FocusLost;
@@ -2662,13 +2953,13 @@ namespace ClassicUO.Game.UI.Gumps
             }
         }
 
-        private void AgentsTextBox_TextChanged(object sender, EventArgs e)
+        private void SABSODVTextBox_TextChanged(object sender, EventArgs e)
         {
-            if (sender is StbTextBox stb)
+            if (sender is AssistStbTextBox stb)
                 _changedPlaceHolder = stb;
         }
 
-        private StbTextBox _changedPlaceHolder;
+        private AssistStbTextBox _changedPlaceHolder;
 
         private void OrganizerName_FocusLost(object sender, EventArgs e)
         {
@@ -2683,6 +2974,7 @@ namespace ClassicUO.Game.UI.Gumps
                     oi.Name = _changedPlaceHolder.Text;
                 }
             }
+            KeyboardFocusFix(sender);
             _changedPlaceHolder = null;
         }
 
@@ -2690,7 +2982,7 @@ namespace ClassicUO.Game.UI.Gumps
         {
             if(_changedPlaceHolder != null && sender == _changedPlaceHolder && _changedPlaceHolder.Tag is ItemDisplay oi)
             {
-                if(string.IsNullOrEmpty(_changedPlaceHolder.Text) || !short.TryParse(_changedPlaceHolder.Text, out short hue) || hue < 0)
+                if (string.IsNullOrEmpty(_changedPlaceHolder.Text) || !short.TryParse(_changedPlaceHolder.Text, out short hue) || hue < 0)
                 {
                     _changedPlaceHolder.Text = "All";
                     oi.Hue = -1;
@@ -2700,6 +2992,7 @@ namespace ClassicUO.Game.UI.Gumps
                     _changedPlaceHolder.Text = (oi.Hue = hue).ToString();
                 }
             }
+            KeyboardFocusFix(sender);
             _changedPlaceHolder = null;
         }
 
@@ -2717,6 +3010,7 @@ namespace ClassicUO.Game.UI.Gumps
                     _changedPlaceHolder.Text = (oi.Amount = amount).ToString();
                 }
             }
+            KeyboardFocusFix(sender);
             _changedPlaceHolder = null;
         }
 
@@ -2737,8 +3031,8 @@ namespace ClassicUO.Game.UI.Gumps
                         b.Checkbox.Tag = b.TextBoxes[0].Tag = b.TextBoxes[1].Tag = id;
                         b.TextBoxes[0].FocusLost += ScavengerName_FocusLost;
                         b.TextBoxes[1].NumbersOnly = true;
-                        b.TextBoxes[0].TextChanged += AgentsTextBox_TextChanged;
-                        b.TextBoxes[1].TextChanged += AgentsTextBox_TextChanged;
+                        b.TextBoxes[0].TextChanged += SABSODVTextBox_TextChanged;
+                        b.TextBoxes[1].TextChanged += SABSODVTextBox_TextChanged;
                         b.TextBoxes[1].FocusLost += ScavengerHue_FocusLost;
                         b.Checkbox.ValueChanged += ScavengedCheckbox_ValueChanged;
                         if (selected != null && selected.Equals(id))
@@ -2781,6 +3075,7 @@ namespace ClassicUO.Game.UI.Gumps
                     _changedPlaceHolder.Text = (id.Hue = hue).ToString();
                 }
             }
+            KeyboardFocusFix(sender);
             _changedPlaceHolder = null;
         }
 
@@ -2797,6 +3092,7 @@ namespace ClassicUO.Game.UI.Gumps
                     id.Name = _changedPlaceHolder.Text;
                 }
             }
+            KeyboardFocusFix(sender);
             _changedPlaceHolder = null;
         }
 
@@ -2822,15 +3118,19 @@ namespace ClassicUO.Game.UI.Gumps
         internal void UpdateDressListGump(ushort selected = ushort.MaxValue)
         {
             _dressListsArea.Clear();
-            for(ushort i = 0; i < DressList.DressLists.Count; ++i)
+            for (ushort i = 0; i < DressList.DressLists.Count; ++i)
             {
                 DressList dl = DressList.DressLists[i];
                 if (dl != null)
                 {
-                    var b = CreateSelection(_dressListsArea, $"Dress-{i + 1}", 2, (int)ButtonType.DressList, (int)ButtonType.DressList, i);
+                    var b = CreateSingleTextSelection(_dressListsArea, 2, (int)ButtonType.DressList, (int)ButtonType.DressList, i, TEXT_ALIGN_TYPE.TS_CENTER, _dressListsArea.Width, dl.Name, ScriptTextBox.GRAY_HUE, 30);
+                    b.TextBoxes[0].Tag = dl;
+                    b.TextBoxes[0].TextChanged += SABSODVTextBox_TextChanged;
+                    b.TextBoxes[0].FocusLost += DressList_FocusLost;
                     if (selected < ushort.MaxValue && i == selected)
                     {
                         b.IsSelected = true;
+                        b.TextBoxes[0].Priority = ClickPriority.High;
                     }
                 }
             }
@@ -2844,8 +3144,8 @@ namespace ClassicUO.Game.UI.Gumps
                 if (dl != null)
                 {
                     names.Add(dl.Name);
-                    HotKeys.AddHotKeyFunc($"agents.dress.{dl.Name.ToLower(XmlFileParser.Culture)}", (input) => { dl.Dress(); return true; });
-                    HotKeys.AddHotKeyFunc($"agents.undress.{dl.Name.ToLower(XmlFileParser.Culture)}", (input) => { dl.Undress(); return true; });
+                    HotKeys.AddHotKeyFunc($"{DressList.Prepend[0]}{dl.Name.ToLower(XmlFileParser.Culture)}", (input) => { dl.Dress(); return true; });
+                    HotKeys.AddHotKeyFunc($"{DressList.Prepend[1]}{dl.Name.ToLower(XmlFileParser.Culture)}", (input) => { dl.Undress(); return true; });
                 }
             }
             _agentsDressHK.SetItemsValue(names.ToArray());
@@ -2897,7 +3197,7 @@ namespace ClassicUO.Game.UI.Gumps
                 _removeDressList.TextLabel.Hue = _setUndressCont.TextLabel.Hue = _newItemDress.TextLabel.Hue = _importDress.TextLabel.Hue = ScriptTextBox.GRAY_HUE;
             }
         }
-        #endregion
+#endregion
 
         public override void OnButtonClick(int buttonID)
         {
@@ -2906,7 +3206,7 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 case ButtonType.SetAutolootContainer:
                 {
-                    void OnTargetSelected(bool loc, uint serial, Point3D p, ushort itemid)
+                    void onTargetSelected(bool loc, uint serial, Point3D p, ushort itemid)
                     {
                         if (UOSObjects.Player.Backpack == null)
                             return;
@@ -2915,28 +3215,37 @@ namespace ClassicUO.Game.UI.Gumps
                             UOItem i = UOSObjects.FindItem(serial);
                             if(i != null)
                             {
-                                if(i.Serial == UOSObjects.Player.Backpack.Serial)
+                                if (i.Serial == UOSObjects.Player.Backpack.Serial)
+                                {
                                     AutoLootContainer = 0;
+                                }
                                 else if (i.IsContainer && UOSObjects.Player.Backpack.ContainsItemBySerial(i.Serial, true))
+                                {
                                     AutoLootContainer = i.Serial;
+                                }
                                 else
+                                {
                                     UOSObjects.Player.OverheadMessage(PlayerData.GetColorCode(MsgLevel.Error), "Autoloot: Not a container or not inside player backpack");
+                                    return;
+                                }
+                                XmlFileParser.SaveData();
                             }
                         }
                         else if (UOSObjects.Player.Serial == serial)
                         {
                             AutoLootContainer = 0;
+                            XmlFileParser.SaveData();
                         }
                         else
                             UOSObjects.Player.OverheadMessage(PlayerData.GetColorCode(MsgLevel.Error), "Autoloot: Invalid Container Target");
                     }
                     UOSObjects.Player.OverheadMessage(PlayerData.GetColorCode(MsgLevel.Friend), "Autoloot Container: Select AutoLoot Container");
-                    Targeting.OneTimeTarget(false, OnTargetSelected);
+                    Targeting.OneTimeTarget(false, onTargetSelected);
                     break;
                 }
                 case ButtonType.AutolootList:
                 {
-                    NiceButton but = NiceButton.GetSelected(_autolootArea, (int)ButtonType.AutolootList);
+                    AssistNiceButton but = AssistNiceButton.GetSelected(_autolootArea, (int)ButtonType.AutolootList);
                     if (but != null)
                     {
                         _lootSelected = (ushort)but.Tag;
@@ -2955,7 +3264,7 @@ namespace ClassicUO.Game.UI.Gumps
                 }
                 case ButtonType.InsertAutolootItem:
                 {
-                    void OnTargetSelected(bool loc, uint serial, Point3D p, ushort itemid)
+                    void onTargetSelected(bool loc, uint serial, Point3D p, ushort itemid)
                     {
                         if (SerialHelper.IsItem(serial))
                         {
@@ -2969,23 +3278,24 @@ namespace ClassicUO.Game.UI.Gumps
                                     return;
                                 ItemsToLoot[itemid] = (0, $"{s}: 0x{itemid:X}");
                                 UpdateAutolootList();
+                                XmlFileParser.SaveData();
                             }
                         }
                         else
                             UOSObjects.Player.OverheadMessage(PlayerData.GetColorCode(MsgLevel.Error), "Autoloot: Invalid target");
                     }
                     UOSObjects.Player.OverheadMessage(PlayerData.GetColorCode(MsgLevel.Friend), "Autoloot List: Target item to add");
-                    Targeting.OneTimeTarget(false, OnTargetSelected);
+                    Targeting.OneTimeTarget(false, onTargetSelected);
                     break;
                 }
                 case ButtonType.RemoveAutolootItem:
                 {
                     ItemsToLoot.Remove(_lootSelected);
                     _lootSelected = 0;
-                    List<NiceButton> list = new List<NiceButton>(_autolootArea.FindControls<ScrollAreaItem>().SelectMany(s => s.Children.OfType<NiceButton>()));
+                    List<AssistNiceButton> list = new List<AssistNiceButton>(_autolootArea.FindControls<AssistNiceButton>());//.SelectMany(s => s.Children.OfType<AssistNiceButton>()));
                     for (int i = 0; i < list.Count; i++)
                     {
-                        NiceButton but = list[i];
+                        AssistNiceButton but = list[i];
                         if (but != null && but.IsSelected)
                         {
                             if (i > 0)
@@ -2996,11 +3306,12 @@ namespace ClassicUO.Game.UI.Gumps
                         }
                     }
                     UpdateAutolootList(_lootSelected);
+                    XmlFileParser.SaveData();
                     break;
                 }
                 case ButtonType.DressList:
                 {
-                    NiceButton but = NiceButton.GetSelected(_dressListsArea, (int)ButtonType.DressList);
+                    NiceButtonStbText but = NiceButtonStbText.GetSelected(_dressListsArea, (int)ButtonType.DressList);
                     if (but != null)
                     {
                         _dressListSelected = (ushort)but.Tag;
@@ -3010,10 +3321,11 @@ namespace ClassicUO.Game.UI.Gumps
                 }
                 case ButtonType.CreateDressList:
                 {
-                    _dressListSelected = DressList.CreateNewFree();
+                    _dressListSelected = DressList.CreateOne();
                     UpdateDressListGump(_dressListSelected);
                     UpdateDressItemsGump();
                     AddDressListToHotkeys();
+                    XmlFileParser.SaveData();
                     break;
                 }
                 case ButtonType.RemoveDressList:
@@ -3023,14 +3335,14 @@ namespace ClassicUO.Game.UI.Gumps
                         DressList dl = DressList.DressLists[_dressListSelected];
                         if (dl != null)
                         {
-                            HotKeys.RemoveHotKey($"agents.dress.dress-{_dressListSelected + 1}");
-                            HotKeys.RemoveHotKey($"agents.undress.dress-{_dressListSelected + 1}");
+                            HotKeys.RemoveHotKey($"{DressList.Prepend[0]}{dl.Name.ToLower(XmlFileParser.Culture)}", true);
+                            HotKeys.RemoveHotKey($"{DressList.Prepend[1]}{dl.Name.ToLower(XmlFileParser.Culture)}", true);
                             DressList.DressLists[_dressListSelected] = null;
                             _dressListSelected = ushort.MaxValue;
-                            List<NiceButton> list = new List<NiceButton>(_dressListsArea.FindControls<ScrollAreaItem>().SelectMany(s => s.Children.OfType<NiceButton>()));
+                            List<NiceButtonStbText> list = new List<NiceButtonStbText>(_dressListsArea.FindControls<NiceButtonStbText>());//.SelectMany(s => s.Children.OfType<NiceButtonStbText>()));
                             for (int i = 0; i < list.Count; i++)
                             {
-                                NiceButton but = list[i];
+                                NiceButtonStbText but = list[i];
                                 if (but != null && but.IsSelected)
                                 {
                                     if (i > 0)
@@ -3043,18 +3355,26 @@ namespace ClassicUO.Game.UI.Gumps
                             UpdateDressListGump(_dressListSelected);
                             UpdateDressItemsGump();
                             AddDressListToHotkeys();
+                            XmlFileParser.SaveData();
                         }
                     }
                     break;
                 }
                 case ButtonType.DressListItem:
                 {
-                    NiceButton but = NiceButton.GetSelected(_dressItemsArea, (int)ButtonType.DressListItem);
+                    AssistNiceButton but = AssistNiceButton.GetSelected(_dressItemsArea, (int)ButtonType.DressListItem);
                     if (but != null)
                     {
                         _dressItemSelected = (Layer)but.Tag;
                         _removeItemDress.IsEnabled = true;
                         _removeItemDress.TextLabel.Hue = ScriptTextBox.GRAY_HUE;
+                        if(_dressListSelected < DressList.DressLists.Count)
+                        {
+                            if (DressList.DressLists[_dressListSelected].LayerItems.TryGetValue(_dressItemSelected, out var item))
+                            {
+                                TypeDress = item.UsesType;
+                            }
+                        }
                     }
                     else
                     {
@@ -3070,15 +3390,16 @@ namespace ClassicUO.Game.UI.Gumps
                         DressList dl = DressList.DressLists[_dressListSelected];
                         if (dl != null)
                         {
-                            void OnTargetSelected(bool loc, uint serial, Point3D p, ushort itemid)
+                            void onTargetSelected(bool loc, uint serial, Point3D p, ushort itemid)
                             {
                                 if (SerialHelper.IsItem(serial))
                                 {
                                     UOItem item = UOSObjects.FindItem(serial);
-                                    if (item != null && item.Layer > Layer.Invalid && item.Layer <= Layer.LastUserValid && item.Layer != Layer.FacialHair && item.Layer != Layer.Hair && item.Layer != Layer.Backpack)
+                                    if (item != null && item.Layer > Layer.Invalid && item.Layer < Layer.Mount && item.Layer != Layer.Beard && item.Layer != Layer.Hair && item.Layer != Layer.Backpack)
                                     {
-                                        dl.LayerItems[item.Layer] = new DressItem(serial, itemid);
+                                        dl.LayerItems[item.Layer] = new DressItem(serial, itemid, TypeDress);
                                         UpdateDressItemsGump(item.Layer);
+                                        XmlFileParser.SaveData();
                                     }
                                     else
                                         UOSObjects.Player.OverheadMessage(PlayerData.GetColorCode(MsgLevel.Error), "Dress Item: Target is NOT a dressable type");
@@ -3087,7 +3408,7 @@ namespace ClassicUO.Game.UI.Gumps
                                     UOSObjects.Player.OverheadMessage(PlayerData.GetColorCode(MsgLevel.Error), "Dress Item: Invalid target");
                             }
                             UOSObjects.Player.OverheadMessage(PlayerData.GetColorCode(MsgLevel.Friend), "Dress Item: Target item to add");
-                            Targeting.OneTimeTarget(false, OnTargetSelected);
+                            Targeting.OneTimeTarget(false, onTargetSelected);
                         }
                     }
                     break;
@@ -3102,10 +3423,10 @@ namespace ClassicUO.Game.UI.Gumps
                             if (dl.LayerItems.Remove(_dressItemSelected))
                             {
                                 _dressItemSelected = Layer.Invalid;
-                                List<NiceButton> list = new List<NiceButton>(_dressItemsArea.FindControls<ScrollAreaItem>().SelectMany(s => s.Children.OfType<NiceButton>()));
+                                List<AssistNiceButton> list = new List<AssistNiceButton>(_dressItemsArea.FindControls<AssistNiceButton>());//.SelectMany(s => s.Children.OfType<AssistNiceButton>()));
                                 for (int i = 0; i < list.Count; i++)
                                 {
-                                    NiceButton but = list[i];
+                                    AssistNiceButton but = list[i];
                                     if (but != null && but.IsSelected)
                                     {
                                         if (i > 0)
@@ -3116,6 +3437,7 @@ namespace ClassicUO.Game.UI.Gumps
                                     }
                                 }
                                 UpdateDressItemsGump(_dressItemSelected);
+                                XmlFileParser.SaveData();
                             }
                         }
                     }
@@ -3143,12 +3465,25 @@ namespace ClassicUO.Game.UI.Gumps
                     {
                         DressList.DressLists[_dressListSelected]?.ImportCurrentItems();
                         UpdateDressItemsGump();
+                        XmlFileParser.SaveData();
                     }
                     break;
                 }
                 case ButtonType.DressTypeOrSerial:
                 {
                     TypeDress = !TypeDress;
+                    if(_dressListSelected < DressList.DressLists.Count)
+                    {
+                        if (DressList.DressLists[_dressListSelected].LayerItems.TryGetValue(_dressItemSelected, out var item) && AssistNiceButton.GetSelected(_dressItemsArea, (int)ButtonType.DressListItem) != null)
+                        {
+                            if (item.UsesType != TypeDress)
+                            {
+                                item.SetUseType(TypeDress);
+                                UpdateDressItemsGump(_dressItemSelected);
+                                XmlFileParser.SaveData();
+                            }
+                        }
+                    }
                     break;
                 }
                 case ButtonType.ClearSelectedDressList:
@@ -3157,6 +3492,7 @@ namespace ClassicUO.Game.UI.Gumps
                     {
                         DressList.ClearAll(_dressListSelected);
                         UpdateDressItemsGump();
+                        XmlFileParser.SaveData();
                     }
                     break;
                 }
@@ -3167,7 +3503,7 @@ namespace ClassicUO.Game.UI.Gumps
                         DressList dl = DressList.DressLists[_dressListSelected];
                         if (dl != null)
                         {
-                            void OnTargetSelected(bool loc, uint serial, Point3D p, ushort itemid)
+                            void onTargetSelected(bool loc, uint serial, Point3D p, ushort itemid)
                             {
                                 if (SerialHelper.IsItem(serial))
                                 {
@@ -3175,7 +3511,10 @@ namespace ClassicUO.Game.UI.Gumps
                                     if (item != null && item.IsContainer)
                                     {
                                         if (item.RootContainer == UOSObjects.Player)
+                                        {
                                             dl.UndressBag = serial;
+                                            XmlFileParser.SaveData();
+                                        }
                                         else
                                             UOSObjects.Player.OverheadMessage(PlayerData.GetColorCode(MsgLevel.Error), "Undress Container: container must be inside your backpack!");
                                     }
@@ -3186,44 +3525,47 @@ namespace ClassicUO.Game.UI.Gumps
                                     UOSObjects.Player.OverheadMessage(PlayerData.GetColorCode(MsgLevel.Error), "Undress Container: Invalid target");
                             }
                             UOSObjects.Player.OverheadMessage(PlayerData.GetColorCode(MsgLevel.Friend), "Undress Container: Target a container");
-                            Targeting.OneTimeTarget(false, OnTargetSelected);
+                            Targeting.OneTimeTarget(false, onTargetSelected);
                         }
                     }
                     break;
                 }
+                case ButtonType.RenameBuySellList:
+                {
+                    AddVendorsListToHotkeys();
+                    XmlFileParser.SaveData();
+                    break;
+                }
                 case ButtonType.BuySellList:
                 {
-                    NiceButton but = NiceButton.GetSelected(_vendorsListArea, (int)ButtonType.BuySellList);
+                    NiceButtonStbText but = NiceButtonStbText.GetSelected(_vendorsListArea, (int)ButtonType.BuySellList);
                     Vendors.IBuySell selected = null;
                     if (but != null)
                     {
                         selected = (Vendors.IBuySell)but.Tag;
                     }
-                    UpdateVendorsListGump(selected);
+                    UpdateVendorsListGump(selected, true);
                     break;
                 }
                 case ButtonType.RemoveBuySellList:
                 {
                     Vendors.IBuySell selected;
-                    OrderedDictionary<Vendors.IBuySell, List<BuySellEntry>> dict;
-                    string prepend;
+                    Utility.Collections.OrderedDictionary<Vendors.IBuySell, List<BuySellEntry>> dict;
                     if (_BuySellCombo.SelectedIndex == 1)
                     {
                         selected = Vendors.Sell.SellSelected;
                         Vendors.Sell.SellSelected = null;
                         dict = Vendors.Sell.SellList;
-                        prepend = "agents.vendors.sell";
                     }
                     else
                     {
                         selected = Vendors.Buy.BuySelected;
                         Vendors.Buy.BuySelected = null;
                         dict = Vendors.Buy.BuyList;
-                        prepend = "agents.vendors.buy";
                     }
                     if (selected != null && dict != null)
                     {
-                        HotKeys.RemoveHotKey($"{prepend}.{selected.Name.ToLower(XmlFileParser.Culture)}");
+                        HotKeys.RemoveHotKey($"{Vendors.Prepend[_BuySellCombo.SelectedIndex]}{selected.Name.ToLower(XmlFileParser.Culture)}", true);
                         int idx = dict.IndexOf(selected);
                         if (idx >= 0)
                         {
@@ -3235,6 +3577,7 @@ namespace ClassicUO.Game.UI.Gumps
                         }
                         UpdateVendorsListGump(selected.Selected);
                         AddVendorsListToHotkeys();
+                        XmlFileParser.SaveData();
                     }
                     break;
                 }
@@ -3253,6 +3596,7 @@ namespace ClassicUO.Game.UI.Gumps
                     {
                         UpdateVendorsListGump(bse);
                         AddVendorsListToHotkeys();
+                        XmlFileParser.SaveData();
                     }
                     break;
                 }
@@ -3297,6 +3641,7 @@ namespace ClassicUO.Game.UI.Gumps
                                     _vendorsItemSelected = ushort.MaxValue;
                             }
                             UpdateVendorsItemsGump(ibs, _vendorsItemSelected);
+                            XmlFileParser.SaveData();
                         }
                     }
                     break;
@@ -3320,7 +3665,7 @@ namespace ClassicUO.Game.UI.Gumps
                         var list = ibs.BuySellItems;
                         if (list != null)
                         {
-                            void OnTargetSelected(bool loc, uint serial, Point3D p, ushort itemid)
+                            void onTargetSelected(bool loc, uint serial, Point3D p, ushort itemid)
                             {
                                 if (SerialHelper.IsItem(serial))
                                 {
@@ -3333,6 +3678,7 @@ namespace ClassicUO.Game.UI.Gumps
                                         {
                                             list.Add(bse);
                                             UpdateVendorsItemsGump(ibs, (ushort)(list.Count - 1));
+                                            XmlFileParser.SaveData();
                                         }
                                         else
                                             UOSObjects.Player.OverheadMessage(PlayerData.GetColorCode(MsgLevel.Error), $"{prepend}: Item is already listed");
@@ -3344,14 +3690,14 @@ namespace ClassicUO.Game.UI.Gumps
                                     UOSObjects.Player.OverheadMessage(PlayerData.GetColorCode(MsgLevel.Error), $"{prepend}: Invalid target");
                             }
                             UOSObjects.Player.OverheadMessage(PlayerData.GetColorCode(MsgLevel.Friend), $"{prepend}: Target item to add");
-                            Targeting.OneTimeTarget(false, OnTargetSelected);
+                            Targeting.OneTimeTarget(false, onTargetSelected);
                         }
                     }
                     break;
                 }
                 case ButtonType.OrganizerList:
                 {
-                    NiceButton but = NiceButton.GetSelected(_organizerListArea, (int)ButtonType.OrganizerList);
+                    NiceButtonStbText but = NiceButtonStbText.GetSelected(_organizerListArea, (int)ButtonType.OrganizerList);
                     if (but != null)
                     {
                         _organizerListSelected = (ushort)but.Tag;
@@ -3383,10 +3729,11 @@ namespace ClassicUO.Game.UI.Gumps
                 }
                 case ButtonType.CreateOrganizerList:
                 {
-                    _organizerListSelected = Organizer.CreateNewFree();
+                    _organizerListSelected = Organizer.CreateOne();
                     UpdateOrganizerListGump(_organizerListSelected);
                     UpdateOrganizerItemsGump();
                     AddOrganizerListToHotkeys();
+                    XmlFileParser.SaveData();
                     break;
                 }
                 case ButtonType.RemoveOrganizerList:
@@ -3396,13 +3743,13 @@ namespace ClassicUO.Game.UI.Gumps
                         Organizer ol = Organizer.Organizers[_organizerListSelected];
                         if (ol != null)
                         {
-                            HotKeys.RemoveHotKey($"agents.organizer.organizer-{_organizerListSelected + 1}");
+                            HotKeys.RemoveHotKey($"{Organizer.Prepend[0]}{ol.Name.ToLower(XmlFileParser.Culture)}", true);
                             Organizer.Organizers[_organizerListSelected] = null;
                             _organizerListSelected = ushort.MaxValue;
-                            List<NiceButton> list = new List<NiceButton>(_organizerListArea.FindControls<ScrollAreaItem>().SelectMany(s => s.Children.OfType<NiceButton>()));
+                            List<NiceButtonStbText> list = new List<NiceButtonStbText>(_organizerListArea.FindControls<NiceButtonStbText>());//.SelectMany(s => s.Children.OfType<NiceButtonStbText>()));
                             for (int i = 0; i < list.Count; i++)
                             {
-                                NiceButton but = list[i];
+                                NiceButtonStbText but = list[i];
                                 if (but != null && but.IsSelected)
                                 {
                                     if (i > 0)
@@ -3415,6 +3762,7 @@ namespace ClassicUO.Game.UI.Gumps
                             UpdateOrganizerListGump(_organizerListSelected);
                             UpdateOrganizerItemsGump();
                             AddOrganizerListToHotkeys();
+                            XmlFileParser.SaveData();
                         }
                     }
                     break;
@@ -3449,6 +3797,7 @@ namespace ClassicUO.Game.UI.Gumps
                                         _organizerItemSelected = ushort.MaxValue;
                                 }
                                 UpdateOrganizerItemsGump(_organizerItemSelected);
+                                XmlFileParser.SaveData();
                             }
                         }
                     }
@@ -3461,7 +3810,7 @@ namespace ClassicUO.Game.UI.Gumps
                         Organizer ol = Organizer.Organizers[_organizerListSelected];
                         if (ol != null)
                         {
-                            void OnTargetSelected(bool loc, uint serial, Point3D p, ushort itemid)
+                            void onTargetSelected(bool loc, uint serial, Point3D p, ushort itemid)
                             {
                                 if (SerialHelper.IsItem(serial))
                                 {
@@ -3473,6 +3822,7 @@ namespace ClassicUO.Game.UI.Gumps
                                         {
                                             ol.Items.Add(oi);
                                             UpdateOrganizerItemsGump((ushort)(ol.Items.Count - 1));
+                                            XmlFileParser.SaveData();
                                         }
                                         else
                                             UOSObjects.Player.OverheadMessage(PlayerData.GetColorCode(MsgLevel.Error), "Organizer: Item is already listed");
@@ -3484,7 +3834,7 @@ namespace ClassicUO.Game.UI.Gumps
                                     UOSObjects.Player.OverheadMessage(PlayerData.GetColorCode(MsgLevel.Error), "Organizer: Invalid target");
                             }
                             UOSObjects.Player.OverheadMessage(PlayerData.GetColorCode(MsgLevel.Friend), "Organizer: Target item to add");
-                            Targeting.OneTimeTarget(false, OnTargetSelected);
+                            Targeting.OneTimeTarget(false, onTargetSelected);
                         }
                     }
                     break;
@@ -3516,6 +3866,7 @@ namespace ClassicUO.Game.UI.Gumps
                     {
                         _scavengerItemSelected = Scavenger.Remove(_scavengerItemSelected);
                         UpdateScavengerItemsGump(_scavengerItemSelected);
+                        XmlFileParser.SaveData();
                     }
                     break;
                 }
@@ -3547,14 +3898,14 @@ namespace ClassicUO.Game.UI.Gumps
                     {
                         WIDTH = x;
                         HEIGHT = y;
-                        XmlFileParser.SaveProfile();
-                        UIManager.Add(UOSObjects.Gump = new AssistantGump(World) { X = 200, Y = 200 });
+                        XmlFileParser.SaveData();
+                        UIManager.Add(UOSObjects.Gump = new AssistantGump() { X = 200, Y = 200 });
                     }
                     break;
                 }
                 case ButtonType.FriendsList:
                 {
-                    NiceButton but = NiceButton.GetSelected(_friendListArea, (int)ButtonType.FriendsList);
+                    AssistNiceButton but = AssistNiceButton.GetSelected(_friendListArea, (int)ButtonType.FriendsList);
                     if (but != null)
                     {
                         _friendSelected = (uint)but.Tag;
@@ -3569,12 +3920,12 @@ namespace ClassicUO.Game.UI.Gumps
                 }
                 case ButtonType.RemoveFriend:
                 {
-                    FriendDictionary.Remove(_friendSelected);
+                    FriendsManager.FriendDictionary.Remove(_friendSelected);
                     _friendSelected = 0;
-                    List<NiceButton> list = new List<NiceButton>(_friendListArea.FindControls<ScrollAreaItem>().SelectMany(s => s.Children.OfType<NiceButton>()));
+                    List<AssistNiceButton> list = new List<AssistNiceButton>(_friendListArea.FindControls<AssistNiceButton>());//.SelectMany(s => s.Children.OfType<AssistNiceButton>()));
                     for(int i = 0; i < list.Count; i++)
                     {
-                        NiceButton but = list[i];
+                        AssistNiceButton but = list[i];
                         if (but != null && but.IsSelected)
                         {
                             if (i > 0)
@@ -3585,12 +3936,13 @@ namespace ClassicUO.Game.UI.Gumps
                         }
                     }
                     UpdateFriendListGump(_friendSelected);
+                    XmlFileParser.SaveData();
                     break;
                 }
                 case ButtonType.MacroList:
                 {
-                    NiceButton but = NiceButton.GetSelected(_macroListArea, (int)ButtonType.MacroList);
-                    if (but != null)
+                    AssistNiceButton but = AssistNiceButton.GetSelected(_macroListArea, (int)ButtonType.MacroList);
+                    if (but != null && (string)but.Tag != _macroSelected)
                     {
                         _macroSelected = (string)but.Tag;
                         SetMacroText();
@@ -3599,18 +3951,21 @@ namespace ClassicUO.Game.UI.Gumps
                 }
                 case ButtonType.NewMacro:
                 {
-                    UIManager.Add(new NewMacroGump(World));
+                    UIManager.Add(new NewMacroGump());
                     break;
                 }
                 case ButtonType.RemoveMacro:
                 {
-                    if(_macroSelected != null)
+                    if (_macroSelected != null)
+                    {
                         ScriptManager.MacroDictionary.Remove(_macroSelected);
+                        UIManager.Gumps.OfType<AssistMacroButtonGump>().FirstOrDefault(s => s._macroName == _macroSelected)?.Dispose();
+                    }
                     _macroSelected = null;
-                    List<NiceButton> list = new List<NiceButton>(_macroListArea.FindControls<ScrollAreaItem>().SelectMany(s => s.Children.OfType<NiceButton>()));
+                    List<AssistNiceButton> list = new List<AssistNiceButton>(_macroListArea.FindControls<AssistNiceButton>());//.SelectMany(s => s.Children.OfType<AssistNiceButton>()));
                     for (int i = 0; i < list.Count; i++)
                     {
-                        NiceButton but = list[i];
+                        AssistNiceButton but = list[i];
                         if (but != null && but.IsSelected)
                         {
                             if (i > 0)
@@ -3621,6 +3976,7 @@ namespace ClassicUO.Game.UI.Gumps
                         }
                     }
                     UpdateMacroListGump(_macroSelected);
+                    XmlFileParser.SaveData();
                     break;
                 }
                 case ButtonType.SaveMacro:
@@ -3628,13 +3984,10 @@ namespace ClassicUO.Game.UI.Gumps
                 {
                     if(!string.IsNullOrEmpty(_macroSelected) && ScriptManager.MacroDictionary.TryGetValue(_macroSelected, out HotKeyOpts opts))
                     {
-                        //uosteam saves the macro before play if the textbox is different - this passage saves the macro to profile too, as uosteam does
-                        //NOTE: Disabled this check because during testing I had trouble saving the profile and having it persist
-                        //might not be necessary but it's ok for now
-                        // if (opts.Macro != _macroArea._textBox.Text)
+                        if (opts.Macro != _macroArea._textBox.Text)
                         {
                             opts.Macro = _macroArea._textBox.Text;
-                            XmlFileParser.SaveProfile();
+                            XmlFileParser.SaveData();
                         }
                         if (bt == ButtonType.PlayMacro)
                             ScriptManager.PlayScript(opts, false, true);
@@ -3643,47 +3996,38 @@ namespace ClassicUO.Game.UI.Gumps
                 }
                 case ButtonType.RecordMacro:
                 {
-                    if (!string.IsNullOrEmpty(_macroSelected) && ScriptManager.MacroDictionary.TryGetValue(_macroSelected, out HotKeyOpts opts))
-                    {
-                        ScriptManager.Recording = !ScriptManager.Recording;
-                        if (ScriptManager.Recording)
-                        {
-                            _recordMacro.TextLabel.Text = "Stop";
-                            _recordMacro.TextLabel.Hue = ScriptTextBox.GREEN_HUE;
-                            _recordAsType.IsVisible = _recordAsType.IsEnabled = true;
-                            _newMacro.TextLabel.Hue = _saveMacro.TextLabel.Hue = _delMacro.TextLabel.Hue = _loopMacro.Hue = _noautoInterrupt.Hue = _playMacro.TextLabel.Hue = ScriptTextBox.RED_HUE;
-                            _newMacro.IsEnabled = _saveMacro.IsEnabled = _delMacro.IsEnabled = _macroListArea.IsEnabled = _loopMacro.IsEnabled = _noautoInterrupt.IsEnabled = _playMacro.IsEnabled = false;
-                        }
-                        else
-                        {
-                            _recordMacro.TextLabel.Text = "Record";
-                            _recordMacro.TextLabel.Hue = ScriptTextBox.GRAY_HUE;
-                            _recordAsType.IsVisible = _recordAsType.IsEnabled = false;
-                            _newMacro.TextLabel.Hue = _saveMacro.TextLabel.Hue = _delMacro.TextLabel.Hue = _loopMacro.Hue = _noautoInterrupt.Hue = _playMacro.TextLabel.Hue = ScriptTextBox.GRAY_HUE;
-                            _newMacro.IsEnabled = _saveMacro.IsEnabled = _delMacro.IsEnabled = _macroListArea.IsEnabled = _loopMacro.IsEnabled = _noautoInterrupt.IsEnabled = _playMacro.IsEnabled = true;
-                        }
-                    }
+                    OnRecordMacroButton();
                     break;
                 }
                 case ButtonType.ObjectInspector:
                 {
-                    void OnTargetSelected(bool loc, uint serial, Point3D p, ushort itemid)
+                    void onTargetSelected(bool loc, uint serial, Point3D p, ushort itemid)
                     {
                         UOEntity entity;
                         if (SerialHelper.IsValid(serial) && (entity = UOSObjects.FindEntity(serial)) != null)
-                            UIManager.Add(new ObjectInspectorGump(World, entity));
+                            UIManager.Add(new ObjectInspectorGump(entity));
                     }
-                    Targeting.OneTimeTarget(false, OnTargetSelected);
+                    Targeting.OneTimeTarget(false, onTargetSelected);
                     break;
                 }
-                case ButtonType.SaveCurrentProfile:
+                /*case ButtonType.SaveCurrentProfile:
                 {
-                    XmlFileParser.SaveProfile();
+                    XmlFileParser.SaveData();
                     break;
-                }
+                }*/
                 case ButtonType.AddNewProfile:
                 {
-                    UIManager.Add(new NewProfileGump(World));
+                    UIManager.Add(new NewProfileGump());
+                    break;
+                }
+                case ButtonType.ExemptionsContSearch:
+                {
+                    UIManager.Add(new SearchExemption());
+                    break;
+                }
+                case ButtonType.RemountSetMount:
+                {
+                    Targeting.OneTimeTarget(false, Targeting.OnSetMountTarget);
                     break;
                 }
                 default:
@@ -3694,44 +4038,74 @@ namespace ClassicUO.Game.UI.Gumps
             }
         }
 
-        #region Core Functions
-        private Texture2D _edge;
-        public override bool Draw(UltimaBatcher2D batcher, int x, int y)
+        internal Dictionary<uint, string> LinkedProfiles = new Dictionary<uint, string>();
+
+        private void OnRecordMacroButton(bool forcestop = false)
         {
-            // MobileUO: TODO: this only hides the assistant if disabled - it should probably actually unload it but this is sufficient for now ~mandlar
-            if (AssistantEnabled)
+            if (!string.IsNullOrEmpty(_macroSelected) && ScriptManager.MacroDictionary.TryGetValue(_macroSelected, out HotKeyOpts opts))
             {
-                if (_edge == null)
+                ScriptManager.Recording = forcestop ? false : !ScriptManager.Recording;
+                if (ScriptManager.Recording)
                 {
-                    _edge = new Texture2D(batcher.GraphicsDevice, 1, 1, false, SurfaceFormat.Color);
-                    _edge.SetData(new Color[] { Color.Gray });
+                    _recordMacro.TextLabel.Text = "Stop";
+                    _recordMacro.TextLabel.Hue = ScriptTextBox.GREEN_HUE;
+                    _recordAsType.IsVisible = _recordAsType.IsEnabled = true;
+                    _newMacro.TextLabel.Hue = _saveMacro.TextLabel.Hue = _delMacro.TextLabel.Hue = _loopMacro.Hue = _noautoInterrupt.Hue = _playMacro.TextLabel.Hue = ScriptTextBox.RED_HUE;
+                    _newMacro.IsEnabled = _saveMacro.IsEnabled = _delMacro.IsEnabled = _macroListArea.IsEnabled = _loopMacro.IsEnabled = _noautoInterrupt.IsEnabled = _playMacro.IsEnabled = false;
                 }
-                // MobileUO: TODO: should this be... 1?
-                Vector3 vec = ShaderHueTranslator.GetHueVector(0, false, 1);
-                //Vector3 vec = Vector3.Zero;
-                batcher.DrawRectangle(_edge, x, y, Width, Height, vec);
-                return base.Draw(batcher, x, y);
+                else
+                {
+                    _recordMacro.TextLabel.Text = "Record";
+                    _recordMacro.TextLabel.Hue = ScriptTextBox.GRAY_HUE;
+                    _recordAsType.IsVisible = _recordAsType.IsEnabled = false;
+                    _newMacro.TextLabel.Hue = _saveMacro.TextLabel.Hue = _delMacro.TextLabel.Hue = _loopMacro.Hue = _noautoInterrupt.Hue = _playMacro.TextLabel.Hue = ScriptTextBox.GRAY_HUE;
+                    _newMacro.IsEnabled = _saveMacro.IsEnabled = _delMacro.IsEnabled = _macroListArea.IsEnabled = _loopMacro.IsEnabled = _noautoInterrupt.IsEnabled = _playMacro.IsEnabled = true;
+                }
+            }
+        }
+
+#region Core Functions
+
+        internal static Line[] CreateRectangleArea(Gump g, int startx, int starty, int width, int height, int topage = 0, uint linecolor = 0xAFAFAF, int linewidth = 1, string toplabel = null, ushort textcolor = 999, byte textfont = 0xFF)
+        {
+            Line[] lines = new Line[3];
+
+            if (!string.IsNullOrEmpty(toplabel))
+            {
+                Label l = new Label(toplabel, true, textcolor, font: textfont);
+                int rwidth = (width - l.Width) >> 1;
+                l.X = startx + rwidth + 2;
+                l.Y = Math.Max(0, starty - ((l.Height + 1) >> 1));
+                g.Add(l, topage);
+
+                if (rwidth > 0)
+                {
+                    g.Add(new Line(startx, starty, rwidth, linewidth, linecolor), topage);
+                    g.Add(new Line(startx + width - rwidth, starty, rwidth, linewidth, linecolor), topage);
+                }
+            }
+            else
+            {
+                g.Add(new Line(startx, starty, width, linewidth, linecolor), topage);
             }
 
-            return false;
+            g.Add(lines[0] = new Line(startx, starty, linewidth, height, linecolor), topage);
+            g.Add(lines[1] = new Line(startx + width - 1, starty, linewidth, height, linecolor), topage);
+            g.Add(lines[2] = new Line(startx, starty + height - 1, width, linewidth, linecolor), topage);
+
+            return lines;
         }
 
-        public override void Dispose()
-        {
-            _edge?.Dispose();
-            base.Dispose();
-        }
-
-        private AssistCheckbox CreateCheckBox(AssistScrollArea area, string text, bool ischecked, int x, int y, ushort inactiveimg = 0x00D2, ushort activeimg = 0x00D3)
+        internal static AssistCheckbox CreateCheckBox(AssistScrollArea area, string text, bool ischecked, int x, int y, ushort inactiveimg = 0x00D2, ushort activeimg = 0x00D3)
         {
             AssistCheckbox box = new AssistCheckbox(inactiveimg, activeimg, text, FONT, ScriptTextBox.GRAY_HUE, true)
             {
                 IsChecked = ischecked
             };
 
-            if (x != 0)
+            /*if (x != 0)
             {
-                ScrollAreaItem item = new ScrollAreaItem();
+                AssistScrollAreaItem item = new AssistScrollAreaItem();
                 box.X = x;
                 box.Y = y;
 
@@ -3743,19 +4117,20 @@ namespace ClassicUO.Game.UI.Gumps
                 box.Y = y;
 
                 area.Add(box);
-            }
+            }*/
+            area.Add(box);
+
             return box;
         }
 
-        private ClickableColorBox CreateClickableColorBox(int x, int y, ushort hue, string text, int page)
+        private AssistClickableColorBox CreateClickableColorBox(int x, int y, ushort hue, string text, int page)
         {
-            uint color = 0xFF7F7F7F;
+            /*uint color = 0xFF7F7F7F;
 
             if (hue != 0xFFFF)
-                color = Client.Game.UO.FileManager.Hues.GetPolygoneColor(12, hue);
+                color = HuesLoader.Instance.GetPolygoneColor(12, hue);*/
 
-            // MobileUO: TODO: ClickableColorBox dropped a parameter in CUO 0.1.9.0, this may need to be revisited
-            ClickableColorBox box = new ClickableColorBox(World, x, y, 13, 14, hue/*, color*/);
+            AssistClickableColorBox box = new AssistClickableColorBox(x, y, 13, 14, hue);//, color);
             Add(box, page);
             Add(new Label(text, true, ScriptTextBox.GRAY_HUE) { X = x + box.Width * 2, Y = y }, page);
             return box;
@@ -3771,9 +4146,17 @@ namespace ClassicUO.Game.UI.Gumps
             return but;
         }
 
-        private NiceButton CreateSelection(AssistScrollArea area, string text, int y, int group, int index, object tag)
+        private NiceButtonStbText CreateSingleTextSelection(AssistScrollArea area, int y, int group, int index, object tag, TEXT_ALIGN_TYPE align, int width, string text, ushort hue, int len = 30)
         {
-            NiceButton but = new NiceButton(0, y, area.Width - (_buttonHeight >> 1), _buttonHeight - (_buttonHeight >> 2), ButtonAction.Activate, text, group) { ButtonParameter = index, Tag = tag };
+            NiceButtonStbText but = new NiceButtonStbText(0, y, width, _buttonHeight - (_buttonHeight >> 2), text, ButtonAction.Activate, align, FONT, group, hue, len) { ButtonParameter = index, Tag = tag };
+            area.Add(but);
+            return but;
+        }
+
+        private AssistNiceButton CreateSelection(AssistScrollArea area, string text, int y, int group, int index, object tag)
+        {
+            AssistNiceButton but = new AssistNiceButton(0, y, area.Width - (_buttonHeight >> 1), _buttonHeight - (_buttonHeight >> 2), ButtonAction.Activate, text, group) { ButtonParameter = index, Tag = tag };
+
             area.Add(but);
             return but;
         }
@@ -3784,22 +4167,22 @@ namespace ClassicUO.Game.UI.Gumps
             area.Add(msb);
             return msb;
         }
-        #endregion
+#endregion
 
-        #region Volatile Variables (not saved)
+#region Volatile Variables (not saved)
         internal bool ToggleHotKeys { get; set; }
-        #endregion
+#endregion
 
-        #region AssistantVariables
+#region AssistantVariables
         internal string LastProfile
         {
-            get => _profileSelected.GetSelectedItem;
+            get => _profileSelected.GetItem(_profileSelected.SelectedIndex);
             set
             {
                 LoadProfiles();
                 for (int i = 0; i < _profiles.Length; i++)
                 {
-                    if (Path.GetFileName(_profiles[i]) == value)
+                    if (Path.GetFileNameWithoutExtension(_profiles[i]) == value)
                     {
                         _profileSelected.SelectedIndex = i;
                         break;
@@ -3840,11 +4223,11 @@ namespace ClassicUO.Game.UI.Gumps
             set => _useObjectsQueue.IsChecked = value;
         }
 
-        internal bool UseTargetQueue
+        /*internal bool UseTargetQueue
         {
             get => _useTargetQueue.IsChecked;
             set => _useTargetQueue.IsChecked = value;
-        }
+        }*/
 
         internal bool ShowBandageTimerStart
         {
@@ -3882,17 +4265,17 @@ namespace ClassicUO.Game.UI.Gumps
             set => _displayNewCorpsesName.IsChecked = value;
         }
 
-        internal bool OpenCorpses
+        /*internal bool OpenCorpses
         {
             get => _openCorpses.IsChecked;
             set => _openCorpses.IsChecked = value;
-        }
+        }*/
 
-        internal bool ShowMobileHits
+        /*internal bool ShowMobileHits
         {
             get => _healthAbovePeopleAndCreatures.IsChecked;
             set => _healthAbovePeopleAndCreatures.IsChecked = value;
-        }
+        }*/
 
         internal bool HandsBeforePotions
         {
@@ -3915,9 +4298,8 @@ namespace ClassicUO.Game.UI.Gumps
         internal ushort HLTargetHue => _highlightCurrentTarget.IsChecked ? _highlightCurrentTargetHue.Hue : (ushort)0;
         internal ushort HighlightCurrentTargetHue
         {
-            // MobileUO: TODO: ClickableColorBox dropped SetColor in CUO 0.1.9.0, this may need to be revisited
             get => _highlightCurrentTargetHue.Hue;
-            set => _highlightCurrentTargetHue.Hue = value; //SetColor(value, HuesLoader.Instance.GetPolygoneColor(12, value));
+            set => _highlightCurrentTargetHue.Hue = value;
         }
 
         internal bool BlockInvalidHeal
@@ -3926,11 +4308,16 @@ namespace ClassicUO.Game.UI.Gumps
             set => _blockHealIfPoisonedOrYellowHits.IsChecked = value;
         }
 
-        internal bool BoneCutter
+        internal bool SharedTargetInAliasEnemy
+        {
+            get => _useSharedTarget.IsChecked;
+            set => _useSharedTarget.IsChecked = value;
+        }
+        /*internal bool BoneCutter
         {
             get => _gauntletBoneCutter.IsChecked;
             set => _gauntletBoneCutter.IsChecked = value;
-        }
+        }*/
 
         internal bool AutoMount
         {
@@ -4040,6 +4427,12 @@ namespace ClassicUO.Game.UI.Gumps
             set => _alwaysAcceptsPartyInvites.IsChecked = value;
         }
 
+        internal bool StartStopMacroMessages
+        {
+            get => _StartStopMacroMessages.IsChecked;
+            set => _StartStopMacroMessages.IsChecked = value;
+        }
+
         /*[PropertyAttributeType(AccessAttribute.ProfileAttribute)]
         internal byte CommandPrefix
         {
@@ -4053,7 +4446,7 @@ namespace ClassicUO.Game.UI.Gumps
             }
         }*/
 
-        private byte _openCorpsesRange;
+        /*private byte _openCorpsesRange;
         internal byte OpenCorpsesRange
         {
             get
@@ -4061,7 +4454,7 @@ namespace ClassicUO.Game.UI.Gumps
                 return _openCorpsesRange;
             }
             set => _limitOpenRange.Text = (_openCorpsesRange = Math.Max((byte)1, Math.Min(value, (byte)10))).ToString();
-        }//byte limit 10
+        }*///byte limit 10
 
         /*private byte _useObjectsLimit;
         internal byte UseObjectsLimit
@@ -4091,7 +4484,7 @@ namespace ClassicUO.Game.UI.Gumps
             set => _limitTargetRangeTiles.Text = (_smartTargetRangeValue = Math.Max((byte)1, Math.Min(value, (byte)15))).ToString();
         }//limit 15
 
-        internal byte FixedSeason { get; set; }//byte
+        //internal byte FixedSeason { get; set; }//byte
 
         internal byte SmartTarget
         {
@@ -4105,7 +4498,7 @@ namespace ClassicUO.Game.UI.Gumps
             }
         }//enum 4
 
-        internal byte TargetShare
+        internal byte EnemyTargetShare
         {
             get => (byte)_shareEnemyTargetOn.SelectedIndex;
             set
@@ -4150,7 +4543,7 @@ namespace ClassicUO.Game.UI.Gumps
             }
         }//byte enum 2
 
-        internal byte OpenCorpsesMode
+        /*internal byte OpenCorpsesMode
         {
             get => (byte)_openCorpsesOptions.SelectedIndex;
             set
@@ -4160,7 +4553,7 @@ namespace ClassicUO.Game.UI.Gumps
                     _openCorpsesOptions.SelectedIndex = value;
                 }
             }
-        }//byte enum 2
+        }//byte enum 2*/
 
         internal byte CustomCaptionMode { get; set; }//byte
 
@@ -4172,7 +4565,7 @@ namespace ClassicUO.Game.UI.Gumps
 
         internal uint AutoBandageTarget
         {
-            get => (uint)(1 << _friendHealSelection.SelectedIndex);
+            get => (uint)(_friendHealSelection.SelectedIndex);
             set
             {
                 if (value < _friendHealSelection.GetItemsLength)
@@ -4225,6 +4618,8 @@ namespace ClassicUO.Game.UI.Gumps
                 }
             }
         }
-        #endregion
+
+        private bool _SetLinkedProfile = false;
+#endregion
     }
 }

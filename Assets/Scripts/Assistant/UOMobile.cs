@@ -1,19 +1,38 @@
-﻿using System;
+﻿#region License
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org> for details.
+#endregion
+
+using System;
 using System.IO;
 using System.Collections.Generic;
 using System.Text;
 
 //using Assistant.Agents;
 //using Assistant.UI;
-
-using ClassicUO.Network;
+using ClassicUO.Configuration;
 using ClassicUO.Assets;
-using ClassicUO;
+using ClassicUO.Network;
+using ClassicUO.Game;
+using ClassicUO.Game.Data;
+
+using UOScript;
 
 namespace Assistant
 {
     [Flags]
-    internal enum Direction : byte
+    internal enum AssistDirection : byte
     {
         North = 0x0,
         Right = 0x1,
@@ -27,43 +46,33 @@ namespace Assistant
         ValueMask = 0x87
     }
 
-    //internal enum BodyType : byte
-    //{
-    //    Empty,
-    //    Monster,
-    //    Sea_Monster,
-    //    Animal,
-    //    Human,
-    //    Equipment
-    //}
-
     internal class UOMobile : UOEntity
     {
-        private ushort m_Body;
-        private Direction m_Direction;
-        private string m_Name;
+        private ushort _Body;
+        private AssistDirection _Direction;
+        private string _Name;
 
-        private byte m_Notoriety;
+        private byte _Notoriety;
 
-        private bool m_Visible;
-        private bool m_Female;
-        private bool m_Poisoned;
-        private bool m_Blessed;
-        private bool m_Warmode;
-        private bool m_Flying;
-        private bool m_Paralyzed;
-        private bool m_IgnoreMobiles;
-        private bool m_Unknown3;
+        private bool _Visible;
+        private bool _Female;
+        private bool _Poisoned;
+        private bool _Blessed;
+        private bool _Warmode;
+        private bool _Flying;
+        private bool _Paralyzed;
+        private bool _IgnoreMobiles;
+        private bool _Unknown3;
 
-        private bool m_CanRename;
+        private bool _CanRename;
         //end new
 
-        private ushort m_HitsMax, m_Hits;
-        protected ushort m_StamMax, m_Stam, m_ManaMax, m_Mana;
+        private ushort _HitsMax, _Hits;
+        protected ushort _StamMax, _Stam, _ManaMax, _Mana;
 
-        private List<UOItem> m_Items = new List<UOItem>();
+        private List<UOItem> _Items = new List<UOItem>();
 
-        private byte m_Map;
+        private byte _Map;
 
         public override string ToString()
         {
@@ -77,8 +86,8 @@ namespace Assistant
 
         internal UOMobile(uint serial) : base(serial)
         {
-            m_Map = UOSObjects.Player == null ? (byte)0 : UOSObjects.Player.Map;
-            m_Visible = true;
+            _Map = UOSObjects.Player == null ? (byte)0 : UOSObjects.Player.Map;
+            _Visible = true;
 
             //Agent.InvokeMobileCreated(this);
         }
@@ -87,19 +96,19 @@ namespace Assistant
         {
             get
             {
-                if (m_Name == null)
+                if (_Name == null)
                     return "";
                 else
-                    return m_Name;
+                    return _Name;
             }
             set
             {
-                if (!string.IsNullOrEmpty(value) && value != m_Name)
+                if (!string.IsNullOrEmpty(value) && value != _Name)
                 {
                     string trim = ClilocConversion(value);
                     if (trim.Length > 0)
                     {
-                        m_Name = trim;
+                        _Name = trim;
                     }
                 }
             }
@@ -118,7 +127,7 @@ namespace Assistant
                 {
                     if (int.TryParse(ss.Substring(1), out int x))
                     {
-                        ss = Client.Game.UO.FileManager.Clilocs.GetString(x);
+                        ss = ClassicUO.Client.Game.UO.FileManager.Clilocs.GetString(x);
                         if (string.IsNullOrEmpty(ss))
                         {
                             ss = arr[i];
@@ -135,19 +144,19 @@ namespace Assistant
 
         internal ushort Body
         {
-            get { return m_Body; }
-            set { m_Body = value; }
+            get { return _Body; }
+            set { _Body = value; }
         }
 
-        internal Direction Direction
+        internal AssistDirection Direction
         {
-            get { return m_Direction; }
+            get { return _Direction; }
             set
             {
-                if (value != m_Direction)
+                if (value != _Direction)
                 {
-                    var oldDir = m_Direction;
-                    m_Direction = value;
+                    var oldDir = _Direction;
+                    _Direction = value;
                     OnDirectionChanging(oldDir);
                 }
             }
@@ -155,43 +164,43 @@ namespace Assistant
 
         internal bool Visible
         {
-            get { return m_Visible; }
-            set { m_Visible = value; }
+            get { return _Visible; }
+            set { _Visible = value; }
         }
 
         internal bool Poisoned
         {
-            get { return m_Poisoned; }
-            set { m_Poisoned = value; }
+            get { return _Poisoned; }
+            set { _Poisoned = value; }
         }
 
         internal bool Blessed
         {
-            get { return m_Blessed; }
-            set { m_Blessed = value; }
+            get { return _Blessed; }
+            set { _Blessed = value; }
         }
 
         public bool Paralyzed
         {
-            get { return m_Paralyzed; }
-            set { m_Paralyzed = value; }
+            get { return _Paralyzed; }
+            set { _Paralyzed = value; }
         }
 
         public bool Flying
         {
-            get { return m_Flying; }
-            set { m_Flying = value; }
+            get { return _Flying; }
+            set { _Flying = value; }
         }
 
         internal bool IsGhost
         {
             get
             {
-                return m_Body == 402
-                       || m_Body == 403
-                       || m_Body == 607
-                       || m_Body == 608
-                       || m_Body == 970;
+                return _Body == 402
+                       || _Body == 403
+                       || _Body == 607
+                       || _Body == 608
+                       || _Body == 970;
             }
         }
 
@@ -199,15 +208,15 @@ namespace Assistant
         {
             get
             {
-                return m_Body == 400
-                        || m_Body == 401
-                        || m_Body == 402
-                        || m_Body == 403
-                        || m_Body == 605
-                        || m_Body == 606
-                        || m_Body == 607
-                        || m_Body == 608
-                        || m_Body == 970; //player ghost
+                return _Body == 400
+                        || _Body == 401
+                        || _Body == 402
+                        || _Body == 403
+                        || _Body == 605
+                        || _Body == 606
+                        || _Body == 607
+                        || _Body == 608
+                        || _Body == 970; //player ghost
             }
         }
 
@@ -218,20 +227,20 @@ namespace Assistant
 
         internal bool Unknown2
         {
-            get { return m_IgnoreMobiles; }
-            set { m_IgnoreMobiles = value; }
+            get { return _IgnoreMobiles; }
+            set { _IgnoreMobiles = value; }
         }
 
         internal bool Unknown3
         {
-            get { return m_Unknown3; }
-            set { m_Unknown3 = value; }
+            get { return _Unknown3; }
+            set { _Unknown3 = value; }
         }
 
         internal bool CanRename //A pet! (where the health bar is open, we can add this to an arraylist of mobiles...
         {
-            get { return m_CanRename; }
-            set { m_CanRename = value; }
+            get { return _CanRename; }
+            set { _CanRename = value; }
         }
         //end new
 
@@ -239,25 +248,25 @@ namespace Assistant
 
         internal bool Warmode
         {
-            get { return m_Warmode; }
-            set { m_Warmode = value; }
+            get { return _Warmode; }
+            set { _Warmode = value; }
         }
 
         internal bool Female
         {
-            get { return m_Female; }
-            set { m_Female = value; }
+            get { return _Female; }
+            set { _Female = value; }
         }
 
         internal byte Notoriety
         {
-            get { return m_Notoriety; }
+            get { return _Notoriety; }
             set
             {
                 if (value != Notoriety)
                 {
-                    OnNotoChange(m_Notoriety, value);
-                    m_Notoriety = value;
+                    OnNotoChange(_Notoriety, value);
+                    _Notoriety = value;
                 }
             }
         }
@@ -267,7 +276,7 @@ namespace Assistant
         }
 
         // grey, blue, green, 'canbeattacked'
-        private static uint[] m_NotoHues = new uint[8]
+        private static uint[] _NotoHues = new uint[8]
         {
             // hue color #30
             0x000000, // black		unused 0
@@ -280,7 +289,7 @@ namespace Assistant
             0xe0e000 // yellow		0x0035 7
         };
 
-        private static int[] m_NotoHuesInt = new int[8]
+        private static int[] _NotoHuesInt = new int[8]
         {
             1, // black		unused 0
             0x059, // blue		0x0059 1
@@ -294,23 +303,23 @@ namespace Assistant
 
         internal uint GetNotorietyColor()
         {
-            if (m_Notoriety < 0 || m_Notoriety >= m_NotoHues.Length)
-                return m_NotoHues[0];
+            if (_Notoriety < 0 || _Notoriety >= _NotoHues.Length)
+                return _NotoHues[0];
             else
-                return m_NotoHues[m_Notoriety];
+                return _NotoHues[_Notoriety];
         }
 
         internal int GetNotorietyColorInt()
         {
-            if (m_Notoriety < 0 || m_Notoriety >= m_NotoHues.Length)
-                return m_NotoHuesInt[0];
+            if (_Notoriety < 0 || _Notoriety >= _NotoHues.Length)
+                return _NotoHuesInt[0];
             else
-                return m_NotoHuesInt[m_Notoriety];
+                return _NotoHuesInt[_Notoriety];
         }
 
         internal byte GetStatusCode()
         {
-            if (m_Poisoned)
+            if (_Poisoned)
                 return 1;
             else
                 return 0;
@@ -318,53 +327,55 @@ namespace Assistant
 
         internal ushort HitsMax
         {
-            get { return m_HitsMax; }
-            set { m_HitsMax = value; }
+            get { return _HitsMax; }
+            set { _HitsMax = value; }
         }
 
         internal ushort Hits
         {
-            get { return m_Hits; }
-            set { m_Hits = value; }
+            get { return _Hits; }
+            set { _Hits = value; }
         }
 
         internal ushort Stam
         {
-            get { return m_Stam; }
-            set { m_Stam = value; }
+            get { return _Stam; }
+            set { _Stam = value; }
         }
 
         internal ushort StamMax
         {
-            get { return m_StamMax; }
-            set { m_StamMax = value; }
+            get { return _StamMax; }
+            set { _StamMax = value; }
         }
 
         internal ushort Mana
         {
-            get { return m_Mana; }
-            set { m_Mana = value; }
+            get { return _Mana; }
+            set { _Mana = value; }
         }
 
         internal ushort ManaMax
         {
-            get { return m_ManaMax; }
-            set { m_ManaMax = value; }
+            get { return _ManaMax; }
+            set { _ManaMax = value; }
         }
 
 
         internal byte Map
         {
-            get { return m_Map; }
+            get { return _Map; }
             set
             {
-                if (m_Map != value)
+                if (_Map != value)
                 {
-                    OnMapChange(m_Map, value);
-                    m_Map = value;
+                    OnMapChange(_Map, value);
+                    _Map = value;
                 }
             }
         }
+
+        internal byte MapIndex { get; set; }
 
         internal virtual void OnMapChange(byte old, byte cur)
         {
@@ -372,18 +383,30 @@ namespace Assistant
 
         internal void AddItem(UOItem item)
         {
-            m_Items.Add(item);
+            _Items.Add(item);
         }
 
         internal void RemoveItem(UOItem item)
         {
-            m_Items.Remove(item);
+            _Items.Remove(item);
+            if (Engine.Instance.AllowBit(FeatureBit.AutoRemount) && item.Layer == Layer.Mount && Serial == UOSObjects.Player.Serial && UOSObjects.Gump.AutoMount)
+            {
+                uint serial = Interpreter.GetAlias("mount");
+                if(SerialHelper.IsValid(serial))
+                {
+                    UOEntity e;
+                    if((e = UOSObjects.FindEntity(serial)) != null)
+                    {
+                        NetClient.Socket.PSend_DoubleClick(e.Serial);
+                    }
+                }
+            }
         }
 
         internal override void Remove()
         {
-            List<UOItem> rem = new List<UOItem>(m_Items);
-            m_Items.Clear();
+            List<UOItem> rem = new List<UOItem>(_Items);
+            _Items.Clear();
 
             for (int i = 0; i < rem.Count; i++)
                 rem[i].Remove();
@@ -401,14 +424,14 @@ namespace Assistant
 
         internal bool InParty
         {
-            get { return PacketHandlers.Party.Contains(this.Serial); }
+            get { return PacketHandlers.Party.Count > 0 && (Serial == UOSObjects.Player.Serial || PacketHandlers.Party.Contains(Serial)); }
         }
 
         internal UOItem GetItemOnLayer(Layer layer)
         {
-            for (int i = 0; i < m_Items.Count; i++)
+            for (int i = 0; i < _Items.Count; i++)
             {
-                UOItem item = m_Items[i];
+                UOItem item = _Items[i];
                 if (item.Layer == layer)
                     return item;
             }
@@ -454,7 +477,7 @@ namespace Assistant
             base.OnPositionChanging(oldPos);
         }
 
-        internal virtual void OnDirectionChanging(Direction oldDir)
+        internal virtual void OnDirectionChanging(AssistDirection oldDir)
         {
         }
 
@@ -462,31 +485,31 @@ namespace Assistant
         {
             int flags = 0x0;
 
-            if (m_Paralyzed)
+            if (_Paralyzed)
                 flags |= 0x01;
 
-            if (m_Female)
+            if (_Female)
                 flags |= 0x02;
 
-            if (m_Poisoned && !PacketHandlers.UseNewStatus)
+            if (_Poisoned && !PacketHandlers.UseNewStatus)
                 flags |= 0x04;
 
-            if (m_Flying)
+            if (_Flying)
                 flags |= 0x04;
 
-            if (m_Blessed)
+            if (_Blessed)
                 flags |= 0x08;
 
-            if (m_Warmode)
+            if (_Warmode)
                 flags |= 0x40;
 
-            if (!m_Visible)
+            if (!_Visible)
                 flags |= 0x80;
 
-            if (m_IgnoreMobiles)
+            if (_IgnoreMobiles)
                 flags |= 0x10;
 
-            if (m_Unknown3)
+            if (_Unknown3)
                 flags |= 0x20;
 
             return flags;
@@ -495,44 +518,44 @@ namespace Assistant
         internal void ProcessPacketFlags(byte flags)
         {
             if (!PacketHandlers.UseNewStatus)
-                m_Poisoned = (flags & 0x04) != 0;
+                _Poisoned = (flags & 0x04) != 0;
             else
-                m_Flying = (flags & 0x04) != 0;
+                _Flying = (flags & 0x04) != 0;
 
-            m_Paralyzed = (flags & 0x01) != 0; //new
-            m_Female = (flags & 0x02) != 0;
-            m_Blessed = (flags & 0x08) != 0;
-            m_IgnoreMobiles = (flags & 0x10) != 0; //new
-            m_Unknown3 = (flags & 0x10) != 0; //new
-            m_Warmode = (flags & 0x40) != 0;
-            m_Visible = (flags & 0x80) == 0;
+            _Paralyzed = (flags & 0x01) != 0; //new
+            _Female = (flags & 0x02) != 0;
+            _Blessed = (flags & 0x08) != 0;
+            _IgnoreMobiles = (flags & 0x10) != 0; //new
+            _Unknown3 = (flags & 0x10) != 0; //new
+            _Warmode = (flags & 0x40) != 0;
+            _Visible = (flags & 0x80) == 0;
         }
 
         internal List<UOItem> Contains
         {
-            get { return m_Items; }
+            get { return _Items; }
         }
 
         internal void OverheadMessageFrom(int hue, string from, string format, params object[] args)
         {
-            OverheadMessageFrom(hue, from, String.Format(format, args));
+            OverheadMessageFrom(hue, from, string.Format(format, args));
         }
 
         internal void OverheadMessageFrom(int hue, string from, string text, bool ascii = false)
         {
             if (ascii)
             {
-                Engine.Instance.SendToClient(new AsciiMessage(Serial, m_Body, MessageType.Regular, hue, 3, from, text));
+                ClientPackets.PRecv_AsciiMessage(Serial, _Body, MessageType.Regular, hue, 3, from, text);
             }
             else
             {
-                Engine.Instance.SendToClient(new UnicodeMessage(Serial, m_Body, MessageType.Regular, hue, 3, "ENU", from, text));
+                ClientPackets.PRecv_UnicodeMessage(Serial, _Body, MessageType.Regular, hue, 3, Settings.GlobalSettings.Language, from, text);
             }
         }
 
         internal void OverheadMessage(int hue, string format, params object[] args)
         {
-            OverheadMessage(hue, String.Format(format, args));
+            OverheadMessage(hue, string.Format(format, args));
         }
 
         internal void OverheadMessage(int hue, string text)
@@ -540,37 +563,34 @@ namespace Assistant
             OverheadMessageFrom(hue, "UOSteam", text);
         }
 
-        private Point2D m_ButtonPoint = Point2D.Zero;
+        private Point2D _ButtonPoint = Point2D.Zero;
 
         internal Point2D ButtonPoint
         {
-            get { return m_ButtonPoint; }
-            set { m_ButtonPoint = value; }
+            get { return _ButtonPoint; }
+            set { _ButtonPoint = value; }
         }
 
         private static List<Layer> _layers = new List<Layer>
         {
             Layer.Backpack,
             Layer.Invalid,
-            Layer.FirstValid,
-            Layer.RightHand,
-            Layer.LeftHand,
+            Layer.OneHanded,
+            Layer.TwoHanded,
             Layer.Shoes,
             Layer.Pants,
             Layer.Shirt,
-            Layer.Head,
-            Layer.Neck,
+            Layer.Helmet,
+            Layer.Necklace,
             Layer.Gloves,
-            Layer.InnerTorso,
-            Layer.MiddleTorso,
+            Layer.Torso,
+            Layer.Tunic,
             Layer.Arms,
             Layer.Cloak,
-            Layer.OuterTorso,
-            Layer.OuterLegs,
-            Layer.InnerLegs,
-            Layer.LastUserValid,
+            Layer.Robe,
+            Layer.Skirt,
+            Layer.Legs,
             Layer.Mount,
-            Layer.LastValid,
             Layer.Hair
         };
 
@@ -589,7 +609,7 @@ namespace Assistant
                 if (i.ItemID == 0x204E && i.Hue == 0x08FD) // death shroud
                     i.ItemID = 0x1F03;
 
-                Engine.Instance.SendToClient(new EquipmentItem(i, i.Hue, Serial));
+                ClientPackets.PRecv_EquipmentItem(i, i.Hue, Serial);//Engine.Instance.SendToClient(new EquipmentItem(i, i.Hue, Serial));
             }
         }
 
@@ -604,23 +624,8 @@ namespace Assistant
                 if (i == null)
                     continue;
 
-                Engine.Instance.SendToClient(new EquipmentItem(i, (ushort)hue, Serial));
+                ClientPackets.PRecv_EquipmentItem(i, (ushort)hue, Serial);//Engine.Instance.SendToClient(new EquipmentItem(i, (ushort)hue, Serial));
             }
-        }
-
-        internal Packet SetMobileHue(Packet p, int hue)
-        {
-            if (IsGhost)
-                return p;
-            WriteHueToPacket(p, (ushort)hue);
-            return p;
-        }
-
-        private static void WriteHueToPacket(Packet p, ushort color)
-        {
-            p.Seek(p.Length - 3);
-            p.WriteUShort(color);
-            p.Seek(p.Length);
         }
     }
 }

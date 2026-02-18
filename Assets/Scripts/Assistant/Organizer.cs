@@ -1,14 +1,32 @@
-﻿using ClassicUO.Game;
+﻿#region License
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org> for details.
+#endregion
+
+using ClassicUO.Game;
 using ClassicUO.Game.UI.Controls;
 using ClassicUO.Game.Managers;
 using System;
+using System.Linq;
 using System.Collections.Generic;
-using ClassicUO;
 
 namespace Assistant
 {
     internal class Organizer
     {
+        internal static readonly string[] Prepend = new string[] { "agents.organizer." };
+
         //this won't check the dragdrop queue, it only checks if the organizer timer is actually running.
         internal static bool IsTimerActive => _Timer != null && _Timer.Running;
         internal static void Stop()
@@ -17,6 +35,7 @@ namespace Assistant
             UOSObjects.Gump.OrganizerStatus(false);
         }
 
+        internal static bool HasContainerSelection => _Source != 0;
         private static uint _Source;
         internal void ContainerSelection()
         {
@@ -37,7 +56,7 @@ namespace Assistant
                 {
                     _Source = item.Serial;
                     UOSObjects.Player.OverheadMessage(PlayerData.GetColorCode(MsgLevel.Friend), "Organizer: Valid *Source* selected, now select the *Target* when prompted");
-                    Timer.DelayedCallback(TimeSpan.FromMilliseconds(600), ContinueTarget).Start();//we let all the remaining target iteration end, this should also prevent very responsive double tap
+                    Timer.DelayedCallback(TimeSpan.FromMilliseconds(200), ContinueTarget).Start();//we let all the remaining target iteration end, this should also prevent very responsive double tap
                     return;
                 }
                 else
@@ -72,7 +91,8 @@ namespace Assistant
                     SourceCont = _Source;
                     TargetCont = item.Serial;
                     UOSObjects.Player.OverheadMessage(PlayerData.GetColorCode(MsgLevel.Friend), "Organizer: Source and Target container are set");
-                    if(_organizeAfter)
+                    XmlFileParser.SaveData();
+                    if (_organizeAfter)
                         BeginOrganize();
                 }
                 else
@@ -110,32 +130,76 @@ namespace Assistant
         private static OrganizerTimer _Timer;
         internal static List<Organizer> Organizers = new List<Organizer>();
 
-        public static ushort CreateNewFree()
+        private static string GetOneGenericFree(ushort free = 0)
+        {
+            HashSet<string> dls = new HashSet<string>();
+            foreach (Organizer org in Organizers)
+            {
+                if (org != null)
+                    dls.Add(org.Name);
+            }
+            for (ushort us = free; us < ushort.MaxValue; ++us)
+            {
+                if (!dls.Contains($"Organizer-{us + 1}"))
+                    return $"Organizer-{us + 1}";
+            }
+            return null;
+        }
+
+        public static ushort CreateOne()
         {
             ushort i = 0;
             for (; i < Organizers.Count; ++i)
             {
                 if (Organizers[i] == null)
                 {
-                    Organizers[i] = new Organizer($"Organizer-{i + 1}");
-                    return i;
+                    string name = GetOneGenericFree(i);
+                    if (!string.IsNullOrEmpty(name))
+                    {
+                        Organizers[i] = new Organizer(name);
+                        return i;
+                    }
+                    return ushort.MaxValue;
                 }
             }
             if (i < ushort.MaxValue)
             {
-                Organizers.Add(new Organizer($"Organizer-{i + 1}"));
-                return i;
+                string name = GetOneGenericFree();
+                if (!string.IsNullOrEmpty(name))
+                {
+                    Organizers.Add(new Organizer(name));
+                    return i;
+                }
+                return ushort.MaxValue;
             }
             return (ushort)(i - 1);
         }
 
-        internal string Name { get; }
+        private string _Name;
+        public string Name
+        {
+            set
+            {
+                if (value == _Name)
+                    return;
+                value = Utility.StringAlphaNumberSpaceMinusUnderscore(value);
+                if (!string.IsNullOrEmpty(value) && !Organizers.Any(org => org != null && org.Name == value))
+                {
+                    _Name = value;
+                }
+            }
+            get
+            {
+                return _Name;
+            }
+        }
 
         internal uint SourceCont { get; set; }
         internal uint TargetCont { get; set; }
-        internal bool Stack { get; set; } = false;
-        internal bool Complete { get; set; } = false;
-        internal bool Loop { get; set; } = false;
+        internal bool Stack { get; set; } = true;
+        internal bool Complete { get; set; } = true;
+        internal bool Loop { get; set; } = true;
+
         internal List<ItemDisplay> Items = new List<ItemDisplay>();
         internal Organizer(string name)
         {
@@ -143,18 +207,19 @@ namespace Assistant
         }
 
         private static bool _organizeAfter;
-        internal void Organize()
+        internal bool Organize()
         {
             if (SerialHelper.IsItem(SourceCont) && UOSObjects.FindItem(SourceCont) != null)
             {
                 if (SerialHelper.IsItem(TargetCont) && UOSObjects.FindItem(TargetCont) != null)
                 {
                     BeginOrganize();
-                    return;
+                    return true;
                 }
             }
             _organizeAfter = true;
             ContainerSelection();
+            return false;
         }
 
         private void BeginOrganize()
@@ -173,7 +238,7 @@ namespace Assistant
             private bool _Init = false;
             private int x, endx, y, endy;
 
-            internal OrganizerTimer(Organizer organizer) : base(TimeSpan.Zero, TimeSpan.FromMilliseconds(UOSObjects.Gump.ActionDelay))
+            internal OrganizerTimer(Organizer organizer) : base(TimeSpan.Zero, TimeSpan.Zero)
             {
                 _Organizer = organizer;
                 if(SerialHelper.IsItem(organizer.SourceCont) && (_Source = UOSObjects.FindItem(organizer.SourceCont)) != null)
@@ -182,7 +247,7 @@ namespace Assistant
                         _Init = _Organizer.Items.Count > _Num;
                     if (_Init)
                     {
-                        var c = Client.Game.UO.World.ContainerManager.Get(_Dest.Graphic);
+                        var c = ClassicUO.Client.Game.UO.World.ContainerManager.Get(_Dest.Graphic);
                         x = c.Bounds.X;
                         endx = c.Bounds.X + c.Bounds.Width;
                         y = c.Bounds.Y;
@@ -198,27 +263,23 @@ namespace Assistant
             protected override void OnTick()
             {
                 //apparently, uosteam can use organizer, even if it's like a restock agent...
-                /*if(!Engine.Instance.AllowBit(FeatureBit.RestockAgent))
+                if(!Engine.Instance.AllowBit(FeatureBit.RestockAgent))
                 {
                     UOSObjects.Player.SendMessage(MsgLevel.Error, "Organizers and Restock agents are not allowed by your server");
                     Organizer.Stop();
                     return;
-                }*/
+                }
                 if (_Init)
                 {
-                    Interval = TimeSpan.FromMilliseconds(UOSObjects.Gump.ActionDelay);
                     ItemDisplay oi = _Organizer.Items[_Num];
                     List<UOItem> items = _Source.FindItemsByID(oi.Graphic, false, oi.Hue, true);
                     UOItem item = null;
                     if (items.Count > 0)
                     {
-                        for(int i = 0; i < items.Count; i++)
+                        item = items.Find(s => !_Done.Contains(s));
+                        if(item != null)
                         {
-                            if(!_Done.Contains(items[i]))
-                            {
-                                _Done.Add(item = items[i]);//we keep track of already attempted items, to avoid infinite cycle
-                                break;
-                            }
+                            _Done.Add(item);
                         }
                     }
                     if (item != null)
@@ -229,17 +290,21 @@ namespace Assistant
                             amt = Math.Min((int)oi.Amount - _Dest.GetCount(oi.Graphic), item.Amount);
                         }
                         else
+                        {
                             amt = (int)(oi.Amount == 0 || oi.Amount > item.Amount ? item.Amount : oi.Amount);
+                        }
+
                         if (amt <= 0)
                         {
-                            ++_Num;
                             Interval = TimeSpan.FromMilliseconds(10);
                         }
                         else
                         {
+                            Interval = TimeSpan.FromMilliseconds(ScriptManager.ActionDelayDragDrop);
                             DragDropManager.DragDrop(item, _Dest, _Organizer.Stack ? Point3D.MinusOne : new Point3D(Utility.Random(x, endx), Utility.Random(y, endy), 0), amt, DragDropManager.ActionType.Organize);
                             _CycleAction = true;
                         }
+                        ++_Num;
                     }
                     else
                     {
@@ -277,13 +342,12 @@ namespace Assistant
         internal uint Amount { get; set; }
         internal bool Enabled { get; set; }
 
-        internal ItemDisplay(ushort graphic, string name, short hue = -1, bool enabled = true, uint amount = 0)
+        internal ItemDisplay(ushort graphic, string name, short hue = -1, bool enabled = true)
         {
             Graphic = graphic;
             Name = name;
             Hue = hue;
             Enabled = enabled;
-            Amount = amount;
         }
 
         public override bool Equals(object obj)

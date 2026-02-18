@@ -1,42 +1,58 @@
-﻿using System;
+﻿#region License
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org> for details.
+#endregion
+
+using System;
 
 namespace Assistant
 {
     public class SkillTimer
     {
-        private static int m_Count;
-        private static Timer m_Timer;
+        private static int _Count;
+        private static Timer _Timer;
 
         static SkillTimer()
         {
-            m_Timer = new InternalTimer();
+            _Timer = new InternalTimer();
         }
 
         public static int Count
         {
-            get { return m_Count; }
+            get { return _Count; }
         }
 
         public static bool Running
         {
-            get { return m_Timer.Running; }
+            get { return _Timer.Running; }
         }
 
         public static void Start()
         {
-            m_Count = 0;
+            _Count = 0;
 
-            if (m_Timer.Running)
+            if (_Timer.Running)
             {
-                m_Timer.Stop();
+                _Timer.Stop();
             }
 
-            m_Timer.Start();
+            _Timer.Start();
         }
 
         public static void Stop()
         {
-            m_Timer.Stop();
+            _Timer.Stop();
         }
 
         private class InternalTimer : Timer
@@ -47,8 +63,8 @@ namespace Assistant
 
             protected override void OnTick()
             {
-                m_Count++;
-                if (m_Count > 10)
+                _Count++;
+                if (_Count > 10)
                 {
                     Stop();
                 }

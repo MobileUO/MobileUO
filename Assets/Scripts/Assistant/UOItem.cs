@@ -1,88 +1,55 @@
-﻿using System;
-using System.IO;
-using System.Collections.Generic;
-//TODO: Agents
-//using Assistant.Agents;
+﻿#region License
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org> for details.
+#endregion
 
-using ClassicUO.Assets;
 using ClassicUO.Game;
-using ClassicUO;
+using ClassicUO.Game.Data;
+using ClassicUO.Assets;
+using System;
+using System.Collections.Generic;
 
 namespace Assistant
 {
-    internal enum Layer : byte
-    {
-        Invalid = 0x00,
-
-        FirstValid = 0x01,
-
-        RightHand = 0x01,
-        LeftHand = 0x02,
-        Shoes = 0x03,
-        Pants = 0x04,
-        Shirt = 0x05,
-        Head = 0x06,
-        Gloves = 0x07,
-        Ring = 0x08,
-        Talisman = 0x09,
-        Neck = 0x0A,
-        Hair = 0x0B,
-        Waist = 0x0C,
-        InnerTorso = 0x0D,
-        Bracelet = 0x0E,
-        Unused_xF = 0x0F,
-        FacialHair = 0x10,
-        MiddleTorso = 0x11,
-        Earrings = 0x12,
-        Arms = 0x13,
-        Cloak = 0x14,
-        Backpack = 0x15,
-        OuterTorso = 0x16,
-        OuterLegs = 0x17,
-        InnerLegs = 0x18,
-
-        LastUserValid = 0x18,
-
-        Mount = 0x19,
-        ShopBuy = 0x1A,
-        ShopResale = 0x1B,
-        ShopSell = 0x1C,
-        Bank = 0x1D,
-
-        LastValid = 0x1D
-    }
-
     internal class UOItem : UOEntity
     {
-        private ushort m_ItemID;
-        private ushort m_Amount;
-        private byte m_Direction;
+        private ushort _ItemID;
+        private ushort _Amount;
+        private byte _Direction;
 
-        private bool m_Visible;
-        private bool m_Movable;
+        private bool _Visible;
+        private bool _Movable;
 
-        private Layer m_Layer;
-        private string m_Name;
-        private object m_Parent;
-        private int m_Price;
-        private string m_BuyDesc;
-        private List<UOItem> m_Items;
-        internal int ItemCount => m_Items.Count;
+        private Layer _Layer;
+        private string _Name;
+        private object _Parent;
+        private int _Price;
+        private string _BuyDesc;
+        private List<UOItem> _Items;
+        internal int ItemCount => _Items.Count;
 
-        private bool m_IsNew;
-        private bool m_AutoStack;
+        private bool _IsNew;
+        private bool _AutoStack;
 
-        private byte[] m_HousePacket;
-        private int m_HouseRev;
-
-        private byte m_GridNum;
+        private byte _GridNum;
 
         internal UOItem(uint serial) : base(serial)
         {
-            m_Items = new List<UOItem>();
+            _Items = new List<UOItem>();
 
-            m_Visible = true;
-            m_Movable = true;
+            _Visible = true;
+            _Movable = true;
 
             OnItemCreated?.Invoke(this);
         }
@@ -92,41 +59,41 @@ namespace Assistant
 
         internal ushort ItemID
         {
-            get { return m_ItemID; }
-            set { m_ItemID = value; }
+            get { return _ItemID; }
+            set { _ItemID = value; }
         }
 
         internal ushort Amount
         {
-            get { return m_Amount; }
-            set { m_Amount = value; }
+            get { return _Amount; }
+            set { _Amount = value; }
         }
 
         internal byte Direction
         {
-            get { return m_Direction; }
-            set { m_Direction = value; }
+            get { return _Direction; }
+            set { _Direction = value; }
         }
 
         internal bool Visible
         {
-            get { return m_Visible; }
-            set { m_Visible = value; }
+            get { return _Visible; }
+            set { _Visible = value; }
         }
 
         internal bool Movable
         {
-            get { return m_Movable; }
-            set { m_Movable = value; }
+            get { return _Movable; }
+            set { _Movable = value; }
         }
 
         internal string Name
         {
             get
             {
-                if (!string.IsNullOrEmpty(m_Name))
+                if (!string.IsNullOrEmpty(_Name))
                 {
-                    return m_Name;
+                    return _Name;
                 }
                 else
                 {
@@ -136,9 +103,9 @@ namespace Assistant
             set
             {
                 if (value != null)
-                    m_Name = value.Trim();
+                    _Name = value.Trim();
                 else
-                    m_Name = null;
+                    _Name = null;
             }
         }
 
@@ -150,25 +117,25 @@ namespace Assistant
             }
         }
 
-        internal StaticTiles TileDataInfo => m_ItemID < Client.Game.UO.FileManager.TileData.StaticData.Length ? Client.Game.UO.FileManager.TileData.StaticData[m_ItemID] : Client.Game.UO.FileManager.TileData.StaticData[0];
+        internal StaticTiles TileDataInfo => _ItemID < ClassicUO.Client.Game.UO.FileManager.TileData.StaticData.Length ? ClassicUO.Client.Game.UO.FileManager.TileData.StaticData[_ItemID] : ClassicUO.Client.Game.UO.FileManager.TileData.StaticData[0];
 
         internal Layer Layer
         {
             get
             {
                 
-                if ((m_Layer < Layer.FirstValid || m_Layer > Layer.LastValid) &&
+                if ((_Layer < Layer.OneHanded || _Layer > Layer.Bank) &&
                     ((TileDataInfo.Flags & TileFlag.Wearable) != 0 ||
                      (TileDataInfo.Flags & TileFlag.Armor) != 0 ||
                      (TileDataInfo.Flags & TileFlag.Weapon) != 0
                     ))
                 {
-                    m_Layer = (Layer)TileDataInfo.Layer;
+                    _Layer = (Layer)TileDataInfo.Layer;
                 }
 
-                return m_Layer;
+                return _Layer;
             }
-            set { m_Layer = value; }
+            set { _Layer = value; }
         }
 
         internal UOItem FindItemByID(ushort id, bool recurse = true, int hue = -1, Layer layer = Layer.Invalid, bool movable = false)
@@ -178,9 +145,9 @@ namespace Assistant
 
         private static UOItem RecurseFindItemByID(UOItem current, ushort id, bool recurse, int hue, Layer layer, bool movable = false)
         {
-            if (current != null && current.m_Items.Count > 0)
+            if (current != null && current._Items.Count > 0)
             {
-                List<UOItem> list = current.m_Items;
+                List<UOItem> list = current._Items;
 
                 for (int i = 0; i < list.Count; ++i)
                 {
@@ -213,9 +180,9 @@ namespace Assistant
 
         private static List<UOItem> RecurseFindItemsByID(UOItem current, List<UOItem> items, ushort id, bool recurse, int hue, bool movable = false)
         {
-            if (current != null && current.m_Items.Count > 0)
+            if (current != null && current._Items.Count > 0)
             {
-                List<UOItem> list = current.m_Items;
+                List<UOItem> list = current._Items;
 
                 for (int i = 0; i < list.Count; ++i)
                 {
@@ -251,9 +218,9 @@ namespace Assistant
 
         private static List<UOItem> RecurseFindItemsByID(UOItem current, List<UOItem> items, HashSet<ushort> ids, bool recurse, int hue)
         {
-            if (current != null && current.m_Items.Count > 0 && ids.Count > 0)
+            if (current != null && current._Items.Count > 0 && ids.Count > 0)
             {
-                List<UOItem> list = current.m_Items;
+                List<UOItem> list = current._Items;
 
                 for (int i = 0; i < list.Count; ++i)
                 {
@@ -280,9 +247,9 @@ namespace Assistant
 
         private static UOItem RecurseFindItemByName(UOItem current, string name, bool recurse)
         {
-            if (current != null && current.m_Items.Count > 0)
+            if (current != null && current._Items.Count > 0)
             {
-                List<UOItem> list = current.m_Items;
+                List<UOItem> list = current._Items;
 
                 for (int i = 0; i < list.Count; ++i)
                 {
@@ -314,9 +281,9 @@ namespace Assistant
 
         private static bool RecurseContainsItemBySerial(UOItem current, uint serial, bool recurse)
         {
-            if (current != null && current.m_Items.Count > 0)
+            if (current != null && current._Items.Count > 0)
             {
-                List<UOItem> list = current.m_Items;
+                List<UOItem> list = current._Items;
 
                 for (int i = 0; i < list.Count; ++i)
                 {
@@ -344,12 +311,11 @@ namespace Assistant
         internal int GetCount(ushort iid)
         {
             int count = 0;
-            for (int i = 0; i < m_Items.Count; i++)
+            for (int i = 0; i < _Items.Count; i++)
             {
-                UOItem item = (UOItem)m_Items[i];
+                UOItem item = (UOItem)_Items[i];
                 if (item.ItemID == iid)
                     count += item.Amount;
-                // fucking osi blank scrolls
                 else if ((item.ItemID == 0x0E34 && iid == 0x0EF3) || (item.ItemID == 0x0EF3 && iid == 0x0E34))
                     count += item.Amount;
                 count += item.GetCount(iid);
@@ -362,33 +328,33 @@ namespace Assistant
         {
             get
             {
-                if (m_Parent is uint && UpdateContainer())
-                    m_NeedContUpdate.Remove(this);
-                return m_Parent;
+                if (_Parent is uint && UpdateContainer())
+                    _NeedContUpdate.Remove(this);
+                return _Parent;
             }
             set
             {
-                if ((m_Parent != null && m_Parent.Equals(value))
-                    || (value is uint vval && m_Parent is UOEntity entity && entity.Serial == vval)
-                    || (m_Parent is uint parent && value is UOEntity ventity && ventity.Serial == parent))
+                if ((_Parent != null && _Parent.Equals(value))
+                    || (value is uint vval && _Parent is UOEntity entity && entity.Serial == vval)
+                    || (_Parent is uint parent && value is UOEntity ventity && ventity.Serial == parent))
                 {
                     return;
                 }
 
-                if (m_Parent is UOMobile mobile)
+                if (_Parent is UOMobile mobile)
                     mobile.RemoveItem(this);
-                else if (m_Parent is UOItem item)
+                else if (_Parent is UOItem item)
                     item.RemoveItem(this);
 
                 if (value is UOMobile vmobile)
-                    m_Parent = vmobile.Serial;
+                    _Parent = vmobile.Serial;
                 else if (value is UOItem vitem)
-                    m_Parent = vitem.Serial;
+                    _Parent = vitem.Serial;
                 else
-                    m_Parent = value;
+                    _Parent = value;
 
-                if (!UpdateContainer() && m_NeedContUpdate != null)
-                    m_NeedContUpdate.Add(this);
+                if (!UpdateContainer() && _NeedContUpdate != null)
+                    _NeedContUpdate.Add(this);
             }
         }
 
@@ -419,13 +385,40 @@ namespace Assistant
             return 0;
         }
 
+        internal UOItem GetRootContainerItem(out int depth)
+        {
+            UOItem cont = null;
+            object cnt = Container;
+            depth = 0;
+            while (cnt != null)
+            {
+                if (cnt is uint ser && UOSObjects.FindItem(ser) is UOItem subx)
+                {
+                    cont = subx;
+                    cnt = subx.Container;
+                    ++depth;
+                }
+                else if (cnt is UOItem subcnt)
+                {
+                    cont = subcnt;
+                    cnt = subcnt.Container;
+                    ++depth;
+                }
+                else
+                {
+                    cnt = null;//this is to prevent infinite loop on mobile
+                }
+            }
+            return cont;
+        }
+
         internal bool UpdateContainer()
         {
-            if (!(m_Parent is uint) || Deleted)
+            if (!(_Parent is uint) || Deleted)
                 return true;
 
             object o = null;
-            uint contSer = (uint)m_Parent;
+            uint contSer = (uint)_Parent;
             if (SerialHelper.IsItem(contSer))
                 o = UOSObjects.FindItem(contSer);
             else if (SerialHelper.IsMobile(contSer))
@@ -434,67 +427,66 @@ namespace Assistant
             if (o == null)
                 return false;
 
-            m_Parent = o;
+            _Parent = o;
 
-            if (m_Parent is UOItem)
-                ((UOItem)m_Parent).AddItem(this);
-            else if (m_Parent is UOMobile)
-                ((UOMobile)m_Parent).AddItem(this);
+            if (_Parent is UOItem)
+                ((UOItem)_Parent).AddItem(this);
+            else if (_Parent is UOMobile)
+                ((UOMobile)_Parent).AddItem(this);
 
-            if (Client.Game.UO.World.Player != null && (IsChildOf(UOSObjects.Player.Backpack) || IsChildOf(UOSObjects.Player.Quiver)))
+            if (UOSObjects.Player != null && (IsChildOf(UOSObjects.Player.Backpack) || IsChildOf(UOSObjects.Player.Quiver)))
             {
-                //TODO: SearchExemptions
-                bool exempt = false;// = SearchExemptionAgent.IsExempt(this);
-
-                if (m_IsNew)
+                if (_IsNew)
                 {
-                    if (m_AutoStack)
+                    if (_AutoStack)// && )
                         AutoStackResource();
-                    //do we really need pouch check for CUO?
-                    if (IsContainer && !exempt)// && (!IsPouch || !Config.GetBool("NoSearchPouches")) && UOSObjects.Gump.AutoSearchContainers)
-                    {
-                        PacketHandlers.IgnoreGumps.Add(this);
-                        PlayerData.DoubleClick(Serial);
 
-                        for (int c = 0; c < Contains.Count; ++c)
+                    if (IsContainer && UOSObjects.Gump.AutoSearchContainers)
+                    {
+                        if (!SearchExemption.IsExempt(Graphic))
                         {
-                            UOItem icheck = Contains[c];
-                            //TODO: SearchExemptionAgent
-                            if (icheck.IsContainer)// && !SearchExemptionAgent.IsExempt(icheck) && (!icheck.IsPouch || !Config.GetBool("NoSearchPouches")))
+                            PacketHandlers.IgnoreGumps.Add(Serial);
+                            PlayerData.DoubleClick(Serial);
+
+                            for (int c = 0; c < Contains.Count; ++c)
                             {
-                                PacketHandlers.IgnoreGumps.Add(icheck);
-                                PlayerData.DoubleClick(icheck.Serial);
+                                UOItem icheck = Contains[c];
+                                if (icheck.IsContainer && !SearchExemption.IsExempt(icheck.Graphic))
+                                {
+                                    PacketHandlers.IgnoreGumps.Add(icheck.Serial);
+                                    PlayerData.DoubleClick(icheck.Serial);
+                                }
                             }
                         }
                     }
                 }
             }
 
-            m_AutoStack = m_IsNew = false;
+            _AutoStack = _IsNew = false;
 
             return true;
         }
 
-        private static List<UOItem> m_NeedContUpdate = new List<UOItem>();
+        private static List<UOItem> _NeedContUpdate = new List<UOItem>();
 
         internal static void UpdateContainers()
         {
             int i = 0;
-            while (i < m_NeedContUpdate.Count)
+            while (i < _NeedContUpdate.Count)
             {
-                if (((UOItem)m_NeedContUpdate[i]).UpdateContainer())
-                    m_NeedContUpdate.RemoveAt(i);
+                if (_NeedContUpdate[i].UpdateContainer())
+                    _NeedContUpdate.RemoveAt(i);
                 else
                     i++;
             }
         }
 
-        private static List<uint> m_AutoStackCache = new List<uint>();
+        private static List<uint> _AutoStackCache = new List<uint>();
 
         internal void AutoStackResource()
         {
             //do we need to check for autostack? does it have really any utility?
-            if (!IsResource || m_AutoStackCache.Contains(Serial))// || !Config.GetBool("AutoStack")
+            if (!Scavenger.Stack || !IsResource || _AutoStackCache.Contains(Serial))
                 return;
 
             foreach (UOItem check in UOSObjects.Items.Values)
@@ -503,12 +495,12 @@ namespace Assistant
                     Utility.InRange(UOSObjects.Player.Position, check.Position, 2))
                 {
                     DragDropManager.DragDrop(this, check);
-                    m_AutoStackCache.Add(Serial);
+                    _AutoStackCache.Add(Serial);
                     return;
                 }
             }
             DragDropManager.DragDrop(this, UOSObjects.Player.Position);
-            m_AutoStackCache.Add(Serial);
+            _AutoStackCache.Add(Serial);
         }
 
         internal object RootContainer
@@ -566,30 +558,30 @@ namespace Assistant
 
         private void AddItem(UOItem item)
         {
-            for (int i = 0; i < m_Items.Count; ++i)
+            for (int i = 0; i < _Items.Count; ++i)
             {
-                if (m_Items[i] == item)
+                if (_Items[i] == item)
                     return;
             }
 
-            m_Items.Add(item);
+            _Items.Add(item);
         }
 
         private void RemoveItem(UOItem item)
         {
-            m_Items.Remove(item);
+            _Items.Remove(item);
         }
 
         internal byte GetPacketFlags()
         {
             byte flags = 0;
 
-            if (!m_Visible)
+            if (!_Visible)
             {
                 flags |= 0x80;
             }
 
-            if (m_Movable)
+            if (_Movable)
             {
                 flags |= 0x20;
             }
@@ -607,27 +599,27 @@ namespace Assistant
 
         internal void ProcessPacketFlags(byte flags)
         {
-            m_Visible = ((flags & 0x80) == 0);
-            m_Movable = ((flags & 0x20) != 0);
+            _Visible = ((flags & 0x80) == 0);
+            _Movable = ((flags & 0x20) != 0);
         }
 
-        private Timer m_RemoveTimer = null;
+        private Timer _RemoveTimer = null;
 
         internal void RemoveRequest()
         {
-            if (m_RemoveTimer == null)
-                m_RemoveTimer = Timer.DelayedCallback(TimeSpan.FromSeconds(0.5), new TimerCallback(Remove));
-            else if (m_RemoveTimer.Running)
-                m_RemoveTimer.Stop();
+            if (_RemoveTimer == null)
+                _RemoveTimer = Timer.DelayedCallback(TimeSpan.FromMilliseconds(25), new TimerCallback(Remove));
+            else if (_RemoveTimer.Running)
+                _RemoveTimer.Stop();
 
-            m_RemoveTimer.Start();
+            _RemoveTimer.Start();
         }
 
         internal bool CancelRemove()
         {
-            if (m_RemoveTimer != null && m_RemoveTimer.Running)
+            if (_RemoveTimer != null && _RemoveTimer.Running)
             {
-                m_RemoveTimer.Stop();
+                _RemoveTimer.Stop();
                 return true;
             }
             else
@@ -638,14 +630,14 @@ namespace Assistant
 
         internal override void Remove()
         {
-            List<UOItem> rem = new List<UOItem>(m_Items);
-            m_Items.Clear();
+            List<UOItem> rem = new List<UOItem>(_Items);
+            _Items.Clear();
             for (int i = 0; i < rem.Count; ++i)
                 (rem[i]).Remove();
 
-            if (m_Parent is UOMobile mobile)
+            if (_Parent is UOMobile mobile)
                 mobile.RemoveItem(this);
-            else if (m_Parent is UOItem item)
+            else if (_Parent is UOItem item)
                 item.RemoveItem(this);
 
             UOSObjects.RemoveItem(this);
@@ -654,15 +646,15 @@ namespace Assistant
 
         internal List<UOItem> Contains
         {
-            get { return m_Items; }
+            get { return _Items; }
         }
 
         public IEnumerable<UOItem> Contents(bool recurse = true)
         {
-            if (m_Items == null)
+            if (_Items == null)
                 yield break;
 
-            foreach (var item in m_Items)
+            foreach (var item in _Items)
             {
                 yield return item;
 
@@ -671,11 +663,10 @@ namespace Assistant
             }
         }
 
-        // possibly 4 bit x/y - 16x16?
         internal byte GridNum
         {
-            get { return m_GridNum; }
-            set { m_GridNum = value; }
+            get { return _GridNum; }
+            set { _GridNum = value; }
         }
 
         internal bool OnGround
@@ -687,29 +678,29 @@ namespace Assistant
         {
             get
             {
-                ushort iid = m_ItemID;
-                return (m_Items.Count > 0 && !IsCorpse) || (iid >= 0x9A8 && iid <= 0x9AC) ||
+                ushort iid = _ItemID;
+                return (_Items.Count > 0 && !IsCorpse) || iid == 0x990 || (iid >= 0x9A8 && iid <= 0x9AC) ||
                        (iid >= 0x9B0 && iid <= 0x9B2) ||
                        (iid >= 0xA2C && iid <= 0xA53) || (iid >= 0xA97 && iid <= 0xA9E) ||
                        (iid >= 0xE3C && iid <= 0xE43) ||
                        (iid >= 0xE75 && iid <= 0xE80 && iid != 0xE7B) || iid == 0x1E80 || iid == 0x1E81 ||
-                       iid == 0x232A || iid == 0x232B ||
+                       iid == 0x232A || iid == 0x232B || (iid >= 0x2DF1 && iid <= 0x2DF4) ||
                        iid == 0x2B02 || iid == 0x2B03 || iid == 0x2FB7 || iid == 0x3171;
             }
         }
 
         internal bool IsBagOfSending
         {
-            get { return Hue >= 0x0400 && m_ItemID == 0xE76; }
+            get { return Hue >= 0x0400 && _ItemID == 0xE76; }
         }
 
         internal bool IsInBank
         {
             get
             {
-                if (m_Parent is UOItem)
-                    return ((UOItem)m_Parent).IsInBank;
-                else if (m_Parent is UOMobile)
+                if (_Parent is UOItem)
+                    return ((UOItem)_Parent).IsInBank;
+                else if (_Parent is UOMobile)
                     return this.Layer == Layer.Bank;
                 else
                     return false;
@@ -718,36 +709,36 @@ namespace Assistant
 
         internal bool IsNew
         {
-            get { return m_IsNew; }
-            set { m_IsNew = value; }
+            get { return _IsNew; }
+            set { _IsNew = value; }
         }
 
         internal bool AutoStack
         {
-            get { return m_AutoStack; }
-            set { m_AutoStack = value; }
+            get { return _AutoStack; }
+            set { _AutoStack = value; }
         }
 
         internal bool IsMulti
         {
-            get { return m_ItemID >= 0x4000; }
+            get { return _ItemID >= 0x4000; }
         }
 
         internal bool IsPouch
         {
-            get { return m_ItemID == 0x0E79; }
+            get { return _ItemID == 0x0E79; }
         }
 
         internal bool IsCorpse
         {
-            get { return m_ItemID == 0x2006 || (m_ItemID >= 0x0ECA && m_ItemID <= 0x0ED2); }
+            get { return _ItemID == 0x2006 || (_ItemID >= 0x0ECA && _ItemID <= 0x0ED2); }
         }
 
         internal bool IsDoor
         {
             get
             {
-                ushort iid = m_ItemID;
+                ushort iid = _ItemID;
                 return (iid >= 0x0675 && iid <= 0x06F6) || (iid >= 0x0821 && iid <= 0x0875) ||
                        (iid >= 0x1FED && iid <= 0x1FFC) ||
                        (iid >= 0x241F && iid <= 0x2424) || (iid >= 0x2A05 && iid <= 0x2A1C);
@@ -758,7 +749,7 @@ namespace Assistant
         {
             get
             {
-                ushort iid = m_ItemID;
+                ushort iid = _ItemID;
                 return (iid >= 0x19B7 && iid <= 0x19BA) || // ore
                        (iid >= 0x09CC && iid <= 0x09CF) || // fishes
                        (iid >= 0x1BDD && iid <= 0x1BE2) || // logs
@@ -772,8 +763,8 @@ namespace Assistant
         {
             get
             {
-                return (m_ItemID >= 0x0F06 && m_ItemID <= 0x0F0D) ||
-                       m_ItemID == 0x2790 || m_ItemID == 0x27DB; // Ninja belt (works like a potion)
+                return (_ItemID >= 0x0F06 && _ItemID <= 0x0F0D) ||
+                       _ItemID == 0x2790 || _ItemID == 0x27DB; // Ninja belt (works like a potion)
             }
         }
 
@@ -781,7 +772,7 @@ namespace Assistant
         {
             get
             {
-                ushort iid = m_ItemID;
+                ushort iid = _ItemID;
                 return (iid >= 0x1bc3 && iid <= 0x1bc5); // virtue shields
             }
         }
@@ -790,10 +781,10 @@ namespace Assistant
         {
             get
             {
-                ushort iid = m_ItemID;
+                ushort iid = _ItemID;
                 return (
                            // everything in layer 2 except shields is 2handed
-                           Layer == Layer.LeftHand &&
+                           Layer == Layer.TwoHanded &&
                            !((iid >= 0x1b72 && iid <= 0x1b7b) || IsVirtueShield) // shields
                        ) ||
 
@@ -818,14 +809,14 @@ namespace Assistant
 
         internal int Price
         {
-            get { return m_Price; }
-            set { m_Price = value; }
+            get { return _Price; }
+            set { _Price = value; }
         }
 
         internal string BuyDesc
         {
-            get { return m_BuyDesc; }
-            set { m_BuyDesc = value; }
+            get { return _BuyDesc; }
+            set { _BuyDesc = value; }
         }
 
         internal override string GetName()

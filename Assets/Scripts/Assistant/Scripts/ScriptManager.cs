@@ -1,4 +1,20 @@
-﻿using System;
+﻿﻿#region License
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org> for details.
+#endregion
+
+using System;
 using System.Collections.Generic;
 using UOScript;
 using Assistant.Scripts;
@@ -18,6 +34,7 @@ namespace Assistant
             {
                 if(value != _Recording)
                 {
+                    AssistantGump gump = UOSObjects.Gump;
                     _Recording = value;
                     if(_Recording)
                     {
@@ -43,6 +60,17 @@ namespace Assistant
 
         internal static bool SetVariableActive { get; set; }
 
+        internal static void BeginInit()
+        {
+            if (ScriptRunning == false)
+            {
+                Timer?.Begin();
+            }
+        }
+
+        internal const uint MACRO_ACTION_DELAY = 100;
+        internal static uint ActionDelayDragDrop => Math.Max(UOSObjects.Gump?.ActionDelay ?? MACRO_ACTION_DELAY, MACRO_ACTION_DELAY * 3);
+
         private class ScriptTimer : Timer
         {
             // Only run scripts once every 25ms to avoid spamming.
@@ -52,14 +80,7 @@ namespace Assistant
 
             protected override void OnTick()
             {
-                if (Interpreter.ExecuteScript())
-                {
-                    if (ScriptRunning == false)
-                    {
-                        Begin();
-                    }
-                }
-                else
+                if (!Interpreter.ExecuteScript())
                 {
                     if (ScriptRunning)
                     {
@@ -83,23 +104,34 @@ namespace Assistant
                 }
             }
 
-            private void Begin()
+            internal void Begin()
             {
-                UOSObjects.Player?.SendMessage("Running Script");
+                if(UOSObjects.Gump.StartStopMacroMessages)
+                    UOSObjects.Player?.SendMessage("Running Script");
                 ScriptRunning = true;
-                if (UOSObjects.Gump != null)
+                SetMacroButton();
+            }
+
+            private void End()
+            {
+                if (UOSObjects.Gump.StartStopMacroMessages)
+                    UOSObjects.Player?.SendMessage("Script Ended");
+                ScriptRunning = false;
+                SetMacroButton();
+            }
+        }
+
+        internal static void SetMacroButton()
+        {
+            if (UOSObjects.Gump != null)
+            {
+                if (ScriptRunning)
                 {
                     UOSObjects.Gump.PlayMacro.TextLabel.Text = "Stop";
                     UOSObjects.Gump.RecordMacro.TextLabel.Hue = ScriptTextBox.RED_HUE;
                     UOSObjects.Gump.RecordMacro.IsEnabled = false;
                 }
-            }
-
-            private void End()
-            {
-                UOSObjects.Player?.SendMessage("Script Ended");
-                ScriptRunning = false;
-                if (UOSObjects.Gump != null)
+                else
                 {
                     UOSObjects.Gump.PlayMacro.TextLabel.Text = "Play";
                     UOSObjects.Gump.RecordMacro.TextLabel.Hue = ScriptTextBox.GRAY_HUE;
@@ -111,6 +143,7 @@ namespace Assistant
         internal static void StopScript()
         {
             Interpreter.StopScript();
+            Commands.ClearAll();
         }
 
         internal static bool PlayScript(string scriptName, bool fromscript = false)
@@ -121,7 +154,7 @@ namespace Assistant
             if (!fromscript)
             {
                 string old = ScriptRunning ? Interpreter.ActiveScript?.ScriptName : null;
-                if (!string.IsNullOrEmpty(old) && MacroDictionary.TryGetValue(old, out HotKeyOpts oldopts) && oldopts.NoAutoInterrupt)
+                if (!string.IsNullOrEmpty(old) && opts.NoAutoInterrupt)
                     return false;
             }
             PlayScript(opts, fromscript);
@@ -130,7 +163,7 @@ namespace Assistant
 
         internal static void PlayScript(HotKeyOpts macro, bool fromscript = false, bool frombutton = false)
         {
-            if (UOSObjects.Player == null || macro == null || string.IsNullOrEmpty(macro.Macro))//ScriptEditor == null || 
+            if (!Engine.Instance.AllowBit(FeatureBit.AdvancedMacros) || UOSObjects.Player == null || macro == null || string.IsNullOrEmpty(macro.Macro))
                 return;
 
             if(fromscript && UOSObjects.Gump.ReturnToParentScript && Engine.Instance.AllowBit(FeatureBit.LoopingMacros))
@@ -163,16 +196,33 @@ namespace Assistant
             {
                 _Initialized = true;
                 Commands.Register();
-                //AgentCommands.Register();
                 Aliases.Register();
                 Expressions.Register();
             }
-            Timer.Start();
+
+            if (ScriptRunning)
+            {
+                Assistant.Timer.DelayedCallback(TimeSpan.FromSeconds(2.5), StartTimer).Start();
+            }
+            else
+            {
+                Timer.Start();
+            }
+        }
+
+        private static void StartTimer()
+        {
+            if (UOSObjects.Gump != null)
+            {
+                Timer?.Start();
+            }
         }
 
         internal static void OnLogout()
         {
             Timer.Stop();
+            Commands.OnDisconnected();
+            Expressions.OnDisconnected();
         }
 
         internal static SortedDictionary<string, HotKeyOpts> MacroDictionary { get; } = new SortedDictionary<string, HotKeyOpts>();
@@ -215,14 +265,14 @@ namespace Assistant
             }
         }
 
-        internal static void Error(bool quiet, string message, string scripterror = null)
+        internal static void Message(bool quiet, string message, string scripterror = null, MsgLevel level = MsgLevel.Error)
         {
             if (!quiet)
             {
                 if (scripterror != null)
-                    UOSObjects.Player?.SendMessage(MsgLevel.Error, $"'{scripterror}' - {message}");
+                    UOSObjects.Player?.SendMessage(level, $"'{scripterror}' - {message}");
                 else
-                    UOSObjects.Player?.SendMessage(MsgLevel.Error, $"{message}");
+                    UOSObjects.Player?.SendMessage(level, $"{message}");
             }
         }
 
@@ -326,13 +376,15 @@ namespace Assistant
             { "herboristery", 54 }
         };
 
-        // Convert steam-compatible skill names to Skills
+        // Convert steam-compatible skill names to Skills (or use skill number if a number is provided)
         internal static Skill GetSkill(string skillName)
         {
             if (SkillMap.TryGetValue(skillName.ToLower(), out var id))
                 return UOSObjects.Player.Skills[id];
+            else if(int.TryParse(skillName, out id) && id >= 0 && id < UOSObjects.Player.Skills.Length)
+                return UOSObjects.Player.Skills[id];
 
-            new RunTimeError(null, $"Unknown skill name: {skillName}");
+            Message(false, $"Unknown skill name: {skillName}");
             return null; 
         }
     }

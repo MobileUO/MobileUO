@@ -1,14 +1,31 @@
-﻿using System;
+﻿#region License
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org> for details.
+#endregion
+
+using System;
 using System.Linq;
 using System.Collections.Generic;
 
+using ClassicUO.IO;
 using ClassicUO.Game;
 using ClassicUO.Network;
+using ClassicUO.Game.UI.Controls;
 
 using Assistant.Core;
 using UOScript;
 using AssistGump = ClassicUO.Game.UI.Gumps.AssistantGump;
-using ClassicUO;
 
 namespace Assistant
 {
@@ -21,6 +38,20 @@ namespace Assistant
         public int X, Y;
         public int Z;
         public ushort Gfx;
+
+        public bool Equals(TargetInfo ti)
+        {
+            if (ti != null && Flags == ti.Flags && Type == ti.Type && Serial == ti.Serial && Gfx == ti.Gfx && X == ti.X && Y == ti.Y && Z == ti.Z)
+                return true;
+            return false;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj is TargetInfo ti)
+                return Equals(ti);
+            return false;
+        }
     }
 
     public enum MobType
@@ -30,76 +61,81 @@ namespace Assistant
         Monster
     }
 
-    internal partial class Targeting
+    internal class Targeting
     {
-        public const uint LocalTargID = 0x7FFFFFFF; // uid for target sent from razor
+        internal static void ClearAll()
+        {
+            _OldLT = _OldBeneficialLT = _OldHarmfulLT = 0;
+        }
+
+        public const uint LOCAL_TARG_ID = 0x7FFFFFFF; // uid for target sent from CUO
 
         public delegate void TargetResponseCallback(bool location, uint serial, Point3D p, ushort gfxid);
 
         public delegate void CancelTargetCallback();
 
-        private static CancelTargetCallback m_OnCancel;
-        private static TargetResponseCallback m_OnTarget;
+        private static CancelTargetCallback _OnCancel;
+        private static TargetResponseCallback _OnTarget;
 
-        private static bool m_Intercept;
-        private static bool m_HasTarget;
-        private static bool m_ClientTarget;
-        private static TargetInfo m_LastTarget;
-        private static TargetInfo m_LastGroundTarg;
-        private static TargetInfo m_LastBeneTarg;
-        private static TargetInfo m_LastHarmTarg;
+        private static bool _Intercept;
+        private static bool _HasTarget;
+        private static bool _ClientTarget;
+        private static TargetInfo _LastTarget;
+        private static TargetInfo _LastGroundTarg;
+        private static TargetInfo _LastBeneTarg;
+        private static TargetInfo _LastHarmTarg;
 
+        private static bool _FromGrabHotKey;
 
-        private static bool m_FromGrabHotKey;
+        private static bool _AllowGround;
+        private static uint _CurrentID;
+        private static byte _CurFlags;
 
-        private static bool m_AllowGround;
-        private static uint m_CurrentID;
-        private static byte m_CurFlags;
+        private static uint _PreviousID;
+        private static bool _PreviousGround;
+        private static byte _PrevFlags;
 
-        private static uint m_PreviousID;
-        private static bool m_PreviousGround;
-        private static byte m_PrevFlags;
+        private static uint _LastCombatant;
+        internal static uint LastCombatant => _LastCombatant;
 
-        private static uint m_LastCombatant;
-
-        private delegate bool QueueTarget();
+        internal delegate bool QueueTarget();
 
         private static QueueTarget TargetSelfAction = new QueueTarget(DoTargetSelf);
         private static QueueTarget LastTargetAction = new QueueTarget(DoLastTarget);
-        private static QueueTarget m_QueueTarget;
+        private static QueueTarget _QueueTarget;
 
 
-        private static uint m_SpellTargID = 0;
+        private static uint _SpellTargID = 0;
 
         public static uint SpellTargetID
         {
-            get { return m_SpellTargID; }
-            set { m_SpellTargID = value; }
+            get { return _SpellTargID; }
+            set { _SpellTargID = value; }
         }
 
-        private static List<uint> m_FilterCancel = new List<uint>();
+        private static List<uint> _FilterCancel = new List<uint>();
 
         public static bool HasTarget
         {
             get 
             { 
-                return m_HasTarget; 
+                return _HasTarget; 
             }
         }
 
-        public static bool ServerTarget => !m_Intercept && m_HasTarget;
+        public static bool ServerTarget => !_Intercept && _HasTarget;
 
         public static TargetInfo LastTargetInfo
         {
-            get { return m_LastTarget; }
+            get { return _LastTarget; }
         }
 
         public static bool FromGrabHotKey
         {
-            get { return m_FromGrabHotKey; }
+            get { return _FromGrabHotKey; }
         }
 
-        private static List<ushort> m_MonsterIds = new List<ushort>()
+        private static List<ushort> _MonsterIds = new List<ushort>()
         {
             0x1, 0x2, 0x3, 0x4, 0x7, 0x8, 0x9, 0xC, 0xD, 0xE, 0xF,
             0x10, 0x11, 0x12, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C,
@@ -124,7 +160,7 @@ namespace Assistant
             Enemy       = 0x20, //orange
             Murderer    = 0x40, //red
             Invulnerable= 0x80, //invulnerable
-            Any         = 0xFE  //any without invalid
+            Any         = 0x7E  //any without invalid and invulnerable
         }
 
         internal static bool ValidTarget(TargetType target, byte noto)
@@ -137,56 +173,51 @@ namespace Assistant
             PacketHandler.RegisterClientToServerViewer(0x6C, TargetResponse);
             PacketHandler.RegisterServerToClientViewer(0x6C, NewTarget);
             PacketHandler.RegisterServerToClientViewer(0xAA, CombatantChange);
-
-            /*HotKey.Add(HKCategory.Targets, LocString.LastTarget, LastTarget);
-            HotKey.Add(HKCategory.Targets, LocString.TargetSelf, TargetSelf);
-            HotKey.Add(HKCategory.Targets, LocString.ClearTargQueue, OnClearQueue);
-
-            HotKey.Add(HKCategory.Targets, LocString.SetLT, TargetSetLastTarget);
-            HotKey.Add(HKCategory.Targets, LocString.SetLastBeneficial, SetLastTargetBeneficial);
-            HotKey.Add(HKCategory.Targets, LocString.SetLastHarmful, SetLastTargetHarmful);
-
-            HotKey.Add(HKCategory.Targets, LocString.AttackLastComb, AttackLastComb);
-            HotKey.Add(HKCategory.Targets, LocString.AttackLastTarg, AttackLastTarg);
-            HotKey.Add(HKCategory.Targets, LocString.CancelTarget, CancelTarget);
-
-            InitRandomTarget();
-            InitNextPrevTargets();
-            InitClosestTargets();*/
         }
 
 
-        private static void CombatantChange(Packet p, PacketHandlerEventArgs e)
+        private static void CombatantChange(ref StackDataReader p, PacketHandlerEventArgs e)
         {
-            uint ser = p.ReadUInt();
+            uint ser = p.ReadUInt32BE();
             if (ser != 0 && ser != uint.MaxValue && SerialHelper.IsValid(ser) && ser != UOSObjects.Player.Serial)
-                m_LastCombatant = ser;
+                _LastCombatant = ser;
         }
 
         internal static void AttackTarget(uint serial)
         {
-            if(SerialHelper.IsValid(serial))
-                Engine.Instance.SendToServer(new AttackReq(serial));
+            if (SerialHelper.IsValid(serial))
+            {
+                NetClient.Socket.PSend_AttackRequest(serial);
+                if (Engine.Instance.AllowBit(FeatureBit.EnemyTargetShare))
+                {
+                    UOMobile m = UOSObjects.FindMobile(serial);
+                    if (m != null)
+                        SendSharedTarget(m);
+                }
+            }
         }
 
         internal static void AttackLastComb()
         {
-            if (SerialHelper.IsValid(m_LastCombatant))
-                Engine.Instance.SendToServer(new AttackReq(m_LastCombatant));
+            if (SerialHelper.IsValid(_LastCombatant))
+            {
+                AttackTarget(_LastCombatant);
+            }
         }
 
         internal static void OnFriendTargetSelected(bool loc, uint serial, Point3D p, ushort itemid)
         {
-            if (SerialHelper.IsMobile(serial) && serial != UOSObjects.Player.Serial && !UOSObjects.Gump.FriendDictionary.ContainsKey(serial))
+            if (SerialHelper.IsMobile(serial) && serial != UOSObjects.Player.Serial && !FriendsManager.FriendDictionary.ContainsKey(serial))
             {
                 UOMobile m = UOSObjects.FindMobile(serial);
                 if (m != null)
                 {
                     if (string.IsNullOrEmpty(m.Name))
                         m.Name = "(Not Seen)";
-                    UOSObjects.Gump.FriendDictionary[serial] = m.Name;
+                    FriendsManager.FriendDictionary[serial] = m.Name;
                     UOSObjects.Player.SendMessage(MsgLevel.Info, $"Friend List: Adding {m}");
                     UOSObjects.Gump.UpdateFriendListGump();
+                    XmlFileParser.SaveData();
                 }
             }
         }
@@ -195,30 +226,68 @@ namespace Assistant
         {
             if (SerialHelper.IsValid(serial))
             {
-                if(UOSObjects.Gump.FriendDictionary.Remove(serial))
+                if(FriendsManager.FriendDictionary.Remove(serial))
                     UOSObjects.Gump.UpdateFriendListGump();
             }
+        }
+
+        internal static void OnSetEnemyTarget(bool loc, uint serial, Point3D p, ushort itemid)
+        {
+            if(SerialHelper.IsValid(serial))
+                Interpreter.SetAlias("enemy", serial);
+            else
+                UOSObjects.Player.SendMessage(MsgLevel.Error, "Invalid target selected!");
+        }
+
+        internal static void OnSetFriendTarget(bool loc, uint serial, Point3D p, ushort itemid)
+        {
+            if (SerialHelper.IsValid(serial))
+                Interpreter.SetAlias("friend", serial);
+            else
+                UOSObjects.Player.SendMessage(MsgLevel.Error, "Invalid target selected!");
+        }
+
+        internal static void OnSetLastTarget(bool loc, uint serial, Point3D p, ushort itemid)
+        {
+            if (SerialHelper.IsValid(serial))
+            {
+                SetLastTargetTo(serial);
+            }
+            else
+                UOSObjects.Player.SendMessage(MsgLevel.Error, "Invalid target selected!");
+        }
+
+        internal static void OnSetMountTarget(bool loc, uint serial, Point3D p, ushort itemid)
+        {
+            if (SerialHelper.IsMobile(serial))
+            {
+                Interpreter.SetAlias("mount", serial);
+            }
+            else
+                UOSObjects.Player.SendMessage(MsgLevel.Error, "Invalid target selected!");
         }
 
         internal static void AttackLastTarg()
         {
             TargetInfo targ;
-            if (IsSmartTargetingEnabled())
+            if (IsSmartTargetingEnabled(2))
             {
                 // If Smart Targetting is being used we'll assume that the user would like to attack the harmful target.
-                targ = m_LastHarmTarg;
+                targ = _LastHarmTarg;
 
                 // If there is no last harmful target, then we'll attack the last target.
                 if (targ == null)
-                    targ = m_LastTarget;
+                    targ = _LastTarget;
             }
             else
             {
-                targ = m_LastTarget;
+                targ = _LastTarget;
             }
 
             if (targ != null && SerialHelper.IsValid(targ.Serial))
-                Engine.Instance.SendToServer(new AttackReq(targ.Serial));
+            {
+                AttackTarget(targ.Serial);
+            }
         }
 
         public static uint RandomTarget(byte range, bool friends, bool isdead, MobType type, TargetType noto = TargetType.Any, bool noset = false)
@@ -240,7 +309,7 @@ namespace Assistant
                         continue;
                 }
 
-                if (!m.Blessed && m.IsGhost == isdead && m.Serial != Client.Game.UO.World.Player.Serial &&
+                if (!m.Blessed && m.IsGhost == isdead && m.Serial != ClassicUO.Client.Game.UO.World.Player.Serial &&
                     Utility.InRange(UOSObjects.Player.Position, m.Position, UOSObjects.Gump.SmartTargetRangeValue))
                 {
                     if (noto == TargetType.Any && !friends)
@@ -275,17 +344,17 @@ namespace Assistant
         internal static HashSet<ushort> Transformation = new HashSet<ushort>();
         internal enum FilterType : byte
         {
-            Invalid         = 0x00,//funzionamento simile a nextprev di razor
+            Next            = 0x00,//funzionamento simile a nextprev di razor
             Closest         = 0x01,//solo il più vicino
             Nearest         = 0x02,//ultimi due target
-            AnyRange        = 0x0F,
+            AnyTarget       = 0x0F,
             Humanoid        = 0x10,
             Transformation  = 0x20,
             AnyForm         = 0xF0
         }
         internal static FilterType GetFilterType(UOMobile m)
         {
-            FilterType f = FilterType.Invalid;
+            FilterType f = FilterType.Next;
             if (Humanoid.Contains(m.Body))
                 f |= FilterType.Humanoid;
             if (Transformation.Contains(m.Body))
@@ -296,11 +365,11 @@ namespace Assistant
         internal static InternalSorter Instance;
         internal class InternalSorter : IComparer<UOEntity>
         {
-            private UOEntity m_From;
+            private PlayerData _From;
 
-            public InternalSorter(UOMobile from)
+            public InternalSorter(PlayerData from)
             {
-                m_From = from;
+                _From = from;
             }
 
             public int Compare(UOEntity x, UOEntity y)
@@ -318,8 +387,73 @@ namespace Assistant
                     return 1;
                 }
 
-                return m_From.GetDistanceToSqrt(x).CompareTo(m_From.GetDistanceToSqrt(y));
+                return _From.GetDistanceToSqrt(x).CompareTo(_From.GetDistanceToSqrt(y));
             }
+        }
+
+        internal static ContainedInternalSorter ContainedInstance;
+        internal class ContainedInternalSorter : IComparer<UOEntity>
+        {
+            private PlayerData _From;
+
+            public ContainedInternalSorter(PlayerData from)
+            {
+                _From = from;
+            }
+
+            public int Compare(UOEntity x, UOEntity y)
+            {
+                if (x == null && y == null)
+                {
+                    return 0;
+                }
+                else if (x == null)
+                {
+                    return -1;
+                }
+                else if (y == null)
+                {
+                    return 1;
+                }
+                int ret = _From.GetDistanceToSqrt(x).CompareTo(_From.GetDistanceToSqrt(y));
+                if(ret == 0 && _From.Backpack != null)
+                {
+                    //same location as player, check if parent is a container and if that container is backpack, other or self
+                    //order is: backpack - other sublayers && self after
+                    int xdepth = -1, ydepth = -1;
+                    if(x is UOItem xitem)
+                    {
+                        xitem = xitem.GetRootContainerItem(out xdepth);
+                        if (xitem == _From.Backpack)
+                            --ret;
+                    }
+                    if(y is UOItem yitem)
+                    {
+                        yitem = yitem.GetRootContainerItem(out ydepth);
+                        if (yitem == _From.Backpack)
+                            ++ret;
+                    }
+                    if(ret == 0 && xdepth >= 0 && ydepth >= 0)
+                    {
+                        if(xdepth == 0 && ydepth == 0)
+                        {
+                            return 0;
+                        }
+                        else if(xdepth < ydepth)
+                        {
+                            return -1;
+                        }
+                        else if(ydepth < xdepth)
+                        {
+                            return 1;
+                        }
+                    }
+                }
+
+                return ret;
+            }
+
+
         }
 
         internal static void GetTarget(TargetType targets, FilterType filter, bool isenemy, bool quiet, bool next = true, bool self = false)
@@ -330,7 +464,7 @@ namespace Assistant
             byte map = UOSObjects.Player.Map;
             foreach (UOMobile m in UOSObjects.Mobiles.Values)
             {
-                if (m.Map == map && Utility.InRange(UOSObjects.Player.Position, m.Position, Client.Game.UO.World.ClientViewRange))
+                if (m.Map == map && Utility.InRange(UOSObjects.Player.Position, m.Position, ClassicUO.Client.Game.UO.World.ClientViewRange))
                 {
                     if (ValidTarget(targets, m.Notoriety) && ((filter & FilterType.AnyForm) == 0 || (GetFilterType(m) & filter) != 0))
                     {
@@ -341,10 +475,10 @@ namespace Assistant
             if (!self)
                 list.Remove(UOSObjects.Player);
 
-            if ((filter &= FilterType.AnyRange) != FilterType.Invalid && list.Count > 1)
+            if ((filter &= FilterType.AnyTarget) != FilterType.Next && list.Count > 1)
             {
                 list.Sort(Instance);
-                if ((filter & FilterType.Closest) != FilterType.Invalid)
+                if ((filter & FilterType.Closest) != FilterType.Next)
                     list.RemoveRange(1, list.Count - 1);
                 else if (list.Count > 2)
                     list.RemoveRange(2, list.Count - 2);
@@ -356,6 +490,8 @@ namespace Assistant
                 if(!quiet)
                     UOSObjects.Player.OverheadMessage(PlayerData.GetColorCode(level), $"[{(isenemy ? "Enemy" : "Friend")}]: {e.GetName()}");
                 Interpreter.SetAlias(isenemy ? "enemy" : "friend", e.Serial);
+                if (e is UOMobile uom)
+                    SetLastTargetTo(uom, (byte)(isenemy ? 1 : 2));
             }
         }
 
@@ -365,7 +501,7 @@ namespace Assistant
         private static int _nextPrevTargetIndex;
         private static UOEntity GetFromTargets(List<UOEntity> targets, bool nextTarget, out TargetInfo target)
         {
-            UOEntity entity = null, old = UOSObjects.FindMobile(m_LastTarget?.Serial ?? 0);
+            UOEntity entity = null, old = UOSObjects.FindMobile(_LastTarget?.Serial ?? 0);
             target = new TargetInfo();
             if (targets.Count <= 0)
             {
@@ -409,8 +545,8 @@ namespace Assistant
                 return null;
             }
 
-            if (m_HasTarget)
-                target.Flags = m_CurFlags;
+            if (_HasTarget)
+                target.Flags = _CurFlags;
             else
                 target.Type = 0;
 
@@ -429,22 +565,25 @@ namespace Assistant
         /// </summary>
         /// <param name="targets">The list of targets (already filtered)</param>
         /// <param name="nextTarget">next target true, previous target false</param>
-        /// <param name="removeFriends"></param>
+        /// <param name="isenemy">only valid if is enemy</param>
         public static void NextPrevTarget(List<UOEntity> targets, bool nextTarget, bool isenemy)
         {
             GetFromTargets(targets, nextTarget, out TargetInfo target);
 
-            m_LastGroundTarg = m_LastTarget = target;
+            if(target.Serial != UOSObjects.Player.Serial)
+                _LastGroundTarg = _LastTarget = target;
+            else
+                _LastGroundTarg = target;
 
             if (isenemy)
-                m_LastHarmTarg = target;
+                _LastHarmTarg = target;
             else
-                m_LastBeneTarg = target;
+                _LastBeneTarg = target;
 
             if (isenemy && target.Serial > 0)
             {
-                Engine.Instance.SendToClient(new ChangeCombatant(target.Serial));
-                m_LastCombatant = target.Serial;
+                ClientPackets.PRecv_ChangeCombatant(target.Serial);
+                _LastCombatant = target.Serial;
             }
 
             UOSObjects.Player.SendMessage(MsgLevel.Force, "New target set.");
@@ -466,7 +605,7 @@ namespace Assistant
 
         internal static void OneTimeTarget(TargetResponseCallback onTarget, bool fromGrab)
         {
-            m_FromGrabHotKey = fromGrab;
+            _FromGrabHotKey = fromGrab;
 
             OneTimeTarget(false, onTarget, null);
         }
@@ -483,57 +622,57 @@ namespace Assistant
 
         internal static void OneTimeTarget(bool ground, TargetResponseCallback onTarget, CancelTargetCallback onCancel)
         {
-            if (m_Intercept && m_OnCancel != null)
+            if (_Intercept && _OnCancel != null)
             {
-                m_OnCancel();
+                _OnCancel();
                 CancelOneTimeTarget();
             }
 
-            if (m_HasTarget && m_CurrentID != 0 && m_CurrentID != LocalTargID)
+            if (_HasTarget && _CurrentID != 0 && _CurrentID != LOCAL_TARG_ID)
             {
-                m_PreviousID = m_CurrentID;
-                m_PreviousGround = m_AllowGround;
-                m_PrevFlags = m_CurFlags;
+                _PreviousID = _CurrentID;
+                _PreviousGround = _AllowGround;
+                _PrevFlags = _CurFlags;
 
-                m_FilterCancel.Add(m_PreviousID);
+                _FilterCancel.Add(_PreviousID);
             }
 
-            m_Intercept = true;
-            m_CurrentID = LocalTargID;
-            m_OnTarget = onTarget;
-            m_OnCancel = onCancel;
+            _Intercept = true;
+            _CurrentID = LOCAL_TARG_ID;
+            _OnTarget = onTarget;
+            _OnCancel = onCancel;
 
-            m_ClientTarget = m_HasTarget = true;
-            Engine.Instance.SendToClient(new Target(LocalTargID, ground));
+            _ClientTarget = _HasTarget = true;
+            ClientPackets.PRecv_Target(LOCAL_TARG_ID, ground);
             ClearQueue();
         }
 
         internal static void CancelOneTimeTarget()
         {
-            m_ClientTarget = m_HasTarget = m_FromGrabHotKey = false;
-            Engine.Instance.SendToClient(new CancelTarget(LocalTargID));
+            _ClientTarget = _HasTarget = _FromGrabHotKey = false;
+            ClientPackets.PRecv_CancelTarget(LOCAL_TARG_ID);
             EndIntercept();
         }
 
         internal static bool HasTargetType(string type)
         {
             //['any'/'beneficial'/'harmful'/'neutral'/'server'/'system']
-            if (m_HasTarget)
+            if (_HasTarget)
             {
                 switch(type)
                 {
                     case "any":
                         return true;
                     case "server":
-                        return !m_ClientTarget;
+                        return !_ClientTarget;
                     case "system":
-                        return m_ClientTarget;
+                        return _ClientTarget;
                     case "neutral":
-                        return m_CurFlags == 0x00;
+                        return _CurFlags == 0x00;
                     case "harmful":
-                        return m_CurFlags == 0x01;
+                        return _CurFlags == 0x01;
                     case "beneficial":
-                        return m_CurFlags == 0x02;
+                        return _CurFlags == 0x02;
                 }
             }
             return false;
@@ -541,25 +680,28 @@ namespace Assistant
 
         internal static void SetAutoTargetAction(params int[] ints)
         {
-            if (_AutoTargetTimer != null && _AutoTargetTimer.Running)
-                _AutoTargetTimer.Stop();
+            CancelAutoTargetAction();
             _AutoTargetTimer = new AutoTargetTimer(ints);
             _AutoTargetTimer.Start();
         }
 
         internal static void CancelAutoTargetAction()
         {
-            if (_AutoTargetTimer != null && _AutoTargetTimer.Running)
-                _AutoTargetTimer.Stop();
+            _AutoTargetTimer?.Stop();
         }
 
         private static AutoTargetTimer _AutoTargetTimer;
         private class AutoTargetTimer : Timer
         {
-            private int _Count = 0;
+            private int _Count = 0, _MaxCount = 39;
             private int[] _Ints;
 
-            internal AutoTargetTimer(params int[] ints) : base(TimeSpan.Zero, TimeSpan.FromMilliseconds(100))
+            internal AutoTargetTimer(ushort count, uint serial) : this((int)serial)
+            {
+                _MaxCount = count;
+            }
+
+            internal AutoTargetTimer(params int[] ints) : base(TimeSpan.Zero, TimeSpan.FromMilliseconds(50))
             {
                 _Ints = ints;
             }
@@ -567,13 +709,13 @@ namespace Assistant
             protected override void OnTick()
             {
                 _Count++;
-                if (_Count <= 100)
+                if (_Count <= _MaxCount)
                 {
-                    if (m_HasTarget)
+                    if (_HasTarget)
                     {
                         if (_Ints.Length == 0)//last target
                         {
-                            Target(m_LastTarget, false);
+                            Target(_LastTarget, false);
                         }
                         else if (_Ints.Length == 1)//serial
                         {
@@ -594,171 +736,15 @@ namespace Assistant
             }
         }
 
-        private static bool m_LTWasSet;
-        public static void TargetSetLastTarget()
-        {
-            if (UOSObjects.Player != null)
-            {
-                m_LTWasSet = false;
-                OneTimeTarget(false, new TargetResponseCallback(OnSetLastTarget),
-                    new CancelTargetCallback(OnSLTCancel));
-                UOSObjects.Player.SendMessage(MsgLevel.Force, "Select Last Target");
-            }
-        }
+        private static bool _LTWasSet;
 
-        private static void OnSLTCancel()
-        {
-            m_LTWasSet = m_LastTarget != null;
-        }
-
-        private static void OnSetLastTarget(bool location, uint serial, Point3D p, ushort gfxid)
-        {
-            if (serial == UOSObjects.Player.Serial)
-            {
-                OnSLTCancel();
-                return;
-            }
-
-            m_LastBeneTarg = m_LastHarmTarg = m_LastGroundTarg = m_LastTarget = new TargetInfo();
-            m_LastTarget.Flags = 0;
-            m_LastTarget.Gfx = gfxid;
-            m_LastTarget.Serial = serial;
-            m_LastTarget.Type = (byte)(location ? 1 : 0);
-            m_LastTarget.X = p.X;
-            m_LastTarget.Y = p.Y;
-            m_LastTarget.Z = p.Z;
-
-            m_LTWasSet = true;
-
-            UOSObjects.Player.SendMessage(MsgLevel.Force, "Last Target Set");
-
-            if (SerialHelper.IsValid(serial))
-            {
-                LastTargetChanged();
-                if(SerialHelper.IsMobile(serial))
-                    Engine.Instance.SendToClient(new ChangeCombatant(serial));
-                m_LastCombatant = serial;
-            }
-        }
-
-        private static bool m_LTBeneWasSet;
-
-        /// <summary>
-        /// Sets the beneficial target
-        /// </summary>
-        private static void SetLastTargetBeneficial()
-        {
-            if (!IsSmartTargetingEnabled())
-            {
-                UOSObjects.Player.SendMessage(MsgLevel.Error, "Smart Targeting is disabled");
-                return;
-            }
-
-            if (UOSObjects.Player != null)
-            {
-                m_LTBeneWasSet = false;
-                OneTimeTarget(false, OnSetLastTargetBeneficial, OnSLTBeneficialCancel);
-                UOSObjects.Player.SendMessage(MsgLevel.Force, "Target new 'Beneficial Target'");
-            }
-        }
-
-        private static void OnSLTBeneficialCancel()
-        {
-            if (m_LastBeneTarg != null)
-                m_LTBeneWasSet = true;
-        }
-
-        private static void OnSetLastTargetBeneficial(bool location, uint serial, Point3D p, ushort gfxid)
-        {
-            if (serial == UOSObjects.Player.Serial)
-            {
-                OnSLTBeneficialCancel();
-                return;
-            }
-
-            m_LastBeneTarg = new TargetInfo
-            {
-                Flags = 0,
-                Gfx = gfxid,
-                Serial = serial,
-                Type = (byte)(location ? 1 : 0),
-                X = p.X,
-                Y = p.Y,
-                Z = p.Z
-            };
-
-            m_LTBeneWasSet = true;
-
-            UOSObjects.Player.SendMessage(MsgLevel.Force, "Last Beneficial Target Set");
-
-            if (SerialHelper.IsMobile(serial))
-            {
-                LastBeneficialTargetChanged();
-            }
-        }
-
-        private static bool m_LTHarmWasSet;
-
-        /// <summary>
-        /// Sets the harmful target
-        /// </summary>
-        private static void SetLastTargetHarmful()
-        {
-            if (!IsSmartTargetingEnabled())
-            {
-                UOSObjects.Player.SendMessage(MsgLevel.Error, "Smart Targeting is disabled");
-                return;
-            }
-
-            if (UOSObjects.Player != null)
-            {
-                OneTimeTarget(false, OnSetLastTargetHarmful, OnSLTHarmfulCancel);
-                UOSObjects.Player.SendMessage(MsgLevel.Force, "Target new 'Harmful Target'");
-            }
-        }
-
-        private static void OnSLTHarmfulCancel()
-        {
-            if (m_LastTarget != null)
-                m_LTHarmWasSet = true;
-        }
-
-        private static void OnSetLastTargetHarmful(bool location, uint serial, Point3D p, ushort gfxid)
-        {
-            if (serial == UOSObjects.Player.Serial)
-            {
-                OnSLTHarmfulCancel();
-                return;
-            }
-
-            m_LastHarmTarg = new TargetInfo
-            {
-                Flags = 0,
-                Gfx = gfxid,
-                Serial = serial,
-                Type = (byte)(location ? 1 : 0),
-                X = p.X,
-                Y = p.Y,
-                Z = p.Z
-            };
-
-            m_LTHarmWasSet = true;
-
-            UOSObjects.Player.SendMessage(MsgLevel.Force, "Last Harmful Target Set");
-
-            if (SerialHelper.IsMobile(serial))
-            {
-                LastHarmfulTargetChanged();
-            }
-        }
-
-        private static uint m_OldLT = 0;
-        private static uint m_OldBeneficialLT = 0;
-        private static uint m_OldHarmfulLT = 0;
+        private static uint _OldLT = 0;
+        private static uint _OldBeneficialLT = 0;
+        private static uint _OldHarmfulLT = 0;
 
         private static void RemoveTextFlags(UOEntity ue)
         {
-            if (ue != null)
+            if (ue != null && ue.ObjPropList != null)
             {
                 bool oplchanged = false;
 
@@ -773,26 +759,23 @@ namespace Assistant
 
         private static void AddTextFlags(UOEntity m)
         {
-            if (m != null)
+            if (m != null && m.ObjPropList != null)
             {
                 bool oplchanged = false;
 
-                if (IsSmartTargetingEnabled())
+                if (_LastHarmTarg != null && _LastHarmTarg.Serial == m.Serial && IsSmartTargetingEnabled((byte)AssistGump.SmartTargetFor.Enemy))
                 {
-                    if (m_LastHarmTarg != null && m_LastHarmTarg.Serial == m.Serial)
-                    {
-                        oplchanged = true;
-                        m.ObjPropList.Add("Harmful Target");
-                    }
-
-                    if (m_LastBeneTarg != null && m_LastBeneTarg.Serial == m.Serial)
-                    {
-                        oplchanged = true;
-                        m.ObjPropList.Add("Beneficial Target");
-                    }
+                    oplchanged = true;
+                    m.ObjPropList.Add("Harmful Target");
                 }
 
-                if (!oplchanged && m_LastTarget != null && m_LastTarget.Serial == m.Serial)
+                if (_LastBeneTarg != null && _LastBeneTarg.Serial == m.Serial && IsSmartTargetingEnabled((byte)AssistGump.SmartTargetFor.Friend))
+                {
+                    oplchanged = true;
+                    m.ObjPropList.Add("Beneficial Target");
+                }
+
+                if (!oplchanged && _LastTarget != null && _LastTarget.Serial == m.Serial)
                 {
                     oplchanged = true;
                     m.ObjPropList.Add("Last Target");
@@ -805,38 +788,38 @@ namespace Assistant
 
         private static void LastTargetChanged()
         {
-            if (m_LastTarget != null)
+            if (_LastTarget != null)
             {
-                m_LTWasSet = true;
+                _LTWasSet = true;
                 bool lth = UOSObjects.Gump.HLTargetHue > 0;
 
-                if (SerialHelper.IsItem(m_OldLT))
+                if (SerialHelper.IsItem(_OldLT))
                 {
-                    RemoveTextFlags(UOSObjects.FindItem(m_OldLT));
+                    RemoveTextFlags(UOSObjects.FindItem(_OldLT));
                 }
                 else
                 {
-                    UOMobile m = UOSObjects.FindMobile(m_OldLT);
+                    UOMobile m = UOSObjects.FindMobile(_OldLT);
                     if (m != null)
                     {
                         if (lth)
-                            Engine.Instance.SendToClient(new MobileIncoming(m));
+                            ClientPackets.PRecv_MobileIncoming(m);
 
                         RemoveTextFlags(m);
                     }
                 }
 
-                if (SerialHelper.IsItem(m_LastTarget.Serial))
+                if (SerialHelper.IsItem(_LastTarget.Serial))
                 {
-                    AddTextFlags(UOSObjects.FindItem(m_LastTarget.Serial));
+                    AddTextFlags(UOSObjects.FindItem(_LastTarget.Serial));
                 }
                 else
                 {
-                    UOMobile m = UOSObjects.FindMobile(m_LastTarget.Serial);
+                    UOMobile m = UOSObjects.FindMobile(_LastTarget.Serial);
                     if (m != null)
                     {
                         if (IsLastTarget(m) && lth)
-                            Engine.Instance.SendToClient(new MobileIncoming(m));
+                            ClientPackets.PRecv_MobileIncoming(m);
 
                         CheckLastTargetRange(m);
 
@@ -844,34 +827,34 @@ namespace Assistant
                     }
                 }
 
-                m_OldLT = m_LastTarget.Serial;
+                _OldLT = _LastTarget.Serial;
             }
         }
 
         private static void LastBeneficialTargetChanged()
         {
-            if (m_LastBeneTarg != null)
+            if (_LastBeneTarg != null)
             {
-                if (SerialHelper.IsItem(m_OldBeneficialLT))
+                if (SerialHelper.IsItem(_OldBeneficialLT))
                 {
-                    RemoveTextFlags(UOSObjects.FindItem(m_OldBeneficialLT));
+                    RemoveTextFlags(UOSObjects.FindItem(_OldBeneficialLT));
                 }
                 else
                 {
-                    UOMobile m = UOSObjects.FindMobile(m_OldBeneficialLT);
+                    UOMobile m = UOSObjects.FindMobile(_OldBeneficialLT);
                     if (m != null)
                     {
                         RemoveTextFlags(m);
                     }
                 }
 
-                if (SerialHelper.IsItem(m_LastBeneTarg.Serial))
+                if (SerialHelper.IsItem(_LastBeneTarg.Serial))
                 {
-                    AddTextFlags(UOSObjects.FindItem(m_LastBeneTarg.Serial));
+                    AddTextFlags(UOSObjects.FindItem(_LastBeneTarg.Serial));
                 }
                 else
                 {
-                    UOMobile m = UOSObjects.FindMobile(m_LastBeneTarg.Serial);
+                    UOMobile m = UOSObjects.FindMobile(_LastBeneTarg.Serial);
                     if (m != null)
                     {
                         CheckLastTargetRange(m);
@@ -880,52 +863,125 @@ namespace Assistant
                     }
                 }
 
-                m_OldBeneficialLT = m_LastBeneTarg.Serial;
+                _OldBeneficialLT = _LastBeneTarg.Serial;
             }
         }
 
         private static void LastHarmfulTargetChanged()
         {
-            if (m_LastHarmTarg != null)
+            if (_LastHarmTarg != null)
             {
-                if (SerialHelper.IsItem(m_OldHarmfulLT))
+                if (SerialHelper.IsItem(_OldHarmfulLT))
                 {
-                    RemoveTextFlags(UOSObjects.FindItem(m_OldHarmfulLT));
+                    RemoveTextFlags(UOSObjects.FindItem(_OldHarmfulLT));
                 }
                 else
                 {
-                    UOMobile m = UOSObjects.FindMobile(m_OldHarmfulLT);
+                    UOMobile m = UOSObjects.FindMobile(_OldHarmfulLT);
                     if (m != null)
                     {
                         RemoveTextFlags(m);
                     }
                 }
 
-                if (SerialHelper.IsItem(m_LastHarmTarg.Serial))
+                if (SerialHelper.IsItem(_LastHarmTarg.Serial))
                 {
-                    AddTextFlags(UOSObjects.FindItem(m_LastHarmTarg.Serial));
+                    AddTextFlags(UOSObjects.FindItem(_LastHarmTarg.Serial));
                 }
                 else
                 {
-                    UOMobile m = UOSObjects.FindMobile(m_LastHarmTarg.Serial);
+                    UOMobile m = UOSObjects.FindMobile(_LastHarmTarg.Serial);
                     if (m != null)
                     {
                         CheckLastTargetRange(m);
 
                         AddTextFlags(m);
+                        
+                        if ((Engine.Instance.AllowBit(FeatureBit.SpellTargetShare) && _LastTarget.TargID == _SpellTargID) || Engine.Instance.AllowBit(FeatureBit.EnemyTargetShare))
+                            SendSharedTarget(m);
                     }
                 }
 
-                m_OldHarmfulLT = m_LastHarmTarg.Serial;
+                _OldHarmfulLT = _LastHarmTarg.Serial;
             }
         }
 
+        private static void SendSharedTarget(UOMobile m, string s = null)
+        {
+            var player = UOSObjects.Player;
+            if (player == null)
+                return;
+
+            byte setting;
+            if (s == null)
+            {
+                s = $"enemy_target:{m.Serial}";
+                setting = UOSObjects.Gump.EnemyTargetShare;
+            }
+            else
+            {
+                setting = UOSObjects.Gump.SpellsTargetShare;
+            }
+
+            if (setting != 0)
+            {
+                if ((setting & (byte)AssistGump.ShareTargetTo.Alliance) != 0)
+                {
+                    UOSObjects.Player.Say(ScriptTextBox.RED_HUE, s, MessageType.Alliance);
+                }
+                if ((setting & (byte)AssistGump.ShareTargetTo.Guild) != 0)
+                {
+                    UOSObjects.Player.Say(ScriptTextBox.RED_HUE, s, MessageType.Guild);
+                }
+                if ((setting & (byte)AssistGump.ShareTargetTo.Party) != 0 && player.InParty)
+                {
+                    NetClient.Socket.PSend_PartyMessage(s);
+                }
+            }
+        }
+
+        internal static void CheckSharedTarget(uint from, string text, PacketHandlerEventArgs args)
+        {
+            if (text == null || text.Length < 14 || !text.StartsWith("enemy_target:"))
+            {
+                return;
+            }
+
+            if(from == UOSObjects.Player.Serial)
+            {
+                args.Block = true;
+                return;
+            }
+
+            if(uint.TryParse(text.Substring(13), out uint serial) && SerialHelper.IsMobile(serial))
+            {
+                UOMobile m = UOSObjects.FindMobile(serial);
+                if(m != null)
+                {
+                    if(!UOSObjects.Gump.SmartTargetRange || (byte)UOSObjects.Player.GetDistanceToSqrt(m) <= UOSObjects.Gump.SmartTargetRangeValue)
+                    {
+                        if(UOSObjects.Gump.SharedTargetInAliasEnemy)
+                        {
+                            Interpreter.SetAlias("enemy", serial);
+                        }
+                        Interpreter.SetAlias("shared", serial);
+                    }
+                }
+            }
+            args.Block = true;
+        }
 
         public static bool LTWasSet
         {
-            get { return m_LTWasSet; }
+            get { return _LTWasSet; }
         }
 
+        public static void SetLastTargetTo(uint serial)
+        {
+            UOMobile m = UOSObjects.FindMobile(serial);
+            if (m != null)
+                SetLastTargetTo(m);
+        }
 
         public static void SetLastTargetTo(UOMobile m)
         {
@@ -935,18 +991,16 @@ namespace Assistant
         public static void SetLastTargetTo(UOMobile m, byte flagType)
         {
             TargetInfo targ = new TargetInfo();
-            m_LastGroundTarg = m_LastTarget = targ;
+            _LastGroundTarg = _LastTarget = targ;
 
-            if ((m_HasTarget && m_CurFlags == 1) || flagType == 1)
-                m_LastHarmTarg = targ;
-            else if ((m_HasTarget && m_CurFlags == 2) || flagType == 2)
-                m_LastBeneTarg = targ;
-            else if (flagType == 0)
-                m_LastHarmTarg = m_LastBeneTarg = targ;
+            if ((_HasTarget && _CurFlags == 1) || flagType == 1)
+                _LastHarmTarg = targ;
+            else if ((_HasTarget && _CurFlags == 2) || flagType == 2)
+                _LastBeneTarg = targ;
 
             targ.Type = 0;
-            if (m_HasTarget)
-                targ.Flags = m_CurFlags;
+            if (_HasTarget)
+                targ.Flags = _CurFlags;
             else
                 targ.Flags = flagType;
 
@@ -956,8 +1010,8 @@ namespace Assistant
             targ.Y = m.Position.Y;
             targ.Z = m.Position.Z;
 
-            Engine.Instance.SendToClient(new ChangeCombatant(m));
-            m_LastCombatant = m.Serial;
+            ClientPackets.PRecv_ChangeCombatant(m.Serial);
+            _LastCombatant = m.Serial;
             UOSObjects.Player.SendMessage(MsgLevel.Force, "New target set");
 
             OverheadTargetMessage(targ);
@@ -971,10 +1025,10 @@ namespace Assistant
 
         private static void EndIntercept()
         {
-            m_Intercept = false;
-            m_OnTarget = null;
-            m_OnCancel = null;
-            m_FromGrabHotKey = false;
+            _Intercept = false;
+            _OnTarget = null;
+            _OnCancel = null;
+            _FromGrabHotKey = false;
         }
 
         public static void TargetSelf(bool forceQ = false)
@@ -982,22 +1036,14 @@ namespace Assistant
             if (UOSObjects.Player == null)
                 return;
 
-            //if ( Macros.MacroManager.AcceptActions )
-            //	MacroManager.Action( new TargetSelfAction() );
-
-            if (m_HasTarget)
+            if (_HasTarget)
             {
                 if (!DoTargetSelf())
                     ResendTarget();
             }
-            else if (forceQ || UOSObjects.Gump.UseTargetQueue)
+            else if (forceQ)
             {
-                if (!forceQ)
-                {
-                    UOSObjects.Player.SendMessage(MsgLevel.Force, "Queued Target Self");
-                }
-
-                m_QueueTarget = TargetSelfAction;
+                _QueueTarget = TargetSelfAction;
             }
         }
 
@@ -1011,14 +1057,14 @@ namespace Assistant
             if (UOSObjects.Player == null)
                 return false;
 
-            if (CheckHealPoisonTarg(m_CurrentID, UOSObjects.Player.Serial))
+            if (CheckHealPoisonTarg(_CurrentID, UOSObjects.Player.Serial))
                 return false;
 
             CancelClientTarget();
-            m_HasTarget = false;
-            m_FromGrabHotKey = false;
+            _HasTarget = false;
+            _FromGrabHotKey = false;
 
-            if (!nointercept && m_Intercept)
+            if (!nointercept && _Intercept)
             {
                 TargetInfo targ = new TargetInfo();
                 targ.Serial = UOSObjects.Player.Serial;
@@ -1027,14 +1073,14 @@ namespace Assistant
                 targ.X = UOSObjects.Player.Position.X;
                 targ.Y = UOSObjects.Player.Position.Y;
                 targ.Z = UOSObjects.Player.Position.Z;
-                targ.TargID = LocalTargID;
+                targ.TargID = LOCAL_TARG_ID;
                 targ.Flags = 0;
 
                 OneTimeResponse(targ);
             }
             else
             {
-                Engine.Instance.SendToServer(new TargetResponse(m_CurrentID, UOSObjects.Player));
+                NetClient.Socket.PSend_TargetResponse(_CurrentID, UOSObjects.Player);
             }
 
             return true;
@@ -1047,25 +1093,17 @@ namespace Assistant
 
         public static void LastTarget(bool forceQ)
         {
-            //if ( Macros.MacroManager.AcceptActions )
-            //	MacroManager.Action( new LastTargetAction() );
-
             if (FromGrabHotKey)
                 return;
 
-            if (m_HasTarget)
+            if (_HasTarget)
             {
                 if (!DoLastTarget())
                     ResendTarget();
             }
-            else if (forceQ || UOSObjects.Gump.UseTargetQueue)
+            else if (forceQ)
             {
-                if (!forceQ)
-                {
-                    UOSObjects.Player.SendMessage(MsgLevel.Force, "Queued Last Target");
-                }
-
-                m_QueueTarget = LastTargetAction;
+                _QueueTarget = LastTargetAction;
             }
         }
 
@@ -1075,26 +1113,26 @@ namespace Assistant
                 return true;
 
             TargetInfo targ;
-            if (IsSmartTargetingEnabled())
+            if (_CurFlags > 0 && IsSmartTargetingEnabled((byte)(_CurFlags == 1 ? 2 : 1)))
             {
-                if (m_AllowGround && m_LastGroundTarg != null)
-                    targ = m_LastGroundTarg;
-                else if (m_CurFlags == 1)
-                    targ = m_LastHarmTarg;
-                else if (m_CurFlags == 2)
-                    targ = m_LastBeneTarg;
+                if (_AllowGround && _LastGroundTarg != null)
+                    targ = _LastGroundTarg;
+                else if (_CurFlags == 1)
+                    targ = _LastHarmTarg;
+                else if (_CurFlags == 2)
+                    targ = _LastBeneTarg;
                 else
-                    targ = m_LastTarget;
+                    targ = _LastTarget;
 
                 if (targ == null)
-                    targ = m_LastTarget;
+                    targ = _LastTarget;
             }
             else
             {
-                if (m_AllowGround && m_LastGroundTarg != null)
-                    targ = m_LastGroundTarg;
+                if (_AllowGround && _LastGroundTarg != null)
+                    targ = _LastGroundTarg;
                 else
-                    targ = m_LastTarget;
+                    targ = _LastTarget;
             }
 
             if (targ == null)
@@ -1136,7 +1174,7 @@ namespace Assistant
             }
             else
             {
-                if (!m_AllowGround && !SerialHelper.IsValid(targ.Serial))
+                if (!_AllowGround && !SerialHelper.IsValid(targ.Serial))
                 {
                     UOSObjects.Player.SendMessage(MsgLevel.Warning, "Warning: Current target does not allow to target Ground. Last Target NOT performed");
                     return false;
@@ -1147,56 +1185,54 @@ namespace Assistant
                 }
             }
 
-            if (UOSObjects.Gump.SmartTargetRange && //Engine.Instance.AllowBit(FeatureBit.RangeCheckLT) &&
+            if (UOSObjects.Gump.SmartTargetRange && Engine.Instance.AllowBit(FeatureBit.RangeCheckLT) &&
                 (pos == Point3D.Zero || !Utility.InRange(UOSObjects.Player.Position, pos, UOSObjects.Gump.SmartTargetRangeValue)))
             {
-                if (UOSObjects.Gump.UseTargetQueue)
-                    m_QueueTarget = LastTargetAction;
                 UOSObjects.Player.SendMessage(MsgLevel.Warning, "Requested Target is out of range, Last Target NOT executed!");
                 return false;
             }
 
-            if (CheckHealPoisonTarg(m_CurrentID, targ.Serial))
+            if (CheckHealPoisonTarg(_CurrentID, targ.Serial))
                 return false;
 
             CancelClientTarget();
-            m_HasTarget = false;
+            _HasTarget = false;
 
-            targ.TargID = m_CurrentID;
+            targ.TargID = _CurrentID;
 
-            if (m_Intercept)
+            if (_Intercept)
                 OneTimeResponse(targ);
             else
-                Engine.Instance.SendToServer(new TargetResponse(targ));
+                NetClient.Socket.PSend_TargetResponse(targ);
             return true;
         }
 
-        public static bool DoQueueTarget(TargetInfo targ)
+        public static bool DoQueueTarget()
         {
             if (FromGrabHotKey)
                 return true;
 
-            TargetInfo info;
-            if (IsSmartTargetingEnabled())
+            TargetInfo targ;
+            if (_CurFlags > 0 && IsSmartTargetingEnabled((byte)(_CurFlags == 1 ? 2 : 1)))
             {
-                if (m_AllowGround && m_LastGroundTarg != null)
-                    targ = m_LastGroundTarg;
-                else if (m_CurFlags == 1)
-                    targ = m_LastHarmTarg;
-                else if (m_CurFlags == 2)
-                    targ = m_LastBeneTarg;
+                if (_AllowGround && _LastGroundTarg != null)
+                    targ = _LastGroundTarg;
+                else if (_CurFlags == 1)
+                    targ = _LastHarmTarg;
+                else if (_CurFlags == 2)
+                    targ = _LastBeneTarg;
                 else
-                    targ = m_LastTarget;
+                    targ = _LastTarget;
 
                 if (targ == null)
-                    targ = m_LastTarget;
+                    targ = _LastTarget;
             }
             else
             {
-                if (m_AllowGround && m_LastGroundTarg != null)
-                    targ = m_LastGroundTarg;
+                if (_AllowGround && _LastGroundTarg != null)
+                    targ = _LastGroundTarg;
                 else
-                    targ = m_LastTarget;
+                    targ = _LastTarget;
             }
 
             if (targ == null)
@@ -1238,7 +1274,7 @@ namespace Assistant
             }
             else
             {
-                if (!m_AllowGround && !SerialHelper.IsValid(targ.Serial))
+                if (!_AllowGround && !SerialHelper.IsValid(targ.Serial))
                 {
                     UOSObjects.Player.SendMessage(MsgLevel.Warning, "Warning: Current target does not allow to target Ground. Last Target NOT performed");
                     return false;
@@ -1249,48 +1285,46 @@ namespace Assistant
                 }
             }
 
-            if (UOSObjects.Gump.SmartTargetRange && //Engine.Instance.AllowBit(FeatureBit.RangeCheckLT) &&
+            if (UOSObjects.Gump.SmartTargetRange && Engine.Instance.AllowBit(FeatureBit.RangeCheckLT) &&
                 (pos == Point3D.Zero || !Utility.InRange(UOSObjects.Player.Position, pos, UOSObjects.Gump.SmartTargetRangeValue)))
             {
-                if (UOSObjects.Gump.UseTargetQueue)
-                    m_QueueTarget = LastTargetAction;
                 UOSObjects.Player.SendMessage(MsgLevel.Warning, "Requested Target is out of range, Last Target NOT executed!");
                 return false;
             }
 
-            if (CheckHealPoisonTarg(m_CurrentID, targ.Serial))
+            if (CheckHealPoisonTarg(_CurrentID, targ.Serial))
                 return false;
 
             CancelClientTarget();
-            m_HasTarget = false;
+            _HasTarget = false;
 
-            targ.TargID = m_CurrentID;
+            targ.TargID = _CurrentID;
 
-            if (m_Intercept)
+            if (_Intercept)
                 OneTimeResponse(targ);
             else
-                Engine.Instance.SendToServer(new TargetResponse(targ));
+                NetClient.Socket.PSend_TargetResponse(targ);
             return true;
         }
 
         public static void ClearQueue()
         {
-            m_QueueTarget = null;
+            _QueueTarget = null;
         }
 
-        private static TimerCallbackState<TargetInfo> m_OneTimeRespCallback = new TimerCallbackState<TargetInfo>(OneTimeResponse);
+        private static TimerCallbackState<TargetInfo> _OneTimeRespCallback = new TimerCallbackState<TargetInfo>(OneTimeResponse);
 
         private static void OneTimeResponse(TargetInfo info)
         {
             if ((info.X == 0xFFFF && info.Y == 0xFFFF) && (info.Serial == 0 || info.Serial >= 0x80000000))
             {
-                m_OnCancel?.Invoke();
+                _OnCancel?.Invoke();
             }
             else
             {
                 if (ScriptManager.Recording)
                     ScriptManager.AddToScript($"target {info.Serial}");
-                m_OnTarget?.Invoke(info.Type == 1 ? true : false, info.Serial, new Point3D(info.X, info.Y, info.Z), info.Gfx);
+                _OnTarget?.Invoke(info.Type == 1 ? true : false, info.Serial, new Point3D(info.X, info.Y, info.Z), info.Gfx);
             }
             EndIntercept();
         }
@@ -1298,59 +1332,72 @@ namespace Assistant
         internal static void CancelTarget()
         {
             OnClearQueue();
-            if (m_HasTarget)
+            if (_HasTarget)
             {
-                if(!m_ClientTarget)
-                    Engine.Instance.SendToServer(new TargetCancelResponse(m_CurrentID));
-                m_HasTarget = false;
+                if(!_ClientTarget)
+                    NetClient.Socket.PSend_TargetCancelResponse(_CurrentID);
+                _HasTarget = false;
             }
             CancelClientTarget();
 
-            m_FromGrabHotKey = false;
+            _FromGrabHotKey = false;
         }
 
         private static void CancelClientTarget()
         {
-            if (m_ClientTarget)
+            if (_ClientTarget)
             {
-                m_FilterCancel.Add((uint)m_CurrentID);
-                Engine.Instance.SendToClient(new CancelTarget(m_CurrentID));
-                m_ClientTarget = false;
+                _FilterCancel.Add((uint)_CurrentID);
+                ClientPackets.PRecv_CancelTarget(_CurrentID);
+                _ClientTarget = false;
             }
         }
 
         private static TargetInfo _QueuedTarget = null;
+        internal static TargetInfo QueuedTarget => _QueuedTarget;
         private static bool OnSimpleTarget()
         {
             if(_QueuedTarget != null)
             {
-                _QueuedTarget.TargID = m_CurrentID;
-                m_LastGroundTarg = m_LastTarget = _QueuedTarget;
-                Engine.Instance.SendToServer(new TargetResponse(_QueuedTarget));
+                _QueuedTarget.TargID = _CurrentID;
+                if(_QueuedTarget.Serial != UOSObjects.Player.Serial)
+                    _LastGroundTarg = _LastTarget = _QueuedTarget;
+                else
+                    _LastGroundTarg = _QueuedTarget;
+                NetClient.Socket.PSend_TargetResponse(_QueuedTarget);
             }
             return true;
         }
 
         public static void Target(TargetInfo info, bool forceQ)
         {
-            if (m_Intercept)
+            void cancel()
             {
+                CancelClientTarget();
+                _HasTarget = false;
+                _FromGrabHotKey = false;
+            }
+
+            if (_Intercept)
+            {
+                cancel();
                 OneTimeResponse(info);
             }
-            else if (m_HasTarget)
+            else if (_HasTarget)
             {
-                info.TargID = m_CurrentID;
-                m_LastGroundTarg = m_LastTarget = info;
-                Engine.Instance.SendToServer(new TargetResponse(info));
+                info.TargID = _CurrentID;
+                if(info.Serial != UOSObjects.Player.Serial)
+                    _LastGroundTarg = _LastTarget = info;
+                else
+                    _LastGroundTarg = info;
+                cancel();
+                NetClient.Socket.PSend_TargetResponse(info);
             }
             else if (forceQ)
             {
                 _QueuedTarget = info;
-                m_QueueTarget = OnSimpleTarget;
+                _QueueTarget = OnSimpleTarget;
             }
-            CancelClientTarget();
-            m_HasTarget = false;
-            m_FromGrabHotKey = false;
         }
 
         public static void Target(Point3D pt, bool forceQ = false)
@@ -1363,11 +1410,13 @@ namespace Assistant
                 X = pt.X,
                 Y = pt.Y,
                 Z = pt.Z,
-                Gfx = 0
+                Gfx = UOSObjects.GetTileNear(pt.X, pt.Y, pt.Z)
             };
 
             Target(info, forceQ);
         }
+
+        public static bool WaitingForTarget => _QueueTarget != null && !_Intercept;
 
         public static void Target(Point3D pt, int gfx, bool forceQ = false)
         {
@@ -1385,7 +1434,7 @@ namespace Assistant
             Target(info, forceQ);
         }
 
-        public static void Target(uint s, bool forceQ = false)
+        public static TargetInfo Target(uint s, bool forceQ = false)
         {
             TargetInfo info = new TargetInfo
             {
@@ -1418,13 +1467,15 @@ namespace Assistant
             }
 
             Target(info, forceQ);
+            return info;
         }
 
-        public static void Target(object o, bool forceQ = false)
+        public static TargetInfo Target(object o, bool forceQ = false)
         {
+            TargetInfo info;
             if (o is UOItem item)
             {
-                TargetInfo info = new TargetInfo
+                info = new TargetInfo
                 {
                     Type = 0,
                     Flags = 0,
@@ -1438,7 +1489,7 @@ namespace Assistant
             }
             else if (o is UOMobile m)
             {
-                TargetInfo info = new TargetInfo
+                info = new TargetInfo
                 {
                     Type = 0,
                     Flags = 0,
@@ -1452,12 +1503,23 @@ namespace Assistant
             }
             else if (o is uint u)
             {
-                Target(u, forceQ);
+                info = Target(u, forceQ);
             }
             else if (o is TargetInfo ti)
             {
+                info = ti;
                 Target(ti, forceQ);
             }
+            else
+            {
+                info = new TargetInfo
+                {
+                    Type = 0,
+                    Flags = 0,
+                    Serial = 0
+                };
+            }
+            return info;
         }
 
         private static DateTime _lastFlagCheck = DateTime.UtcNow;
@@ -1468,23 +1530,15 @@ namespace Assistant
             if (DateTime.UtcNow - _lastFlagCheck < TimeSpan.FromMilliseconds(250) && m.Serial == _lastFlagCheckSerial)
                 return;
 
-            /*if (IgnoreAgent.IsIgnored(m.Serial))
-            {
-                m.OverheadMessage(Config.GetInt("SysColor"), "[Ignored]");
-            }*/
+            bool harm = _LastHarmTarg != null && _LastHarmTarg.Serial == m.Serial;
+            bool bene = _LastBeneTarg != null && _LastBeneTarg.Serial == m.Serial;
 
-            if (IsSmartTargetingEnabled())
-            {
-                bool harm = m_LastHarmTarg != null && m_LastHarmTarg.Serial == m.Serial;
-                bool bene = m_LastBeneTarg != null && m_LastBeneTarg.Serial == m.Serial;
+            if (harm && IsSmartTargetingEnabled((byte)AssistGump.SmartTargetFor.Enemy))
+                m.OverheadMessage(0x90, "[Harmful Target]");
+            if (bene && IsSmartTargetingEnabled((byte)AssistGump.SmartTargetFor.Friend))
+                m.OverheadMessage(0x3F, "[Beneficial Target]");
 
-                if (harm)
-                    m.OverheadMessage(0x90, "[Harmful Target]");
-                if (bene)
-                    m.OverheadMessage(0x3F, "[Beneficial Target]");
-            }
-
-            if (m_LastTarget != null && m_LastTarget.Serial == m.Serial)
+            if (_LastTarget != null && _LastTarget.Serial == m.Serial)
                 m.OverheadMessage(0x3B2, "[Last Target]");
 
             _lastFlagCheck = DateTime.UtcNow;
@@ -1495,14 +1549,14 @@ namespace Assistant
         {
             if (m != null)
             {
-                if (IsSmartTargetingEnabled())
+                if (IsSmartTargetingEnabled(3))
                 {
-                    if (m_LastHarmTarg != null && m_LastHarmTarg.Serial == m.Serial)
+                    if (_LastHarmTarg != null && _LastHarmTarg.Serial == m.Serial)
                         return true;
                 }
                 else
                 {
-                    if (m_LastTarget != null && m_LastTarget.Serial == m.Serial)
+                    if (_LastTarget != null && _LastTarget.Serial == m.Serial)
                         return true;
                 }
             }
@@ -1514,14 +1568,14 @@ namespace Assistant
         {
             if (m != null)
             {
-                if (IsSmartTargetingEnabled())
+                if (IsSmartTargetingEnabled(1))
                 {
-                    if (m_LastBeneTarg != null && m_LastBeneTarg.Serial == m.Serial)
+                    if (_LastBeneTarg != null && _LastBeneTarg.Serial == m.Serial)
                         return true;
                 }
                 else
                 {
-                    if (m_LastTarget != null && m_LastTarget.Serial == m.Serial)
+                    if (_LastTarget != null && _LastTarget.Serial == m.Serial)
                         return true;
                 }
             }
@@ -1533,14 +1587,14 @@ namespace Assistant
         {
             if (m != null)
             {
-                if (IsSmartTargetingEnabled())
+                if (IsSmartTargetingEnabled(2))
                 {
-                    if (m_LastHarmTarg != null && m_LastHarmTarg.Serial == m.Serial)
+                    if (_LastHarmTarg != null && _LastHarmTarg.Serial == m.Serial)
                         return true;
                 }
                 else
                 {
-                    if (m_LastTarget != null && m_LastTarget.Serial == m.Serial)
+                    if (_LastTarget != null && _LastTarget.Serial == m.Serial)
                         return true;
                 }
             }
@@ -1553,14 +1607,14 @@ namespace Assistant
             if (UOSObjects.Player == null)
                 return;
 
-            if (m_HasTarget && m != null && m_LastTarget != null && m.Serial == m_LastTarget.Serial &&
-                m_QueueTarget == LastTargetAction)
+            if (_HasTarget && m != null && _LastTarget != null && m.Serial == _LastTarget.Serial &&
+                _QueueTarget == LastTargetAction)
             {
                 if (UOSObjects.Gump.SmartTargetRange && Engine.Instance.AllowBit(FeatureBit.RangeCheckLT))
                 {
                     if (Utility.InRange(UOSObjects.Player.Position, m.Position, UOSObjects.Gump.SmartTargetRangeValue))
                     {
-                        if (m_QueueTarget())
+                        if (_QueueTarget())
                             ClearQueue();
                     }
                 }
@@ -1572,7 +1626,7 @@ namespace Assistant
             if (UOSObjects.Player == null)
                 return false;
 
-            if (targID == m_SpellTargID && SerialHelper.IsMobile(ser) &&
+            if (targID == _SpellTargID && SerialHelper.IsMobile(ser) &&
                 (UOSObjects.Player.LastSpell == Spell.ToID(1, 4) || UOSObjects.Player.LastSpell == Spell.ToID(4, 5)) &&
                 UOSObjects.Gump.BlockInvalidHeal && Engine.Instance.AllowBit(FeatureBit.BlockHealPoisoned))
             {
@@ -1588,79 +1642,85 @@ namespace Assistant
             return false;
         }
 
-        private static void TargetResponse(Packet p, PacketHandlerEventArgs args)
+        private static void TargetResponse(ref StackDataReader p, PacketHandlerEventArgs args)
         {
             TargetInfo info = new TargetInfo
             {
-                Type = p.ReadByte(),
-                TargID = p.ReadUInt(),
-                Flags = p.ReadByte(),
-                Serial = p.ReadUInt(),
-                X = p.ReadUShort(),
-                Y = p.ReadUShort(),
-                Z = (short)p.ReadUShort(),
-                Gfx = p.ReadUShort()
+                Type = p.ReadUInt8(),
+                TargID = p.ReadUInt32BE(),
+                Flags = p.ReadUInt8(),
+                Serial = p.ReadUInt32BE(),
+                X = p.ReadUInt16BE(),
+                Y = p.ReadUInt16BE(),
+                Z = (short)p.ReadUInt16BE(),
+                Gfx = p.ReadUInt16BE()
             };
 
-            m_ClientTarget = false;
+            _ClientTarget = false;
 
             OverheadTargetMessage(info);
 
             // check for cancel
             if (info.X == 0xFFFF && info.Y == 0xFFFF && (info.Serial <= 0 || info.Serial >= 0x80000000))
             {
-                m_HasTarget = false;
-                m_FromGrabHotKey = false;
+                bool prevhas = _HasTarget, prevgrab = _FromGrabHotKey;
+                _HasTarget = false;
+                _FromGrabHotKey = false;
 
-                if (m_Intercept)
+                if (_Intercept)
                 {
                     args.Block = true;
-                    Timer.DelayedCallbackState(TimeSpan.Zero, m_OneTimeRespCallback, info).Start();
+                    Timer.DelayedCallbackState(TimeSpan.Zero, _OneTimeRespCallback, info).Start();
 
-                    if (m_PreviousID != 0)
+                    if (_PreviousID != 0)
                     {
-                        m_CurrentID = m_PreviousID;
-                        m_AllowGround = m_PreviousGround;
-                        m_CurFlags = m_PrevFlags;
+                        _CurrentID = _PreviousID;
+                        _AllowGround = _PreviousGround;
+                        _CurFlags = _PrevFlags;
 
-                        m_PreviousID = 0;
+                        _PreviousID = 0;
 
                         ResendTarget();
                     }
                 }
-                else if (m_FilterCancel.Contains((uint)info.TargID) || info.TargID == LocalTargID)
+                else if (_FilterCancel.Contains((uint)info.TargID) || info.TargID == LOCAL_TARG_ID)
                 {
                     args.Block = true;
+                    if (info.TargID != LOCAL_TARG_ID)
+                    {
+                        _HasTarget = prevhas;
+                        _FromGrabHotKey = prevgrab;
+                    }
                 }
 
-                m_FilterCancel.Clear();
+                _FilterCancel.Clear();
                 return;
             }
 
             ClearQueue();
 
-            if (m_Intercept)
+            if (_Intercept)
             {
-                if (info.TargID == LocalTargID)
+                if (info.TargID == LOCAL_TARG_ID)
                 {
-                    Timer.DelayedCallbackState(TimeSpan.Zero, m_OneTimeRespCallback, info).Start();
+                    Timer.DelayedCallbackState(TimeSpan.Zero, _OneTimeRespCallback, info).Start();
 
-                    m_HasTarget = false;
-                    m_FromGrabHotKey = false;
+                    _HasTarget = false;
+                    _FromGrabHotKey = false;
                     args.Block = true;
 
-                    if (m_PreviousID != 0)
+                    if (_PreviousID != 0)
                     {
-                        m_CurrentID = m_PreviousID;
-                        m_AllowGround = m_PreviousGround;
-                        m_CurFlags = m_PrevFlags;
+                        _CurrentID = _PreviousID;
+                        _AllowGround = _PreviousGround;
+                        _CurFlags = _PrevFlags;
 
-                        m_PreviousID = 0;
+                        _PreviousID = 0;
 
                         ResendTarget();
                     }
 
-                    m_FilterCancel.Clear();
+                    _FilterCancel.Clear();
 
                     return;
                 }
@@ -1670,9 +1730,9 @@ namespace Assistant
                 }
             }
 
-            m_HasTarget = false;
+            _HasTarget = false;
 
-            if (CheckHealPoisonTarg(m_CurrentID, info.Serial))
+            if (CheckHealPoisonTarg(_CurrentID, info.Serial))
             {
                 ResendTarget();
                 args.Block = true;
@@ -1684,18 +1744,51 @@ namespace Assistant
                 {
                     // only let lasttarget be a non-ground target
 
-                    m_LastTarget = info;
+                    _LastTarget = info;
                     if (info.Flags == 1)
-                        m_LastHarmTarg = info;
+                    {
+                        _LastHarmTarg = info;
+                        if (IsSmartTargetingEnabled((byte)AssistGump.SmartTargetFor.Enemy))
+                        {
+                            Interpreter.SetAlias("enemy", info.Serial);
+                        }
+                        
+                        if (info.Serial != _OldHarmfulLT)
+                        {
+                            LastHarmfulTargetChanged();
+                        }
+                    }
                     else if (info.Flags == 2)
-                        m_LastBeneTarg = info;
+                    {
+                        _LastBeneTarg = info;
+                        if (IsSmartTargetingEnabled((byte)AssistGump.SmartTargetFor.Friend))
+                        {
+                            Interpreter.SetAlias("friend", info.Serial);
+                        }
+                        
+                        if (info.Serial != _OldBeneficialLT)
+                        {
+                            LastBeneficialTargetChanged();
+                        }
+                    }
+
+                    if(SerialHelper.IsMobile(info.Serial) && _SpellTargID == info.TargID && Engine.Instance.AllowBit(FeatureBit.SpellTargetShare))
+                    {
+                        UOMobile m = UOSObjects.FindMobile(info.Serial);
+                        if (m != null)
+                        {
+                            string name = Spell.GetName(UOSObjects.Player.LastSpell);
+                            if (!string.IsNullOrEmpty(name))
+                            {
+                                SendSharedTarget(m, $"targeting \"{m.Name}\" with {name}.");
+                            }
+                        }
+                    }
 
                     LastTargetChanged();
-                    LastBeneficialTargetChanged();
-                    LastHarmfulTargetChanged();
                 }
 
-                m_LastGroundTarg = info; // ground target is the true last target
+                _LastGroundTarg = info; // ground target is the true last target
                 if (ScriptManager.Recording)
                     ScriptManager.AddToScript(info.Serial == 0 ? $"targettile {info.X} {info.Y} {info.Z}" : (UOSObjects.Gump.RecordTypeUse ? $"targettype 0x{info.Gfx:X4}" : $"target 0x{info.Serial:X}"));
             }
@@ -1715,53 +1808,50 @@ namespace Assistant
                 GateTimer.Start();
             }
 
-            m_FilterCancel.Clear();
+            _FilterCancel.Clear();
         }
 
-        private static void NewTarget(Packet p, PacketHandlerEventArgs args)
+        private static void NewTarget(ref StackDataReader p, PacketHandlerEventArgs args)
         {
-            bool prevAllowGround = m_AllowGround;
-            uint prevID = m_CurrentID;
-            byte prevFlags = m_CurFlags;
-            bool prevClientTarget = m_ClientTarget;
+            bool prevAllowGround = _AllowGround;
+            uint prevID = _CurrentID;
+            byte prevFlags = _CurFlags;
+            bool prevClientTarget = _ClientTarget;
 
-            m_AllowGround = p.ReadBool(); // allow ground
-            m_CurrentID = p.ReadUInt(); // target uid
-            m_CurFlags = p.ReadByte(); // flags
+            _AllowGround = p.ReadBool(); // allow ground
+            _CurrentID = p.ReadUInt32BE(); // target uid
+            _CurFlags = p.ReadUInt8(); // flags
             // the rest of the packet is 0s
 
             // check for a server cancel command
-            if (!m_AllowGround && m_CurrentID == 0 && m_CurFlags == 3)
+            if (!_AllowGround && _CurrentID == 0 && _CurFlags == 3)
             {
-                m_HasTarget = false;
-                m_FromGrabHotKey = false;
+                _HasTarget = false;
+                _FromGrabHotKey = false;
 
-                m_ClientTarget = false;
-                if (m_Intercept)
+                _ClientTarget = false;
+                if (_Intercept)
                 {
                     EndIntercept();
-                    UOSObjects.Player.SendMessage(MsgLevel.Error, "Server sent new target, canceling internal target.");
+                    UOSObjects.Player.SendMessage(MsgLevel.Warning, "Server sent new target, canceling internal target.");
                 }
 
                 return;
             }
 
-            if (Spell.LastCastTime + TimeSpan.FromSeconds(3.0) > DateTime.UtcNow &&
-                Spell.LastCastTime + TimeSpan.FromSeconds(0.5) <= DateTime.UtcNow && m_SpellTargID == 0)
-                m_SpellTargID = m_CurrentID;
+            if (Spell.LastCastTime + TimeSpan.FromMilliseconds(Utility.ISTANT_CASTING ? 1000 : 3000) > DateTime.UtcNow && Spell.LastCastTime + TimeSpan.FromMilliseconds(Utility.ISTANT_CASTING ? 0 : 500) <= DateTime.UtcNow && _SpellTargID == 0)
+                _SpellTargID = _CurrentID;
 
-            m_HasTarget = true;
-            m_ClientTarget = false;
+            _HasTarget = true;
+            _ClientTarget = false;
             if (ScriptManager.Recording)
                 ScriptManager.AddToScript("waitfortarget 30000");
-            /*if (m_QueueTarget == null && ScriptManager.AddToScript("waitfortarget"))
-            {
-                args.Block = true;
-            }
-            else*/
-            if (m_QueueTarget != null && m_QueueTarget())
+
+            if (_QueueTarget != null && _QueueTarget())
             {
                 ClearQueue();
+                _HasTarget = false;
+                _FromGrabHotKey = false;
                 args.Block = true;
             }
 
@@ -1769,38 +1859,38 @@ namespace Assistant
             {
                 if (prevClientTarget)
                 {
-                    m_AllowGround = prevAllowGround;
-                    m_CurrentID = prevID;
-                    m_CurFlags = prevFlags;
+                    _AllowGround = prevAllowGround;
+                    _CurrentID = prevID;
+                    _CurFlags = prevFlags;
 
-                    m_ClientTarget = true;
+                    _ClientTarget = true;
 
-                    if (!m_Intercept)
+                    if (!_Intercept)
                         CancelClientTarget();
                 }
             }
             else
             {
-                m_ClientTarget = true;
+                _ClientTarget = true;
 
-                if (m_Intercept)
+                if (_Intercept)
                 {
-                    m_OnCancel?.Invoke();
+                    _OnCancel?.Invoke();
                     EndIntercept();
                     UOSObjects.Player.SendMessage(MsgLevel.Error, "Server sent new target, canceling internal target.");
 
-                    m_FilterCancel.Add((uint)prevID);
+                    _FilterCancel.Add((uint)prevID);
                 }
             }
         }
 
         public static void ResendTarget()
         {
-            if (!m_ClientTarget || !m_HasTarget)
+            if (!_ClientTarget || !_HasTarget)
             {
                 CancelClientTarget();
-                m_ClientTarget = m_HasTarget = true;
-                Engine.Instance.SendToClient(new Target(m_CurrentID, m_AllowGround, m_CurFlags));
+                _ClientTarget = _HasTarget = true;
+                ClientPackets.PRecv_Target(_CurrentID, _AllowGround, _CurFlags);
             }
         }
 
@@ -1811,12 +1901,7 @@ namespace Assistant
             if (info == null)
                 return;
 
-            /*if (Config.GetBool("ShowAttackTargetNewOnly") && info.Serial == _lastOverheadMessageTarget.Serial)
-                return;
-
-             UOMobile m = null;*/
-
-            if (UOSObjects.Gump.HLTargetHue > 0 && SerialHelper.IsMobile(info.Serial))//Config.GetBool("ShowAttackTargetOverhead") &&
+            if (UOSObjects.Gump.HLTargetHue > 0 && SerialHelper.IsMobile(info.Serial))
             {
                 UOMobile m = UOSObjects.FindMobile(info.Serial);
 
@@ -1824,16 +1909,6 @@ namespace Assistant
                     return;
 
                 UOSObjects.Player.OverheadMessage(FriendsManager.IsFriend(m.Serial) ? PlayerData.GetColorCode(MsgLevel.Friend) : m.GetNotorietyColorInt(), $"Target: {m.Name}");
-            /*}
-
-            if (Config.GetBool("ShowTextTargetIndicator") && info.Serial != 0 && info.Serial.IsMobile)
-            {
-                // lets not look it up again they had the previous feature enabled
-                if (m == null)
-                    m = UOSObjects.FindMobile(info.Serial);
-
-                if (m == null)
-                    return;*/
 
                 m.OverheadMessage(UOSObjects.Gump.HLTargetHue, $"*{m.Name}*");
             }
@@ -1841,9 +1916,21 @@ namespace Assistant
             _lastOverheadMessageTarget = info;
         }
 
-        private static bool IsSmartTargetingEnabled()
+        private static bool IsSmartTargetingEnabled(byte type)
         {
-            return UOSObjects.Gump.SmartTarget > 0 && Engine.Instance.AllowBit(FeatureBit.SmartLT);
+            byte st = UOSObjects.Gump.SmartTarget;
+            if(st > 0 && Engine.Instance.AllowBit(FeatureBit.SmartLT))
+            {
+                if((type & 2) != 0)
+                {
+                    return (st & 2) != 0;
+                }
+                else if((type & 1) != 0)
+                {
+                    return (st & 1) != 0;
+                }
+            }
+            return false;
         }
 
         public static void ClosestTarget(MobType type, params int[] noto)
@@ -1860,11 +1947,6 @@ namespace Assistant
         {
             ClosestTarget(12, friends, isdead, type, noto);
         }
-
-        /*public static void ClosestTarget(byte range, TargetType target, bool friends, bool isdead, MobType type)
-        {
-
-        }*/
 
         public static void ClosestTarget(byte range, bool friends, bool isdead, MobType type, params int[] noto)
         {
@@ -1884,7 +1966,7 @@ namespace Assistant
                     if (!m.IsMonster)
                         continue;
                 }
-                if (!m.Blessed && m.IsGhost == isdead && m.Serial != Client.Game.UO.World.Player.Serial &&
+                if (!m.Blessed && m.IsGhost == isdead && m.Serial != ClassicUO.Client.Game.UO.World.Player.Serial &&
                     Utility.InRange(UOSObjects.Player.Position, m.Position, UOSObjects.Gump.SmartTargetRangeValue))
                 {
                     if (noto.Length == 0 && !friends)

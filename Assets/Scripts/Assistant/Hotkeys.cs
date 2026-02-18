@@ -1,8 +1,27 @@
-﻿using ClassicUO.Game;
+﻿#region License
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org> for details.
+#endregion
+
+using ClassicUO.Game;
 using ClassicUO.Network;
+using ClassicUO.Game.Data;
 using ClassicUO.Game.Managers;
+using ClassicUO.IO;
 using ClassicUO.Assets;
 using ClassicUO.Game.UI.Controls;
+using ClassicUO.Configuration;
 using SDL2;
 
 using System;
@@ -13,7 +32,6 @@ using Assistant.Core;
 using Assistant.Scripts;
 
 using AssistGump = ClassicUO.Game.UI.Gumps.AssistantGump;
-using ClassicUO;
 
 namespace Assistant
 {
@@ -81,6 +99,10 @@ namespace Assistant
                 }
             }
         }
+
+        /// <summary>
+        /// Not a so well documented feature in UOSteam, if the current macro is playing and you replay it, don't interrupt it's execution, good for keyboard-macro-spam, to avoid it's re-execution
+        /// </summary>
         internal bool NoAutoInterrupt
         {
             get
@@ -109,7 +131,6 @@ namespace Assistant
             _HotKeyContainer.Clear();
         }
 
-        // MobileUO: TODO: make this pass in world instead of using static one?
         internal static void AddHotkey(uint key, HotKeyOpts keyopt, AssistHotkeyBox box, ref string hkname, AssistGump gump, bool overwrite = false)
         {
             if (keyopt == null || string.IsNullOrEmpty(keyopt.Action) || !_HotKeyActions.ContainsKey(keyopt.Action))
@@ -123,7 +144,7 @@ namespace Assistant
             }
             if (!string.IsNullOrEmpty(oval) && oval != val && !overwrite)
             {
-                UIManager.Add(new AssistGump.OverWriteHKGump(Client.Game.UO.World, key, keyopt, box, ref hkname, ops.Param ?? ops.Action));
+                UIManager.Add(new AssistGump.OverWriteHKGump(key, keyopt, box, ref hkname, ops.Param ?? ops.Action));
             }
             else
             {
@@ -191,7 +212,18 @@ namespace Assistant
 
         private static void GetSDLfromVK(uint vkey, out int key, out int mod)
         {
-            XmlFileParser.vkToSDLkey.TryGetValue(vkey & 0x1FF, out SDL.SDL_Keycode code);
+            retry:
+            if(!XmlFileParser.vkToSDLkey.TryGetValue(vkey & 0x1FF, out SDL.SDL_Keycode code))
+            {
+                if(vkey >= 0x110 && vkey <= 0x1FF)
+                {
+                    SDL.SDL_Keycode kc = (SDL.SDL_Keycode)(vkey - 0x100);
+                    string newvalue = Char.ToString((char)kc);
+                    XmlFileParser.vkToSDLkey[vkey] = kc;
+                    XmlFileParser.SDLkeyToVK[kc] = (vkey, newvalue);
+                    goto retry;
+                }
+            }
             XmlFileParser.vkmToSDLmod.TryGetValue(vkey & 0xE00, out SDL.SDL_Keymod kmod);
             key = (int)code;
             if (key > 0)
@@ -203,7 +235,7 @@ namespace Assistant
         internal static bool NonBlockHotKeyAction(uint vkey)
         {
             bool noblock = true;
-            if (!UOSObjects.Gump._keyName.IsActive && !UOSObjects.Gump._macrokeyName.IsActive && _HotKeyContainer.TryGetValue(vkey, out HotKeyOpts hk) && !string.IsNullOrEmpty(hk.Action) && (!UOSObjects.Gump.ToggleHotKeys || hk.Action == "main.togglehotkeys" || hk.Action == "macro.play") && _HotKeyActions.TryGetValue(hk.Action, out Func<string, bool> func))
+            if (!(UIManager.KeyboardFocusControl is ScriptTextBox) && !UOSObjects.Gump._keyName.IsActive && !UOSObjects.Gump._macrokeyName.IsActive && _HotKeyContainer.TryGetValue(vkey, out HotKeyOpts hk) && !string.IsNullOrEmpty(hk.Action) && (!UOSObjects.Gump.ToggleHotKeys || hk.Action == "main.togglehotkeys") && _HotKeyActions.TryGetValue(hk.Action, out Func<string, bool> func))// || hk.Action == "macro.play") && _HotKeyActions.TryGetValue(hk.Action, out Func<string, bool> func))
             {
                 string param = hk.Param;
                 if (param == null)
@@ -230,14 +262,14 @@ namespace Assistant
             {
                 _HotKeyActions["skills.last"] = (input) =>
                 {
-                    if (UOSObjects.Player.LastSkill >= 0 && UOSObjects.Player.LastSkill < Client.Game.UO.FileManager.Skills.Skills.Count)
+                    if (UOSObjects.Player.LastSkill >= 0 && UOSObjects.Player.LastSkill < ClassicUO.Client.Game.UO.FileManager.Skills.Skills.Count)
                     {
-                        SkillEntry se = Client.Game.UO.FileManager.Skills.Skills[UOSObjects.Player.LastSkill];
+                        SkillEntry se = ClassicUO.Client.Game.UO.FileManager.Skills.Skills[UOSObjects.Player.LastSkill];
                         if (se.HasAction)
                         {
-                            Engine.Instance.SendToServer(new UseSkill(UOSObjects.Player.LastSkill));
+                            NetClient.Socket.PSend_UseSkill(UOSObjects.Player.LastSkill);
                             if (ScriptManager.Recording)
-                                ScriptManager.AddToScript($"useskill '{se.Name.ToLower(XmlFileParser.Culture)}'");
+                                ScriptManager.AddToScript($"useskill \"{se.Name.ToLower(XmlFileParser.Culture)}\"");
                         }
                     }
                     return true;
@@ -246,9 +278,9 @@ namespace Assistant
                 {
                     _HotKeyActions[$"skills.{kvp.Key}"] = (input) =>
                     {
-                        Engine.Instance.SendToServer(new UseSkill(kvp.Value));
+                        NetClient.Socket.PSend_UseSkill(kvp.Value);
                         if (ScriptManager.Recording)
-                            ScriptManager.AddToScript($"useskill '{kvp.Key}'");
+                            ScriptManager.AddToScript($"useskill \"{kvp.Key}\"");
                         return true;
                     };
                 }
@@ -260,24 +292,50 @@ namespace Assistant
             _HotKeyActions[keyname] = action;//.ToLower(XmlFileParser.Culture).Replace(" ", "").Split('(')[0]] = action;
         }
 
-        internal static void RemoveHotKey(string realkeyname)
+        internal static (uint, HotKeyOpts, bool) RemoveHotKey(string realkeyname, bool removefunc = false, bool onlyclear = false)
         {
-            if(_RevHotKeyContainer.TryGetValue(realkeyname, out uint keyval))
+            var gump = UOSObjects.Gump;
+            if(gump == null)
             {
+                return (0, null, false);
+            }
+            HotKeyOpts opts = null;
+            bool haskey = false;
+            if (_RevHotKeyContainer.TryGetValue(realkeyname, out uint keyval))
+            {
+                _HotKeyContainer.TryGetValue(keyval, out opts);
                 _HotKeyContainer.Remove(keyval);
                 _RevHotKeyContainer.Remove(realkeyname);
-                if (UOSObjects.Gump.SelectedHK == realkeyname)
-                    UOSObjects.Gump.SelectedHK = null;
+                if (gump.SelectedHK == realkeyname)
+                {
+                    if(!onlyclear)
+                        gump.SelectedHK = null;
+                    haskey = true;
+                    if (realkeyname == gump.MacroSelected)
+                    {
+                        if (gump._macrokeyName != null)
+                        {
+                            gump._macrokeyName.SetKey(SDL.SDL_Keycode.SDLK_UNKNOWN, SDL.SDL_Keymod.KMOD_NONE);
+                        }
+                        if (gump._keyName != null)
+                        {
+                            gump._keyName.SetKey(SDL.SDL_Keycode.SDLK_UNKNOWN, SDL.SDL_Keymod.KMOD_NONE);
+                        }
+                    }
+                }
+
+                if (removefunc)
+                    _HotKeyActions.Remove(realkeyname);
+                return (keyval, opts, haskey);
             }
+            return (0, opts, haskey);
         }
 
         internal static bool GetVKfromSDL(int key, int mod, out uint vkey)
         {
             if(XmlFileParser.SDLkeyToVK.TryGetValue((SDL.SDL_Keycode)key, out (uint, string) qkey))
             {
-                vkey = qkey.Item1;
-                if (XmlFileParser.SDLmodToVK.TryGetValue(mod & 0x3C3, out uint mkey))
-                    vkey |= mkey;
+                vkey = qkey.Item1 | XmlFileParser.GetVKfromSDLmod(mod);
                 return true;
             }
             vkey = 0;
@@ -299,9 +357,19 @@ namespace Assistant
                 Ping.StartPing(5);
                 return true;
             });
+            AddHotKeyFunc("main.resync", (input) =>
+            {
+                Resync();
+                return true;
+            });
             AddHotKeyFunc("main.resyncronize", (input) =>
             {
                 Resync();
+                return true;
+            });
+            AddHotKeyFunc("hotkeys", (input) =>
+            {
+                Commands.HotKeys(null, null, false, false);
                 return true;
             });
             AddHotKeyFunc("main.togglehotkeys", (input) =>
@@ -332,7 +400,7 @@ namespace Assistant
             {
                 if (SerialHelper.IsValid(UOSObjects.Player.LastObject))
                 {
-                    Engine.Instance.SendToServer(new DoubleClick(UOSObjects.Player.LastObject));
+                    NetClient.Socket.PSend_DoubleClick(UOSObjects.Player.LastObject);
                     return true;
                 }
                 UOSObjects.Player.SendMessage(MsgLevel.Error, "No valid last object present!");
@@ -340,10 +408,10 @@ namespace Assistant
             });
             AddHotKeyFunc("actions.use.lefthand", (input) =>
             {
-                UOItem i = UOSObjects.Player.GetItemOnLayer(Layer.LeftHand);
+                UOItem i = UOSObjects.Player.GetItemOnLayer(Layer.TwoHanded);
                 if (i != null)
                 {
-                    Engine.Instance.SendToServer(new DoubleClick(i.Serial));
+                    NetClient.Socket.PSend_DoubleClick(i.Serial);
                     return true;
                 }
                 UOSObjects.Player.SendMessage(MsgLevel.Error, "Use: No object found on Left Hand!");
@@ -351,10 +419,10 @@ namespace Assistant
             });
             AddHotKeyFunc("actions.use.righthand", (input) =>
             {
-                UOItem i = UOSObjects.Player.GetItemOnLayer(Layer.RightHand);
+                UOItem i = UOSObjects.Player.GetItemOnLayer(Layer.OneHanded);
                 if (i != null)
                 {
-                    Engine.Instance.SendToServer(new DoubleClick(i.Serial));
+                    NetClient.Socket.PSend_DoubleClick(i.Serial);
                     return true;
                 }
                 UOSObjects.Player.SendMessage(MsgLevel.Error, "Use: No object found on Right Hand!");
@@ -455,7 +523,9 @@ namespace Assistant
             {
                 uint ser = Targeting.RandomTarget(UOSObjects.Gump.SmartTargetRangeValue, false, false, MobType.Any, Targeting.TargetType.Enemy, true);
                 if (SerialHelper.IsMobile(ser))
-                    Engine.Instance.SendToServer(new AttackReq(ser));
+                {
+                    Targeting.AttackTarget(ser);//Engine.Instance.SendToServer(new AttackReq(ser));
+                }
                 return true;
             });
             AddHotKeyFunc("combat.attack.lasttarget", (input) =>
@@ -530,7 +600,7 @@ namespace Assistant
                     OnUseItem(3846);
                 return true;
             });
-            AddHotKeyFunc("combat.consume.miscellaneous.enchantedapple", (input) =>
+             AddHotKeyFunc("combat.consume.miscellaneous.enchantedapple", (input) =>
             {
                 if (Engine.Instance.AllowBit(FeatureBit.PotionHotkeys))
                     OnUseItem(12248, 1160);
@@ -634,22 +704,22 @@ namespace Assistant
             });
             AddHotKeyFunc("targeting.set.enemy", (input) =>
             {
-                
+                Targeting.OneTimeTarget(false, Targeting.OnSetEnemyTarget);
                 return true;
             });
             AddHotKeyFunc("targeting.set.friend", (input) =>
             {
-                
+                Targeting.OneTimeTarget(false, Targeting.OnSetFriendTarget);
                 return true;
             });
             AddHotKeyFunc("targeting.set.last", (input) =>
             {
-                
+                Targeting.OneTimeTarget(false, Targeting.OnSetLastTarget);
                 return true;
             });
             AddHotKeyFunc("targeting.set.mount", (input) =>
             {
-                
+                Targeting.OneTimeTarget(false, Targeting.OnSetMountTarget);
                 return true;
             });
 
@@ -688,18 +758,6 @@ namespace Assistant
             Engine.MainWindow.ToggleDamageTracker(!DamageTracker.Running);
         }*/
 
-        private enum PetCommands
-        {
-            AllCome,
-            AllFollowMe,
-            AllFollow,
-            AllGuardMe,
-            AllGuard,
-            AllKill,
-            AllStay,
-            AllStop
-        }
-
         private static LootTimer _LootTimer;
         internal static void AutoLootOnTarget(bool loc, uint serial, Point3D p, ushort itemid)
         {
@@ -725,7 +783,7 @@ namespace Assistant
             HashSet<ushort> _toLoot;
             UOItem _Container, _LootCont;
 
-            internal LootTimer(UOItem lootcont) : base(TimeSpan.Zero, TimeSpan.FromMilliseconds(Math.Max(UOSObjects.Gump.ActionDelay, 600)))
+            internal LootTimer(UOItem lootcont) : base(TimeSpan.Zero, TimeSpan.FromMilliseconds(ScriptManager.MACRO_ACTION_DELAY * 6))
             {
                 if (UOSObjects.Player.Backpack == null || lootcont == null)
                     return;
@@ -770,12 +828,12 @@ namespace Assistant
 
         private static void PetAllFollow()
         {
-            UOSObjects.Player.Say("All Follow");
+            UOSObjects.Player.Say("All Follow me");
         }
 
         private static void PetAllGuard()
         {
-            UOSObjects.Player.Say("All Guard");
+            UOSObjects.Player.Say("All Guard me");
         }
 
         private static void PetAllKill()
@@ -819,7 +877,7 @@ namespace Assistant
         {
             if (PacketHandlers.PartyLeader != 0)
             {
-                Engine.Instance.SendToServer(new AcceptParty(PacketHandlers.PartyLeader));
+                NetClient.Socket.PSend_PartyAccept(PacketHandlers.PartyLeader);
                 PacketHandlers.PartyLeader = 0;
             }
         }
@@ -828,7 +886,7 @@ namespace Assistant
         {
             if (PacketHandlers.PartyLeader != 0)
             {
-                Engine.Instance.SendToServer(new DeclineParty(PacketHandlers.PartyLeader));
+                NetClient.Socket.PSend_PartyDecline(PacketHandlers.PartyLeader);
                 PacketHandlers.PartyLeader = 0;
             }
         }
@@ -836,7 +894,7 @@ namespace Assistant
         private static void Dismount()
         {
             if (UOSObjects.Player.GetItemOnLayer(Layer.Mount) != null)
-                ActionQueue.DoubleClick(true, UOSObjects.Player.Serial);
+                ActionQueue.DoubleClick(UOSObjects.Player.Serial);
             else
                 UOSObjects.Player.SendMessage("You are not mounted.");
         }
@@ -846,10 +904,11 @@ namespace Assistant
             foreach (UOMobile m in UOSObjects.MobilesInRange())
             {
                 if (m != UOSObjects.Player)
-                    Engine.Instance.SendToServer(new SingleClick(m));
+                {
+                    NetClient.Socket.PSend_SingleClick(m.Serial);
+                }
 
                 Targeting.CheckTextFlags(m);
-
                 if (FriendsManager.IsFriend(m.Serial))
                 {
                     m.OverheadMessage(PlayerData.GetColorCode(MsgLevel.Friend), "[Friend]");
@@ -859,7 +918,9 @@ namespace Assistant
             foreach (UOItem i in UOSObjects.Items.Values)
             {
                 if (i.IsCorpse)
-                    Engine.Instance.SendToServer(new SingleClick(i));
+                {
+                    NetClient.Socket.PSend_SingleClick(i.Serial);
+                }
             }
         }
 
@@ -868,7 +929,9 @@ namespace Assistant
             foreach (UOItem i in UOSObjects.Items.Values)
             {
                 if (i.IsCorpse)
-                    Engine.Instance.SendToServer(new SingleClick(i));
+                {
+                    NetClient.Socket.PSend_SingleClick(i.Serial);
+                }
             }
         }
 
@@ -877,10 +940,11 @@ namespace Assistant
             foreach (UOMobile m in UOSObjects.MobilesInRange())
             {
                 if (m != UOSObjects.Player)
-                    Engine.Instance.SendToServer(new SingleClick(m));
+                {
+                    NetClient.Socket.PSend_SingleClick(m.Serial);
+                }
 
                 Targeting.CheckTextFlags(m);
-
                 if (FriendsManager.IsFriend(m.Serial))
                 {
                     m.OverheadMessage(PlayerData.GetColorCode(MsgLevel.Friend), "[Friend]");
@@ -891,7 +955,7 @@ namespace Assistant
         private static void LastSkill()
         {
             if (UOSObjects.Player != null && UOSObjects.Player.LastSkill != -1)
-                Engine.Instance.SendToServer(new UseSkill(UOSObjects.Player.LastSkill));
+                NetClient.Socket.PSend_UseSkill(UOSObjects.Player.LastSkill);
         }
 
         private static void LastObj()
@@ -909,15 +973,15 @@ namespace Assistant
             }
         }
 
-        private static DateTime m_LastSync;
+        private static DateTime _LastSync;
 
         private static void Resync()
         {
-            if (DateTime.UtcNow - m_LastSync > TimeSpan.FromSeconds(1.0))
+            if (DateTime.UtcNow - _LastSync > TimeSpan.FromSeconds(1.0))
             {
-                m_LastSync = DateTime.UtcNow;
+                _LastSync = DateTime.UtcNow;
 
-                Engine.Instance.SendToServer(new ResyncReq());
+                NetClient.Socket.PSend_Resync();
             }
         }
 
@@ -1012,9 +1076,9 @@ namespace Assistant
 
         private static void UseItemInHand()
         {
-            UOItem item = UOSObjects.Player.GetItemOnLayer(Layer.RightHand);
+            UOItem item = UOSObjects.Player.GetItemOnLayer(Layer.OneHanded);
             if (item == null)
-                item = UOSObjects.Player.GetItemOnLayer(Layer.LeftHand);
+                item = UOSObjects.Player.GetItemOnLayer(Layer.TwoHanded);
 
             if (item != null)
                 PlayerData.DoubleClick(item.Serial);
@@ -1022,7 +1086,7 @@ namespace Assistant
 
         private static void UseItemInRightHand()
         {
-            UOItem item = UOSObjects.Player.GetItemOnLayer(Layer.RightHand);
+            UOItem item = UOSObjects.Player.GetItemOnLayer(Layer.OneHanded);
 
             if (item != null)
                 PlayerData.DoubleClick(item.Serial);
@@ -1030,7 +1094,7 @@ namespace Assistant
 
         private static void UseItemInLeftHand()
         {
-            UOItem item = UOSObjects.Player.GetItemOnLayer(Layer.LeftHand);
+            UOItem item = UOSObjects.Player.GetItemOnLayer(Layer.TwoHanded);
 
             if (item != null)
                 PlayerData.DoubleClick(item.Serial);
@@ -1090,8 +1154,8 @@ namespace Assistant
             UOItem item;
             if (cont == UOSObjects.Player.Backpack)
             {
-                item = UOSObjects.Player.GetItemOnLayer(Layer.RightHand);
-                if (item != null && (itemids == null || itemids.Contains(item.ItemID)) && (hue == ushort.MaxValue || hue == item.Hue) && item.ObjPropList.Content.Any(opl => opl.Number == (int)effect && int.TryParse(opl.Args, out int num) && num > 0))
+                item = UOSObjects.Player.GetItemOnLayer(Layer.OneHanded);
+                if (item != null && (itemids == null || itemids.Contains(item.ItemID)) && (hue == ushort.MaxValue || hue == item.Hue) && item.ObjPropList != null && item.ObjPropList.Content.Any(opl => opl.Number == (int)effect && int.TryParse(opl.Args, out int num) && num > 0))
                 {
                     PlayerData.DoubleClick(item.Serial);
                     return true;
@@ -1102,7 +1166,7 @@ namespace Assistant
             {
                 item = cont.Contains[i];
 
-                if ((itemids == null || itemids.Contains(item.ItemID)) && (hue == ushort.MaxValue || hue == item.Hue) && item.ObjPropList.Content.Any(opl => opl.Number == (int)effect && int.TryParse(opl.Args, out int num) && num > 0))
+                if ((itemids == null || itemids.Contains(item.ItemID)) && (hue == ushort.MaxValue || hue == item.Hue) && item.ObjPropList != null && item.ObjPropList.Content.Any(opl => opl.Number == (int)effect && int.TryParse(opl.Args, out int num) && num > 0))
                 {
                     PlayerData.DoubleClick(item.Serial);
                     return true;
@@ -1172,19 +1236,16 @@ namespace Assistant
             }
         }
 
-        private static void OnGrabItemSingleClick(Packet pvSrc, PacketHandlerEventArgs args)
+        private static void OnGrabItemSingleClick(ref StackDataReader pvSrc, PacketHandlerEventArgs args)
         {
-            uint serial = pvSrc.ReadUInt();
+            uint serial = pvSrc.ReadUInt32BE();
             if (UOSObjects.Gump.GrabHotBag == serial)
             {
-                ushort gfx = 0;
                 UOItem c = UOSObjects.FindItem(UOSObjects.Gump.GrabHotBag);
                 if (c != null)
                 {
-                    gfx = c.ItemID;
+                    ClientPackets.PRecv_UnicodeMessage(UOSObjects.Gump.GrabHotBag, c.ItemID, MessageType.Label, 0x3B2, 3, Settings.GlobalSettings.Language, "", "(Grab Item HotBag)");
                 }
-
-                Engine.Instance.SendToClient(new UnicodeMessage(UOSObjects.Gump.GrabHotBag, gfx, MessageType.Label, 0x3B2, 3, "ENU", "", "(Grab Item HotBag)"));
             }
         }
     }

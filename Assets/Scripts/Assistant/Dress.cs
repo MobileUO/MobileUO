@@ -1,32 +1,50 @@
-﻿namespace Assistant.Core
+﻿#region License
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org> for details.
+#endregion
+
+using ClassicUO.Game.Data;
+
+namespace Assistant.Core
 {
     internal static class Dress
     {
-        private static UOItem m_Right, m_Left;
+        private static UOItem _Right, _Left;
 
-        public static void ToggleRight()
+        public static void ToggleRight(bool quiet = false)
         {
             if (UOSObjects.Player == null)
                 return;
 
-            UOItem item = UOSObjects.Player.GetItemOnLayer(Layer.RightHand);
+            UOItem item = UOSObjects.Player.GetItemOnLayer(Layer.OneHanded);
             if (item == null)
             {
-                if (m_Right != null)
-                    m_Right = UOSObjects.FindItem(m_Right.Serial);
+                if (_Right != null)
+                    _Right = UOSObjects.FindItem(_Right.Serial);
 
-                if (m_Right != null && m_Right.IsChildOf(UOSObjects.Player.Backpack))
+                if (_Right != null && _Right.IsChildOf(UOSObjects.Player.Backpack))
                 {
                     // try to also undress conflicting hand(s)
-                    UOItem conflict = UOSObjects.Player.GetItemOnLayer(Layer.LeftHand);
-                    if (conflict != null && (conflict.IsTwoHanded || m_Right.IsTwoHanded))
+                    UOItem conflict = UOSObjects.Player.GetItemOnLayer(Layer.TwoHanded);
+                    if (conflict != null && (conflict.IsTwoHanded || _Right.IsTwoHanded))
                     {
                         Unequip(DressList.GetLayerFor(conflict));
                     }
 
-                    Equip(m_Right, DressList.GetLayerFor(m_Right));
+                    Equip(_Right, DressList.GetLayerFor(_Right));
                 }
-                else
+                else if(!quiet)
                 {
                     UOSObjects.Player.SendMessage(MsgLevel.Force, "You must disarm something before you can arm it");
                 }
@@ -34,32 +52,32 @@
             else
             {
                 Unequip(DressList.GetLayerFor(item));
-                m_Right = item;
+                _Right = item;
             }
         }
 
-        public static void ToggleLeft()
+        public static void ToggleLeft(bool quiet = false)
         {
             if (UOSObjects.Player == null || UOSObjects.Player.Backpack == null)
                 return;
 
-            UOItem item = UOSObjects.Player.GetItemOnLayer(Layer.LeftHand);
+            UOItem item = UOSObjects.Player.GetItemOnLayer(Layer.TwoHanded);
             if (item == null)
             {
-                if (m_Left != null)
-                    m_Left = UOSObjects.FindItem(m_Left.Serial);
+                if (_Left != null)
+                    _Left = UOSObjects.FindItem(_Left.Serial);
 
-                if (m_Left != null && m_Left.IsChildOf(UOSObjects.Player.Backpack))
+                if (_Left != null && _Left.IsChildOf(UOSObjects.Player.Backpack))
                 {
-                    UOItem conflict = UOSObjects.Player.GetItemOnLayer(Layer.RightHand);
-                    if (conflict != null && (conflict.IsTwoHanded || m_Left.IsTwoHanded))
+                    UOItem conflict = UOSObjects.Player.GetItemOnLayer(Layer.OneHanded);
+                    if (conflict != null && (conflict.IsTwoHanded || _Left.IsTwoHanded))
                     {
                         Unequip(DressList.GetLayerFor(conflict));
                     }
 
-                    Equip(m_Left, DressList.GetLayerFor(m_Left));
+                    Equip(_Left, DressList.GetLayerFor(_Left));
                 }
-                else
+                else if (!quiet)
                 {
                     UOSObjects.Player.SendMessage(MsgLevel.Force, "You must disarm something before you can arm it");
                 }
@@ -67,19 +85,19 @@
             else
             {
                 Unequip(DressList.GetLayerFor(item));
-                m_Left = item;
+                _Left = item;
             }
         }
 
-        public static bool Equip(UOItem item, Layer layer)
+        public static bool Equip(UOItem item, Layer layer, bool force = false)
         {
-            if (layer == Layer.Invalid || layer > Layer.LastUserValid || item == null || item.Layer == Layer.Invalid ||
-                item.Layer > Layer.LastUserValid)
+            if (layer == Layer.Invalid || layer >= Layer.Mount || item == null || item.Layer == Layer.Invalid ||
+                item.Layer >= Layer.Mount)
                 return false;
 
             if (item != null && UOSObjects.Player != null && item.IsChildOf(UOSObjects.Player.Backpack))
             {
-                DragDropManager.DragDrop(item, UOSObjects.Player, layer);
+                DragDropManager.DragDrop(item, UOSObjects.Player, layer, force);
                 return true;
             }
 
@@ -88,7 +106,7 @@
 
         public static bool Unequip(Layer layer)
         {
-            if (layer == Layer.Invalid || layer > Layer.LastUserValid)
+            if (layer == Layer.Invalid || layer >= Layer.Mount)
                 return false;
 
             UOItem item = UOSObjects.Player.GetItemOnLayer(layer);

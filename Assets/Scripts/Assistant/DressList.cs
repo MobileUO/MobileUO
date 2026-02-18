@@ -1,32 +1,78 @@
-﻿using System;
+﻿#region License
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org> for details.
+#endregion
+
+using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Xml;
 using Assistant.Core;
 using Assistant.Scripts;
 using ClassicUO.Game;
+using ClassicUO.Game.Data;
 using ClassicUO.Game.UI.Gumps;
 
 namespace Assistant
 {
     internal class DressList
     {
+        internal static readonly string[] Prepend = new string[] { "agents.dress.", "agents.undress." };
+
         public static List<DressList> DressLists { get; } = new List<DressList>();
 
-        public static ushort CreateNewFree()
+        private static string GetOneGenericFree(ushort free = 0)
+        {
+            HashSet<string> dls = new HashSet<string>();
+            foreach (DressList dl in DressLists)
+            {
+                if(dl != null)
+                    dls.Add(dl.Name);
+            }
+            for(ushort us = free; us < ushort.MaxValue; ++us)
+            {
+                if (!dls.Contains($"Dress-{us + 1}"))
+                    return $"Dress-{us + 1}";
+            }
+            return null;
+        }
+
+        public static ushort CreateOne()
         {
             ushort i = 0;
             for(; i < DressLists.Count; ++i)
             {
                 if (DressLists[i] == null)
                 {
-                    DressLists[i] = new DressList($"Dress-{i + 1}");
-                    return i;
+                    string name = GetOneGenericFree();
+                    if (!string.IsNullOrEmpty(name))
+                    {
+                        DressLists[i] = new DressList(name);
+                        return i;
+                    }
+                    return ushort.MaxValue;
                 }
             }
             if (i < ushort.MaxValue)
             {
-                DressLists.Add(new DressList($"Dress-{i + 1}"));
-                return i;
+                string name = GetOneGenericFree();
+                if (!string.IsNullOrEmpty(name))
+                {
+                    DressLists.Add(new DressList(name));
+                    return i;
+                }
+                return ushort.MaxValue;
             }
             return (ushort)(i - 1);
         }
@@ -41,8 +87,8 @@ namespace Assistant
                     dl = DressLists[0];
                     if (dl != null)
                     {
-                        HotKeys.RemoveHotKey($"agents.dress.{dl.Name.ToLower(XmlFileParser.Culture)}");
-                        HotKeys.RemoveHotKey($"agents.undress.{dl.Name.ToLower(XmlFileParser.Culture)}");
+                        HotKeys.RemoveHotKey($"{Prepend[0]}{dl.Name.ToLower(XmlFileParser.Culture)}", true);
+                        HotKeys.RemoveHotKey($"{Prepend[1]}{dl.Name.ToLower(XmlFileParser.Culture)}", true);
                     }
                     DressLists.Remove(dl);
                 }
@@ -50,7 +96,11 @@ namespace Assistant
             else if(selected < DressLists.Count)
             {
                 if (DressLists[selected] == null)
-                    DressLists[selected] = new DressList($"Dress-{selected + 1}");
+                {
+                    string name = GetOneGenericFree((ushort)selected);
+                    if(!string.IsNullOrEmpty(name))
+                        DressLists[selected] = new DressList(name);
+                }
                 else
                     DressLists[selected].LayerItems.Clear();
             }
@@ -97,8 +147,8 @@ namespace Assistant
             LayerItems.Clear();
             foreach(UOItem item in UOSObjects.Player.Contains)
             {
-                if (item.Layer > Layer.Invalid && item.Layer <= Layer.LastUserValid && item.Layer != Layer.Backpack && item.Layer != Layer.FacialHair && item.Layer != Layer.Hair)
-                    LayerItems[item.Layer] = new DressItem(item.Serial, item.Graphic);
+                if (item.Layer > Layer.Invalid && item.Layer < Layer.Mount && item.Layer != Layer.Backpack && item.Layer != Layer.Beard && item.Layer != Layer.Hair)
+                    LayerItems[item.Layer] = new DressItem(item.Serial, item.Graphic, UOSObjects.Gump.TypeDress);
             }
         }
 
@@ -120,7 +170,24 @@ namespace Assistant
             return Name;
         }
 
-        public string Name { get; }
+        private string _Name;
+        public string Name
+        {
+            set
+            {
+                if (value == _Name)
+                    return;
+                value = Utility.StringAlphaNumberSpaceMinusUnderscore(value);
+                if (!string.IsNullOrEmpty(value) && !DressLists.Any(dl => dl != null && dl.Name == value))
+                {
+                    _Name = value;
+                }
+            }
+            get
+            {
+                return _Name;
+            }
+        }
 
         public Dictionary<Layer, DressItem> LayerItems { get; }
 
@@ -131,40 +198,6 @@ namespace Assistant
             else
                 UndressBag = serial;
         }
-
-        /*public void Toggle()
-        {
-            if (UOSObjects.Player == null || UOSObjects.Player.Backpack == null)
-                return;
-
-            int worn = 0;
-            int total = LayerItems.Count;
-
-            foreach(KeyValuePair<Layer, DressItem> kvp in LayerItems)
-            {
-                UOItem item = kvp.Value.Find(kvp.Key);
-
-                if (item == null)
-                    total--;
-                else if (item.Container == UOSObjects.Player)
-                    worn++;
-            }
-
-            if (LayerItems.Count == 1)
-            {
-                if (worn != 0)
-                    Undress();
-                else
-                    Dress();
-            }
-            else
-            {
-                if (worn > total / 2)
-                    Undress();
-                else
-                    Dress();
-            }
-        }*/
 
         public void Undress()
         {
@@ -180,7 +213,7 @@ namespace Assistant
             }
 
             if(ScriptManager.Recording)
-                ScriptManager.AddToScript($"undress '{Name}'");
+                ScriptManager.AddToScript($"undress \"{Name}\"");
 
             if (SerialHelper.IsItem(UndressBag))
             {
@@ -214,7 +247,7 @@ namespace Assistant
         public static Layer GetLayerFor(UOItem item)
         {
             Layer layer = item.Layer;
-            if (layer == Layer.Invalid || layer > Layer.LastUserValid)
+            if (layer == Layer.Invalid || layer >= Layer.Mount)
                 layer = (Layer)item.TileDataInfo.Layer;
 
             return layer;
@@ -235,7 +268,7 @@ namespace Assistant
             }
 
             if (ScriptManager.Recording)
-                ScriptManager.AddToScript($"dress '{Name}'");
+                ScriptManager.AddToScript($"dress \"{Name}\"");
 
             foreach(KeyValuePair<Layer, DressItem> kvp in LayerItems)
             {
@@ -255,7 +288,7 @@ namespace Assistant
                 else if (item.IsChildOf(UOSObjects.Player.Backpack) || item.RootContainer == null)
                 {
                     Layer layer = GetLayerFor(item);
-                    if (layer == Layer.Invalid || layer > Layer.LastUserValid || layer == Layer.Backpack)
+                    if (layer == Layer.Invalid || layer >= Layer.Mount || layer == Layer.Backpack)
                         continue;
 
                     if (UOSObjects.Gump.MoveConflictingItems)
@@ -265,10 +298,10 @@ namespace Assistant
                             DragDropManager.DragDrop(conflict, FindUndressBag(conflict), DragDropManager.ActionType.Dressing);
 
                         // try to also undress conflicting hand(s)
-                        if (layer == Layer.RightHand)
-                            conflict = UOSObjects.Player.GetItemOnLayer(Layer.LeftHand);
-                        else if (layer == Layer.LeftHand)
-                            conflict = UOSObjects.Player.GetItemOnLayer(Layer.RightHand);
+                        if (layer == Layer.OneHanded)
+                            conflict = UOSObjects.Player.GetItemOnLayer(Layer.TwoHanded);
+                        else if (layer == Layer.TwoHanded)
+                            conflict = UOSObjects.Player.GetItemOnLayer(Layer.OneHanded);
                         else
                             conflict = null;
 
@@ -294,12 +327,18 @@ namespace Assistant
     {
         internal uint Serial { get; private set; }
         internal ushort ObjType { get; private set; }
-        internal bool UsesType { get; private set; } = UOSObjects.Gump.TypeDress;
+        internal bool UsesType { get; private set; }
 
-        internal DressItem(uint serial, ushort type)
+        internal void SetUseType(bool useType)
+        {
+            UsesType = useType;
+        }
+
+        internal DressItem(uint serial, ushort type, bool usetype)
         {
             Serial = serial;
             ObjType = type;
+            UsesType = usetype;
         }
 
         internal void ChangeItemSerial(UOItem item)

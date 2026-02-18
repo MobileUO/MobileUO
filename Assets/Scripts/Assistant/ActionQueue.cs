@@ -1,9 +1,26 @@
-﻿using ClassicUO;
+﻿#region License
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org> for details.
+#endregion
+
+using ClassicUO;
 using ClassicUO.Game;
+using ClassicUO.Game.Data;
+using ClassicUO.Network;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-//using Assistant.Agents;
 
 namespace Assistant
 {
@@ -23,7 +40,8 @@ namespace Assistant
         {
             None     = 0x00,
             Dressing = 0x01,
-            Organize = 0x02
+            Organize = 0x02,
+            Forced   = 0x04
         }
 
         private class LiftReq
@@ -77,14 +95,12 @@ namespace Assistant
 
         internal static void DropCurrent()
         {
-            //Log("Drop current requested on {0}", m_Holding);
-
-            if (SerialHelper.IsItem(m_Holding))
+            if (SerialHelper.IsItem(_Holding))
             {
                 if (UOSObjects.Player.Backpack != null)
-                    Engine.Instance.SendToServer(new DropRequest(m_Holding, Point3D.MinusOne, UOSObjects.Player.Backpack.Serial));
+                    NetClient.Socket.PSend_DropRequest(_Holding, Point3D.MinusOne, UOSObjects.Player.Backpack.Serial);
                 else
-                    Engine.Instance.SendToServer(new DropRequest(m_Holding, UOSObjects.Player.Position, 0));
+                    NetClient.Socket.PSend_DropRequest(_Holding, UOSObjects.Player.Position, 0);
             }
             else
             {
@@ -94,17 +110,17 @@ namespace Assistant
             Clear();
         }
 
-        private static int m_LastID;
+        private static int _LastID;
 
-        private static uint m_Pending, m_Holding;
-        private static bool m_ClientLiftReq = false;
-        private static DateTime m_Lifted = DateTime.MinValue;
+        private static uint _Pending, _Holding;
+        private static bool _ClientLiftReq = false;
+        private static DateTime _Lifted = DateTime.MinValue;
 
         private static readonly Dictionary<uint, Queue<DropReq>>
-            m_DropReqs = new Dictionary<uint, Queue<DropReq>>();
+            _DropReqs = new Dictionary<uint, Queue<DropReq>>();
 
-        private static readonly LiftReq[] m_LiftReqs = new LiftReq[256];
-        private static byte m_Front, m_Back;
+        private static readonly LiftReq[] _LiftReqs = new LiftReq[256];
+        private static byte _Front, _Back;
 
         public static UOItem Holding 
         {
@@ -114,25 +130,23 @@ namespace Assistant
 
         public static uint Pending
         {
-            get { return m_Pending; }
+            get { return _Pending; }
         }
 
         public static int LastIDLifted
         {
-            get { return m_LastID; }
+            get { return _LastID; }
         }
 
         public static void Clear()
         {
-            //Log("Clearing....");
-
-            m_DropReqs.Clear();
+            _DropReqs.Clear();
             for (int i = 0; i < 256; i++)
-                m_LiftReqs[i] = null;
-            m_Front = m_Back = 0;
-            m_Holding = m_Pending = 0;
+                _LiftReqs[i] = null;
+            _Front = _Back = 0;
+            _Holding = _Pending = 0;
             Holding = null;
-            m_Lifted = DateTime.MinValue;
+            _Lifted = DateTime.MinValue;
         }
 
         public static void DragDrop(UOItem i, uint to)
@@ -170,28 +184,28 @@ namespace Assistant
 
         public static void DragDrop(UOItem i, UOMobile to, Layer layer, bool doLast = false, ActionType actionType = ActionType.None)
         {
-            Drag(i, i.Amount, false, doLast);
-            Drop(i, to, layer);
+            Drag(i, i.Amount, false, doLast, actionType);
+            Drop(i, to, layer, actionType);
         }
 
         public static bool Empty
         {
-            get { return m_Back == m_Front; }
+            get { return _Back == _Front; }
         }
 
         public static bool Full
         {
-            get { return ((byte)(m_Back + 1)) == m_Front; }
+            get { return ((byte)(_Back + 1)) == _Front; }
         }
 
         public static bool IsDressing()
         {
-            return m_LiftReqs.Any(lr => lr != null && lr.LiftType == ActionType.Dressing) || m_DropReqs.Any(drd => drd.Value.Any(dr => dr.DropType == ActionType.Dressing));
+            return _LiftReqs.Any(lr => lr != null && lr.LiftType == ActionType.Dressing) || _DropReqs.Any(drd => drd.Value.Any(dr => dr.DropType == ActionType.Dressing));
         }
 
         public static bool IsOrganizing()
         {
-            return m_LiftReqs.Any(lr => lr != null && lr.LiftType == ActionType.Organize) || m_DropReqs.Values.Any(drq => drq.Any(dr => dr.DropType == ActionType.Organize));
+            return _LiftReqs.Any(lr => lr != null && lr.LiftType == ActionType.Organize) || _DropReqs.Values.Any(drq => drq.Any(dr => dr.DropType == ActionType.Organize));
         }
 
         public static int Drag(UOItem i, int amount, bool fromClient = false, bool doLast = false, ActionType actionType = ActionType.None)
@@ -202,36 +216,34 @@ namespace Assistant
             if (Full)
             {
                 if (fromClient)
-                    Engine.Instance.SendToClient(new LiftRej());
+                    ClientPackets.PRecv_LiftRej();
                 else
                     UOSObjects.Player.SendMessage(MsgLevel.Error, "Drag drop queue is FULL! Please wait");
                 return 0;
             }
 
-            //Log("Queuing Drag request {0}", lr);
+            if (_Back >= _LiftReqs.Length)
+                _Back = 0;
 
-            if (m_Back >= m_LiftReqs.Length)
-                m_Back = 0;
-
-            if (m_Back <= 0)
-                prev = m_LiftReqs[m_LiftReqs.Length - 1];
-            else if (m_Back <= m_LiftReqs.Length)
-                prev = m_LiftReqs[m_Back - 1];
+            if (_Back <= 0)
+                prev = _LiftReqs[_LiftReqs.Length - 1];
+            else if (_Back <= _LiftReqs.Length)
+                prev = _LiftReqs[_Back - 1];
 
             // if the current last req must stay last, then insert this one in its place
             if (prev != null && prev.DoLast)
             {
                 //Log("Back-Queuing {0}", prev);
-                if (m_Back <= 0)
-                    m_LiftReqs[m_LiftReqs.Length - 1] = lr;
-                else if (m_Back <= m_LiftReqs.Length)
-                    m_LiftReqs[m_Back - 1] = lr;
+                if (_Back <= 0)
+                    _LiftReqs[_LiftReqs.Length - 1] = lr;
+                else if (_Back <= _LiftReqs.Length)
+                    _LiftReqs[_Back - 1] = lr;
 
                 // and then re-insert it at the end
                 lr = prev;
             }
 
-            m_LiftReqs[m_Back++] = lr;
+            _LiftReqs[_Back++] = lr;
 
             ActionQueue.SignalLift(!fromClient);
             return lr.Id;
@@ -239,22 +251,21 @@ namespace Assistant
 
         public static bool Drop(UOItem i, UOMobile to, Layer layer, ActionType actionType = ActionType.None)
         {
-            if (m_Pending == i.Serial)
+            if (_Pending == i.Serial)
             {
-                //Log("Equipping {0} to {1} (@{2})", i, to.Serial, layer);
-                Engine.Instance.SendToServer(new EquipRequest(i.Serial, to, layer));
-                m_Pending = 0;
+                NetClient.Socket.PSend_EquipRequest(i.Serial, to.Serial, layer);
+                _Pending = 0;
                 EndHolding(i.Serial);
-                m_Lifted = DateTime.MinValue;
+                _Lifted = DateTime.MinValue;
                 return true;
             }
             else
             {
                 bool add = false;
 
-                for (byte j = m_Front; j != m_Back && !add; j++)
+                for (byte j = _Front; j != _Back && !add; j++)
                 {
-                    if (m_LiftReqs[j] != null && m_LiftReqs[j].Serial == i.Serial)
+                    if (_LiftReqs[j] != null && _LiftReqs[j].Serial == i.Serial)
                     {
                         add = true;
                         break;
@@ -263,17 +274,14 @@ namespace Assistant
 
                 if (add)
                 {
-                    //Log("Queuing Equip {0} to {1} (@{2})", i, to.Serial, layer);
-
-                    if (!m_DropReqs.TryGetValue(i.Serial, out var q) || q == null)
-                        m_DropReqs[i.Serial] = q = new Queue<DropReq>();
+                    if (!_DropReqs.TryGetValue(i.Serial, out var q) || q == null)
+                        _DropReqs[i.Serial] = q = new Queue<DropReq>();
 
                     q.Enqueue(new DropReq(to == null ? 0 : to.Serial, layer, actionType));
                     return true;
                 }
                 else
                 {
-                    //Log("Drop/Equip for {0} (to {1} (@{2})) not found, skipped", i,to == null ? 0 : to.Serial, layer);
                     return false;
                 }
             }
@@ -281,22 +289,21 @@ namespace Assistant
 
         public static bool Drop(UOItem i, uint dest, Point3D pt, ActionType actionType = ActionType.None)
         {
-            if (m_Pending == i.Serial)
+            if (_Pending == i.Serial)
             {
-                //Log("Dropping {0} to {1} (@{2})", i, dest, pt);
-                Engine.Instance.SendToServer(new DropRequest(i.Serial, pt, dest));
-                m_Pending = 0;
+                NetClient.Socket.PSend_DropRequest(i.Serial, pt, dest);
+                _Pending = 0;
                 EndHolding(i.Serial);
-                m_Lifted = DateTime.MinValue;
+                _Lifted = DateTime.MinValue;
                 return true;
             }
             else
             {
                 bool add = false;
 
-                for (byte j = m_Front; j != m_Back && !add; j++)
+                for (byte j = _Front; j != _Back && !add; j++)
                 {
-                    if (m_LiftReqs[j] != null && m_LiftReqs[j].Serial == i.Serial)
+                    if (_LiftReqs[j] != null && _LiftReqs[j].Serial == i.Serial)
                     {
                         add = true;
                         break;
@@ -305,17 +312,14 @@ namespace Assistant
 
                 if (add)
                 {
-                    //Log("Queuing Drop {0} (to {1} (@{2}))", i, dest, pt);
-
-                    if (!m_DropReqs.TryGetValue(i.Serial, out var q) || q == null)
-                        m_DropReqs[i.Serial] = q = new Queue<DropReq>();
+                    if (!_DropReqs.TryGetValue(i.Serial, out var q) || q == null)
+                        _DropReqs[i.Serial] = q = new Queue<DropReq>();
 
                     q.Enqueue(new DropReq(dest, pt, actionType));
                     return true;
                 }
                 else
                 {
-                    //Log("Drop for {0} (to {1} (@{2})) not found, skipped", i, dest, pt);
                     return false;
                 }
             }
@@ -333,22 +337,21 @@ namespace Assistant
 
         public static bool LiftReject()
         {
-            //Log("Server rejected lift for item {0}", m_Holding);
-            if (m_Holding == 0)
+            if (_Holding == 0)
                 return true;
 
-            m_Holding = m_Pending = 0;
+            _Holding = _Pending = 0;
             Holding = null;
-            m_Lifted = DateTime.MinValue;
+            _Lifted = DateTime.MinValue;
 
-            return m_ClientLiftReq;
+            return _ClientLiftReq;
         }
 
         public static bool HasDragFor(uint s)
         {
-            for (byte j = m_Front; j != m_Back; j++)
+            for (byte j = _Front; j != _Back; j++)
             {
-                if (m_LiftReqs[j] != null && m_LiftReqs[j].Serial == s)
+                if (_LiftReqs[j] != null && _LiftReqs[j].Serial == s)
                     return true;
             }
 
@@ -361,30 +364,30 @@ namespace Assistant
                 return false;
 
             int skip = 0;
-            for (byte j = m_Front; j != m_Back; j++)
+            for (byte j = _Front; j != _Back; j++)
             {
-                if (skip == 0 && m_LiftReqs[j] != null && m_LiftReqs[j].Serial == s)
+                if (skip == 0 && _LiftReqs[j] != null && _LiftReqs[j].Serial == s)
                 {
-                    m_LiftReqs[j] = null;
+                    _LiftReqs[j] = null;
                     skip++;
-                    if (j == m_Front)
+                    if (j == _Front)
                     {
-                        m_Front++;
+                        _Front++;
                         break;
                     }
                     else
                     {
-                        m_Back--;
+                        _Back--;
                     }
                 }
 
                 if (skip > 0)
-                    m_LiftReqs[j] = m_LiftReqs[(byte)(j + skip)];
+                    _LiftReqs[j] = _LiftReqs[(byte)(j + skip)];
             }
 
             if (skip > 0)
             {
-                m_LiftReqs[m_Back] = null;
+                _LiftReqs[_Back] = null;
                 return true;
             }
             else
@@ -395,12 +398,9 @@ namespace Assistant
 
         public static bool EndHolding(uint s)
         {
-            //if ( m_Pending == s )
-            //	return false;
-
-            if (m_Holding == s)
+            if (_Holding == s)
             {
-                m_Holding = 0;
+                _Holding = 0;
                 Holding = null;
             }
 
@@ -410,12 +410,12 @@ namespace Assistant
         private static DropReq DequeueDropFor(uint s)
         {
             DropReq dr = null;
-            if (m_DropReqs.TryGetValue(s, out var q) && q != null)
+            if (_DropReqs.TryGetValue(s, out var q) && q != null)
             {
                 if (q.Count > 0)
                     dr = q.Dequeue();
                 if (q.Count <= 0)
-                    m_DropReqs.Remove(s);
+                    _DropReqs.Remove(s);
             }
 
             return dr;
@@ -423,39 +423,39 @@ namespace Assistant
 
         public static void GracefulStop()
         {
-            m_Front = m_Back = 0;
+            _Front = _Back = 0;
 
-            if (SerialHelper.IsValid(m_Pending))
+            if (SerialHelper.IsValid(_Pending))
             {
-                m_DropReqs.TryGetValue(m_Pending, out var q);
-                m_DropReqs.Clear();
-                m_DropReqs[m_Pending] = q;
+                _DropReqs.TryGetValue(_Pending, out var q);
+                _DropReqs.Clear();
+                _DropReqs[_Pending] = q;
             }
         }
 
         public static ProcStatus ProcessNext(int numPending)
         {
-            if (m_Pending != 0)
+            if (_Pending != 0)
             {
-                if (m_Lifted + TimeSpan.FromMinutes(2) < DateTime.UtcNow)
+                if (_Lifted + TimeSpan.FromMinutes(2) < DateTime.UtcNow)
                 {
-                    //UOItem i = UOSObjects.FindItem(m_Pending);
-
-                    //Log("Lift timeout, forced drop to pack for {0}", m_Pending);
-
                     if (Client.Game.UO.World.Player != null)
                     {
                         UOSObjects.Player.SendMessage(MsgLevel.Force, "WARNING: Drag/Drop timeout! Dropping item in hand to backpack");
 
                         if (UOSObjects.Player.Backpack != null)
-                            Engine.Instance.SendToServer(new DropRequest(m_Pending, Point3D.MinusOne, UOSObjects.Player.Backpack.Serial));
+                        {
+                            NetClient.Socket.PSend_DropRequest(_Pending, Point3D.MinusOne, UOSObjects.Player.Backpack.Serial);
+                        }
                         else
-                            Engine.Instance.SendToServer(new DropRequest(m_Pending, UOSObjects.Player.Position, 0));
+                        {
+                            NetClient.Socket.PSend_DropRequest(_Pending, UOSObjects.Player.Position, 0);
+                        }
                     }
 
-                    m_Holding = m_Pending = 0;
+                    _Holding = _Pending = 0;
                     Holding = null;
-                    m_Lifted = DateTime.MinValue;
+                    _Lifted = DateTime.MinValue;
                 }
                 else
                 {
@@ -463,23 +463,21 @@ namespace Assistant
                 }
             }
 
-            if (m_Front == m_Back)
+            if (_Front == _Back)
             {
-                m_Front = m_Back = 0;
+                _Front = _Back = 0;
                 return ProcStatus.Nothing;
             }
 
-            LiftReq lr = m_LiftReqs[m_Front];
+            LiftReq lr = _LiftReqs[_Front];
 
             if (numPending > 0 && lr != null && lr.DoLast)
                 return ProcStatus.ReQueue;
 
-            m_LiftReqs[m_Front] = null;
-            m_Front++;
+            _LiftReqs[_Front] = null;
+            _Front++;
             if (lr != null)
             {
-                //Log("Lifting {0}", lr);
-
                 UOItem item = UOSObjects.FindItem(lr.Serial);
                 if (item != null && item.Container == null)
                 {
@@ -491,38 +489,39 @@ namespace Assistant
                     }
                 }
 
-                Engine.Instance.SendToServer(new LiftRequest(lr.Serial, lr.Amount));
+                NetClient.Socket.PSend_LiftRequest(lr.Serial, lr.Amount);
 
-                m_LastID = lr.Id;
-                m_Holding = lr.Serial;
+                _LastID = lr.Id;
+                _Holding = lr.Serial;
                 Holding = UOSObjects.FindItem(lr.Serial);
-                m_ClientLiftReq = lr.FromClient;
+                _ClientLiftReq = lr.FromClient;
 
                 DropReq dr = DequeueDropFor(lr.Serial);
                 if (dr != null)
                 {
-                    m_Pending = 0;
+                    _Pending = 0;
                     EndHolding(lr.Serial);
-                    m_Lifted = DateTime.MinValue;
+                    _Lifted = DateTime.MinValue;
 
-                    //Log("Dropping {0} to {1}", lr, dr.Serial);
-
-                    if (SerialHelper.IsMobile(dr.Serial) && dr.Layer > Layer.Invalid && dr.Layer <= Layer.LastUserValid)
-                        Engine.Instance.SendToServer(new EquipRequest(lr.Serial, dr.Serial, dr.Layer));
+                    if (SerialHelper.IsMobile(dr.Serial) && dr.Layer > Layer.Invalid && dr.Layer < Layer.Mount)
+                    {
+                        NetClient.Socket.PSend_EquipRequest(lr.Serial, dr.Serial, dr.Layer);
+                    }
                     else
-                        Engine.Instance.SendToServer(new DropRequest(lr.Serial, dr.Point, dr.Serial));
+                    {
+                        NetClient.Socket.PSend_DropRequest(lr.Serial, dr.Point, dr.Serial);
+                    }
                 }
                 else
                 {
-                    m_Pending = lr.Serial;
-                    m_Lifted = DateTime.UtcNow;
+                    _Pending = lr.Serial;
+                    _Lifted = DateTime.UtcNow;
                 }
 
                 return ProcStatus.Success;
             }
             else
             {
-                //Log("No lift to be done?!");
                 return ProcStatus.Nothing;
             }
         }
@@ -530,24 +529,22 @@ namespace Assistant
 
     public class ActionQueue
     {
-        private static uint m_Last = 0;
-        private static readonly Queue<uint> m_Queue = new Queue<uint>();
-        private static readonly ProcTimer m_Timer = new ProcTimer();
-        private static int m_Total = 0;
+        private static uint _Last = 0;
+        private static readonly Queue<uint> _Queue = new Queue<uint>();
+        private static readonly ProcTimer _Timer = new ProcTimer();
+        private static int _Total = 0;
 
-        public static void DoubleClick(bool silent, uint s)
+        public static void DoubleClick(uint s, bool silent = true)
         {
             if (s != 0)
             {
-                if (m_Last != s)
+                if (_Last != s)
                 {
-                    m_Queue.Enqueue(s);
-                    m_Last = s;
-                    m_Total++;
-                    if (m_Queue.Count == 1 && !m_Timer.Running)
-                        m_Timer.StartMe();
-                    else if (!silent && m_Total > 1)
-                        UOSObjects.Player.SendMessage($"Queuing action request {m_Queue.Count}... {TimeLeft} left.");
+                    _Queue.Enqueue(s);
+                    _Last = s;
+                    _Total++;
+                    if (!silent && _Total > 1)
+                        UOSObjects.Player.SendMessage($"Queuing action request {_Queue.Count}... {TimeLeft} left.");
                 }
                 else if (!silent)
                 {
@@ -558,41 +555,39 @@ namespace Assistant
 
         public static void SignalLift(bool silent)
         {
-            m_Queue.Enqueue(0);
-            m_Total++;
-            if ( /*m_Queue.Count == 1 &&*/ !m_Timer.Running)
-                m_Timer.StartMe();
-            else if (!silent && m_Total > 1)
-                UOSObjects.Player.SendMessage($"Queuing dragdrop request {m_Queue.Count}... {TimeLeft} left.");
+            _Queue.Enqueue(0);
+            _Total++;
+
+            if (!silent && _Total > 1)
+                UOSObjects.Player.SendMessage($"Queuing dragdrop request {_Queue.Count}... {TimeLeft} left.");
         }
 
         public static void Stop()
         {
-            if (m_Timer != null && m_Timer.Running)
-                m_Timer.Stop();
-            m_Queue.Clear();
+            if (_Timer != null && _Timer.Running)
+                _Timer.Stop();
+            _Queue.Clear();
             DragDropManager.Clear();
         }
 
         public static void ClearActions()
         {
-            m_Queue?.Clear();
+            _Queue?.Clear();
         }
+
+        public static int QueuedActions => _Queue.Count;
 
         public static bool Empty
         {
-            get { return m_Queue.Count <= 0 && !m_Timer.Running; }
+            get { return _Queue.Count <= 0 && !_Timer.Running; }
         }
 
         public static string TimeLeft
         {
             get
             {
-                if (m_Timer.Running)
+                if (_Timer.Running)
                 {
-                    //Config.GetBool("ObjectDelayEnabled")
-                    //double time = Config.GetInt( "ObjectDelay" ) / 1000.0;
-
                     double time = UOSObjects.Gump.ActionDelay / 1000.0;
 
                     if (!UOSObjects.Gump.UseObjectsQueue)
@@ -601,12 +596,12 @@ namespace Assistant
                     }
 
                     double init = 0;
-                    if (m_Timer.LastTick != DateTime.MinValue)
-                        init = time - (DateTime.UtcNow - m_Timer.LastTick).TotalSeconds;
-                    time = init + time * m_Queue.Count;
+                    if (_Timer.LastTick != DateTime.MinValue)
+                        init = time - (DateTime.UtcNow - _Timer.LastTick).TotalSeconds;
+                    time = init + time * _Queue.Count;
                     if (time < 0)
                         time = 0;
-                    return String.Format("{0:F1} seconds", time);
+                    return string.Format("{0:F1} seconds", time);
                 }
                 else
                 {
@@ -615,86 +610,98 @@ namespace Assistant
             }
         }
 
+        internal static void StartTimer()
+        {
+            if(_Timer.Running)
+            {
+                Stop();
+            }
+            _Timer.StartMe();
+        }
+
         private class ProcTimer : Timer
         {
-            private DateTime m_StartTime;
-            private DateTime m_LastTick;
+            private DateTime _StartTime;
+            private DateTime _LastTick;
+            private bool _SendMSG = false;
+            private uint _TimeDragDrop;
 
             public DateTime LastTick
             {
-                get { return m_LastTick; }
+                get { return _LastTick; }
             }
 
-            public ProcTimer() : base(TimeSpan.Zero, TimeSpan.Zero)
+            public ProcTimer() : base(TimeSpan.Zero, TimeSpan.FromMilliseconds(UOSObjects.Gump.ActionDelay))
             {
             }
 
-            public void StartMe()
+            internal void StartMe()
             {
-                m_LastTick = DateTime.UtcNow;
-                m_StartTime = DateTime.UtcNow;
-
-                OnTick();
-
-                Delay = Interval;
+                _LastTick = DateTime.UtcNow;
+                _StartTime = DateTime.UtcNow;
 
                 Start();
             }
 
             protected override void OnTick()
             {
-                //this code is useless now, since this is a drawback from razor, that requeued instead of maintaining in the queue directly, changing also the priority of the queue, prior to my mods to markdwags repo for generic rework
-                //List<uint> requeue = null;
+                _LastTick = DateTime.UtcNow;
 
-                m_LastTick = DateTime.UtcNow;
-
-                if (m_Queue != null && m_Queue.Count > 0)
+                if (_Queue != null && _Queue.Count > 0)
                 {
-                    this.Interval = TimeSpan.FromMilliseconds(UOSObjects.Gump.ActionDelay);
-
-                    //this.Interval = TimeSpan.FromMilliseconds( Config.GetInt( "ObjectDelay" ) );
-
-                    while (m_Queue.Count > 0)
+                    if (!_SendMSG)
                     {
-                        uint s = m_Queue.Peek();
+                        _StartTime = DateTime.UtcNow;
+                        _SendMSG = true;
+                    }
+
+                    Interval = TimeSpan.FromMilliseconds(UOSObjects.Gump.ActionDelay);//action such as dclick must be done as commanded and as fast as possible
+
+                    while (_Queue.Count > 0)
+                    {
+                        uint s = _Queue.Peek();
                         if (s == 0) // dragdrop action
                         {
-                            DragDropManager.ProcStatus status = DragDropManager.ProcessNext(m_Queue.Count - 1);
+                            if(_TimeDragDrop + ScriptManager.ActionDelayDragDrop > Time.Ticks)
+                            {
+                                break;
+                            }
+                            DragDropManager.ProcStatus status = DragDropManager.ProcessNext(_Queue.Count - 1);
                             if (status != DragDropManager.ProcStatus.KeepWaiting)
                             {
-                                m_Queue.Dequeue(); // if not waiting then dequeue it
+                                _Queue.Dequeue(); // if not waiting then dequeue it
 
                                 if (status == DragDropManager.ProcStatus.ReQueue)
-                                    m_Queue.Enqueue(s);
+                                    _Queue.Enqueue(s);
                             }
 
-                            if (status == DragDropManager.ProcStatus.KeepWaiting ||
-                                status == DragDropManager.ProcStatus.Success)
+                            if (status == DragDropManager.ProcStatus.KeepWaiting || status == DragDropManager.ProcStatus.Success)
+                            {
+                                if(status == DragDropManager.ProcStatus.Success)
+                                {
+                                    _TimeDragDrop = Time.Ticks;//write doing the successful action to postpone the next dragdrop
+                                }
                                 break; // don't process more if we're waiting or we just processed something
+                            }
                         }
                         else
                         {
-                            m_Queue.Dequeue();
-                            Engine.Instance.SendToServer(new DoubleClick(s));
+                            _Queue.Dequeue();
+                            NetClient.Socket.PSend_DoubleClick(s);
                             break;
                         }
                     }
-
-                    /*if (requeue != null)
-                    {
-                        for (int i = 0; i < requeue.Count; i++)
-                            m_Queue.Enqueue(requeue[i]);
-                    }*/
                 }
                 else
                 {
-                    Stop();
+                    if (_SendMSG && _Total > 1 && UOSObjects.Player != null)
+                    {
+                        UOSObjects.Player.SendMessage($"Finished {_Total} queued actions in {(((DateTime.UtcNow - _StartTime) - this.Interval).TotalSeconds)} seconds.");
+                        _SendMSG = false;
+                    }
 
-                    if (m_Total > 1 && UOSObjects.Player != null)
-                        UOSObjects.Player.SendMessage($"Finished {m_Total} queued actions in {(((DateTime.UtcNow - m_StartTime) - this.Interval).TotalSeconds)} seconds.");
-
-                    m_Last = 0;
-                    m_Total = 0;
+                    _Last = 0;
+                    _Total = 0;
                 }
             }
         }
