@@ -157,8 +157,12 @@ namespace ClassicUO.Game.UI.Controls
             }
         }
 
+        private bool _raisedEvent = false;
         public void SetKey(SDL.SDL_Keycode key, SDL.SDL_Keymod mod)
         {
+            if (_raisedEvent)
+                return;
+            _raisedEvent = true;
             mod = (SDL.SDL_Keymod)((ushort)mod & 0x3C3);
             if (key == SDL.SDL_Keycode.SDLK_UNKNOWN && mod == SDL.SDL_Keymod.KMOD_NONE)
             {
@@ -182,17 +186,24 @@ namespace ClassicUO.Game.UI.Controls
                         goto retry;
                     }
                     else
+                    {
+                        _raisedEvent = false;
                         return;
+                    }
                 }
                 Key = key;
                 Mod = mod;
                 _label.Text = newvalue;
                 HotkeyChanged.Raise(this);
             }
+            _raisedEvent = false;
         }
 
         public override void OnButtonClick(int buttonID)
         {
+            if (_raisedEvent)
+                return;
+            _raisedEvent = true;
             switch ((ButtonState)buttonID)
             {
                 case ButtonState.Clear:
@@ -211,7 +222,7 @@ namespace ClassicUO.Game.UI.Controls
 
                     break;
             }
-
+            _raisedEvent = false;
             IsActive = false;
         }
 
