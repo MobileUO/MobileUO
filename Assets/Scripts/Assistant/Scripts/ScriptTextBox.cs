@@ -495,15 +495,6 @@ namespace ClassicUO.Game.UI.Controls
                 _rect.Add(new Rectangle2D(x, y, w, h));
                 l.AddRange(_rect);
             }
-
-            public static bool IsSyntaxValid(string cmd, int argCount)
-            {
-                if (Interpreter.CmdMap.TryGetValue(cmd, out CmdRule rule))
-                {
-                    return argCount >= rule.MinArgs && argCount <= rule.MaxArgs;
-                }
-                return true; // Se il comando non è in mappa, non segnaliamo errore
-            }
         }
     }
 }

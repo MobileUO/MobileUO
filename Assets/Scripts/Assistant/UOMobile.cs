@@ -303,7 +303,7 @@ namespace Assistant
 
         internal uint GetNotorietyColor()
         {
-            if (_Notoriety < 0 || _Notoriety >= _NotoHues.Length)
+            if (_Notoriety >= _NotoHues.Length)
                 return _NotoHues[0];
             else
                 return _NotoHues[_Notoriety];
@@ -311,7 +311,7 @@ namespace Assistant
 
         internal int GetNotorietyColorInt()
         {
-            if (_Notoriety < 0 || _Notoriety >= _NotoHues.Length)
+            if (_Notoriety >= _NotoHues.Length)
                 return _NotoHuesInt[0];
             else
                 return _NotoHuesInt[_Notoriety];
@@ -389,7 +389,7 @@ namespace Assistant
         internal void RemoveItem(UOItem item)
         {
             _Items.Remove(item);
-            if (Engine.Instance.AllowBit(FeatureBit.AutoRemount) && item.Layer == Layer.Mount && Serial == UOSObjects.Player.Serial && UOSObjects.Gump.AutoMount)
+            if (Engine.Instance.AllowBit(FeatureBit.AutoRemount) && item.Layer == Layer.Mount && UOSObjects.Player != null && Serial == UOSObjects.Player.Serial && UOSObjects.Gump != null && UOSObjects.Gump.AutoMount)
             {
                 uint serial = Interpreter.GetAlias("mount");
                 if(SerialHelper.IsValid(serial))
@@ -424,7 +424,7 @@ namespace Assistant
 
         internal bool InParty
         {
-            get { return PacketHandlers.Party.Count > 0 && (Serial == UOSObjects.Player.Serial || PacketHandlers.Party.Contains(Serial)); }
+            get { return PacketHandlers.Party.Count > 0 && ((UOSObjects.Player != null && Serial == UOSObjects.Player.Serial) || PacketHandlers.Party.Contains(Serial)); }
         }
 
         internal UOItem GetItemOnLayer(Layer layer)
