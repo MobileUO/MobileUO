@@ -11,7 +11,7 @@
 // and the AGPL-3.0 terms are respected for this specific module.
 //
 // This program is distributed WITHOUT ANY WARRANTY. 
-// See <https://www.gnu.org> for details.
+// See <https://www.gnu.org/licenses/agpl-3.0.html> for details.
 #endregion
 
 using ClassicUO.Game;
