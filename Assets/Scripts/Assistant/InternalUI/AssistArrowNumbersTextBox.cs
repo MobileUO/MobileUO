@@ -23,11 +23,14 @@ namespace ClassicUO.Game.UI.Controls
 {
     internal class AssistArrowNumbersTextBox : Control
     {
-        private const int TIME_BETWEEN_CLICKS = 250;
+        private const uint TIME_BETWEEN_CLICKS = 250;
+        private const uint TIME_BETWEEN_CLICKS_FAST = 125;
+        private const uint TIME_BETWEEN_CLICKS_FASTEST = 50;
         private readonly int _Min, _Max;
         private readonly AssistStbTextBox _textBox;
         private readonly Button _up, _down;
-        private float _timeUntilNextClick;
+        private uint _timeUntilNextClick, _timeFirstClick;
+        private bool _mouseAlwaysDown;
 
         public AssistArrowNumbersTextBox(int x, int y, int width, int raiseamount, int minvalue, int maxvalue, byte font = 0, int maxcharlength = -1, bool isunicode = true, FontStyle style = FontStyle.None, ushort hue = 0)
         {
@@ -59,6 +62,10 @@ namespace ClassicUO.Game.UI.Controls
                     _timeUntilNextClick = Time.Ticks + TIME_BETWEEN_CLICKS * 2;
                 }
             };
+            _up.MouseUp += (sender, e) =>
+            {
+                _mouseAlwaysDown = false;
+            };
             Add(_up);
 
             _down = new Button(-raiseamount, 0x985, 0x986)
@@ -75,6 +82,10 @@ namespace ClassicUO.Game.UI.Controls
                     UpdateValue();
                     _timeUntilNextClick = Time.Ticks + TIME_BETWEEN_CLICKS * 2;
                 }
+            };
+            _down.MouseUp += (sender, e) =>
+            {
+                _mouseAlwaysDown = false;
             };
             Add(_down);
             Add(_textBox = new AssistStbTextBox(font, maxcharlength, width, isunicode, style, hue)
@@ -111,6 +122,12 @@ namespace ClassicUO.Game.UI.Controls
 
         private void UpdateValue()
         {
+            if(!_mouseAlwaysDown)
+            {
+                _mouseAlwaysDown = true;
+                _timeFirstClick = Time.Ticks;
+            }
+
             int.TryParse(_textBox.Text, out int i);
 
             if (_up.IsClicked)
@@ -138,7 +155,8 @@ namespace ClassicUO.Game.UI.Controls
             {
                 if (Time.Ticks > _timeUntilNextClick)
                 {
-                    _timeUntilNextClick += Time.Ticks + TIME_BETWEEN_CLICKS;
+                    var elapsed = Time.Ticks - _timeFirstClick;
+                    _timeUntilNextClick = Time.Ticks + (elapsed > 4000 ? (elapsed > 8000 ? TIME_BETWEEN_CLICKS_FASTEST : TIME_BETWEEN_CLICKS_FAST) : TIME_BETWEEN_CLICKS);
                     UpdateValue();
                 }
             }
