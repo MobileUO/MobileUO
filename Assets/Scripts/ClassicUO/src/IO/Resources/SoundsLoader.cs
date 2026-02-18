@@ -272,7 +272,9 @@ namespace ClassicUO.IO.Resources
 
             // check if name exists as file, ignoring case since UO isn't consistent with file case (necessary for *nix)
             // also, not every filename in Config.txt has a file extension, so let's strip it out just in case.
-            string name = GetTrueFileName(Path.GetFileNameWithoutExtension(splits[1]), musicFileList);
+            string name = splits[1].Trim();
+            // MobileUO: TODO: this is somehow causing to load the wrong music file, re-visit later after upgrading CUO ~mandlar
+            //string name = GetTrueFileName(Path.GetFileNameWithoutExtension(splits[1].Trim()), musicFileList);
 
             bool doesLoop = splits.Length == 3 && splits[2] == "loop";
 
