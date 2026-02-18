@@ -48,6 +48,7 @@ namespace Assistant
 
     internal class UOMobile : UOEntity
     {
+        private const string SENDER = "Assistant";
         private ushort _Body;
         private AssistDirection _Direction;
         private string _Name;
@@ -311,7 +312,7 @@ namespace Assistant
 
         internal int GetNotorietyColorInt()
         {
-            if (_Notoriety >= _NotoHues.Length)
+            if (_Notoriety >= _NotoHuesInt.Length)
                 return _NotoHuesInt[0];
             else
                 return _NotoHuesInt[_Notoriety];
@@ -560,7 +561,7 @@ namespace Assistant
 
         internal void OverheadMessage(int hue, string text)
         {
-            OverheadMessageFrom(hue, "UOSteam", text);
+            OverheadMessageFrom(hue, SENDER, text);
         }
 
         private Point2D _ButtonPoint = Point2D.Zero;

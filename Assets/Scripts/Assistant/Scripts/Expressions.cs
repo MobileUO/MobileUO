@@ -1549,7 +1549,10 @@ namespace Assistant.Scripts
             {
                 if (islayer)
                 {
-                    list.Add(source);
+                    if (container.ItemID == graphicId && (!color.HasValue || color.Value == ushort.MaxValue || container.Hue == color.Value))
+                    {
+                        list.Add(source);
+                    }
                 }
                 else
                 {

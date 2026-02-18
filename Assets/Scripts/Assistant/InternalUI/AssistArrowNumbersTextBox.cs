@@ -30,7 +30,7 @@ namespace ClassicUO.Game.UI.Controls
         private readonly AssistStbTextBox _textBox;
         private readonly Button _up, _down;
         private uint _timeUntilNextClick, _timeFirstClick;
-        private bool _mouseAlwaysDown;
+        private bool _autoRepeatInitialized;
 
         public AssistArrowNumbersTextBox(int x, int y, int width, int raiseamount, int minvalue, int maxvalue, byte font = 0, int maxcharlength = -1, bool isunicode = true, FontStyle style = FontStyle.None, ushort hue = 0)
         {
@@ -64,7 +64,7 @@ namespace ClassicUO.Game.UI.Controls
             };
             _up.MouseUp += (sender, e) =>
             {
-                _mouseAlwaysDown = false;
+                _autoRepeatInitialized = false;
             };
             Add(_up);
 
@@ -85,7 +85,7 @@ namespace ClassicUO.Game.UI.Controls
             };
             _down.MouseUp += (sender, e) =>
             {
-                _mouseAlwaysDown = false;
+                _autoRepeatInitialized = false;
             };
             Add(_down);
             Add(_textBox = new AssistStbTextBox(font, maxcharlength, width, isunicode, style, hue)
@@ -122,9 +122,9 @@ namespace ClassicUO.Game.UI.Controls
 
         private void UpdateValue()
         {
-            if(!_mouseAlwaysDown)
+            if(!_autoRepeatInitialized)
             {
-                _mouseAlwaysDown = true;
+                _autoRepeatInitialized = true;
                 _timeFirstClick = Time.Ticks;
             }
 
