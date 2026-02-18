@@ -1482,7 +1482,7 @@ namespace ClassicUO.Game.UI.Gumps
                 UOMobile m = UOSObjects.FindMobile(Targeting.LastTargetInfo.Serial);
                 if(m != null)
                 {
-                    ClientPackets.PRecv_MobileIncoming(m);//Engine.Instance.SendToClient(new MobileIncoming(m));
+                    ClientPackets.PRecv_MobileIncoming(m);
                 }
             }
         }

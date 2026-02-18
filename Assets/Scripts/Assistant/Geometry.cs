@@ -477,7 +477,7 @@ namespace Assistant
         public bool Intersects(Rectangle2D test)
         {
             Point2D e1 = new Point2D(test.Start.X + test.Width, test.Start.Y);
-            Point2D e2 = new Point2D(test.Start.X, test.Start.Y + test.Width);
+            Point2D e2 = new Point2D(test.Start.X, test.Start.Y + test.Height);
 
             return Contains(test.Start) || Contains(test.End) || Contains(e1) || Contains(e2);
         }
@@ -609,7 +609,7 @@ namespace Assistant
         public bool Intersects(Rectangle3D test)
         {
             Point3D e1 = new Point3D(test.Start.X + test.Width, test.Start.Y, test.Start.Z);
-            Point3D e2 = new Point3D(test.Start.X, test.Start.Y + test.Width, test.Start.Z);
+            Point3D e2 = new Point3D(test.Start.X, test.Start.Y + test.Height, test.Start.Z);
             Point3D e3 = new Point3D(test.Start.X, test.Start.Y, test.Start.Z + test.Depth);
 
             return Contains(test.Start) || Contains(test.End) || Contains(e1) || Contains(e2) || Contains(e3);
@@ -618,7 +618,7 @@ namespace Assistant
         public bool Contains(Rectangle3D test)
         {
             Point3D e1 = new Point3D(test.Start.X + test.Width, test.Start.Y, test.Start.Z);
-            Point3D e2 = new Point3D(test.Start.X, test.Start.Y + test.Width, test.Start.Z);
+            Point3D e2 = new Point3D(test.Start.X, test.Start.Y + test.Height, test.Start.Z);
             Point3D e3 = new Point3D(test.Start.X, test.Start.Y, test.Start.Z + test.Depth);
 
             return Contains(test.Start) && Contains(test.End) && Contains(e1) && Contains(e2) && Contains(e3);

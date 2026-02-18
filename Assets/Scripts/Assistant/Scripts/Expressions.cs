@@ -165,6 +165,9 @@ namespace Assistant.Scripts
                 return false;
             }
 
+            if (UOSObjects.Player == null)
+                return false;
+
             string type = args[0].AsString();
             Point3D p;
             if (args.Length > 1)
@@ -295,27 +298,27 @@ namespace Assistant.Scripts
 
         private static int Physical(string expression, Argument[] args, bool quiet, bool force)
         {
-            return UOSObjects.Player.AR;
+            return UOSObjects.Player?.AR ?? 0;
         }
 
         private static int Fire(string expression, Argument[] args, bool quiet, bool force)
         {
-            return UOSObjects.Player.FireResistance;
+            return UOSObjects.Player?.FireResistance ?? 0;
         }
 
         private static int Cold(string expression, Argument[] args, bool quiet, bool force)
         {
-            return UOSObjects.Player.ColdResistance;
+            return UOSObjects.Player?.ColdResistance ?? 0;
         }
 
         private static int Poison(string expression, Argument[] args, bool quiet, bool force)
         {
-            return UOSObjects.Player.PoisonResistance;
+            return UOSObjects.Player?.PoisonResistance ?? 0;
         }
 
         private static int Energy(string expression, Argument[] args, bool quiet, bool force)
         {
-            return UOSObjects.Player.EnergyResistance;
+            return UOSObjects.Player?.EnergyResistance ?? 0;
         }
 
         private static int Str(string expression, Argument[] args, bool quiet, bool force)
@@ -392,6 +395,9 @@ namespace Assistant.Scripts
 
         private static int DiffHits(string expression, Argument[] args, bool quiet, bool force)
         {
+            if (UOSObjects.Player == null)
+                return 0;
+
             if (args.Length == 0)
                 return UOSObjects.Player.HitsMax - UOSObjects.Player.Hits;
             else if (args.Length != 1)
@@ -414,11 +420,8 @@ namespace Assistant.Scripts
 
         private static int Stam(string expression, Argument[] args, bool quiet, bool force)
         {
-            if (UOSObjects.Player == null)
-                return 0;
-
             if (args.Length == 0)
-                return UOSObjects.Player.Stam;
+                return UOSObjects.Player?.Stam ?? 0;
             else if (args.Length != 1)
             {
                 ScriptManager.Message(quiet, $"Usage: {Interpreter.GetExprHelper(expression)}");
@@ -438,11 +441,8 @@ namespace Assistant.Scripts
 
         private static int MaxStam(string expression, Argument[] args, bool quiet, bool force)
         {
-            if (UOSObjects.Player == null)
-                return 0;
-
             if (args.Length == 0)
-                return UOSObjects.Player.StamMax;
+                return UOSObjects.Player?.StamMax ?? 0;
             else if (args.Length != 1)
             {
                 ScriptManager.Message(quiet, $"Usage: {Interpreter.GetExprHelper(expression)}");
@@ -463,7 +463,7 @@ namespace Assistant.Scripts
         private static int Mana(string expression, Argument[] args, bool quiet, bool force)
         {
             if (args.Length == 0)
-                return UOSObjects.Player.Mana;
+                return UOSObjects.Player?.Mana ?? 0;
             else if (args.Length != 1)
             {
                 ScriptManager.Message(quiet, $"Usage: {Interpreter.GetExprHelper(expression)}");
@@ -484,7 +484,7 @@ namespace Assistant.Scripts
         private static int MaxMana(string expression, Argument[] args, bool quiet, bool force)
         {
             if (args.Length == 0)
-                return UOSObjects.Player.ManaMax;
+                return UOSObjects.Player?.ManaMax ?? 0;
             else if (args.Length != 1)
             {
                 ScriptManager.Message(quiet, $"Usage: {Interpreter.GetExprHelper(expression)}");
@@ -519,24 +519,24 @@ namespace Assistant.Scripts
 
         private static int Followers(string expression, Argument[] args, bool quiet, bool force)
         {
-            return UOSObjects.Player.Followers;
+            return UOSObjects.Player?.Followers ?? 0;
         }
 
         private static int MaxFollowers(string expression, Argument[] args, bool quiet, bool force)
         {
-            return UOSObjects.Player.FollowersMax;
+            return UOSObjects.Player?.FollowersMax ?? 0;
         }
 
         private static uint Gold(string expression, Argument[] args, bool quiet, bool force)
         {
-            return UOSObjects.Player.Gold;
+            return UOSObjects.Player?.Gold ?? 0;
         }
 
         private static bool Hidden(string expression, Argument[] args, bool quiet, bool force)
         {
             if (args.Length == 0)
             {
-                return !UOSObjects.Player.Visible;
+                return !UOSObjects.Player?.Visible ?? true;
             }
             else if (args.Length != 1)
             {
@@ -579,26 +579,29 @@ namespace Assistant.Scripts
 
         private static int Luck(string expression, Argument[] args, bool quiet, bool force)
         {
-            return UOSObjects.Player.Luck;
+            return UOSObjects.Player?.Luck ?? 0;
         }
 
         private static int TithingPoints(string expression, Argument[] args, bool quiet, bool force)
         {
-            return UOSObjects.Player.Tithe;
+            return UOSObjects.Player?.Tithe ?? 0;
         }
 
         private static double Weight(string expression, Argument[] args, bool quiet, bool force)
         {
-            return UOSObjects.Player.Weight;
+            return UOSObjects.Player?.Weight ?? 0;
         }
 
         private static int MaxWeight(string expression, Argument[] args, bool quiet, bool force)
         {
-            return UOSObjects.Player.MaxWeight;
+            return UOSObjects.Player?.MaxWeight ?? 0;
         }
 
         private static int DiffWeight(string expression, Argument[] args, bool quiet, bool force)
         {
+            if (UOSObjects.Player == null)
+                return 0;
+
             return UOSObjects.Player.MaxWeight - UOSObjects.Player.Weight;
         }
 
@@ -734,7 +737,7 @@ namespace Assistant.Scripts
         {
             if (args.Length == 0)
             {
-                return UOSObjects.Player.Name;
+                return UOSObjects.Player?.Name ?? string.Empty;
             }
             if (args.Length != 1)
             {
@@ -779,7 +782,7 @@ namespace Assistant.Scripts
         {
             if (args.Length == 0)
             {
-                return UOSObjects.Player.IsGhost;
+                return UOSObjects.Player?.IsGhost ?? false;
             }
             if (args.Length != 1)
             {
@@ -812,7 +815,7 @@ namespace Assistant.Scripts
         {
             if (args.Length == 0)
             {
-                return (int)UOSObjects.Player.Direction;
+                return (int)(UOSObjects.Player?.Direction ?? 0);
             }
             if (args.Length != 1)
             {
@@ -845,7 +848,7 @@ namespace Assistant.Scripts
         {
             if (args.Length == 0)
             {
-                return UOSObjects.Player.Flying;
+                return UOSObjects.Player?.Flying ?? false;
             }
 
             if (args.Length != 1)
@@ -879,7 +882,7 @@ namespace Assistant.Scripts
         {
             if (args.Length == 0)
             {
-                return UOSObjects.Player.Paralyzed;
+                return UOSObjects.Player?.Paralyzed ?? false;
             }
             if (args.Length != 1)
             {
@@ -984,7 +987,7 @@ namespace Assistant.Scripts
         {
             if (args.Length == 0)
             {
-                return UOSObjects.Player.Poisoned;
+                return UOSObjects.Player?.Poisoned ?? false;
             }
             if (args.Length != 1)
             {
@@ -1017,7 +1020,7 @@ namespace Assistant.Scripts
         {
             if (args.Length == 0)
             {
-                if (UOSObjects.Player.GetItemOnLayer(Layer.Mount) != null)
+                if (UOSObjects.Player?.GetItemOnLayer(Layer.Mount) != null)
                 {
                     return true;
                 }
@@ -1054,7 +1057,7 @@ namespace Assistant.Scripts
         {
             if (args.Length == 0)
             {
-                return UOSObjects.Player.Blessed;
+                return UOSObjects.Player?.Blessed ?? false;
             }
             if (args.Length != 1)
             {
@@ -1085,7 +1088,7 @@ namespace Assistant.Scripts
         private static bool Criminal(string expression, Argument[] args, bool quiet, bool force)
         {
             if (args.Length == 0)
-                return UOSObjects.Player.Notoriety == 0x4;
+                return UOSObjects.Player?.Notoriety == 0x4;
             else if (args.Length != 1)
             {
                 ScriptManager.Message(quiet, $"Usage: {Interpreter.GetExprHelper(expression)}");
@@ -1106,7 +1109,7 @@ namespace Assistant.Scripts
         private static bool Enemy(string expression, Argument[] args, bool quiet, bool force)
         {
             if (args.Length == 0)
-                return UOSObjects.Player.Notoriety == 0x5;
+                return UOSObjects.Player?.Notoriety == 0x5;
             else if (args.Length != 1)
             {
                 ScriptManager.Message(quiet, $"Usage: {Interpreter.GetExprHelper(expression)}");
@@ -1127,7 +1130,7 @@ namespace Assistant.Scripts
         private static bool Friend(string expression, Argument[] args, bool quiet, bool force)
         {
             if (args.Length == 0)
-                return UOSObjects.Player.Notoriety == 0x2;
+                return UOSObjects.Player?.Notoriety == 0x2;
             else if (args.Length != 1)
             {
                 ScriptManager.Message(quiet, $"Usage: {Interpreter.GetExprHelper(expression)}");
@@ -1148,7 +1151,7 @@ namespace Assistant.Scripts
         private static bool Gray(string expression, Argument[] args, bool quiet, bool force)
         {
             if (args.Length == 0)
-                return UOSObjects.Player.Notoriety == 0x3;
+                return UOSObjects.Player?.Notoriety == 0x3;
             else if (args.Length != 1)
             {
                 ScriptManager.Message(quiet, $"Usage: {Interpreter.GetExprHelper(expression)}");
@@ -1169,7 +1172,7 @@ namespace Assistant.Scripts
         private static bool Innocent(string expression, Argument[] args, bool quiet, bool force)
         {
             if (args.Length == 0)
-                return UOSObjects.Player.Notoriety == 0x1;
+                return UOSObjects.Player?.Notoriety == 0x1;
             else if (args.Length != 1)
             {
                 ScriptManager.Message(quiet, $"Usage: {Interpreter.GetExprHelper(expression)}");
@@ -1190,7 +1193,7 @@ namespace Assistant.Scripts
         private static bool Invulnerable(string expression, Argument[] args, bool quiet, bool force)
         {
             if (args.Length == 0)
-                return UOSObjects.Player.Notoriety == 0x7;
+                return UOSObjects.Player?.Notoriety == 0x7;
             else if (args.Length != 1)
             {
                 ScriptManager.Message(quiet, $"Usage: {Interpreter.GetExprHelper(expression)}");
@@ -1210,7 +1213,7 @@ namespace Assistant.Scripts
         private static bool Murderer(string expression, Argument[] args, bool quiet, bool force)
         {
             if (args.Length == 0)
-                return UOSObjects.Player.Notoriety == 0x6;
+                return UOSObjects.Player?.Notoriety == 0x6;
             else if (args.Length != 1)
             {
                 ScriptManager.Message(quiet, $"Usage: {Interpreter.GetExprHelper(expression)}");
@@ -1281,7 +1284,7 @@ namespace Assistant.Scripts
                 UOEntity e = UOSObjects.FindEntity(objSerial);
                 if(e != null)
                 {
-                    return (int)UOSObjects.Player.GetDistanceToSqrt(e) <= range;
+                    return (int)UOSObjects.Player?.GetDistanceToSqrt(e) <= range;
                 }
             }
             else
@@ -1299,7 +1302,7 @@ namespace Assistant.Scripts
             string name = args[0].AsString();
             if (!string.IsNullOrEmpty(name) && PlayerData.BuffNames.TryGetValue(name.ToLower(XmlFileParser.Culture), out int icon))
             {
-                return UOSObjects.Player.BuffsDebuffs.Exists(b => b.IconNumber == icon);
+                return UOSObjects.Player?.BuffsDebuffs.Exists(b => b.IconNumber == icon) ?? false;
             }
             else
                 ScriptManager.Message(quiet, "buffexists: not a valid buff name, check for buff names in bufficons.xml inside Data directory");
@@ -1759,7 +1762,7 @@ namespace Assistant.Scripts
         private static bool InParty(string expression, Argument[] args, bool quiet, bool force)
         {
             if (args.Length == 0)
-                return UOSObjects.Player.InParty;
+                return UOSObjects.Player?.InParty ?? false;
 
             var mobile = UOSObjects.FindMobile(args[0].AsSerial());
 
@@ -1782,7 +1785,7 @@ namespace Assistant.Scripts
         {
             if (args.Length == 0)
             {
-                return UOSObjects.Player.Warmode;
+                return UOSObjects.Player?.Warmode ?? false;
             }
             if (args.Length != 1)
             {
@@ -1813,6 +1816,9 @@ namespace Assistant.Scripts
 
         private static bool InGump(string expression, Argument[] args, bool quiet, bool force)
         {
+            if (UOSObjects.Player == null)
+                return false;
+
             if (args.Length != 2)
             {
                 ScriptManager.Message(quiet, $"Usage: {Interpreter.GetExprHelper(expression)}");
@@ -1849,6 +1855,9 @@ namespace Assistant.Scripts
 
         private static bool GumpExists(string expression, Argument[] args, bool quiet, bool force)
         {
+            if (UOSObjects.Player == null)
+                return false;
+
             if (args.Length != 1)
             {
                 ScriptManager.Message(quiet, $"Usage: {Interpreter.GetExprHelper(expression)}");

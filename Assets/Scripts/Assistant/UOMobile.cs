@@ -610,7 +610,7 @@ namespace Assistant
                 if (i.ItemID == 0x204E && i.Hue == 0x08FD) // death shroud
                     i.ItemID = 0x1F03;
 
-                ClientPackets.PRecv_EquipmentItem(i, i.Hue, Serial);//Engine.Instance.SendToClient(new EquipmentItem(i, i.Hue, Serial));
+                ClientPackets.PRecv_EquipmentItem(i, i.Hue, Serial);
             }
         }
 
@@ -625,7 +625,7 @@ namespace Assistant
                 if (i == null)
                     continue;
 
-                ClientPackets.PRecv_EquipmentItem(i, (ushort)hue, Serial);//Engine.Instance.SendToClient(new EquipmentItem(i, (ushort)hue, Serial));
+                ClientPackets.PRecv_EquipmentItem(i, (ushort)hue, Serial);
             }
         }
     }
