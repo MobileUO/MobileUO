@@ -77,7 +77,7 @@ namespace ClassicUO.Game.UI.Controls
             {
                 _selectedIndex = value;
 
-                if (_items != null)
+                if (_items != null && value >= 0 && value < _items.Length)
                 {
                     _label.Text = _items[value];
 
@@ -191,7 +191,7 @@ namespace ClassicUO.Game.UI.Controls
                 }
 
                 int totalHeight = Math.Min(maxHeight, labels.Sum(l => l.Height));
-                int maxWidth = Math.Max(width, labels.Max(o => o.X + o.Width));
+                int maxWidth = labels.Length > 0 ? Math.Max(width, labels.Max(o => o.X + o.Width)) : width;
 
                 AssistScrollArea area = new AssistScrollArea(0, 0, maxWidth + 15, totalHeight);
 

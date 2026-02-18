@@ -62,29 +62,32 @@ namespace Assistant
 
         internal static string Contains(Point3D p, string type, int range = 24)
         {
-            RegionType rtype = RegionType.None;
-            if (UOSObjects.Player == null || string.IsNullOrEmpty(type) || !RegionTypes.TryGetValue(type, out rtype))
-                return null;
-
-            if (MapRegions.TryGetValue(UOSObjects.Player.MapIndex, out var dict))
+            if (!string.IsNullOrEmpty(type))
             {
-                if(rtype == RegionType.Any)
+                type = type.ToLower(XmlFileParser.Culture);
+                if (UOSObjects.Player == null || string.IsNullOrEmpty(type) || !RegionTypes.TryGetValue(type, out RegionType rtype))
+                    return null;
+
+                if (MapRegions.TryGetValue(UOSObjects.Player.MapIndex, out var dict))
                 {
-                    foreach(var kvp in dict)
+                    if (rtype == RegionType.Any)
                     {
-                        foreach(var reg in kvp.Value)
+                        foreach (var kvp in dict)
                         {
-                            if (reg.IsInside(p) && Utility.InRange(UOSObjects.Player.Position, p, range))
-                                return reg.Name;
+                            foreach (var reg in kvp.Value)
+                            {
+                                if (reg.IsInside(p) && Utility.InRange(UOSObjects.Player.Position, p, range))
+                                    return reg.Name;
+                            }
                         }
                     }
-                }
-                else if(dict.TryGetValue(rtype, out var list))
-                {
-                    foreach (var reg in list)
+                    else if (dict.TryGetValue(rtype, out var list))
                     {
-                        if (reg.IsInside(p))
-                            return reg.Name;
+                        foreach (var reg in list)
+                        {
+                            if (reg.IsInside(p))
+                                return reg.Name;
+                        }
                     }
                 }
             }

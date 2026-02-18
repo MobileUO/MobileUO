@@ -1975,7 +1975,7 @@ namespace ClassicUO.Game.UI.Gumps
 
         private void OnHotKeyChanged(ref string macroselected, AssistHotkeyBox box, uint vkey, bool ismacro)
         {
-            if(ismacro)
+            if (ismacro)
             {
                 if (!ScriptManager.MacroDictionary.TryGetValue(macroselected, out HotKeyOpts opts))
                     ScriptManager.MacroDictionary[macroselected] = new HotKeyOpts(box.PassToCUO, "macro.play", macroselected);

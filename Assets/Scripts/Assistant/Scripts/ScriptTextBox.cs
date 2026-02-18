@@ -56,7 +56,7 @@ namespace ClassicUO.Game.UI.Controls
                         base.Draw(batcher, x, y);
                         //childRenderLists.DrawRenderLists(batcher, sbyte.MaxValue);
                         DrawSelection(batcher, x, y);//, layerDepth);
-                        _rendererText.Draw(batcher, x, y);//, layerDepth);
+                        //_rendererText.Draw(batcher, x, y);//, layerDepth);
                         foreach (KeyValuePair<ushort, List<Rectangle2D>> kvp in HuedText)
                         {
                             foreach (Rectangle2D r in kvp.Value)

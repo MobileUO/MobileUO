@@ -36,7 +36,7 @@ namespace Assistant.Core
         private static readonly uint _largeBodGumpId = 2703603018;
         private static readonly uint _smallBodGumpId = 1526454082;
 
-        private static readonly string _bodFile = Path.GetDirectoryName(Engine.DataPath);
+        private static readonly string _bodFile = Path.Combine(Engine.DataPath, "bod.csv");
 
         public static bool IsBodGump(uint gumpId)
         {

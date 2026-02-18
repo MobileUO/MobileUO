@@ -526,7 +526,7 @@ namespace Assistant
             _Female = (flags & 0x02) != 0;
             _Blessed = (flags & 0x08) != 0;
             _IgnoreMobiles = (flags & 0x10) != 0; //new
-            _Unknown3 = (flags & 0x10) != 0; //new
+            _Unknown3 = (flags & 0x20) != 0; //new
             _Warmode = (flags & 0x40) != 0;
             _Visible = (flags & 0x80) == 0;
         }

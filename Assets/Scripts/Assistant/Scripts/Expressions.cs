@@ -1910,7 +1910,7 @@ namespace Assistant.Scripts
 
         private static bool InList(string expression, Argument[] args, bool quiet, bool force)
         {
-            if (args.Length != 1)
+            if (args.Length != 2)
             {
                 ScriptManager.Message(quiet, $"Usage: {Interpreter.GetExprHelper(expression)}");
                 return false;
