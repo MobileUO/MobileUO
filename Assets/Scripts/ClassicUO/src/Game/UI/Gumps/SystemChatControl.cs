@@ -60,7 +60,7 @@ namespace ClassicUO.Game.UI.Gumps
         private const int MAX_MESSAGE_LENGHT = 100;
         private readonly Label _currentChatModeLabel;
         // MobileUO: added option to allow large chat box to be easier to click on
-        private int CHAT_HEIGHT = ProfileManager.Current.UseLargeSystemChatTextBox ? 30 : 15;
+        private int CHAT_HEIGHT = ProfileManager.Current != null && ProfileManager.Current.UseLargeSystemChatTextBox ? 30 : 15;
         private static readonly List<Tuple<ChatMode, string>> _messageHistory = new List<Tuple<ChatMode, string>>();
         private static int _messageHistoryIndex = -1;
 
