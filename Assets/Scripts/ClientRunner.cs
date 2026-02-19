@@ -127,7 +127,6 @@ public class ClientRunner : MonoBehaviour
 
 	private void OnEnableAssistantChanged(int enableAssistantCurrentValue)
 	{
-#if ENABLE_INTERNAL_ASSISTANT
 		if (UserPreferences.EnableAssistant.CurrentValue == (int) PreferenceEnums.EnableAssistant.On && Client.Game != null)
 		{
 			if (Plugin.LoadInternalAssistant())
@@ -140,7 +139,6 @@ public class ClientRunner : MonoBehaviour
 				}
 			}
 		}
-#endif
 	}
 
 	private void OnShowModifierKeyButtonsChanged(int currentValue)
@@ -355,12 +353,10 @@ public class ClientRunner : MonoBehaviour
 	    {
 		    Client.SceneChanged += OnSceneChanged;
 		    Client.Run();
-#if ENABLE_INTERNAL_ASSISTANT
 		    if (UserPreferences.EnableAssistant.CurrentValue == (int) PreferenceEnums.EnableAssistant.On)
 		    {
 			    Plugin.LoadInternalAssistant();
 		    }
-#endif
 		    Client.Game.Exiting += OnGameExiting;
 		    ApplyScalingFactor();
 
