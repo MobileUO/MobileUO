@@ -16,6 +16,7 @@ using ClassicUO.Game.UI.Gumps.Login;
 using Newtonsoft.Json;
 using ClassicUO.Network;
 using Microsoft.Xna.Framework;
+using PreferenceEnums;
 using SDL2;
 using GameObject = UnityEngine.GameObject;
 using Texture2D = Microsoft.Xna.Framework.Graphics.Texture2D;
@@ -177,8 +178,11 @@ public class ClientRunner : MonoBehaviour
 
 	private static void OnTargetFrameRateChanged(int frameRate)
 	{
-		Application.targetFrameRate = frameRate;
-	}
+        if (frameRate == (int)TargetFrameRates.InGameFPS)
+            frameRate = Settings.GlobalSettings.FPS;
+
+        Application.targetFrameRate = frameRate;
+    }
     
 	private void UpdateTextureFiltering(int textureFiltering)
 	{

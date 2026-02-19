@@ -13,9 +13,11 @@ namespace PreferenceEnums
 
     public enum TargetFrameRates
     {
-        Thirty = 30,
-        Sixty = 60
+        _30 = 30,
+        _60 = 60,
+        InGameFPS = -1
     }
+
 
     public enum JoystickSizes
     {
