@@ -174,7 +174,7 @@ namespace ClassicUO.Game.UI.Gumps
 
                 if (it.IsLootable)
                 {
-                    GridLootItem gridItem = new GridLootItem(it, GRID_ITEM_SIZE);
+                    GridLootItem gridItem = new GridLootItem(this, it, GRID_ITEM_SIZE);
 
                     if (x >= MAX_WIDTH - 20)
                     {
@@ -315,13 +315,36 @@ namespace ClassicUO.Game.UI.Gumps
             if (_corpse != null && !_corpse.IsDestroyed) SelectedObject.CorpseObject = null;
         }
 
+        // MobileUO: only loot item if user clicks it twice
+        private uint _selectedItemSerial; // 0 = none
+        internal uint SelectedItemSerial => _selectedItemSerial;
+
+        internal void HandleItemClick(uint serial, Item item, ushort amount)
+        {
+            if (serial == 0 || item == null)
+                return;
+
+            if (_selectedItemSerial == serial || !ProfileManager.Current.DoubleClickForGridLoot)
+            {
+                // second click on the same item -> loot it
+                GameActions.GrabItem(item, amount);
+                _selectedItemSerial = 0;
+            }
+            else
+            {
+                // first click on this item -> set as selected
+                _selectedItemSerial = serial;
+            }
+        }
 
         private class GridLootItem : Control
         {
             private readonly TextureControl _texture;
+            private readonly GridLootGump _gump;
 
-            public GridLootItem(uint serial, int size)
+            public GridLootItem(GridLootGump gump, uint serial, int size)
             {
+                _gump = gump;
                 LocalSerial = serial;
 
                 Item item = World.Items.Get(serial);
@@ -367,7 +390,11 @@ namespace ClassicUO.Game.UI.Gumps
                 {
                     if (e.Button == MouseButtonType.Left)
                     {
-                        GameActions.GrabItem(item, (ushort)amount.Value);
+                        // MobileUO: handle item click depending on if double click to loot is enabled
+                        var serial = LocalSerial;
+                        var item = World.Items.Get(serial);
+
+                        _gump.HandleItemClick(serial, item, (ushort)amount.Value);
                     }
                 };
 

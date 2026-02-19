@@ -231,6 +231,9 @@ namespace ClassicUO.Configuration
 
         public int GridLootType { get; set; } // 0 = none, 1 = only grid, 2 = both
 
+        // MobileUO: double click for grid loot option
+        public bool DoubleClickForGridLoot { get; set; } = false;
+
         public bool ReduceFPSWhenInactive { get; set; } = true;
 
         public bool OverrideAllFonts { get; set; }
