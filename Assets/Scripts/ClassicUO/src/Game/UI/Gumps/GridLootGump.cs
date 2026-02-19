@@ -36,9 +36,12 @@ namespace ClassicUO.Game.UI.Gumps
     internal class GridLootGump : Gump
     {
         private readonly AlphaBlendControl _background;
-        private readonly NiceButton _buttonPrev, _buttonNext, _setlootbag;
+        private readonly NiceButton _buttonPrev, _buttonNext, _setlootbag,
+            // MobileUO: added close button
+            _buttonClose;
         private readonly Item _corpse;
         private readonly Label _currentPageLabel;
+        private readonly Label _corpseNameLabel;
         private readonly bool _hideIfEmpty;
 
         private int _currentPage = 1;
@@ -48,7 +51,7 @@ namespace ClassicUO.Game.UI.Gumps
         private static int _lastY = 100;
 
         private const int MAX_WIDTH = 300;
-        private const int MAX_HEIGHT = 400;
+        private const int MAX_HEIGHT = 420;
 
         public GridLootGump(uint local) : base(local, 0)
         {
@@ -96,11 +99,43 @@ namespace ClassicUO.Game.UI.Gumps
 
             Add(_buttonPrev);
             Add(_buttonNext);
+
+            // MobileUO: added close button
+            _buttonClose = new NiceButton(
+                0,
+                0,
+                40,
+                40,
+                ButtonAction.Activate,
+                "X"
+            )
+            {
+                ButtonParameter = 3,
+                IsSelectable = false
+            };
+
+            Add(_buttonClose);
+
             Add(_currentPageLabel = new Label("1", true, 999, align: IO.Resources.TEXT_ALIGN_TYPE.TS_CENTER)
             {
                 X = Width / 2 - 5,
                 Y = Height - 20,
             });
+
+            Add(
+                _corpseNameLabel = new Label(
+                    GetCorpseName(),
+                    true,
+                    0x0481,
+                    align: TEXT_ALIGN_TYPE.TS_CENTER,
+                    maxwidth: 300
+                )
+                {
+                    Width = 300,
+                    X = 0,
+                    Y = 0
+                }
+            );
         }
 
       
@@ -143,6 +178,11 @@ namespace ClassicUO.Game.UI.Gumps
                 GameActions.Print("Target the container to Grab items into.");
                 TargetManager.SetTargeting(CursorTarget.SetGrabBag, 0, TargetType.Neutral);
             }
+            // MobileUO: added close button
+            else if (buttonID == 3)
+            {
+                Dispose();
+            }
             else
                 base.OnButtonClick(buttonID);
         }
@@ -182,8 +222,8 @@ namespace ClassicUO.Game.UI.Gumps
                         ++line;
 
                         y += gridItem.Height + 20;
-                        
-                        if (y >= MAX_HEIGHT - 40)
+
+                        if (y >= MAX_HEIGHT - 60)
                         {
                             _pagesCount++;
                             y = 20;
@@ -192,7 +232,7 @@ namespace ClassicUO.Game.UI.Gumps
                     }
 
                     gridItem.X = x;
-                    gridItem.Y = y;
+                    gridItem.Y = y + 20;
                     Add(gridItem, _pagesCount);
 
                     x += gridItem.Width + 20;
@@ -202,7 +242,7 @@ namespace ClassicUO.Game.UI.Gumps
             }
 
             _background.Width = (GRID_ITEM_SIZE + 20) * row + 20;
-            _background.Height = 20 + 40 + (GRID_ITEM_SIZE + 20) * line + 20;
+            _background.Height = 20 + 40 + (GRID_ITEM_SIZE + 20) * line + 40;
 
 
             if (_background.Height >= MAX_HEIGHT - 40)
@@ -285,8 +325,8 @@ namespace ClassicUO.Game.UI.Gumps
 
             if (_background.Width < 100)
                 _background.Width = 100;
-            if (_background.Height < 100)
-                _background.Height = 100;
+            if (_background.Height < 120)
+                _background.Height = 120;
 
             Width = _background.Width;
             Height = _background.Height;
@@ -299,6 +339,12 @@ namespace ClassicUO.Game.UI.Gumps
             _setlootbag.Y = Height - 23;
             _currentPageLabel.X = Width / 2 - 5;
             _currentPageLabel.Y = Height - 20;
+
+            // MobileUO: added close button
+            _buttonClose.X = Width - _buttonClose.Width - 3;
+            _buttonClose.Y = 3;
+
+            _corpseNameLabel.Text = GetCorpseName();
 
             WantUpdateSize = true;
 
@@ -313,6 +359,11 @@ namespace ClassicUO.Game.UI.Gumps
         protected override void OnMouseExit(int x, int y)
         {
             if (_corpse != null && !_corpse.IsDestroyed) SelectedObject.CorpseObject = null;
+        }
+
+        private string GetCorpseName()
+        {
+            return _corpse.Name?.Length > 0 ? _corpse.Name : "a corpse";
         }
 
         // MobileUO: only loot item if user clicks it twice
