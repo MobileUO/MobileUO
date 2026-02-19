@@ -361,6 +361,9 @@ namespace ClassicUO.Configuration
 
         public static uint GumpsVersion { get; private set; }
 
+        // MobileUO: added option to allow large chat box to be easier to click on
+        public bool UseLargeSystemChatTextBox { get; set; }
+
         public List<Gump> ReadGumps()
         {
             string path = FileSystemHelper.CreateFolderIfNotExists(ProfilePath, Username.Trim(), ServerName.Trim(), CharacterName.Trim());

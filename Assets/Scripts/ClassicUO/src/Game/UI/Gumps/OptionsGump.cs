@@ -110,6 +110,9 @@ namespace ClassicUO.Game.UI.Gumps
         private Checkbox _showInfoBar;
         private Combobox _infoBarHighlightType;
 
+        // MobileUO: added option to allow large chat box to be easier to click on
+        private Checkbox _useLargeSystemChatTextBox;
+
         // speech
         private Checkbox _scaleSpeechDelay, _saveJournalCheckBox;
         private NiceButton _randomizeColorsButton;
@@ -769,6 +772,16 @@ namespace ClassicUO.Game.UI.Gumps
             _auraMouse = CreateCheckBox(rightArea, "Aura on mouse target", ProfileManager.Current.AuraOnMouse, 0, SPACE_Y);
             _xBR = CreateCheckBox(rightArea, "Use xBR effect [BETA]", ProfileManager.Current.UseXBR, 0, SPACE_Y);
             _hideChatGradient = CreateCheckBox(rightArea, "Hide Chat Gradient", ProfileManager.Current.HideChatGradient, 0, SPACE_Y);
+
+            // MobileUO: added option to allow large chat box to be easier to click on
+            _useLargeSystemChatTextBox = CreateCheckBox
+            (
+                rightArea,
+                "Use large system chat text box",
+                ProfileManager.Current.UseLargeSystemChatTextBox,
+                0,
+                SPACE_Y
+            );
 
             Add(rightArea, PAGE);
         }
@@ -1621,6 +1634,8 @@ namespace ClassicUO.Game.UI.Gumps
                     _chatShiftEnterCheckbox.IsChecked = true;
                     _activeChatArea.IsVisible = _chatAfterEnter.IsChecked;
                     _saveJournalCheckBox.IsChecked = false;
+                    // MobileUO: added option to allow large chat box to be easier to click on
+                    _useLargeSystemChatTextBox.IsChecked = false;
 
                     break;
 
@@ -1960,6 +1975,8 @@ namespace ClassicUO.Game.UI.Gumps
             ProfileManager.Current.PartyAura = _partyAura.IsChecked;
             ProfileManager.Current.PartyAuraHue = _partyAuraColorPickerBox.Hue;
             ProfileManager.Current.HideChatGradient = _hideChatGradient.IsChecked;
+            // MobileUO: added option to allow large chat box to be easier to click on
+            ProfileManager.Current.UseLargeSystemChatTextBox = _useLargeSystemChatTextBox.IsChecked;
 
             // fonts
             ProfileManager.Current.ForceUnicodeJournal = _forceUnicodeJournal.IsChecked;
