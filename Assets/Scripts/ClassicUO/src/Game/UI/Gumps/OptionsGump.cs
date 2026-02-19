@@ -773,16 +773,6 @@ namespace ClassicUO.Game.UI.Gumps
             _xBR = CreateCheckBox(rightArea, "Use xBR effect [BETA]", ProfileManager.Current.UseXBR, 0, SPACE_Y);
             _hideChatGradient = CreateCheckBox(rightArea, "Hide Chat Gradient", ProfileManager.Current.HideChatGradient, 0, SPACE_Y);
 
-            // MobileUO: added option to allow large chat box to be easier to click on
-            _useLargeSystemChatTextBox = CreateCheckBox
-            (
-                rightArea,
-                "Use large system chat text box",
-                ProfileManager.Current.UseLargeSystemChatTextBox,
-                0,
-                SPACE_Y
-            );
-
             Add(rightArea, PAGE);
         }
 
@@ -1111,7 +1101,15 @@ namespace ClassicUO.Game.UI.Gumps
                 rightArea.Add(_activeChatArea);
             }
 
-            
+            // MobileUO: added option to allow large chat box to be easier to click on
+            _useLargeSystemChatTextBox = CreateCheckBox
+            (
+                rightArea,
+                "Use large system chat text box",
+                ProfileManager.Current.UseLargeSystemChatTextBox,
+                0,
+                SPACE_Y
+            );
 
             _randomizeColorsButton = new NiceButton(0, 20 + SPACE_Y, 140, 25, ButtonAction.Activate, "Randomize speech hues") { ButtonParameter = (int)Buttons.Disabled };
             _randomizeColorsButton.MouseUp += (sender, e) =>
