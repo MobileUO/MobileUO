@@ -173,7 +173,8 @@ namespace ClassicUO.IO.Audio
         {            
             if (_sound_instance != null)
             {
-                _sound_instance.Volume = 0.0f;
+                // MobileUO: set volume
+                //SoundInstance.Volume = 0.0f; // MobileUO: TODO: CUO 0.1.9.0 throws exception:  UnityException: set_volume can only be called from the main thread.
                 _sound_instance.BufferNeeded -= OnBufferNeeded;
                 _sound_instance.Stop();
             }
