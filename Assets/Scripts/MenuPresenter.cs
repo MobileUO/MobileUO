@@ -61,6 +61,7 @@ public class MenuPresenter : MonoBehaviour
         customizeJoystickButtonGameObject.SetActive(false);
 
         AddHeader("Developer");
+        GetOptionEnumViewInstance().Initialize(typeof(ShowErrorDetails), UserPreferences.ShowErrorDetails, "Show Error Details", false, false);
         GetOptionEnumViewInstance().Initialize(typeof(UseDrawTexture), UserPreferences.UseDrawTexture, "Use DrawTexture", false, false);
         GetOptionEnumViewInstance().Initialize(typeof(UseSpriteSheet), UserPreferences.UseSpriteSheet, "Use Sprite Sheets", false, false);
         GetOptionEnumViewInstance().Initialize(typeof(SpriteSheetSize), UserPreferences.SpriteSheetSize, "Sprite Sheet Size", false, false);
