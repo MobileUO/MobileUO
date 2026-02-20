@@ -56,9 +56,6 @@ public class ClientRunner : MonoBehaviour
 
 	private void Awake()
 	{
-        UnityEngine.QualitySettings.asyncUploadBufferSize = 128; // MB (pari alla dimensione della texture)
-                                                                 // Limita quanto tempo il Main Thread spende per inviare dati alla GPU ogni frame
-        UnityEngine.QualitySettings.asyncUploadTimeSlice = 2;   // millisecondi
         UserPreferences.ScaleSize.ValueChanged += OnCustomScaleSizeChanged;
 		UserPreferences.ForceUseXbr.ValueChanged += OnForceUseXbrChanged;
 		UserPreferences.ShowCloseButtons.ValueChanged += OnShowCloseButtonsChanged;
@@ -133,19 +130,16 @@ public class ClientRunner : MonoBehaviour
 //#if ENABLE_INTERNAL_ASSISTANT
 		if (UserPreferences.EnableAssistant.CurrentValue == (int) PreferenceEnums.EnableAssistant.On && Client.Game != null)
 		{
-            if (Client.Game.Scene is GameScene)
+            if (Plugin.LoadInternalAssistant())
 			{
-				Assistant.Engine.Instance.ReInit();
+				//If we're already in the GameScene, trigger OnConnected callback since the Assistant won't receive it and
+				//because it's needed for initialization
+				if (Client.Game.Scene is GameScene)
+				{
+					Plugin.OnConnected();
+				}
 			}
-			else
-			{
-				Assistant.Engine.Instance.Init();
-            }
         }
-		else
-		{
-			Assistant.Engine.Instance.OnClientClosing();
-		}
 //#endif
 	}
 
@@ -370,10 +364,10 @@ public class ClientRunner : MonoBehaviour
 			// MobileUO: TODO: will passing null be a problem?
 		    Client.Run(null);
 //#if ENABLE_INTERNAL_ASSISTANT
-//		    if (UserPreferences.EnableAssistant.CurrentValue == (int) PreferenceEnums.EnableAssistant.On)
-//		    {
-//			    Plugin.LoadInternalAssistant();
-//		    }
+		    if (UserPreferences.EnableAssistant.CurrentValue == (int) PreferenceEnums.EnableAssistant.On)
+		    {
+			    Plugin.LoadInternalAssistant();
+		    }
 //#endif
 		    Client.Game.Exiting += OnGameExiting;
 		    ApplyScalingFactor();
