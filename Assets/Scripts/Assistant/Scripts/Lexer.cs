@@ -1,4 +1,20 @@
-﻿using System;
+﻿#region License
+// Original interpreter logic by Jaedan (2022)
+// Modified and maintained by Sascha Puligheddu (2023-2025)
+// 
+// Copyright (C) 2023-2025 Sascha Puligheddu
+// 
+// This specific derivative work is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org/licenses/agpl-3.0.html> for details.
+#endregion
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -8,24 +24,6 @@ using ClassicUO.Utility.Logging;
 
 namespace UOScript
 {
-    public class SyntaxError
-    {
-        public SyntaxError(string line, int lineNumber, ASTNode node, string error)
-        {
-            if (node != null)
-            {
-                Log.Error($"Error in Script: {node} - with Error: {error} on Line {lineNumber}: {line}");
-                UOSObjects.Player?.SendMessage(MsgLevel.Error, $"{error} ({node.Lexeme}) - Line {lineNumber}: {line}");
-            }
-            else
-            {
-                Log.Error($"Error in Script - null NODE - Error: {error}");
-                UOSObjects.Player?.SendMessage(MsgLevel.Error, $"{error} (NULL NODE) - Line {lineNumber}: {line}");
-            }
-            ScriptManager.StopScript();
-        }
-    }
-
     public enum ASTNodeType
     {
         // Keywords
@@ -182,7 +180,7 @@ namespace UOScript
             string[] lexemes;
             if (!frombutton && lst.Contains("hotkeys"))
                 lexemes = new string[] { "hotkeys" };
-            else if (!UOSObjects.Gump.ToggleHotKeys)
+            else if (frombutton || !UOSObjects.Gump.ToggleHotKeys)
                 lexemes = lst.ToArray();
             else
                 lexemes = new string[] { };
@@ -278,146 +276,149 @@ namespace UOScript
                     node.Push(ASTNodeType.GREATER_THAN_OR_EQUAL, null, _curLine);
                     break;
                 default:
-                    new SyntaxError(lexeme, _curLine,  node, "Invalid operator in binary expression");
+                    SyntaxError(lexeme, _curLine,  node, "Invalid operator in binary expression");
                     break;
             }
         }
 
         private static void ParseStatement(ASTNode node, string[] lexemes)
         {
-            //if (Engine.Instance.AllowBit(FeatureBit.AdvancedMacros)) //Apparently, uosteam can use macros even if this is activated, maybe this is for orion?
+            //Apparently, original uosteam can use macros even if this is activated, maybe this is for others?
+            //if (Engine.Instance.AllowBit(FeatureBit.AdvancedMacros))
+            {
                 var statement = node.Push(ASTNodeType.STATEMENT, null, _curLine);
 
                 // Examine the first word on the line
-            switch (lexemes[0])
-            {
-                // Ignore comments
-                case "#":
-                case "//":
-                    return;
+                switch (lexemes[0])
+                {
+                    // Ignore comments
+                    case "#":
+                    case "//":
+                        return;
 
-                // Control flow statements are special
-                case "if":
-                {
-                    if (lexemes.Length <= 1)
-                        new SyntaxError(string.Join(" ", lexemes), _curLine, node, "Script compilation error");
-                    else
+                    // Control flow statements are special
+                    case "if":
                     {
-                        var t = statement.Push(ASTNodeType.IF, null, _curLine);
-                        ParseLogicalExpression(t, lexemes.Slice(1, lexemes.Length - 1));
+                        if (lexemes.Length <= 1)
+                            SyntaxError(string.Join(" ", lexemes), _curLine, node, "Script compilation error");
+                        else
+                        {
+                            var t = statement.Push(ASTNodeType.IF, null, _curLine);
+                            ParseLogicalExpression(t, lexemes.Slice(1, lexemes.Length - 1));
+                        }
+                        break;
                     }
-                    break;
-                }
-                case "elseif":
-                {
-                    if (lexemes.Length <= 1)
-                        new SyntaxError(string.Join(" ", lexemes), _curLine, node, "Script compilation error");
-                    else
+                    case "elseif":
                     {
-                        var t = statement.Push(ASTNodeType.ELSEIF, null, _curLine);
-                        ParseLogicalExpression(t, lexemes.Slice(1, lexemes.Length - 1));
-                    }
-                    break;
-                }
-                case "else":
-                    if (lexemes.Length > 1)
-                        new SyntaxError(string.Join(" ", lexemes), _curLine, node, "Script compilation error");
-                    else
-                        statement.Push(ASTNodeType.ELSE, null, _curLine);
-                    break;
-                case "endif":
-                    if (lexemes.Length > 1)
-                        new SyntaxError(string.Join(" ", lexemes), _curLine, node, "Script compilation error");
-                    else
-                        statement.Push(ASTNodeType.ENDIF, null, _curLine);
-                    break;
-                case "stop":
-                    if (lexemes.Length > 1)
-                        new SyntaxError(string.Join(" ", lexemes), _curLine, node, "Script compilation error");
-                    else
-                        statement.Push(ASTNodeType.STOP, null, _curLine);
-                    break;
-                case "break":
-                    if (lexemes.Length > 1)
-                        new SyntaxError(string.Join(" ", lexemes), _curLine, node, "Script compilation error");
-                    else
-                        statement.Push(ASTNodeType.BREAK, null, _curLine);
-                    break;
-                case "while":
-                {
-                    if (!Engine.Instance.AllowBit(FeatureBit.LoopingMacros))
+                        if (lexemes.Length <= 1)
+                            SyntaxError(string.Join(" ", lexemes), _curLine, node, "Script compilation error");
+                        else
+                        {
+                            var t = statement.Push(ASTNodeType.ELSEIF, null, _curLine);
+                            ParseLogicalExpression(t, lexemes.Slice(1, lexemes.Length - 1));
+                        }
                         break;
-                    if (lexemes.Length <= 1)
-                        new SyntaxError(string.Join(" ", lexemes), _curLine, node, "Script compilation error");
-                    else
+                    }
+                    case "else":
+                        if (lexemes.Length > 1)
+                            SyntaxError(string.Join(" ", lexemes), _curLine, node, "Script compilation error");
+                        else
+                            statement.Push(ASTNodeType.ELSE, null, _curLine);
+                        break;
+                    case "endif":
+                        if (lexemes.Length > 1)
+                            SyntaxError(string.Join(" ", lexemes), _curLine, node, "Script compilation error");
+                        else
+                            statement.Push(ASTNodeType.ENDIF, null, _curLine);
+                        break;
+                    case "stop":
+                        if (lexemes.Length > 1)
+                            SyntaxError(string.Join(" ", lexemes), _curLine, node, "Script compilation error");
+                        else
+                            statement.Push(ASTNodeType.STOP, null, _curLine);
+                        break;
+                    case "break":
+                        if (lexemes.Length > 1)
+                            SyntaxError(string.Join(" ", lexemes), _curLine, node, "Script compilation error");
+                        else
+                            statement.Push(ASTNodeType.BREAK, null, _curLine);
+                        break;
+                    case "while":
                     {
-                        var t = statement.Push(ASTNodeType.WHILE, null, _curLine);
-                        ParseLogicalExpression(t, lexemes.Slice(1, lexemes.Length - 1));
+                        if (!Engine.Instance.AllowBit(FeatureBit.LoopingMacros))
+                            break;
+                        if (lexemes.Length <= 1)
+                            SyntaxError(string.Join(" ", lexemes), _curLine, node, "Script compilation error");
+                        else
+                        {
+                            var t = statement.Push(ASTNodeType.WHILE, null, _curLine);
+                            ParseLogicalExpression(t, lexemes.Slice(1, lexemes.Length - 1));
+                        }
+                        break;
                     }
-                    break;
-                }
-                case "endwhile":
-                    if (!Engine.Instance.AllowBit(FeatureBit.LoopingMacros))
+                    case "endwhile":
+                        if (!Engine.Instance.AllowBit(FeatureBit.LoopingMacros))
+                            break;
+                        if (lexemes.Length > 1)
+                            SyntaxError(string.Join(" ", lexemes), _curLine, node, "Script compilation error");
+                        else
+                            statement.Push(ASTNodeType.ENDWHILE, null, _curLine);
                         break;
-                    if (lexemes.Length > 1)
-                        new SyntaxError(string.Join(" ", lexemes), _curLine, node, "Script compilation error");
-                    else
-                        statement.Push(ASTNodeType.ENDWHILE, null, _curLine);
-                    break;
-                case "for":
-                {
-                    if (!Engine.Instance.AllowBit(FeatureBit.LoopingMacros))
+                    case "for":
+                    {
+                        if (!Engine.Instance.AllowBit(FeatureBit.LoopingMacros))
+                            break;
+                        if (lexemes.Length <= 1)
+                            SyntaxError(string.Join(" ", lexemes), _curLine, node, "Script compilation error");
+                        else
+                            ParseForLoop(statement, lexemes.Slice(1, lexemes.Length - 1));
                         break;
-                    if (lexemes.Length <= 1)
-                        new SyntaxError(string.Join(" ", lexemes), _curLine, node, "Script compilation error");
-                    else
-                        ParseForLoop(statement, lexemes.Slice(1, lexemes.Length - 1));
-                    break;
-                }
-                case "foreach":
-                {
-                    if (!Engine.Instance.AllowBit(FeatureBit.LoopingMacros))
+                    }
+                    case "foreach":
+                    {
+                        if (!Engine.Instance.AllowBit(FeatureBit.LoopingMacros))
+                            break;
+                        if (lexemes.Length < 4)
+                            SyntaxError(string.Join(" ", lexemes), _curLine, node, "Script compilation error");
+                        else
+                            ParseForEachLoop(statement, lexemes.Slice(1, lexemes.Length - 1));
                         break;
-                    if (lexemes.Length != 4)
-                        new SyntaxError(string.Join(" ", lexemes), _curLine, node, "Script compilation error");
-                    else
-                        ParseForEachLoop(statement, lexemes.Slice(1, lexemes.Length - 1));
-                    break;
-                }
-                case "endfor":
-                    if (!Engine.Instance.AllowBit(FeatureBit.LoopingMacros))
+                    }
+                    case "endfor":
+                        if (!Engine.Instance.AllowBit(FeatureBit.LoopingMacros))
+                            break;
+                        if (lexemes.Length > 1)
+                            SyntaxError(string.Join(" ", lexemes), _curLine, node, "Script compilation error");
+                        else
+                            statement.Push(ASTNodeType.ENDFOR, null, _curLine);
                         break;
-                    if (lexemes.Length > 1)
-                        new SyntaxError(string.Join(" ", lexemes), _curLine, node, "Script compilation error");
-                    else
-                        statement.Push(ASTNodeType.ENDFOR, null, _curLine);
-                    break;
-                case "continue":
-                    if (!Engine.Instance.AllowBit(FeatureBit.LoopingMacros))
+                    case "continue":
+                        if (!Engine.Instance.AllowBit(FeatureBit.LoopingMacros))
+                            break;
+                        if (lexemes.Length > 1)
+                            SyntaxError(string.Join(" ", lexemes), _curLine, node, "Script compilation error");
+                        else
+                            statement.Push(ASTNodeType.CONTINUE, null, _curLine);
                         break;
-                    if (lexemes.Length > 1)
-                        new SyntaxError(string.Join(" ", lexemes), _curLine, node, "Script compilation error");
-                    else
-                        statement.Push(ASTNodeType.CONTINUE, null, _curLine);
-                    break;
-                case "replay":
-                case "loop":
-                    if (!Engine.Instance.AllowBit(FeatureBit.LoopingMacros))
+                    case "replay":
+                    case "loop":
+                        if (!Engine.Instance.AllowBit(FeatureBit.LoopingMacros))
+                            break;
+                        if (lexemes.Length > 1)
+                            SyntaxError(string.Join(" ", lexemes), _curLine, node, "Script compilation error");
+                        else
+                            statement.Push(ASTNodeType.REPLAY, null, _curLine);
                         break;
-                    if (lexemes.Length > 1)
-                        new SyntaxError(string.Join(" ", lexemes), _curLine, node, "Script compilation error");
-                    else
-                        statement.Push(ASTNodeType.REPLAY, null, _curLine);
-                    break;
-                default:
-                    // It's a regular statement.
-                    ParseCommand(statement, lexemes[0]);
+                    default:
+                        // It's a regular statement.
+                        ParseCommand(statement, lexemes[0]);
 
-                    foreach (var lexeme in lexemes.Slice(1, lexemes.Length - 1))
-                    {
-                        ParseValue(statement, lexeme, ASTNodeType.STRING);
-                    }
-                    break;
+                        foreach (var lexeme in lexemes.Slice(1, lexemes.Length - 1))
+                        {
+                            ParseValue(statement, lexeme, ASTNodeType.STRING);
+                        }
+                        break;
+                }
             }
         }
 
@@ -498,7 +499,7 @@ namespace UOScript
 
             if (unary && binary)
             {
-                new SyntaxError(string.Join(" ", lexemes), _curLine, node, "Invalid expression");
+                SyntaxError(string.Join(" ", lexemes), _curLine, node, "Invalid expression");
             }
             else
             {
@@ -587,11 +588,13 @@ namespace UOScript
                     else
                         ParseValue(loop, ((resn - resp) + 1).ToString(), ASTNodeType.STRING);
                 }
-                else
+                else if(uint.TryParse(lexemes[0], out resp))
                 {
                     // for X to LIST
-                    loop = statement.Push(ASTNodeType.FOREACH, null, _curLine);
+                    loop = statement.Push(ASTNodeType.FORINLIST, null, _curLine);
                     loop.Push(ASTNodeType.STRING, lexemes[2], _curLine);
+                    ParseValue(loop, resp.ToString(), ASTNodeType.STRING);
+                    ParseValue(loop, lexemes[2], ASTNodeType.STRING);
                 }
             }
             else if(lexemes.Length == 5 && lexemes[1] == "to" && lexemes[3] == "in" && uint.TryParse(lexemes[2], out uint resn) && uint.TryParse(lexemes[0], out uint resp))
@@ -600,11 +603,11 @@ namespace UOScript
                 loop = statement.Push(ASTNodeType.FORINLIST, null, _curLine);
                 loop.Push(ASTNodeType.STRING, lexemes[4], _curLine);
                 ParseValue(loop, resp.ToString(), ASTNodeType.STRING);
-                ParseValue(loop, resn.ToString(), ASTNodeType.STRING);
+                ParseValue(loop, (resn + 1).ToString(), ASTNodeType.STRING);
             }
             if(loop == null)
             {
-                new SyntaxError(string.Join(" ", lexemes), _curLine, statement, "Invalid for loop");
+                SyntaxError(string.Join(" ", lexemes), _curLine, statement, "Invalid for loop");
             }
         }
 
@@ -615,7 +618,7 @@ namespace UOScript
 
             if (lexemes[1] != "in")
             {
-                new SyntaxError(string.Join(" ", lexemes), _curLine, statement, "Invalid foreach loop");
+                SyntaxError(string.Join(" ", lexemes), _curLine, statement, "Invalid foreach loop");
             }
             else
             {
@@ -623,6 +626,21 @@ namespace UOScript
                 ParseValue(loop, lexemes[0], ASTNodeType.STRING);
                 loop.Push(ASTNodeType.LIST, lexemes[2], _curLine);
             }
+        }
+
+        private static void SyntaxError(string line, int lineNumber, ASTNode node, string error)
+        {
+            if (node != null)
+            {
+                Log.Error($"Error in Script: {node} - with Error: {error} on Line {lineNumber}: {line}");
+                UOSObjects.Player?.SendMessage(MsgLevel.Error, $"{error} ({node.Lexeme}) - Line {lineNumber}: {line}");
+            }
+            else
+            {
+                Log.Error($"Error in Script - null NODE - Error: {error}");
+                UOSObjects.Player?.SendMessage(MsgLevel.Error, $"{error} (NULL NODE) - Line {lineNumber}: {line}");
+            }
+            ScriptManager.StopScript();
         }
     }
 }

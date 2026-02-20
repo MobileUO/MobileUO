@@ -1,7 +1,26 @@
-﻿using System.Collections.Generic;
+﻿#region License
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org/licenses/agpl-3.0.html> for details.
+#endregion
+
+using System.Collections.Generic;
 using ClassicUO.Utility.Collections;
 using ClassicUO.Network;
 using ClassicUO.Game;
+using ClassicUO.Configuration;
+using ClassicUO.IO;
+using ClassicUO;
 using System.Linq;
 using System;
 
@@ -9,10 +28,10 @@ namespace Assistant
 {
     internal class Scavenger
     {
-        private static uint m_Bag;
-        internal static OrderedDictionary<ushort, List<ItemDisplay>> ItemIDsHues { get; } = new OrderedDictionary<ushort, List<ItemDisplay>>();
+        private static uint _Bag;
+        internal static ClassicUO.Utility.Collections.OrderedDictionary<ushort, List<ItemDisplay>> ItemIDsHues { get; } = new ClassicUO.Utility.Collections.OrderedDictionary<ushort, List<ItemDisplay>>();
 
-        private static UOItem m_BagRef;
+        private static UOItem _BagRef;
 
         public static void Initialize()
         {
@@ -35,32 +54,33 @@ namespace Assistant
 
         private static void CheckBagOPL(UOItem item)
         {
-            if (item.Serial == m_Bag)
+            if (item.Serial == _Bag)
             {
-                m_BagRef = item;
+                _BagRef = item;
                 Timer.DelayedCallback(TimeSpan.FromMilliseconds(200), OnPositiveCheck).Start();
             }
         }
 
         private static void OnPositiveCheck()
         {
-            if(m_BagRef != null && m_BagRef.ObjPropList != null)
-                m_BagRef.ObjPropList.Add("Scavenger HotBag");
+            if(_BagRef != null && _BagRef.ObjPropList != null)
+                _BagRef.ObjPropList.Add("Scavenger HotBag");
         }
 
-        private static void OnSingleClick(Packet pvSrc, PacketHandlerEventArgs args)
+        private static void OnSingleClick(ref StackDataReader reader, PacketHandlerEventArgs args)
         {
-            uint serial = pvSrc.ReadUInt();
-            if (m_Bag == serial)
+            uint serial = reader.ReadUInt32BE();
+            if (_Bag == serial)
             {
                 ushort gfx = 0;
-                UOItem c = UOSObjects.FindItem(m_Bag);
+                UOItem c = UOSObjects.FindItem(_Bag);
                 if (c != null)
                 {
                     gfx = c.ItemID;
                 }
 
-                Engine.Instance.SendToClient(new UnicodeMessage(m_Bag, gfx, Assistant.MessageType.Label, 0x3B2, 3, "ENU", "", "Scavenger HotBag"));
+
+                ClientPackets.PRecv_UnicodeMessage(_Bag, gfx, MessageType.Label, 0x3B2, 3, Settings.GlobalSettings.Language, "", "Scavenger HotBag");
             }
         }
 
@@ -69,13 +89,18 @@ namespace Assistant
             Enabled = false;
             ItemIDsHues.Clear();
             Cached.Activator(false);
-            m_BagRef = null;
-            m_Bag = 0;
+            _BagRef = null;
+            _Bag = 0;
         }
 
         internal static void OnEnabledChanged()
         {
             Enabled = UOSObjects.Gump.EnabledScavenger.IsChecked;
+        }
+
+        internal static void OnStackChanged()
+        {
+            Stack = UOSObjects.Gump.StackOresAtFeet.IsChecked;
         }
 
         private static bool _Enabled;
@@ -89,12 +114,14 @@ namespace Assistant
             }
         }
 
+        public static bool Stack { get; private set; }
+
         private class Cached : Timer
         {
             private static byte _Pos = 0;
             private static Cached _Timer { get; } = new Cached();
             private static HashSet<uint>[] _Cached { get; } = new HashSet<uint>[2] { new HashSet<uint>(), new HashSet<uint>() };
-            internal Cached() : base(TimeSpan.Zero, TimeSpan.FromSeconds(15))
+            internal Cached() : base(TimeSpan.Zero, TimeSpan.FromSeconds(10))
             {
             }
 
@@ -182,6 +209,7 @@ namespace Assistant
                 hueset.Add(id);
                 UOSObjects.Player.SendMessage(MsgLevel.Force, "Scavenger: Item added to scavenge list");
                 UOSObjects.Gump.UpdateScavengerItemsGump(id);
+                XmlFileParser.SaveData();
             }
         }
 
@@ -192,26 +220,27 @@ namespace Assistant
                 return;
             }
 
-            if (m_BagRef == null)
+            if (_BagRef == null)
             {
-                m_BagRef = UOSObjects.FindItem(m_Bag);
+                _BagRef = UOSObjects.FindItem(_Bag);
             }
 
-            if (m_BagRef != null)
+            if (_BagRef != null && _BagRef.ObjPropList != null)
             {
-                m_BagRef.ObjPropList.Remove("Scavenger HotBag");
-                m_BagRef.OPLChanged();
+                _BagRef.ObjPropList.Remove("Scavenger HotBag");
+                _BagRef.OPLChanged();
             }
 
-            m_Bag = serial;
-            m_BagRef = UOSObjects.FindItem(m_Bag);
-            if (m_BagRef != null)
+            _Bag = serial;
+            _BagRef = UOSObjects.FindItem(_Bag);
+            if (_BagRef != null && _BagRef.ObjPropList != null)
             {
-                m_BagRef.ObjPropList.Add("Scavenger HotBag");
-                m_BagRef.OPLChanged();
+                _BagRef.ObjPropList.Add("Scavenger HotBag");
+                _BagRef.OPLChanged();
             }
 
-            UOSObjects.Player.SendMessage(MsgLevel.Force, $"Scavenger: Setting HotBag 0x{m_Bag:X}");
+            UOSObjects.Player.SendMessage(MsgLevel.Force, $"Scavenger: Setting HotBag 0x{_Bag:X}");
+            XmlFileParser.SaveData();
         }
 
         public static void Uncache(uint s)
@@ -259,17 +288,17 @@ namespace Assistant
             {
                 return;
             }
-            else if(UOSObjects.Player.Backpack == null)
+            else if (UOSObjects.Player.Backpack == null)
             {
                 Utility.SendTimedWarning("You don't have any Backpack!");
                 return;
             }
-            else if(UOSObjects.Player.Weight >= UOSObjects.Player.MaxWeight)
+            else if (UOSObjects.Player.Weight >= UOSObjects.Player.MaxWeight)
             {
                 Utility.SendTimedWarning("You are overloaded, Scavenger will NOT pickup items anymore!");
                 return;
             }
-            else if(!ItemIDsHues.TryGetValue(item.ItemID, out var list) || !list.Any(id => id.Enabled && (id.Hue == -1 || id.Hue == item.Hue)))
+            else if (!ItemIDsHues.TryGetValue(item.ItemID, out var list) || !list.Any(id => id.Enabled && (id.Hue == -1 || id.Hue == item.Hue)))
             {
                 return;
             }
@@ -279,10 +308,10 @@ namespace Assistant
                 return;
             }
 
-            UOItem bag = m_BagRef;
+            UOItem bag = _BagRef;
             if (bag == null || bag.Deleted)
             {
-                bag = m_BagRef = UOSObjects.FindItem(m_Bag);
+                bag = _BagRef = UOSObjects.FindItem(_Bag);
             }
 
             if (bag == null || bag.Deleted || !bag.IsChildOf(UOSObjects.Player.Backpack))

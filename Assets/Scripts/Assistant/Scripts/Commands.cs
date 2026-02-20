@@ -1,23 +1,35 @@
-﻿using System;
-using System.IO;
+﻿﻿#region License
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org/licenses/agpl-3.0.html> for details.
+#endregion
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
 using Assistant.Core;
 using ClassicUO;
+using ClassicUO.Utility;
 using ClassicUO.Game.UI.Gumps;
 using ClassicUO.Game;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.Data;
+using ClassicUO.IO;
 using ClassicUO.Assets;
 using UOScript;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework;
-using ClassicUO.Game.GameObjects;
 using ClassicUO.Input;
-using System.Runtime.InteropServices;
 using ClassicUO.Network;
-using System.Threading.Tasks;
 
 namespace Assistant.Scripts
 {
@@ -26,160 +38,174 @@ namespace Assistant.Scripts
         public static void Register()
         {
             // Commands. From UOSteam Documentation
-            Interpreter.RegisterCommandHandler("attack", Attack, "attack (serial)");
-            Interpreter.RegisterCommandHandler("warmode", WarMode, "warmode ['on'/'off']");
+            Interpreter.RegisterCommandHandler("attack", Attack, "attack (serial)", 1, 1);
+            Interpreter.RegisterCommandHandler("warmode", WarMode, "warmode [\"on\"/\"off\"]", 0, 1);
 
             // Menu
-            Interpreter.RegisterCommandHandler("clearjournal", ClearJournal, "clearjournal");
-            Interpreter.RegisterCommandHandler("waitforjournal", WaitForJournal, "waitforjournal ('text') (timeout) ['author'/'system']");
+            Interpreter.RegisterCommandHandler("clearjournal", ClearJournal, "clearjournal", 0, 0);
+            Interpreter.RegisterCommandHandler("waitforjournal", WaitForJournal, "waitforjournal (\"text\") (timeout) [\"author\"/\"system\"]", 2, 3);
 
 
-            Interpreter.RegisterCommandHandler("msg", Msg, "msg ('text') [color]");
-            Interpreter.RegisterCommandHandler("whispermsg", WhisperMsg, "whispermsg ('text')");
-            Interpreter.RegisterCommandHandler("yellmsg", YellMsg, "yellmsg ('text')");
-            Interpreter.RegisterCommandHandler("emotemsg", EmoteMsg, "emotemsg ('text') [color]");
+            Interpreter.RegisterCommandHandler("msg", Msg, "msg (\"text\") [color]", 1, 2);
+            Interpreter.RegisterCommandHandler("whispermsg", WhisperMsg, "whispermsg (\"text\") [color]", 1, 2);
+            Interpreter.RegisterCommandHandler("yellmsg", YellMsg, "yellmsg (\"text\") [color]", 1, 2);
+            Interpreter.RegisterCommandHandler("emotemsg", EmoteMsg, "emotemsg (\"text\") [color]", 1, 2);
 
-            Interpreter.RegisterCommandHandler("partymsg", PartyMsg, "partymsg ('text')");
-            Interpreter.RegisterCommandHandler("guildmsg", GuildMsg, "guildmsg ('text')");
-            Interpreter.RegisterCommandHandler("allymsg", AllyMsg, "allymsg ('text')");
-            Interpreter.RegisterCommandHandler("headmsg", HeadMsg, "headmsg ('text') [color] [serial]");
-            Interpreter.RegisterCommandHandler("sysmsg", SysMsg, "sysmsg ('text') [color]");
-            Interpreter.RegisterCommandHandler("chatmsg", DummyCommand, null);//chatmsg ('text')
-            Interpreter.RegisterCommandHandler("timermsg", DummyCommand, null);//timermsg ('timer name') [color]
+            Interpreter.RegisterCommandHandler("headmsg", HeadMsg, "headmsg (\"text\") [color] [serial]", 1, 3);
+            Interpreter.RegisterCommandHandler("sysmsg", SysMsg, "sysmsg (\"text\") [color]", 1, 2);
+            Interpreter.RegisterCommandHandler("timermsg", TimerMsg, "timermsg (\"timer name\") [color]", 1, 2);
 
-            Interpreter.RegisterCommandHandler("poplist", PopList, "poplist ('list name') ('element value'/'front'/'back')");
-            Interpreter.RegisterCommandHandler("pushlist", PushList, "pushlist ('list name') ('element value') ['front'/'back']");
-            Interpreter.RegisterCommandHandler("removelist", RemoveList, "removelist ('list name')");
-            Interpreter.RegisterCommandHandler("createlist", CreateList, "createlist ('list name')");
-            Interpreter.RegisterCommandHandler("clearlist", ClearList, "clearlist ('list name')");
+            Interpreter.RegisterCommandHandler("poplist", PopList, "poplist (\"list name\") (\"element value\"/\"front\"/\"back\")", 2, 2);
+            Interpreter.RegisterCommandHandler("pushlist", PushList, "pushlist (\"list name\") (\"element value\") [\"front\"/\"back\"]", 2, 3);
+            Interpreter.RegisterCommandHandler("removelist", RemoveList, "removelist (\"list name\")", 1, 1);
+            Interpreter.RegisterCommandHandler("createlist", CreateList, "createlist (\"list name\")", 1, 1);
+            Interpreter.RegisterCommandHandler("clearlist", ClearList, "clearlist (\"list name\")", 1, 1);
 
-            Interpreter.RegisterCommandHandler("setalias", SetAlias, "setalias ('name') [serial]");
-            Interpreter.RegisterCommandHandler("unsetalias", UnsetAlias, "unsetalias ('name')");
+            Interpreter.RegisterCommandHandler("setalias", SetAlias, "setalias (\"name\") [serial]", 1, 2);
+            Interpreter.RegisterCommandHandler("unsetalias", UnsetAlias, "unsetalias (\"name\")", 1, 1);
 
-            Interpreter.RegisterCommandHandler("shownames", ShowNames, "shownames ['all'/mobiles'/'corpses'] [range]");
+            Interpreter.RegisterCommandHandler("shownames", ShowNames, "shownames [\"all\"/mobiles\"/\"corpses\"] [range]", 0, 2);
 
-            Interpreter.RegisterCommandHandler("contextmenu", ContextMenu, "contextmenu (serial) (option)"); //ContextMenuAction
-            Interpreter.RegisterCommandHandler("waitforcontext", WaitForContext, "waitforcontext (serial) (option) (timeout)"); //WaitForMenuAction
+            Interpreter.RegisterCommandHandler("contextmenu", ContextMenu, "contextmenu (serial) (option)", 2, 2); //ContextMenuAction
+            Interpreter.RegisterCommandHandler("waitforcontext", WaitForContext, "waitforcontext (serial) (option) (timeout)", 3, 3); //WaitForMenuAction
 
             // Targets
-            Interpreter.RegisterCommandHandler("target", Target, "target (serial) [timeout]");
-            Interpreter.RegisterCommandHandler("targettype", TargetType, "targettype (graphic) [color] [range]");
-            Interpreter.RegisterCommandHandler("targetground", TargetGround, "targetground (graphic) [color] [range]");
-            Interpreter.RegisterCommandHandler("targettile", TargetTile, "targettile ('last'/'current'/(x y z))");
-            Interpreter.RegisterCommandHandler("targettileoffset", TargetTileOffset, "targettileoffset (x y z)");
-            Interpreter.RegisterCommandHandler("targettilerelative", TargetTileRelative, "targettilerelative (serial) (range)");
-            Interpreter.RegisterCommandHandler("waitfortarget", WaitForTarget, "waitfortarget (timeout)");
-            Interpreter.RegisterCommandHandler("canceltarget", CancelTarget, "canceltarget");
-            Interpreter.RegisterCommandHandler("cleartargetqueue", ClearTargetQueue, null);
-            Interpreter.RegisterCommandHandler("autotargetlast", AutoTargetLast, "autotargetlast");
-            Interpreter.RegisterCommandHandler("autotargetself", AutoTargetSelf, "autotargetself");
-            Interpreter.RegisterCommandHandler("autotargetobject", AutoTargetObject, "autotargetobject (serial)");
-            Interpreter.RegisterCommandHandler("autotargettype", TargetType, "autotargettype (graphic) [color] [range]");
-            Interpreter.RegisterCommandHandler("autotargettile", TargetTile, "autotargettile ('last'/'current'/(x y z))");
-            Interpreter.RegisterCommandHandler("autotargettileoffset", TargetTileOffset, "autotargettileoffset (x y z)");
-            Interpreter.RegisterCommandHandler("autotargettilerelative", TargetTileRelative, "autotargettilerelative (serial) (range)");
-            Interpreter.RegisterCommandHandler("autotargetghost", AutoTargetGhost, "autotargetghost (range) [z-range]");
-            Interpreter.RegisterCommandHandler("autotargetground", TargetGround, "autotargetground (graphic) [color] [range]");
-            Interpreter.RegisterCommandHandler("cancelautotarget", CancelAutoTarget, "cancelautotarget");
-            Interpreter.RegisterCommandHandler("getenemy", GetEnemy, "getenemy ('innocent'/'criminal'/'enemy'/'murderer'/'friend'/'gray'/'invulnerable'/'any') ['humanoid'/'transformation'/'nearest'/'closest']");
-            Interpreter.RegisterCommandHandler("getfriend", GetFriend, "getfriend ('innocent'/'criminal'/'enemy'/'murderer'/'friend'/'gray'/'invulnerable'/'any') ['humanoid'/'transformation'/'nearest'/'closest']");
+            Interpreter.RegisterCommandHandler("target", Target, "target (serial) [timeout]", 1, 2);
+            Interpreter.RegisterCommandHandler("targettype", TargetType, "targettype (graphic) [color] [range]", 1, 3);
+            Interpreter.RegisterCommandHandler("targetground", TargetGround, "targetground (graphic) [color] [range]", 1, 3);
+            Interpreter.RegisterCommandHandler("targettile", TargetTile, "targettile (\"last\"/\"current\"/(x y z))", 1, 3);
+            Interpreter.RegisterCommandHandler("targettileoffset", TargetTileOffset, "targettileoffset (x y z)", 3, 3);
+            Interpreter.RegisterCommandHandler("targettilerelative", TargetTileRelative, "targettilerelative (serial) (range)", 2, 2);
+            Interpreter.RegisterCommandHandler("waitfortarget", WaitForTarget, "waitfortarget (timeout)", 1, 1);
+            Interpreter.RegisterCommandHandler("canceltarget", CancelTarget, "canceltarget", 0, 0);
+            Interpreter.RegisterCommandHandler("cleartargetqueue", ClearTargetQueue, "cleartargetqueue", 0, 0);
+            Interpreter.RegisterCommandHandler("autotargetlast", AutoTargetLast, "autotargetlast", 0, 0);
+            Interpreter.RegisterCommandHandler("autotargetself", AutoTargetSelf, "autotargetself", 0, 0);
+            Interpreter.RegisterCommandHandler("autotargetobject", AutoTargetObject, "autotargetobject (serial)", 1, 1);
+            Interpreter.RegisterCommandHandler("autotargettype", TargetType, "autotargettype (graphic) [color] [range]", 1, 3);
+            Interpreter.RegisterCommandHandler("autotargettile", TargetTile, "autotargettile (\"last\"/\"current\"/(x y z))", 1, 3);
+            Interpreter.RegisterCommandHandler("autotargettileoffset", TargetTileOffset, "autotargettileoffset (x y z)", 3, 3);
+            Interpreter.RegisterCommandHandler("autotargettilerelative", TargetTileRelative, "autotargettilerelative (serial) (range)", 2, 2);
+            Interpreter.RegisterCommandHandler("autotargetghost", AutoTargetGhost, "autotargetghost (range) [z-range]", 1, 2);
+            Interpreter.RegisterCommandHandler("autotargetground", TargetGround, "autotargetground (graphic) [color] [range]", 1, 3);
+            Interpreter.RegisterCommandHandler("cancelautotarget", CancelAutoTarget, "cancelautotarget", 0, 0);
+            Interpreter.RegisterCommandHandler("getenemy", GetEnemy, "getenemy (\"innocent\"/\"criminal\"/\"enemy\"/\"murderer\"/\"friend\"/\"gray\"/\"invulnerable\"/\"any\") [\"humanoid\"/\"transformation\"/\"nearest\"/\"closest\"]", 1, 2);
+            Interpreter.RegisterCommandHandler("getfriend", GetFriend, "getfriend (\"innocent\"/\"criminal\"/\"enemy\"/\"murderer\"/\"friend\"/\"gray\"/\"invulnerable\"/\"any\") [\"humanoid\"/\"transformation\"/\"nearest\"/\"closest\"]", 1, 2);
 
-            Interpreter.RegisterCommandHandler("settimer", SetTimer, "settimer ('timer name') (value)");
-            Interpreter.RegisterCommandHandler("removetimer", RemoveTimer, "removetimer ('timer name')");
-            Interpreter.RegisterCommandHandler("createtimer", CreateTimer, "createtimer ('timer name')");
+            Interpreter.RegisterCommandHandler("settimer", SetTimer, "settimer (\"timer name\") (value)", 2, 2);
+            Interpreter.RegisterCommandHandler("removetimer", RemoveTimer, "removetimer (\"timer name\")", 1, 1);
+            Interpreter.RegisterCommandHandler("createtimer", CreateTimer, "createtimer (\"timer name\")", 1, 1);
 
-            Interpreter.RegisterCommandHandler("clickobject", ClickObject, "clickobject (serial)");
+            Interpreter.RegisterCommandHandler("clickobject", ClickObject, "clickobject (serial)", 1, 1);
 
             // Using stuff
-            Interpreter.RegisterCommandHandler("usetype", UseType, "usetype (graphic) [color] [source] [range]");
-            Interpreter.RegisterCommandHandler("useobject", UseObject, "useobject (serial)");
-            Interpreter.RegisterCommandHandler("useonce", UseOnce, "useonce (graphic) [color]");
+            Interpreter.RegisterCommandHandler("usetype", UseType, "usetype (graphic) [color] [source] [range]", 1, 4);
+            Interpreter.RegisterCommandHandler("useobject", UseObject, "useobject (serial)", 1, 1);
+            Interpreter.RegisterCommandHandler("useonce", UseOnce, "useonce (graphic) [color]", 1, 2);
 
-            Interpreter.RegisterCommandHandler("fly", Fly, null);
-            Interpreter.RegisterCommandHandler("land", Land, null);
+            /*Interpreter.RegisterCommandHandler("fly", Fly, null);
+            Interpreter.RegisterCommandHandler("land", Land, null);*/
 
-            Interpreter.RegisterCommandHandler("bandage", Bandage, "bandage [serial]");
-            Interpreter.RegisterCommandHandler("bandageself", BandageSelf, "bandageself");
+            Interpreter.RegisterCommandHandler("bandage", Bandage, "bandage [serial]", 1, 1);
+            Interpreter.RegisterCommandHandler("bandageself", BandageSelf, "bandageself", 0, 0);
 
-            Interpreter.RegisterCommandHandler("clearuseonce", ClearUseOnce, null);//clearuseonce
-            Interpreter.RegisterCommandHandler("clearusequeue", ClearUseQueue, null);//clearuseonce
-            Interpreter.RegisterCommandHandler("moveitem", MoveItem, "moveitem (serial) (destination) [(x y z)] [amount]");
-            Interpreter.RegisterCommandHandler("moveitemoffset", MoveItemOffset, "moveitemoffset (serial) (destination) [(x y z)] [amount]");
-            Interpreter.RegisterCommandHandler("movetype", MoveType, "movetype (graphic) (source) (destination) [(x y z)] [color] [amount] [range]");
-            Interpreter.RegisterCommandHandler("movetypeoffset", MoveTypeOffset, "movetypeoffset (graphic) (source) (destination) [(x y z)] [color] [amount] [range]");
+            Interpreter.RegisterCommandHandler("clearuseonce", ClearUseOnce, "clearuseonce", 0, 0);
+            Interpreter.RegisterCommandHandler("clearusequeue", ClearUseQueue, "clearusequeue", 0, 0);
+            Interpreter.RegisterCommandHandler("moveitem", MoveItem, "moveitem (serial) (destination) [(x y z)] [amount]", 2, 6);
+            Interpreter.RegisterCommandHandler("moveitemoffset", MoveItemOffset, "moveitemoffset (serial) (destination) [(x y z)] [amount]", 2, 6);
+            Interpreter.RegisterCommandHandler("movetype", MoveType, "movetype (graphic) (source) (destination) [(x y z)] [color] [amount] [range]", 2, 9);
+            Interpreter.RegisterCommandHandler("movetypeoffset", MoveTypeOffset, "movetypeoffset (graphic) (source) (destination) [(x y z)] [color] [amount] [range]", 3, 9);
 
-            Interpreter.RegisterCommandHandler("feed", Feed, "feed (serial) ('food name'/'food group'/'any'/graphic) [color] [amount]");
-            Interpreter.RegisterCommandHandler("rename", Rename, "rename (serial) ('new name')");
-            Interpreter.RegisterCommandHandler("togglehands", ToggleHands, "togglehands ('left'/'right')");
-            Interpreter.RegisterCommandHandler("equipitem", EquipItem, "equipitem (serial) (layer)");
-            Interpreter.RegisterCommandHandler("equipwand", DummyCommand, null);
-            Interpreter.RegisterCommandHandler("buy", DummyCommand, null);
-            Interpreter.RegisterCommandHandler("sell", DummyCommand, null);
-            Interpreter.RegisterCommandHandler("clearbuy", DummyCommand, null);
-            Interpreter.RegisterCommandHandler("clearsell", DummyCommand, null);
-            Interpreter.RegisterCommandHandler("organizer", DummyCommand, null);
-            Interpreter.RegisterCommandHandler("autoloot", AutoLoot, "autoloot");
-            Interpreter.RegisterCommandHandler("toggleautoloot", ToggleAutoLoot, "toggleautoloot");
-            Interpreter.RegisterCommandHandler("togglescavenger", ToggleScavenger, null);
-            Interpreter.RegisterCommandHandler("clearhands", ClearHands, "clearhands ('left'/'right'/'both')");
+            Interpreter.RegisterCommandHandler("feed", Feed, "feed (serial) (\"food name\"/\"food group\"/\"any\"/graphic) [color] [amount]", 2, 4);
+            Interpreter.RegisterCommandHandler("rename", Rename, "rename (serial) (\"new name\")", 2, 2);
+            Interpreter.RegisterCommandHandler("togglehands", ToggleHands, "togglehands (\"left\"/\"right\")", 1, 1);
+            Interpreter.RegisterCommandHandler("equipitem", EquipItem, "equipitem (serial/item id) (layer)", 2, 2);
+            Interpreter.RegisterCommandHandler("equipwand", EquipWand, "equipwand (\"spell name\"/\"any\"/\"undefined\") [minimum charges]", 1, 2);
 
-            Interpreter.RegisterCommandHandler("togglemounted", ToggleMounted, "togglemounted");
+            Interpreter.RegisterCommandHandler("buy", Buy, "buy (\"list name\")", 1 ,1);
+            Interpreter.RegisterCommandHandler("sell", Sell, "sell (\"list name\")", 1, 1);
+            Interpreter.RegisterCommandHandler("clearbuy", ClearBuy, "clearbuy", 0, 0);
+            Interpreter.RegisterCommandHandler("clearsell", ClearSell, "clearsell", 0, 0);
+            Interpreter.RegisterCommandHandler("organizer", Organize, "organizer (\"profile name\") [source] [destination]", 1, 3);
+
+            Interpreter.RegisterCommandHandler("autoloot", AutoLoot, "autoloot", 0, 0);
+            Interpreter.RegisterCommandHandler("toggleautoloot", ToggleAutoLoot, "toggleautoloot", 0, 0);
+            Interpreter.RegisterCommandHandler("togglescavenger", ToggleScavenger, "togglescavenger", 0, 0);
+
+            Interpreter.RegisterCommandHandler("togglemounted", ToggleMounted, "togglemounted", 0, 0);
 
             // Gump
-            Interpreter.RegisterCommandHandler("waitforgump", WaitForGump, "waitforgump (gump id/'any') (timeout)");
-            Interpreter.RegisterCommandHandler("replygump", ReplyGump, "replygump (gump id/'any') (button) [checkboxid/'textid \"text response\"']"); // GumpResponseAction
-            Interpreter.RegisterCommandHandler("closegump", CloseGump, "closegump ('paperdoll'/'status'/'profile'/'container') ('serial')"); // GumpResponseAction
+            Interpreter.RegisterCommandHandler("waitforgump", WaitForGump, "waitforgump (gump id/\"any\") (timeout)", 2, 2);
+            Interpreter.RegisterCommandHandler("replygump", ReplyGump, "replygump (gump id/\"any\") (button) [checkboxid/\"textid textresponse\"]", 2, 3); // GumpResponseAction
+            Interpreter.RegisterCommandHandler("closegump", CloseGump, "closegump (\"paperdoll\"/\"status\"/\"profile\"/\"container\") (\"serial\")", 2, 2); // GumpResponseAction
 
             // Dress
-            Interpreter.RegisterCommandHandler("dress", DressCommand, "dress ['profile name']"); //DressAction
-            Interpreter.RegisterCommandHandler("undress", UnDressCommand, "undress ['profile name']"); //UndressAction
-            Interpreter.RegisterCommandHandler("dressconfig", DressConfig, "dressconfig"); //DressConfig
+            Interpreter.RegisterCommandHandler("dress", DressCommand, "dress [\"profile name\"]", 0, 1); //DressAction
+            Interpreter.RegisterCommandHandler("undress", UnDressCommand, "undress [\"profile name\"]", 0, 1); //UndressAction
+            Interpreter.RegisterCommandHandler("dressconfig", DressConfig, "dressconfig", 0, 0); //DressConfig
 
             // Prompt
-            Interpreter.RegisterCommandHandler("promptalias", PromptAlias, "promptalias ('alias name')");
-            Interpreter.RegisterCommandHandler("promptmsg", PromptMsg, "promptmsg ('text')");
-            Interpreter.RegisterCommandHandler("cancelprompt", CancelPrompt, "cancelprompt");
-            Interpreter.RegisterCommandHandler("waitforprompt", WaitForPrompt, "waitforprompt (timeout)"); //WaitForPromptAction
+            Interpreter.RegisterCommandHandler("promptalias", PromptAlias, "promptalias (\"alias name\")", 1, 1);
+            Interpreter.RegisterCommandHandler("promptmsg", PromptMsg, "promptmsg (\"text\")", 1, 1);
+            Interpreter.RegisterCommandHandler("cancelprompt", CancelPrompt, "cancelprompt", 0, 0);
+            Interpreter.RegisterCommandHandler("waitforprompt", WaitForPrompt, "waitforprompt (timeout)", 1, 1); //WaitForPromptAction
 
             // General Waits/Pauses
-            Interpreter.RegisterCommandHandler("pause", Pause, "pause (timeout)"); //PauseAction
+            Interpreter.RegisterCommandHandler("pause", Pause, "pause (timeout)", 1, 1); //PauseAction
 
             // Misc
-            //Interpreter.RegisterCommandHandler("setability", SetAbility, "setability ('primary'/'secondary'/'stun'/'disarm') ['on'/'off']");
-            Interpreter.RegisterCommandHandler("useskill", UseSkill, "useskill ('skill name'/'last')");
-            Interpreter.RegisterCommandHandler("walk", Walk, "walk ('direction')");//blu
-            Interpreter.RegisterCommandHandler("turn", Turn, "turn ('direction')");//blu
-            Interpreter.RegisterCommandHandler("run", Run, "run ('direction')");//blu
-            Interpreter.RegisterCommandHandler("setskill", DummyCommand, null);
+            Interpreter.RegisterCommandHandler("clearability", ClearAbilities, "clearability", 0, 0);
+            Interpreter.RegisterCommandHandler("setability", SetAbility, "setability (\"primary\"/\"secondary\"/\"stun\"/\"disarm\") [\"on\"/\"off\"]", 1, 2);
+            Interpreter.RegisterCommandHandler("useskill", UseSkill, "useskill (\"skill name\"/\"last\")", 1, 1);
+            Interpreter.RegisterCommandHandler("walk", Walk, "walk (\"direction\")", 1, 1);//blu
+            Interpreter.RegisterCommandHandler("turn", Turn, "turn (\"direction\")", 1, 1);//blu
+            Interpreter.RegisterCommandHandler("run", Run, "run (\"direction\")", 1, 1);//blu
+            Interpreter.RegisterCommandHandler("setskill", SetSkill, "setskill (\"skill name\") (\"up/down/locked\")", 2, 2);
 
-            Interpreter.RegisterCommandHandler("info", DummyCommand, null);
-            Interpreter.RegisterCommandHandler("ping", Ping, "ping");
-            Interpreter.RegisterCommandHandler("playmacro", PlayMacro, "playmacro ('macro name')");
-            Interpreter.RegisterCommandHandler("playsound", PlaySound, "playsound (sound id)");
-            Interpreter.RegisterCommandHandler("resync", Resync, "resync");
-            Interpreter.RegisterCommandHandler("snapshot", SnapShot, "snapshot");
-            Interpreter.RegisterCommandHandler("hotkeys", HotKeys, "hotkeys");
-            Interpreter.RegisterCommandHandler("where", DummyCommand, "where");
-            Interpreter.RegisterCommandHandler("messagebox", MessageBox, "messagebox ('title') ('body')");
-            Interpreter.RegisterCommandHandler("clickscreen", ClickScreen, "clickscreen (x) (y) ['single'/'double'] ['left'/'right']");
-            Interpreter.RegisterCommandHandler("paperdoll", Paperdoll, "paperdoll [serial]");
-            Interpreter.RegisterCommandHandler("cast", Cast, "cast ('spell name') [serial]");
-            Interpreter.RegisterCommandHandler("helpbutton", HelpButton, "helpbutton");
-            Interpreter.RegisterCommandHandler("guildbutton", GuildButton, "guildbutton");
-            Interpreter.RegisterCommandHandler("questsbutton", QuestsButton, "questsbutton");
-            Interpreter.RegisterCommandHandler("logoutbutton", LogoutButton, "logoutbutton");
-            Interpreter.RegisterCommandHandler("virtue", Virtue, "virtue ('honor'/'sacrifice'/'valor')");
+            Interpreter.RegisterCommandHandler("info", Info, "info", 0, 0);
+            Interpreter.RegisterCommandHandler("ping", Ping, "ping", 0, 0);
+            Interpreter.RegisterCommandHandler("playmacro", PlayMacro, "playmacro (\"macro name\")", 1, 1);
+            Interpreter.RegisterCommandHandler("playsound", PlaySound, "playsound (sound id)", 1, 1);
+            Interpreter.RegisterCommandHandler("resync", Resync, "resync", 0, 0);
+            Interpreter.RegisterCommandHandler("snapshot", SnapShot, "snapshot [timer]", 0, 1);
+            Interpreter.RegisterCommandHandler("hotkeys", HotKeys, "hotkeys", 0, 0);
+            Interpreter.RegisterCommandHandler("where", Where, "where", 0, 0);
+            Interpreter.RegisterCommandHandler("messagebox", MessageBox, "messagebox (\"title\") (\"body\")", 2, 2);
+            Interpreter.RegisterCommandHandler("clickscreen", ClickScreen, "clickscreen (x) (y) [\"single\"/\"double\"] [\"left\"/\"right\"]", 2, 4);
+            Interpreter.RegisterCommandHandler("paperdoll", Paperdoll, "paperdoll [serial]", 0, 1);
+            Interpreter.RegisterCommandHandler("cast", Cast, "cast (\"spell name\") [serial]", 1, 2);
+            Interpreter.RegisterCommandHandler("helpbutton", HelpButton, "helpbutton", 0, 0);
+            Interpreter.RegisterCommandHandler("guildbutton", GuildButton, "guildbutton", 0, 0);
+            Interpreter.RegisterCommandHandler("questsbutton", QuestsButton, "questsbutton", 0, 0);
+            Interpreter.RegisterCommandHandler("logoutbutton", LogoutButton, "logoutbutton", 0, 0);
+            Interpreter.RegisterCommandHandler("virtue", Virtue, "virtue (\"honor\"/\"sacrifice\"/\"valor\")", 1, 1);
 
-            Interpreter.RegisterCommandHandler("addfriend", AddFriend, "addfriend");
-            Interpreter.RegisterCommandHandler("removefriend", RemoveFriend, "removefriend");
-            //Interpreter.RegisterCommandHandler("ignoreobject", DummyCommand);
-            //Interpreter.RegisterCommandHandler("clearignorelist", DummyCommand);
-            Interpreter.RegisterCommandHandler("waitforproperties", DummyCommand, null);
-            Interpreter.RegisterCommandHandler("autocolorpick", AutoColorPick, "autocolorpick (color)");
-            Interpreter.RegisterCommandHandler("waitforcontents", WaitForContents, "waitforcontents (serial) (timeout)");
-            Interpreter.RegisterCommandHandler("miniheal", DummyCommand, null);
-            Interpreter.RegisterCommandHandler("bigheal", DummyCommand, null);
-            Interpreter.RegisterCommandHandler("chivalryheal", DummyCommand, null);
+            Interpreter.RegisterCommandHandler("addfriend", AddFriend, "addfriend", 0, 0);
+            Interpreter.RegisterCommandHandler("removefriend", RemoveFriend, "removefriend", 0, 0);
+            Interpreter.RegisterCommandHandler("ignoreobject", IgnoreObject, "ignoreobject (serial)", 1, 1);
+            Interpreter.RegisterCommandHandler("clearignorelist", ClearIgnoreList, "clearignorelist", 0, 0);
+            Interpreter.RegisterCommandHandler("autocolorpick", AutoColorPick, "autocolorpick (color)", 1, 1);
+            Interpreter.RegisterCommandHandler("waitforcontents", WaitForContents, "waitforcontents (serial) (timeout)", 2, 2);
+
+            Interpreter.RegisterCommandHandler("random", RandomNumber, "random [from] to", 1, 2);
+
+            if (ClassicUO.Client.Game.UO.Version > ClientVersion.CV_200)
+            {
+                Interpreter.RegisterCommandHandler("waitforproperties", WaitForProperties, "waitforproperties (serial) (timeout)", 2, 2);
+                Interpreter.RegisterCommandHandler("partymsg", PartyMsg, "partymsg (\"text\") [serial]", 1, 2);
+                Interpreter.RegisterCommandHandler("guildmsg", GuildMsg, "guildmsg (\"text\")", 1, 1);
+                Interpreter.RegisterCommandHandler("allymsg", AllyMsg, "allymsg (\"text\")", 1, 1);
+                Interpreter.RegisterCommandHandler("chatmsg", ChatMsg, "chatmsg (\"text\")", 1, 1);
+            }
+            else
+            {
+                Interpreter.RegisterCommandHandler("guildmsg", GuildMsg, "guildmsg (\"text\")", 1, 1);
+                Interpreter.RegisterCommandHandler("allymsg", AllyMsg, "allymsg (\"text\")", 1, 1);
+            }
+            //those are too osi specific and I've no interest in emulate
+            /*Interpreter.RegisterCommandHandler("miniheal", Command, "helper", 0, 0);
+            Interpreter.RegisterCommandHandler("bigheal", Command, "helper", 0, 0);
+            Interpreter.RegisterCommandHandler("chivalryheal", Command, "helper", 0, 0);*/
         }
 
         private static bool _hasAction = false;
@@ -188,7 +214,7 @@ namespace Assistant.Scripts
         private static void GetFilterTargetTypes(Argument[] args, out Targeting.TargetType targetType, out Targeting.FilterType filterType)
         {
             targetType = Targeting.TargetType.None;
-            filterType = Targeting.FilterType.Invalid;
+            filterType = Targeting.FilterType.Next;
             for(int i = 0; i < args.Length; i++)
             {
                 string val = args[i].AsString().ToLower(Interpreter.Culture);
@@ -238,7 +264,7 @@ namespace Assistant.Scripts
         {
             if (args.Length < 1)
             {
-                new RunTimeError(null, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
             GetFilterTargetTypes(args, out Targeting.TargetType target, out Targeting.FilterType filter);
@@ -250,7 +276,7 @@ namespace Assistant.Scripts
         {
             if (args.Length < 1)
             {
-                new RunTimeError(null, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
             GetFilterTargetTypes(args, out Targeting.TargetType target, out Targeting.FilterType filter);
@@ -262,7 +288,7 @@ namespace Assistant.Scripts
         {
             if (args.Length != 1)
             {
-                new RunTimeError(null, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
             ScriptManager.PlayScript(args[0].AsString(), true);
@@ -273,24 +299,38 @@ namespace Assistant.Scripts
         {
             if (args.Length != 1)
             {
-                new RunTimeError(null, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
             int soundid = Utility.ToInt32(args[0].AsString(), -1);
             if(soundid >= 0)
                 Client.Game.Audio.PlaySound(soundid);
             else
-                ScriptManager.Error(quiet, "Invalid sound id, only numbers are supported at the moment, and the number must be greater or equal than zero");
+                ScriptManager.Message(quiet, "Invalid sound id, only numbers are supported at the moment, and the number must be greater or equal than zero");
             return true;
         }
 
-        public static bool SnapShot(string command, Argument[] args, bool quiet, bool force)
+        private static bool SnapShot(string command, Argument[] args, bool quiet, bool force)
         {
+            if(args.Length > 0)
+            {
+                uint timeout = args[0].AsUInt();
+                if(timeout > 0)
+                {
+                    Interpreter.Timeout(timeout, () =>
+                    {
+                        UOSObjects.SnapShot(quiet);
+                        return true;
+                    });
+                    return false;
+                }
+            }
+
             UOSObjects.SnapShot(quiet);
             return true;
         }
 
-        public static bool HotKeys(string command, Argument[] args, bool quiet, bool force)
+        internal static bool HotKeys(string command, Argument[] args, bool quiet, bool force)
         {
             UOSObjects.Gump.ToggleHotKeys = !UOSObjects.Gump.ToggleHotKeys;
             if (!quiet)
@@ -303,22 +343,44 @@ namespace Assistant.Scripts
             return true;
         }
 
-        private static bool DummyCommand(string command, Argument[] args, bool quiet, bool force)
-        {
-            Console.WriteLine("Executing command {0} {1}", command, args);
+        private readonly static string[] _cityNames = { "Felucca", "Trammel", "Ilshenar", "Malas", "Tokuno", "Ter Mur" };
+        internal static string CityName(byte mapid) 
+        { 
+            if (mapid < _cityNames.Length)
+                return _cityNames[mapid];
+            return $"Unknown ({mapid})";
+        }
 
-            UOSObjects.Player?.SendMessage(MsgLevel.Info, $"Unimplemented command {command}");
+        internal static bool Where(string command, Argument[] args, bool quiet, bool force)
+        {
+            var p = UOSObjects.Player;
+            if (p != null)
+            {
+                p.SendMessage(MsgLevel.Info, $"Location: {p.Position.X} {p.Position.Y} {p.Position.Z} in {CityName(p.Map)}");
+            }
+            return true;
+        }
+
+        private static bool ChatMsg(string command, Argument[] args, bool quiet, bool force)
+        {
+            if (args.Length != 1)
+            {
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                return true;
+            }
+
+            NetClient.Socket.Send_ChatMessageCommand(args[0].AsString());
 
             return true;
         }
 
-        public static bool AutoLoot(string command, Argument[] args, bool quiet, bool force)
+        private static bool AutoLoot(string command, Argument[] args, bool quiet, bool force)
         {
             Targeting.OneTimeTarget(false, Assistant.HotKeys.AutoLootOnTarget);
             return true;
         }
 
-        public static bool ToggleAutoLoot(string command, Argument[] args, bool quiet, bool force)
+        private static bool ToggleAutoLoot(string command, Argument[] args, bool quiet, bool force)
         {
             UOSObjects.Gump.AutoLoot = !UOSObjects.Gump.AutoLoot;
             UOSObjects.Player?.SendMessage(UOSObjects.Gump.AutoLoot ? MsgLevel.Friend : MsgLevel.Info, $"AutoLoot {(UOSObjects.Gump.AutoLoot ? "Enabled" : "Disabled" )}");
@@ -347,7 +409,7 @@ namespace Assistant.Scripts
         {
             if (args.Length != 1)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
@@ -360,7 +422,7 @@ namespace Assistant.Scripts
         }
 
         private static DressList _Temporary;
-        public static bool DressCommand(string command, Argument[] args, bool quiet, bool force)
+        private static bool DressCommand(string command, Argument[] args, bool quiet, bool force)
         {
             //we're using a named dresslist or a temporary dresslist?
             if (args.Length == 0)
@@ -368,7 +430,7 @@ namespace Assistant.Scripts
                 if (_Temporary != null)
                     _Temporary.Dress();
                 else
-                    ScriptManager.Error(quiet, $"No dresslist specified and no temporary 'dressconfig' present - Usage: {Interpreter.GetCmdHelper(command)}");
+                    ScriptManager.Message(quiet, $"No dresslist specified and no temporary 'dressconfig' present - Usage: {Interpreter.GetCmdHelper(command)}");
             }
             else
             {
@@ -376,13 +438,13 @@ namespace Assistant.Scripts
                 if (d != null)
                     d.Dress();
                 else
-                    ScriptManager.Error(quiet, command, $"{args[0].AsString()} not found");
+                    ScriptManager.Message(quiet, command, $"{args[0].AsString()} not found");
             }
 
             return true;
         }
 
-        public static bool UnDressCommand(string command, Argument[] args, bool quiet, bool force)
+        private static bool UnDressCommand(string command, Argument[] args, bool quiet, bool force)
         {
             //we're using a named dresslist or a temporary dresslist?
             if (args.Length == 0)
@@ -390,7 +452,7 @@ namespace Assistant.Scripts
                 if (_Temporary != null)
                     _Temporary.Undress();
                 else
-                    ScriptManager.Error(quiet, $"No dresslist specified and no temporary 'dressconfig' present - Usage: {Interpreter.GetCmdHelper(command)}");
+                    ScriptManager.Message(quiet, $"No dresslist specified and no temporary 'dressconfig' present - Usage: {Interpreter.GetCmdHelper(command)}");
             }
             else
             {
@@ -398,13 +460,13 @@ namespace Assistant.Scripts
                 if (d != null)
                     d.Undress();
                 else
-                    ScriptManager.Error(quiet, command, $"{args[0].AsString()} not found");
+                    ScriptManager.Message(quiet, command, $"{args[0].AsString()} not found");
             }
 
             return true;
         }
 
-        public static bool DressConfig(string command, Argument[] args, bool quiet, bool force)
+        private static bool DressConfig(string command, Argument[] args, bool quiet, bool force)
         {
             if (_Temporary == null)
                 _Temporary = new DressList("dressconfig");
@@ -413,11 +475,131 @@ namespace Assistant.Scripts
             for (int i = 0; i < UOSObjects.Player.Contains.Count; i++)
             {
                 UOItem item = UOSObjects.Player.Contains[i];
-                if (item.Layer <= Layer.LastUserValid && item.Layer != Layer.Backpack && item.Layer != Layer.Hair &&
-                    item.Layer != Layer.FacialHair)
-                    _Temporary.LayerItems[item.Layer] = new DressItem(item.Serial, item.Graphic);
+                if (item.Layer < Layer.Mount && item.Layer != Layer.Backpack && item.Layer != Layer.Hair &&
+                    item.Layer != Layer.Beard)
+                    _Temporary.LayerItems[item.Layer] = new DressItem(item.Serial, item.Graphic, UOSObjects.Gump.TypeDress);
             }
 
+            return true;
+        }
+
+        private static bool Buy(string command, Argument[] args, bool quiet, bool force)
+        {
+            if (Engine.Instance.AllowBit(FeatureBit.BuyAgent))
+            {
+                if (args.Length < 1)
+                {
+                    ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                    return true;
+                }
+                string name = args[0].AsString();
+                if (!string.IsNullOrEmpty(name))
+                {
+                    var bs = Vendors.Buy.BuyList.Keys.FirstOrDefault(k => k.Name == name);
+                    if (bs != null)
+                    {
+                        if (UOSObjects.Gump.SelectedBuyOrSell == 0)
+                            UOSObjects.Gump.UpdateVendorsListGump(bs);
+                        else
+                            Vendors.Buy.BuySelected = bs;
+                    }
+                }
+            }
+            return true;
+        }
+
+        private static bool Sell(string command, Argument[] args, bool quiet, bool force)
+        {
+            if (Engine.Instance.AllowBit(FeatureBit.SellAgent))
+            {
+                if (args.Length < 1)
+                {
+                    ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                    return true;
+                }
+                string name = args[0].AsString();
+                if (!string.IsNullOrEmpty(name))
+                {
+                    var bs = Vendors.Sell.SellList.Keys.FirstOrDefault(k => k.Name == name);
+                    if (bs != null)
+                    {
+                        if (UOSObjects.Gump.SelectedBuyOrSell == 1)
+                            UOSObjects.Gump.UpdateVendorsListGump(bs);
+                        else
+                            Vendors.Sell.SellSelected = bs;
+                    }
+                }
+            }
+            return true;
+        }
+
+        private static bool ClearBuy(string command, Argument[] args, bool quiet, bool force)
+        {
+            if (UOSObjects.Gump.SelectedBuyOrSell == 0)
+                UOSObjects.Gump.EnableBuySell.IsChecked = false;
+            else
+                Vendors.Buy.BuyEnabled = false;
+            return true;
+        }
+
+        private static bool ClearSell(string command, Argument[] args, bool quiet, bool force)
+        {
+            if (UOSObjects.Gump.SelectedBuyOrSell == 1)
+                UOSObjects.Gump.EnableBuySell.IsChecked = false;
+            else
+                Vendors.Sell.SellEnabled = false;
+            return true;
+        }
+
+        private static bool Organize(string command, Argument[] args, bool quiet, bool force)
+        {
+            if (args.Length < 1)
+            {
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                return true;
+            }
+
+            if (!_hasAction)
+            {
+                string name = args[0].AsString();
+                if (!string.IsNullOrEmpty(name))
+                {
+                    var organizer = Organizer.Organizers.FirstOrDefault(org => org.Name == name);
+                    if (organizer != null)
+                    {
+                        if (args.Length > 1)//"organizer ('profile name') [source] [destination]"
+                        {
+                            uint source = args[1].AsSerial(false);
+                            if (SerialHelper.IsItem(source))
+                                organizer.SourceCont = source;
+                            else
+                                ScriptManager.Message(quiet, $"Organizer source is not a valid item serial: {args[1].AsString()}");
+                            if (args.Length > 2)
+                            {
+                                source = args[2].AsSerial(false);
+                                if (SerialHelper.IsItem(source))
+                                    organizer.TargetCont = source;
+                                else
+                                    ScriptManager.Message(quiet, $"Organizer target is not a valid item serial: {args[2].AsString()}");
+                            }
+                        }
+
+                        _hasAction = !organizer.Organize();
+                    }
+                    else
+                        ScriptManager.Message(quiet, command, $"{args[0].AsString()} not found");
+                }
+            }
+            else if (Organizer.HasContainerSelection || Organizer.IsTimerActive)
+                return false;
+            _hasAction = false;
+            return true;
+        }
+
+        private static bool ClearAbilities(string command, Argument[] args, bool quiet, bool force)
+        {
+            ClientPackets.PRecv_ClearAbility();
+            NetClient.Socket.PSend_UseAbility(Ability.None);
             return true;
         }
 
@@ -426,7 +608,7 @@ namespace Assistant.Scripts
         {
             if (args.Length < 1 || !abilities.Contains(args[0].AsString()))
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
@@ -441,10 +623,10 @@ namespace Assistant.Scripts
                         SpecialMoves.SetSecondaryAbility();
                         break;
                     case "stun":
-                        Engine.Instance.SendToServer(new StunRequest());
+                        NetClient.Socket.PSend_StunDisarm(true);
                         break;
                     case "disarm":
-                        Engine.Instance.SendToServer(new DisarmRequest());
+                        NetClient.Socket.PSend_StunDisarm(false);
                         break;
                     default:
                         break;
@@ -452,48 +634,23 @@ namespace Assistant.Scripts
             }
             else if (args.Length == 2 && args[1].AsString() == "off")
             {
-                Engine.Instance.SendToServer(new UseAbility(Ability.None));
-                Engine.Instance.SendToClient(ClearAbility.Instance);
+                ClientPackets.PRecv_ClearAbility();
+                NetClient.Socket.PSend_UseAbility(Ability.None);
             }
 
             return true;
         }
 
-        private static string[] hands = new string[3] { "left", "right", "both" };
-        private static bool ClearHands(string command, Argument[] args, bool quiet, bool force)
-        {
-            if (args.Length == 0 || !hands.Contains(args[0].AsString()))
-            {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
-                return true;
-            }
-
-            switch (args[0].AsString())
-            {
-                case "left":
-                    Dress.Unequip(Layer.LeftHand);
-                    break;
-                case "right":
-                    Dress.Unequip(Layer.RightHand);
-                    break;
-                default:
-                    Dress.Unequip(Layer.LeftHand);
-                    Dress.Unequip(Layer.RightHand);
-                    break;
-            }
-
-            return true;
-        }
         private static bool ClickObject(string command, Argument[] args, bool quiet, bool force)
         {
             if (args.Length == 0)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
             uint serial = args[0].AsSerial();
-            Engine.Instance.SendToServer(new SingleClick(serial));
+            NetClient.Socket.PSend_SingleClick(serial);
 
             return true;
         }
@@ -513,19 +670,14 @@ namespace Assistant.Scripts
                 }
                 else
                 {
-                    Engine.Instance.SendToServer(new DoubleClick(obj.Serial));
-                    if(args.Length > 0)
-                    {
-                        uint serial = args[0].AsSerial();
-                        if(SerialHelper.IsMobile(serial))
-                        {
-                            Targeting.SetAutoTargetAction((int)serial);
-                        }
-                    }
+                    if (args.Length > 0)
+                        NetClient.Socket.PSend_BandageReq(obj.Serial, args[0].AsSerial());
+                    else
+                        NetClient.Socket.PSend_DoubleClick(obj.Serial);
                 }
             }
             else
-                ScriptManager.Error(quiet, command, "No backpack could be found");
+                ScriptManager.Message(quiet, command, "No backpack could be found");
             return true;
         }
 
@@ -544,14 +696,8 @@ namespace Assistant.Scripts
                 }
                 else
                 {
-                    Engine.Instance.SendToServer(new DoubleClick(obj.Serial));
-                    if (force)
-                    {
-                        Targeting.ClearQueue();
-                        Targeting.DoTargetSelf(true);
-                    }
-                    else
-                        Targeting.TargetSelf(true);
+                    //we use internal Bandage for Extended packet!
+                    NetClient.Socket.PSend_BandageReq(obj.Serial, UOSObjects.Player.Serial);
                 }
             }
 
@@ -562,18 +708,18 @@ namespace Assistant.Scripts
         {
             if (args.Length < 1)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
-
+            //usetype (graphic) [color] [source] [range]
             string graphicString = args[0].AsString();
-            uint graphicId = args[0].AsUInt();
+            ushort graphicId = args[0].AsUShort();
 
-            uint? color = null;
-            if (args.Length >= 2 && args[1].AsString().ToLower() != "any")
+            ushort? color = null;
+            if (args.Length >= 2 && args[1].AsString().ToLower(Interpreter.Culture) != "any")
             {
-                color = args[1].AsUInt();
-                if (color == uint.MaxValue)
+                color = args[1].AsUShort();
+                if (color == ushort.MaxValue)
                     color = null;
             }
 
@@ -582,7 +728,7 @@ namespace Assistant.Scripts
 
             if (args.Length >= 3)
             {
-                sourceStr = args[2].AsString().ToLower();
+                sourceStr = args[2].AsString().ToLower(Interpreter.Culture);
                 if (sourceStr != "world" && sourceStr != "any" && sourceStr != "ground")
                 {
                     source = args[2].AsSerial();
@@ -590,102 +736,63 @@ namespace Assistant.Scripts
             }
 
             uint? range = null;
-            if (args.Length >= 4 && args[3].AsString().ToLower() != "any")
+            if (args.Length >= 4 && args[3].AsString().ToLower(Interpreter.Culture) != "any")
             {
                 range = args[3].AsUInt();
             }
 
             List<uint> list = new List<uint>();
 
-            if (args.Length < 3 || source == 0)
+            bool ground = sourceStr == "world" || sourceStr == "ground";
+            bool any = sourceStr == "any" || (source == 0 && !ground);
+            UOItem container = null;
+            if (ground || any || ((container = UOSObjects.FindItem(source)) != null && container.IsContainer))
             {
-                // No source provided or invalid. Treat as world.
-                foreach (UOMobile find in UOSObjects.MobilesInRange())
+                List<UOEntity> entities = new List<UOEntity>();
+                if (container != null)
                 {
-                    if (find.Body == graphicId)
-                    {
-                        if (color.HasValue && find.Hue != color.Value)
-                        {
-                            continue;
-                        }
-
-                        // This expression does not support checking if mobiles on ground or an amount of mobiles.
-
-                        if (range.HasValue && !Utility.InRange(UOSObjects.Player.Position, find.Position, (int)range.Value))
-                        {
-                            continue;
-                        }
-
-                        list.Add(find.Serial);
-                    }
+                    entities.AddRange(container.FindItemsByID(graphicId));
+                }
+                else if (ground || any)
+                {
+                    entities.AddRange(UOSObjects.FindEntitiesByType(graphicId, contained: any));
+                    if (ground)
+                        entities.Sort(Targeting.Instance);
+                    else
+                        entities.Sort(Targeting.ContainedInstance);
                 }
 
-                if (list.Count == 0)
+                foreach (UOEntity entity in entities)
                 {
-                    foreach (UOItem i in UOSObjects.Items.Values)
+                    if (entity != null &&
+                        (!color.HasValue || color.Value == ushort.MaxValue || entity.Hue == color.Value) &&
+                        (!range.HasValue || Utility.InRange(UOSObjects.Player.Position, entity.WorldPosition, (int)range.Value)))
                     {
-                        if (i.ItemID == graphicId && !i.IsInBank)
-                        {
-                            if (color.HasValue && i.Hue != color.Value)
-                            {
-                                continue;
-                            }
-
-                            if (sourceStr == "ground" && !i.OnGround)
-                            {
-                                continue;
-                            }
-
-                            if (range.HasValue && !Utility.InRange(UOSObjects.Player.Position, i.Position, (int)range.Value))
-                            {
-                                continue;
-                            }
-
-                            list.Add(i.Serial);
-                        }
+                        list.Add(entity.Serial);
                     }
                 }
             }
-            else if (source != 0)
+            else if (container != null && !container.IsContainer)
             {
-                UOItem container = UOSObjects.FindItem(source);
-                if (container != null && container.IsContainer)
-                {
-                    // TODO need an Argument.ToUShort() in interpreter as ItemId stores ushort.
-                    UOItem item = container.FindItemByID((ushort)graphicId);
-                    if (item != null &&
-                        (!color.HasValue || item.Hue == color.Value) &&
-                        (sourceStr != "ground" || item.OnGround) &&
-                        (!range.HasValue || Utility.InRange(UOSObjects.Player.Position, item.Position, (int)range.Value)))
-                    {
-                        list.Add(item.Serial);
-                    }
-                }
-                else if (container == null)
-                {
-                    ScriptManager.Error(quiet, $"Script Error: Couldn't find source '{sourceStr}'");
-                }
-                else if (!container.IsContainer)
-                {
-                    ScriptManager.Error(quiet, $"Script Error: Source '{sourceStr}' is not a container!");
-                }
+                ScriptManager.Message(quiet, $"Script Error: Source '{sourceStr}' is not a container!");
             }
 
             if (list.Count > 0)
             {
-                uint click = list[Utility.Random(list.Count)];
-                if (click != 0)
+                uint serial = list[0];//always take the first in list, nearest object
+
+                if (serial != 0)
                 {
-                    Engine.Instance.SendToServer(new DoubleClick(click));
-                    Interpreter.Pause(UOSObjects.Gump.ActionDelay);
+                    if (force || !UOSObjects.Gump.UseObjectsQueue)
+                        NetClient.Socket.PSend_DoubleClick(serial);
+                    else
+                        ActionQueue.DoubleClick(serial);
+                    Interpreter.Pause(ScriptManager.MACRO_ACTION_DELAY);
                     return true;
                 }
             }
 
-            if (!quiet)
-            {
-                ScriptManager.Error(quiet, $"Script Error: Couldn't find '{graphicString}'");
-            }
+            ScriptManager.Message(quiet, $"Script Error: Couldn't find '{graphicString}'");
             return true;
         }
 
@@ -693,7 +800,7 @@ namespace Assistant.Scripts
         {
             if (args.Length == 0)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
@@ -701,12 +808,15 @@ namespace Assistant.Scripts
 
             if (!SerialHelper.IsValid(serial))
             {
-                ScriptManager.Error(quiet, command, "invalid serial");
+                ScriptManager.Message(quiet, command, "invalid serial");
                 return true;
             }
 
-            Engine.Instance.SendToServer(new DoubleClick(serial));
-            Interpreter.Pause(UOSObjects.Gump.ActionDelay);
+            if (force || !UOSObjects.Gump.UseObjectsQueue)
+                NetClient.Socket.PSend_DoubleClick(serial);
+            else
+                ActionQueue.DoubleClick(serial, quiet);
+            Interpreter.Pause(ScriptManager.MACRO_ACTION_DELAY);
             return true;
         }
 
@@ -714,7 +824,7 @@ namespace Assistant.Scripts
         {
             if (args.Length < 1)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
             }
 
             ushort graphicId = args[0].AsUShort();
@@ -726,38 +836,84 @@ namespace Assistant.Scripts
             UOItem pack = UOSObjects.Player.Backpack;
             if (pack != null)
             {
-                UOItem item = pack.FindItemByID(graphicId, true, color);
-                if (item != null)
+                List<UOItem> items = pack.FindItemsByID(graphicId, true, color);
+                if (items.Count > 0)
                 {
-                    PlayerData.DoubleClick(item.Serial);
-                    Interpreter.Pause(UOSObjects.Gump.ActionDelay);
+                    bool found = false;
+                    for(int i = 0; i < items.Count && !found; ++i)
+                    {
+                        UOItem item = items[i];
+                        if (UsedOnce.Add(item.Serial))
+                        {
+                            found = true;
+                            if (i + 1 < items.Count)
+                            {
+                                NextUsedOnce = items[i + 1].Serial;
+                                UseOnceForceUpdate(items[i + 1], true);
+                            }
+                            else
+                                NextUsedOnce = 0;
+                            UseOnceForceUpdate(item, true);
+                            PlayerData.DoubleClick(item.Serial, quiet, force);
+                            Interpreter.Pause(ScriptManager.MACRO_ACTION_DELAY);
+                        }
+                    }
+                    if(!found)
+                        ScriptManager.Message(quiet, command, $"Items with graphic '0x{graphicId:X}' where already used, consider using 'clearuseonce'", level: MsgLevel.Warning);
                 }
                 else
-                    ScriptManager.Error(quiet, command, $"Couldn't find item with graphic '0x{graphicId:X}'");
+                    ScriptManager.Message(quiet, command, $"Couldn't find item with graphic '0x{graphicId:X}'");
             }
             else
-                ScriptManager.Error(quiet, command, "No backpack could be found");
+                ScriptManager.Message(quiet, command, "No backpack could be found");
             return true;
         }
 
+        private static void UseOnceForceUpdate(UOItem item, bool nocheck = false)
+        {
+            if(nocheck || item != null)
+            {
+                ClientPackets.PRecv_ContainerItem(item);
+            }
+        }
+
+        internal static HashSet<uint> UsedOnce = new HashSet<uint>();
+        internal static uint NextUsedOnce { get; set; } = 0;
+
         private static bool ClearUseOnce(string command, Argument[] args, bool quiet, bool force)
         {
+            List<uint> list = new List<uint>(UsedOnce);
+            UsedOnce.Clear();
+            foreach (uint u in list)
+            {
+                UseOnceForceUpdate(UOSObjects.FindItem(u));
+            }
+            uint ui = NextUsedOnce;
+            NextUsedOnce = 0;
+            UseOnceForceUpdate(UOSObjects.FindItem(ui));
+            ScriptManager.Message(quiet, "use once list cleared", null, MsgLevel.Info);
             return true;
         }
 
         private static bool ClearUseQueue(string command, Argument[] args, bool quiet, bool force)
         {
             ActionQueue.ClearActions();
+            ScriptManager.Message(quiet, "use queue list cleared", null, MsgLevel.Info);
             return true;
         }
 
         private static bool MoveItem(string command, Argument[] args, bool quiet, bool force)
         {
+            return MoveItemUniversal(command, args, quiet, force, true);
+        }
+
+        internal static bool MoveItemUniversal(string command, Argument[] args, bool quiet, bool force = false, bool iscommand = false)
+        {
             string nameStr = null;
             if (args.Length < 2 || ((nameStr = args[1].AsString()) == "ground" && args.Length < 5))
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
-                return true;
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                return iscommand;
             }
 
             uint serial = args[0].AsSerial();
@@ -780,11 +936,13 @@ namespace Assistant.Scripts
             UOItem item;
             if (!SerialHelper.IsValid(serial) || (item = UOSObjects.FindItem(serial)) == null)
             {
-                ScriptManager.Error(quiet, command, $"invalid item '0x{serial:X8}'");
+                ScriptManager.Message(quiet, command, $"invalid item '0x{serial:X8}'");
+                return iscommand;
             }
             else if(p == Point3D.MinusOne && !SerialHelper.IsValid(destination) && nameStr != "any")
             {
-                ScriptManager.Error(quiet, command, $"invalid destination '0x{destination:X8}'");
+                ScriptManager.Message(quiet, command, $"invalid destination '0x{destination:X8}'");
+                return iscommand;
             }
             else
             {
@@ -795,21 +953,48 @@ namespace Assistant.Scripts
                     else if (item.Container is UOItem cnt)
                         destination = cnt.Serial;
                 }
+                if (force)//avoid stacking of the item at all costs
+                {
+                    if (p == Point3D.MinusOne)
+                    {
+                        p = new Point3D(Utility.Random(20, 50), Utility.Random(20, 50), p._Z);
+                    }
+                    else if(destination > 0)
+                    {
+                        UOItem dest = UOSObjects.FindItem(destination);
+                        if(dest.Container == null)//on ground, drop at the coordinates
+                        {
+                            p = dest.Position;
+                            destination = 0;
+                        }
+                        else if(dest.Graphic == item.Graphic && dest.Container is UOItem uit && uit.IsContainer)
+                        {
+                            destination = uit.Serial;
+                        }
+                    }
+                }
                 if (p == Point3D.MinusOne || destination > 0)
+                {
                     DragDropManager.DragDrop(item, destination, p, amount < 1 ? item.Amount : amount);
+                }
                 else
                     DragDropManager.DragDrop(item, p, amount < 1 ? item.Amount : amount);
-                Interpreter.Pause(UOSObjects.Gump.ActionDelay);
+                Interpreter.Pause(ScriptManager.MACRO_ACTION_DELAY);
             }
             return true;
         }
 
         private static bool MoveItemOffset(string command, Argument[] args, bool quiet, bool force)
         {
+            return MoveItemOffsetUniversal(command, args, quiet, force, true);
+        }
+
+        internal static bool MoveItemOffsetUniversal(string command, Argument[] args, bool quiet, bool force = false, bool iscommand = false)
+        {
             if (args.Length < 5)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
-                return true;
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                return iscommand;
             }
 
             uint serial = args[0].AsSerial();
@@ -821,11 +1006,13 @@ namespace Assistant.Scripts
             string nameStr = args[1].AsString();
             if (!SerialHelper.IsValid(serial) || (item = UOSObjects.FindItem(serial)) == null)
             {
-                ScriptManager.Error(quiet, command, $"invalid item '0x{serial:X8}'");
+                ScriptManager.Message(quiet, command, $"invalid item '0x{serial:X8}'");
+                return iscommand;
             }
             else if (nameStr != "ground" && nameStr != "any" && !SerialHelper.IsValid(destination))
             {
-                ScriptManager.Error(quiet, command, $"invalid destination '0x{destination:X8}'");
+                ScriptManager.Message(quiet, command, $"invalid destination '0x{destination:X8}'");
+                return iscommand;
             }
             else
             {
@@ -848,24 +1035,29 @@ namespace Assistant.Scripts
                     DragDropManager.DragDrop(item, destination, p, amount < 1 ? item.Amount : amount);
                 else
                     DragDropManager.DragDrop(item, p, amount < 1 ? item.Amount : amount);
-                Interpreter.Pause(UOSObjects.Gump.ActionDelay);
+                Interpreter.Pause(ScriptManager.MACRO_ACTION_DELAY);
             }
             return true;
         }
 
         private static bool MoveType(string command, Argument[] args, bool quiet, bool force)
         {
+            return MoveTypeUniversal(command, args, quiet, force, true);
+        }
+
+        internal static bool MoveTypeUniversal(string command, Argument[] args, bool quiet, bool force = false, bool iscommand = false)
+        {
             if (args.Length < 3)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
-                return true;
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                return iscommand;
             }
 
             int graphicId = args[0].AsInt();
             if(graphicId <= 0 || graphicId >= ushort.MaxValue)
             {
-                ScriptManager.Error(quiet, command, $"invalid graphic '0x{graphicId:X}'");
-                return true;
+                ScriptManager.Message(quiet, command, $"invalid graphic '0x{graphicId:X}'");
+                return iscommand;
             }
             ContainerType sourceType;
             switch(args[1].AsString())
@@ -928,36 +1120,63 @@ namespace Assistant.Scripts
             UOItem item = UOSObjects.FindItemByType(graphicId, color, range, sourceType);
             if(item == null)
             {
-                ScriptManager.Error(quiet, command, $"item not found");
+                ScriptManager.Message(quiet, command, $"item not found");
+                return iscommand;
             }
             else if ((sourceType == ContainerType.Ground && !item.OnGround) || (sourceType == ContainerType.Serial && (!SerialHelper.IsValid(source) || (sent = UOSObjects.FindEntity(source)) == null)) || ((destType & ContainerType.Ground) != ContainerType.Ground && (!SerialHelper.IsValid(destination) || (dend = UOSObjects.FindEntity(destination)) == null)))
             {
-                ScriptManager.Error(quiet, command, $"invalid source '0x{source:X}' or destination '0x{destination:X}' for item '{item}'");
+                ScriptManager.Message(quiet, command, $"invalid source '0x{source:X}' or destination '0x{destination:X}' for item '{item}'");
+                return iscommand;
             }
             else
             {
-                if(!item.OnGround && ((destType & ContainerType.Ground) == ContainerType.Ground || destination == 0))
+                if (force)//avoid stacking of the item at all costs
+                {
+                    if (p == Point3D.MinusOne)
+                    {
+                        p = new Point3D(Utility.Random(20, 50), Utility.Random(20, 50), p._Z);
+                    }
+                    else if (destination > 0)
+                    {
+                        UOItem dest = UOSObjects.FindItem(destination);
+                        if (dest.Container == null)//on ground, drop at the coordinates
+                        {
+                            p = dest.Position;
+                            destination = 0;
+                        }
+                        else if (dest.Graphic == item.Graphic && dest.Container is UOItem uit && uit.IsContainer)
+                        {
+                            destination = uit.Serial;
+                        }
+                    }
+                }
+                if (!item.OnGround && ((destType & ContainerType.Ground) == ContainerType.Ground || destination == 0))
                     DragDropManager.DragDrop(item, p, amount < 1 ? item.Amount : amount);
                 else
                     DragDropManager.DragDrop(item, destination, p, amount < 1 ? item.Amount : amount);
-                Interpreter.Pause(UOSObjects.Gump.ActionDelay);
+                Interpreter.Pause(ScriptManager.MACRO_ACTION_DELAY);
             }
             return true;
         }
 
         private static bool MoveTypeOffset(string command, Argument[] args, bool quiet, bool force)
         {
+            return MoveTypeOffsetUniversal(command, args, quiet, force, true);
+        }
+
+        internal static bool MoveTypeOffsetUniversal(string command, Argument[] args, bool quiet, bool force = false, bool iscommand = false)
+        {
             if (args.Length < 6)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
-                return true;
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                return iscommand;
             }
 
             int graphicId = args[0].AsInt();
             if (graphicId <= 0 || graphicId >= ushort.MaxValue)
             {
-                ScriptManager.Error(quiet, command, $"invalid graphic '0x{graphicId:X}'");
-                return true;
+                ScriptManager.Message(quiet, command, $"invalid graphic '0x{graphicId:X}'");
+                return iscommand;
             }
             ContainerType sourceType;
             switch (args[1].AsString())
@@ -1009,11 +1228,13 @@ namespace Assistant.Scripts
             UOItem item = UOSObjects.FindItemByType(graphicId, color, range, sourceType);
             if (item == null)
             {
-                ScriptManager.Error(quiet, command, $"item not found");
+                ScriptManager.Message(quiet, command, $"item not found");
+                return iscommand;
             }
             else if ((sourceType == ContainerType.Ground && !item.OnGround) || (sourceType == ContainerType.Serial && (!SerialHelper.IsValid(source) || (sent = UOSObjects.FindEntity(source)) == null)) || ((destType & ContainerType.Ground) != ContainerType.Ground && (!SerialHelper.IsValid(destination) || (dend = UOSObjects.FindEntity(destination)) == null)))
             {
-                ScriptManager.Error(quiet, command, $"invalid source '0x{source:X}' or destination '0x{destination:X}' for item '{item}'");
+                ScriptManager.Message(quiet, command, $"invalid source '0x{source:X}' or destination '0x{destination:X}' for item '{item}'");
+                return iscommand;
             }
             else
             {
@@ -1028,62 +1249,86 @@ namespace Assistant.Scripts
                     p = new Point3D(item.Position.X + args[3].AsInt(), item.Position.Y + args[4].AsInt(), item.Position.Z + args[5].AsInt());
                     DragDropManager.DragDrop(item, destination, p, amount < 1 ? item.Amount : amount);
                 }
-                Interpreter.Pause(UOSObjects.Gump.ActionDelay);
+                Interpreter.Pause(ScriptManager.MACRO_ACTION_DELAY);
             }
             return true;
         }
 
-        private static Dictionary<string, Direction> _Directions = new Dictionary<string, Direction>()
+        private static Dictionary<string, AssistDirection> _Directions = new Dictionary<string, AssistDirection>()
         {
-            { "north", Direction.North },
-            { "northeast", Direction.Right },
-            { "right", Direction.Right },
-            { "east", Direction.East },
-            { "southeast", Direction.Down },
-            { "down", Direction.Down },
-            { "south", Direction.South },
-            { "southwest", Direction.Left },
-            { "left", Direction.Left },
-            { "west", Direction.West },
-            { "northwest", Direction.Up },
-            { "up", Direction.Up }
+            { "north", AssistDirection.North },
+            { "nord", AssistDirection.North },
+            { "northeast", AssistDirection.Right },
+            { "right", AssistDirection.Right },
+            { "nordest", AssistDirection.Right },
+            { "destra", AssistDirection.Right },
+            { "east", AssistDirection.East },
+            { "est", AssistDirection.East },
+            { "southeast", AssistDirection.Down },
+            { "down", AssistDirection.Down },
+            { "sudest", AssistDirection.Down },
+            { "basso", AssistDirection.Down },
+            { "south", AssistDirection.South },
+            { "sud", AssistDirection.South },
+            { "southwest", AssistDirection.Left },
+            { "sudovest", AssistDirection.Left },
+            { "left", AssistDirection.Left },
+            { "sinistra", AssistDirection.Left },
+            { "west", AssistDirection.West },
+            { "ovest", AssistDirection.West },
+            { "northwest", AssistDirection.Up },
+            { "nordovest", AssistDirection.Up },
+            { "up", AssistDirection.Up },
+            { "sopra", AssistDirection.Up }
         };
 
-        private static Queue<Direction> _MoveDirection = new Queue<Direction>();
+        private static Queue<AssistDirection> _MoveDirection = new Queue<AssistDirection>();
         private static bool Walk(string command, Argument[] args, bool quiet, bool force)
         {
             if (args.Length < 1)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
             else if(args[0] != null)
             {
                 _MoveDirection.Clear();
-                for(int i = 0; i < args.Length; i++)
+                string[] sp = args[0].AsString().ToLower().Split(',');
+                for(int i = 0; i < sp.Length; i++)
                 {
-                    if(_Directions.TryGetValue(args[i].AsString().ToLower(), out Direction d))
+                    if(_Directions.TryGetValue(sp[i].Trim(), out AssistDirection d))
                     {
                         _MoveDirection.Enqueue(d);
                     }
                 }
                 args[0] = null;
             }
-            if (ScriptManager.LastWalk < DateTime.UtcNow)
+            if (_MoveDirection.Count == 0)
+            {
+                return true;
+            }
+            if (ScriptManager.LastWalk > DateTime.UtcNow)
             {
                 return false;
             }
 
             ScriptManager.LastWalk = DateTime.UtcNow + TimeSpan.FromMilliseconds(MovementSpeed.TimeToCompleteMovement(false,
-                                                                             Client.Game.UO.World.Player.IsMounted ||
-                                                                             Client.Game.UO.World.Player.SpeedMode == CharacterSpeedType.FastUnmount ||
-                                                                             Client.Game.UO.World.Player.SpeedMode == CharacterSpeedType.FastUnmountAndCantRun ||
-                                                                             Client.Game.UO.World.Player.IsFlying
+                                                                             ClassicUO.Client.Game.UO.World.Player.IsMounted ||
+                                                                             ClassicUO.Client.Game.UO.World.Player.SpeedMode == CharacterSpeedType.FastUnmount ||
+                                                                             ClassicUO.Client.Game.UO.World.Player.SpeedMode == CharacterSpeedType.FastUnmountAndCantRun ||
+                                                                             ClassicUO.Client.Game.UO.World.Player.IsFlying
                                                                              ));
 
-            Direction dir = _MoveDirection.Dequeue();
-            if ((UOSObjects.Player.Direction & Direction.Up) != dir)
-                Engine.Instance.RequestMove(dir, false);
+            AssistDirection dir = _MoveDirection.Peek();
+            if ((UOSObjects.Player.Direction & AssistDirection.Up) == dir)
+            {
+                _MoveDirection.Dequeue();
+            }
+            else
+            {
+                ScriptManager.LastWalk = DateTime.UtcNow + TimeSpan.FromMilliseconds(Constants.TURN_DELAY);
+            }
+
             Engine.Instance.RequestMove(dir, false);
             return _MoveDirection.Count < 1;
         }
@@ -1092,14 +1337,22 @@ namespace Assistant.Scripts
         {
             if (args.Length < 1)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
-            if (_Directions.TryGetValue(args[0].AsString().ToLower(), out Direction dir))
+            if (_Directions.TryGetValue(args[0].AsString().ToLower(), out AssistDirection dir))
             {
-                if((UOSObjects.Player.Direction & Direction.Up) != dir)
+                if ((UOSObjects.Player.Direction & AssistDirection.Up) != dir)
+                {
+                    if (ScriptManager.LastWalk > DateTime.UtcNow)
+                    {
+                        return false;
+                    }
+
+                    ScriptManager.LastWalk = DateTime.UtcNow + TimeSpan.FromMilliseconds(Constants.TURN_DELAY);
                     Engine.Instance.RequestMove(dir, false);
+                }
             }
 
             return true;
@@ -1109,64 +1362,121 @@ namespace Assistant.Scripts
         {
             if (args.Length < 1)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
             else if (args[0] != null)
             {
                 _MoveDirection.Clear();
-                for (int i = 0; i < args.Length; i++)
+                string[] sp = args[0].AsString().ToLower().Split(',');
+                for (int i = 0; i < sp.Length; i++)
                 {
-                    if (_Directions.TryGetValue(args[i].AsString().ToLower(), out Direction d))
+                    if (_Directions.TryGetValue(sp[i].Trim(), out AssistDirection d))
                     {
                         _MoveDirection.Enqueue(d);
                     }
                 }
                 args[0] = null;
             }
-            if (ScriptManager.LastWalk < DateTime.UtcNow)
+            if (_MoveDirection.Count == 0)
+            {
+                return true;
+            }
+            if (ScriptManager.LastWalk > DateTime.UtcNow)
             {
                 return false;
             }
 
-            ScriptManager.LastWalk = DateTime.UtcNow + TimeSpan.FromMilliseconds(MovementSpeed.TimeToCompleteMovement(true,
-                                                                             Client.Game.UO.World.Player.IsMounted ||
-                                                                             Client.Game.UO.World.Player.SpeedMode == CharacterSpeedType.FastUnmount ||
-                                                                             Client.Game.UO.World.Player.SpeedMode == CharacterSpeedType.FastUnmountAndCantRun ||
-                                                                             Client.Game.UO.World.Player.IsFlying
+            AssistDirection dir = _MoveDirection.Peek();
+            if ((UOSObjects.Player.Direction & AssistDirection.Up) == dir)
+            {
+                ScriptManager.LastWalk = DateTime.UtcNow + TimeSpan.FromMilliseconds(MovementSpeed.TimeToCompleteMovement(true,
+                                                                             ClassicUO.Client.Game.UO.World.Player.IsMounted ||
+                                                                             ClassicUO.Client.Game.UO.World.Player.SpeedMode == CharacterSpeedType.FastUnmount ||
+                                                                             ClassicUO.Client.Game.UO.World.Player.SpeedMode == CharacterSpeedType.FastUnmountAndCantRun ||
+                                                                             ClassicUO.Client.Game.UO.World.Player.IsFlying
                                                                              ));
+                _MoveDirection.Dequeue();
+            }
+            else
+            {
+                ScriptManager.LastWalk = DateTime.UtcNow + TimeSpan.FromMilliseconds(Constants.TURN_DELAY);
+            }
 
-            Direction dir = _MoveDirection.Dequeue();
-            if ((UOSObjects.Player.Direction & Direction.Up) != dir)
-                Engine.Instance.RequestMove(dir, false);
             Engine.Instance.RequestMove(dir, true);
             return _MoveDirection.Count < 1;
+        }
+
+        private static bool SetSkill(string command, Argument[] args, bool quiet, bool force)
+        {
+            if (args.Length < 2)
+            {
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                return true;
+            }
+
+            Skill sk;
+            if (args[0].AsString() == "last" && UOSObjects.Player.LastSkill >= 0 && UOSObjects.Player.LastSkill < ClassicUO.Client.Game.UO.FileManager.Skills.Skills.Count)
+            {
+                sk = UOSObjects.Player.Skills[UOSObjects.Player.LastSkill];
+            }
+            else
+            {
+                sk = ScriptManager.GetSkill(args[0].AsString());
+            }
+            if (sk != null && sk.Index < ClassicUO.Client.Game.UO.FileManager.Skills.Skills.Count)
+            {
+                //"setskill ('skill name') ('up/down/locked')"
+                switch(args[1].AsString().ToLower(XmlFileParser.Culture))
+                {
+                    case "up":
+                        sk.Lock = LockType.Up;
+                        break;
+                    case "down":
+                        sk.Lock = LockType.Down;
+                        break;
+                    case "locked":
+                        sk.Lock = LockType.Locked;
+                        break;
+                    default:
+                        ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                        return true;
+                }
+                NetClient.Socket.PSend_SkillsStatusChange((ushort)sk.Index, (byte)sk.Lock);
+            }
+
+            return true;
         }
 
         private static bool UseSkill(string command, Argument[] args, bool quiet, bool force)
         {
             if (args.Length == 0)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
             if (args[0].AsString() == "last")
             {
-                Engine.Instance.SendToServer(new UseSkill(UOSObjects.Player.LastSkill));
+                NetClient.Socket.PSend_UseSkill(UOSObjects.Player.LastSkill);
+                Interpreter.Pause(ScriptManager.MACRO_ACTION_DELAY);
             }
             else
             {
                 Skill sk = ScriptManager.GetSkill(args[0].AsString());
-                if (sk != null && sk.Index < Client.Game.UO.FileManager.Skills.Skills.Count)
+                if (sk != null && sk.Index < ClassicUO.Client.Game.UO.FileManager.Skills.Skills.Count)
                 {
-                    if(Client.Game.UO.FileManager.Skills.Skills[sk.Index].HasAction)
-                        Engine.Instance.SendToServer(new UseSkill(sk.Index));
+                    if (ClassicUO.Client.Game.UO.FileManager.Skills.Skills[sk.Index].HasAction)
+                    {
+                        UOSObjects.Player.LastSkill = sk.Index;
+                        NetClient.Socket.PSend_UseSkill(sk.Index);
+                        Interpreter.Pause(ScriptManager.MACRO_ACTION_DELAY);
+                    }
                     else
-                        new RunTimeError(null, $"Non usable skill: {args[0].AsString()}");
+                        ScriptManager.Message(quiet, $"Non usable skill: {args[0].AsString()}");
                 }
                 else
-                    new RunTimeError(null, $"Unknown skill name: {args[0].AsString()}");
+                    ScriptManager.Message(quiet, $"Unknown skill name: {args[0].AsString()}");
             }
 
             return true;
@@ -1176,13 +1486,13 @@ namespace Assistant.Scripts
         {
             if(args.Length < 2)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
             UOItem backpack = UOSObjects.Player.GetItemOnLayer(Layer.Backpack);
             if(backpack == null)
             {
-                ScriptManager.Error(quiet, "Backpack not found");
+                ScriptManager.Message(quiet, "Backpack not found");
                 return true;
             }
             uint targetSerial = args[0].AsSerial();
@@ -1211,7 +1521,7 @@ namespace Assistant.Scripts
                     DragDropManager.DragDrop(item, targetSerial, Point3D.MinusOne, amount < 1 ? item.Amount : amount);
                 }
                 else
-                    ScriptManager.Error(quiet, $"No valid food found");
+                    ScriptManager.Message(quiet, $"No valid food found");
             }
             return true;
         }
@@ -1220,13 +1530,13 @@ namespace Assistant.Scripts
         {
             if (args.Length != 2)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
             uint targetSerial = args[0].AsSerial();
-            if(SerialHelper.IsValid(targetSerial))
-                Engine.Instance.SendToServer(new RenameReq(targetSerial, args[1].AsString()));
+            if (SerialHelper.IsValid(targetSerial))
+                NetClient.Socket.PSend_RenameReq(targetSerial, args[1].AsString());
             return true;
         }
 
@@ -1240,14 +1550,14 @@ namespace Assistant.Scripts
                     Interpreter.SetAlias(_nextPromptAliasName, serial);
             }
             else
-                ScriptManager.Error(false, "Invalid object targeted");
+                ScriptManager.Message(false, "Invalid object targeted");
         }
 
         private static bool PromptAlias(string command, Argument[] args, bool quiet, bool force)
         {
             if (args.Length != 1)
             {
-                ScriptManager.Error(quiet, "Usage: promptalias ('name')");
+                ScriptManager.Message(quiet, "Usage: promptalias ('name')");
                 return true;
             }
 
@@ -1256,6 +1566,7 @@ namespace Assistant.Scripts
                 _hasAction = true;
                 _nextPromptAliasName = args[0].AsString();
                 Targeting.OneTimeTarget(false, OnPromptAliasTarget);
+                ScriptManager.Message(false, $"Select the object for {_nextPromptAliasName}", null, MsgLevel.Info);
                 return false;
             }
 
@@ -1273,19 +1584,19 @@ namespace Assistant.Scripts
         {
             if (args.Length == 0)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
-            Interpreter.Pause(args[0].AsUInt());
-            return true;
+            Interpreter.Timeout(args[0].AsUInt(), () => { return true; });
+            return false;
         }
 
         private static bool WaitForGump(string command, Argument[] args, bool quiet, bool force)
         {
             if (args.Length < 2)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
@@ -1307,11 +1618,11 @@ namespace Assistant.Scripts
             return false;
         }
 
-        public static bool Attack(string command, Argument[] args, bool quiet, bool force)
+        private static bool Attack(string command, Argument[] args, bool quiet, bool force)
         {
             if (args.Length == 0)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
@@ -1319,21 +1630,23 @@ namespace Assistant.Scripts
 
             if (!SerialHelper.IsValid(serial))
             {
-                ScriptManager.Error(quiet, "attack - invalid serial");
+                ScriptManager.Message(quiet, "attack - invalid serial");
                 return true;
             }
 
             if (SerialHelper.IsMobile(serial))
-                Engine.Instance.SendToServer(new AttackReq(serial));
+            {
+                NetClient.Socket.PSend_AttackRequest(serial);
+            }
 
             return true;
         }
 
-        public static bool WarMode(string command, Argument[] args, bool quiet, bool force)
+        private static bool WarMode(string command, Argument[] args, bool quiet, bool force)
         {
             if (args.Length > 1)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
@@ -1343,19 +1656,19 @@ namespace Assistant.Scripts
                 {
                     case "on":
                     case "true":
-                        Engine.Instance.SendToServer(new SetWarMode(true));
+                        NetClient.Socket.PSend_SetWarMode(true);
                         break;
                     case "off":
                     case "false":
-                        Engine.Instance.SendToServer(new SetWarMode(false));
+                        NetClient.Socket.PSend_SetWarMode(false);
                         break;
                     default:
-                        ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                        ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                         break;
                 }
             }
             else
-                Engine.Instance.SendToServer(new SetWarMode(!UOSObjects.Player.Warmode));
+                NetClient.Socket.PSend_SetWarMode(!UOSObjects.Player.Warmode);
             return true;
         }
 
@@ -1369,7 +1682,7 @@ namespace Assistant.Scripts
         {
             if (args.Length < 2)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
@@ -1389,11 +1702,11 @@ namespace Assistant.Scripts
             return true;
         }
 
-        public static bool Msg(string command, Argument[] args, bool quiet, bool force)
+        private static bool Msg(string command, Argument[] args, bool quiet, bool force)
         {
             if (args.Length == 0)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
@@ -1405,11 +1718,11 @@ namespace Assistant.Scripts
             return true;
         }
 
-        public static bool WhisperMsg(string command, Argument[] args, bool quiet, bool force)
+        private static bool WhisperMsg(string command, Argument[] args, bool quiet, bool force)
         {
             if (args.Length == 0)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
@@ -1421,11 +1734,11 @@ namespace Assistant.Scripts
             return true;
         }
 
-        public static bool YellMsg(string command, Argument[] args, bool quiet, bool force)
+        private static bool YellMsg(string command, Argument[] args, bool quiet, bool force)
         {
             if (args.Length == 0)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
@@ -1437,11 +1750,11 @@ namespace Assistant.Scripts
             return true;
         }
 
-        public static bool EmoteMsg(string command, Argument[] args, bool quiet, bool force)
+        private static bool EmoteMsg(string command, Argument[] args, bool quiet, bool force)
         {
             if (args.Length == 0)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
@@ -1453,28 +1766,28 @@ namespace Assistant.Scripts
             return true;
         }
 
-        public static bool PartyMsg(string command, Argument[] args, bool quiet, bool force)
+        private static bool PartyMsg(string command, Argument[] args, bool quiet, bool force)
         {
             if (args.Length == 0)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
             if (PacketHandlers.PartyLeader == 0)
             {
-                ScriptManager.Error(quiet, command, "You must be in a party to use 'partymsg'");
+                ScriptManager.Message(quiet, command, "You must be in a party to use 'partymsg'");
                 return true;
             }
 
-            Engine.Instance.SendToServer(new SendPartyMessage(args[0].AsString()));
+            NetClient.Socket.PSend_PartyMessage(args[0].AsString(), args.Length > 1 ? args[1].AsSerial() : 0);
             return true;
         }
 
-        public static bool GuildMsg(string command, Argument[] args, bool quiet, bool force)
+        private static bool GuildMsg(string command, Argument[] args, bool quiet, bool force)
         {
             if (args.Length == 0)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
@@ -1486,11 +1799,11 @@ namespace Assistant.Scripts
             return true;
         }
 
-        public static bool AllyMsg(string command, Argument[] args, bool quiet, bool force)
+        private static bool AllyMsg(string command, Argument[] args, bool quiet, bool force)
         {
             if (args.Length == 0)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
@@ -1502,21 +1815,23 @@ namespace Assistant.Scripts
             return true;
         }
 
-        public static bool HeadMsg(string command, Argument[] args, bool quiet, bool force)
+        private static bool HeadMsg(string command, Argument[] args, bool quiet, bool force)
         {
             if (args.Length == 0)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
             if (args.Length == 1)
+            {
                 UOSObjects.Player.OverheadMessage(0x03B1, args[0].AsString());
+            }
             else
             {
                 int hue = Utility.ToInt32(args[1].AsString(), 0);
 
-                if (args.Length >= 3)
+                if (args.Length > 2)
                 {
                     uint serial = args[2].AsSerial();
                     UOMobile m = UOSObjects.FindMobile((uint)serial);
@@ -1525,17 +1840,19 @@ namespace Assistant.Scripts
                         m.OverheadMessage(hue, args[0].AsString());
                 }
                 else
+                {
                     UOSObjects.Player.OverheadMessage(hue, args[0].AsString());
+                }
             }
 
             return true;
         }
 
-        public static bool SysMsg(string command, Argument[] args, bool quiet, bool force)
+        private static bool SysMsg(string command, Argument[] args, bool quiet, bool force)
         {
             if (args.Length == 0)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
@@ -1547,11 +1864,28 @@ namespace Assistant.Scripts
             return true;
         }
 
+        private static bool TimerMsg(string command, Argument[] args, bool quiet, bool force)
+        {
+            if (args.Length == 0)
+            {
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                return true;
+            }
+
+            TimeSpan ts = Interpreter.GetTimer(args[0].AsString());
+            if (args.Length == 1)
+                UOSObjects.Player.SendMessage(0x03B1, ts.TotalMilliseconds.ToString("F0"));
+            else if (args.Length == 2)
+                UOSObjects.Player.SendMessage(args[1].AsInt(), ts.TotalMilliseconds.ToString("F0"));
+
+            return true;
+        }
+
         private static bool PopList(string command, Argument[] args, bool quiet, bool force)
         {
             if (args.Length != 2)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
@@ -1584,7 +1918,7 @@ namespace Assistant.Scripts
         {
             if (args.Length < 2 || args.Length > 3)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
@@ -1604,7 +1938,7 @@ namespace Assistant.Scripts
         {
             if (args.Length != 1)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
@@ -1617,7 +1951,7 @@ namespace Assistant.Scripts
         {
             if (args.Length != 1)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
@@ -1630,7 +1964,7 @@ namespace Assistant.Scripts
         {
             if (args.Length != 1)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
@@ -1643,7 +1977,7 @@ namespace Assistant.Scripts
         {
             if (args.Length < 1)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
@@ -1661,7 +1995,7 @@ namespace Assistant.Scripts
         {
             if (args.Length == 0)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
@@ -1672,10 +2006,10 @@ namespace Assistant.Scripts
 
         private static bool ShowNames(string command, Argument[] args, bool quiet, bool force)
         {
-            if (Client.Game.UO.World.Player == null)
+            if (ClassicUO.Client.Game.UO.World.Player == null)
                 return true;
             byte type = 1;//mobile as default
-            int range = Client.Game.UO.World.ClientViewRange;
+            int range = ClassicUO.Client.Game.UO.World.ClientViewRange;
             if (args.Length > 0)
             {
                 switch (args[0].AsString())
@@ -1701,7 +2035,9 @@ namespace Assistant.Scripts
                     foreach (UOMobile m in UOSObjects.MobilesInRange(range))
                     {
                         if (m != UOSObjects.Player)
-                            Engine.Instance.SendToServer(new SingleClick(m));
+                        {
+                            NetClient.Socket.PSend_SingleClick(m.Serial);
+                        }
                     }
                     if (type == 3)
                         goto case 2;
@@ -1710,18 +2046,20 @@ namespace Assistant.Scripts
                     foreach (UOItem i in UOSObjects.ItemsInRange(range))
                     {
                         if (i.IsCorpse)
-                            Engine.Instance.SendToServer(new SingleClick(i));
+                        {
+                            NetClient.Socket.PSend_SingleClick(i.Serial);
+                        }
                     }
                     break;
             }
             return true;
         }
 
-        public static bool ContextMenu(string command, Argument[] args, bool quiet, bool force)
+        private static bool ContextMenu(string command, Argument[] args, bool quiet, bool force)
         {
             if (args.Length < 2)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
@@ -1731,8 +2069,8 @@ namespace Assistant.Scripts
             if (s == 0 && UOSObjects.Player != null)
                 s = UOSObjects.Player.Serial;
 
-            Engine.Instance.SendToServer(new ContextMenuRequest(s));
-            Engine.Instance.SendToServer(new ContextMenuResponse(s, index));
+            NetClient.Socket.PSend_ContextMenuRequest(s);
+            NetClient.Socket.PSend_ContextMenuResponse(s, index);
             return true;
         }
 
@@ -1740,7 +2078,7 @@ namespace Assistant.Scripts
         {
             if (args.Length < 3)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
@@ -1751,50 +2089,93 @@ namespace Assistant.Scripts
 
             if (UOSObjects.Player.HasMenu)
             {
-                Engine.Instance.SendToServer(new ContextMenuResponse(args[0].AsSerial(), args[1].AsUShort()));
+                NetClient.Socket.PSend_ContextMenuResponse(args[0].AsSerial(), args[1].AsUShort());
                 return true;
             }
             return false;
         }
 
+        private static DelayQueueTimer _DelayQueueTimer;
         private static bool Target(string command, Argument[] args, bool quiet, bool force)
         {
             if (args.Length < 1)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
-            if (!Targeting.HasTarget)
+            uint target = args[0].AsSerial();
+            if (SerialHelper.IsValid(target))
             {
-                if (args.Length > 1)
+                if (force)
                 {
-                    Interpreter.Timeout(args[1].AsUInt(), () =>
+                    if (!Targeting.HasTarget)
                     {
-                        return true;
-                    });
-                    return false;
+                        ScriptManager.Message(quiet, command, "No target cursor available. Consider using waitfortarget.");
+                    }
+                    else
+                    {
+                        _DelayQueueTimer?.Stop();
+                        Targeting.Target(target);
+                    }
                 }
                 else
-                    ScriptManager.Error(quiet, command, "No target cursor available. Consider using waitfortarget.");
+                {
+                    _DelayQueueTimer?.Stop();
+                    if (!Targeting.HasTarget)
+                    {
+                        uint time = 5000;
+                        if (args.Length > 1)
+                        {
+                            time = args[1].AsUInt();
+                        }
+                        (_DelayQueueTimer = new DelayQueueTimer(Targeting.Target(target, true), time)).Start();
+                    }
+                    else
+                    {
+                        Targeting.Target(target);
+                    }
+                }
             }
             else
-                Targeting.Target(args[0].AsSerial());
-
+                ScriptManager.Message(quiet, command, "Invalid target serial.");
             return true;
+        }
+        private class DelayQueueTimer : Timer
+        {
+            private TargetInfo _Info;
+            private uint _Total;
+            private const uint INTERVAL = 50;
+            private uint _Passed = INTERVAL;
+            internal DelayQueueTimer(TargetInfo t, uint delay) : base(TimeSpan.FromMilliseconds(INTERVAL), TimeSpan.FromMilliseconds(INTERVAL))
+            {
+                _Info = t;
+                _Total = delay;
+            }
+
+            protected override void OnTick()
+            {
+                _Passed += INTERVAL;
+                if (_Passed >= _Total || _Info != Targeting.QueuedTarget)
+                {
+                    if (_Info == Targeting.QueuedTarget)
+                        Targeting.ClearQueue();
+                    Stop();
+                }
+            }
         }
 
         private static bool TargetType(string command, Argument[] args, bool quiet, bool force)
         {
             if (args.Length < 1 || args.Length > 3)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
             if (command == "targettype" && !Targeting.HasTarget)
             {
-                ScriptManager.Error(quiet, command, "No target cursor available. Consider using waitfortarget.");
+                ScriptManager.Message(quiet, command, "No target cursor available. Consider using waitfortarget.");
                 return true;
             }
 
@@ -1836,7 +2217,7 @@ namespace Assistant.Scripts
 
             if (serial == uint.MaxValue)
             {
-                new RunTimeError(null, "Unable to find suitable target");
+                ScriptManager.Message(quiet, "Unable to find suitable target");
                 return true;
             }
             if(command == "targettype")
@@ -1846,11 +2227,11 @@ namespace Assistant.Scripts
             return true;
         }
 
-        public static bool PromptMsg(string command, Argument[] args, bool quiet, bool force)
+        private static bool PromptMsg(string command, Argument[] args, bool quiet, bool force)
         {
             if (args.Length < 1)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
@@ -1858,45 +2239,114 @@ namespace Assistant.Scripts
             return true;
         }
 
-        public static bool ToggleHands(string command, Argument[] args, bool quiet, bool force)
+        private static bool ToggleHands(string command, Argument[] args, bool quiet, bool force)
         {
             if (args.Length == 0)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
             if (args[0].AsString() == "left")
-                Dress.ToggleLeft();
+                Dress.ToggleLeft(quiet);
             else
-                Dress.ToggleRight();
+                Dress.ToggleRight(quiet);
 
             return true;
         }
 
-        public static bool EquipItem(string command, Argument[] args, bool quiet, bool force)
+        private static bool EquipItem(string command, Argument[] args, bool quiet, bool force)
         {
             if (UOSObjects.Player == null)
                 return true;
 
             if (args.Length < 2)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
-            UOItem equip = UOSObjects.FindItem(args[0].AsSerial());
+            uint ser = args[0].AsSerial();
             Layer layer = args[1].AsLayer();
-            if (equip != null && layer != Layer.Invalid && layer <= Layer.LastUserValid)
-                Dress.Equip(equip, layer);
+            if (layer != Layer.Invalid && layer < Layer.Mount)
+            {
+                UOItem equip = null;
+                if (SerialHelper.IsItem(ser))
+                {
+                    equip = UOSObjects.FindItem(ser);
+                }
+                else if (UOSObjects.Player.Backpack != null && ser > 0 && ser < ClassicUO.Client.Game.UO.FileManager.TileData.StaticData.Length)
+                {
+                    equip = UOSObjects.Player.Backpack.FindItemByID((ushort)ser, true, -1, layer, true);
+                }
+
+                if (equip != null)
+                {
+                    Dress.Unequip(layer);
+                    Dress.Equip(equip, layer, force);
+                }
+            }
+            else
+                ScriptManager.Message(quiet, $"equipitem: invalid layer");
 
             return true;
         }
 
-        public static bool ToggleScavenger(string command, Argument[] args, bool quiet, bool force)
+        internal static HashSet<ushort> WandTypes { get; } = new HashSet<ushort>() { 0xDEB, 0xDEC, 0xDED, 0xDEE, 0xDF2, 0xDF3, 0xDF4, 0xDF5 };
+        private static bool EquipWand(string command, Argument[] args, bool quiet, bool force)
+        {
+            if (UOSObjects.Player == null)
+                return true;
+
+            string spellname;
+            if (args.Length < 1 || string.IsNullOrEmpty(spellname = args[0].AsString()))
+            {
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                return true;
+            }
+            int charges = 0;
+            if(args.Length > 1)
+            {
+                charges = args[1].AsInt();
+            }
+            bool anyspell = spellname == "any" || spellname == "undefined";
+
+            List<UOItem> list = new List<UOItem>(UOSObjects.FindItemsByTypes(WandTypes, range: 3).Where(w => w.Name != null && (anyspell || w.Name.IndexOf(spellname, StringComparison.InvariantCultureIgnoreCase) >= 0) && (charges <= 0 || (w.ObjPropList != null && w.ObjPropList.Content.Any(opl => opl.Number == 1076207 && int.TryParse(opl.Args, out int wcharges) && wcharges >= charges)))));
+            if (list.Count > 0)
+            {
+                Dress.Unequip(Layer.OneHanded);
+                Dress.Equip(list[Utility.Random(list.Count)], Layer.OneHanded);
+            }
+            else
+                ScriptManager.Message(quiet, $"equipwand: No wands found");
+
+            return true;
+        }
+
+        private static bool ToggleScavenger(string command, Argument[] args, bool quiet, bool force)
         {
             UOSObjects.Gump.EnabledScavenger.IsChecked = !UOSObjects.Gump.EnabledScavenger.IsChecked;
             return true;
+        }
+
+        private static bool Info(string command, Argument[] args, bool quiet, bool force)
+        {
+            if (!_hasAction)
+            {
+                _hasAction = true;
+                Targeting.OneTimeTarget(false, InfoTargetSelected, TargetCancel);
+            }
+            return !_hasAction;
+        }
+
+        private static void InfoTargetSelected(bool loc, uint serial, Point3D p, ushort itemid)
+        {
+            _hasAction = false;
+            UOEntity ent;
+            if (SerialHelper.IsValid(serial) && (ent = UOSObjects.FindEntity(serial)) != null)
+            {
+                UIManager.Add(new AssistantGump.ObjectInspectorGump(ent));
+            }
         }
 
         private static bool Ping(string command, Argument[] args, bool quiet, bool force)
@@ -1906,9 +2356,14 @@ namespace Assistant.Scripts
             return true;
         }
 
+        private static DateTime lastResync = DateTime.MinValue;
         private static bool Resync(string command, Argument[] args, bool quiet, bool force)
         {
-            Engine.Instance.SendToServer(new ResyncReq());
+            if (lastResync.AddMilliseconds(800) < DateTime.UtcNow)
+            {
+                lastResync = DateTime.UtcNow;
+                NetClient.Socket.PSend_Resync();
+            }
 
             return true;
         }
@@ -1918,7 +2373,7 @@ namespace Assistant.Scripts
         {
             if (args.Length != 2)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
             if(!HasMessageGump)
@@ -1928,7 +2383,7 @@ namespace Assistant.Scripts
                     string title = args[0].AsString(), body = args[1].AsString();
                     MessageEnded = false;
                     HasMessageGump = true;
-                    UIManager.Add(new AssistantGump.MessageBoxGump(Client.Game.UO.World, title, body));
+                    UIManager.Add(new AssistantGump.MessageBoxGump(title, body));
                 }
                 else
                     MessageEnded = true;
@@ -1940,7 +2395,7 @@ namespace Assistant.Scripts
         {
             if (args.Length < 2)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
             int x = Utility.ToInt32(args[0].AsString(), -1);
@@ -1949,43 +2404,32 @@ namespace Assistant.Scripts
             {
                 Mouse.Position.X = x;
                 Mouse.Position.Y = y;
-                if(args.Length > 2 && args[2].AsString() == "double")
+                MouseButtonType mbt = MouseButtonType.Left;
+                bool dclick = false;
+                for(int i = args.Length - 1; i >= 2; --i)
                 {
-                    if (args.Length > 3 && args[3].AsString() == "right")
-                    {
-                        //UIManager.OnRightMouseDoubleClick();
-                        //UIManager.OnRightMouseButtonUp();
-                        UIManager.OnMouseDoubleClick(MouseButtonType.Right);
-                        UIManager.OnMouseButtonUp(MouseButtonType.Right);
-                    }
-                    else
-                    {
-                        //UIManager.OnLeftMouseDoubleClick();
-                        //UIManager.OnLeftMouseButtonUp();
-                        UIManager.OnMouseDoubleClick(MouseButtonType.Left);
-                        UIManager.OnMouseButtonUp(MouseButtonType.Left);
-                    }
+                    string s = args[i].AsString();
+                    if (s == "double")
+                        dclick = true;
+                    else if (s == "right")
+                        mbt = MouseButtonType.Right;
+                }
+
+                if(dclick)
+                {
+                    UIManager.OnMouseDoubleClick(mbt);
                 }
                 else
                 {
-                    if (args.Length > 3 && args[3].AsString() == "right")
-                    {
-                        //UIManager.OnRightMouseButtonDown();
-                        //UIManager.OnRightMouseButtonUp();
-                        UIManager.OnMouseButtonDown(MouseButtonType.Right);
-                        UIManager.OnMouseButtonUp(MouseButtonType.Right);
-                    }
-                    else
-                    {
-                        //UIManager.OnLeftMouseButtonDown();
-                        //UIManager.OnLeftMouseButtonUp();
-                        UIManager.OnMouseButtonDown(MouseButtonType.Left);
-                        UIManager.OnMouseButtonUp(MouseButtonType.Left);
-                    }
+                    UIManager.OnMouseButtonDown(mbt);
                 }
+
+                Interpreter.Pause(ScriptManager.MACRO_ACTION_DELAY);
+                UIManager.OnMouseButtonUp(mbt);
             }
             else
-                ScriptManager.Error(quiet, command, "x or y coordinates are out of bounds or negative value!");
+                ScriptManager.Message(quiet, command, "x or y coordinates are out of bounds or negative value!");
+
             return true;
         }
 
@@ -1993,12 +2437,13 @@ namespace Assistant.Scripts
         {
             if (args.Length > 1)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
             }
             else
             {
                 uint serial = args.Length == 0 ? UOSObjects.Player.Serial : args[0].AsSerial();
-                Engine.Instance.SendToServer(new DoubleClick(serial));
+                NetClient.Socket.PSend_DoubleClick(serial);
+                Interpreter.Pause(ScriptManager.MACRO_ACTION_DELAY);
             }
 
             return true;
@@ -2008,7 +2453,7 @@ namespace Assistant.Scripts
         {
             if (args.Length < 1)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
@@ -2025,16 +2470,17 @@ namespace Assistant.Scripts
                         Targeting.ClearQueue();
                     if (SerialHelper.IsValid(s))
                     {
-                        Targeting.Target(s);
+                        Targeting.Target(s, true);
                     }
                     else if (!quiet)
-                        ScriptManager.Error(quiet, command, "invalid serial or alias");
+                        ScriptManager.Message(quiet, command, "invalid serial or alias");
                 }
-                spell.OnCast(new CastSpellFromMacro((ushort)spell.GetID()));
+                Spell.FullCast(spell.Number);//.OnCast(new CastSpellFromMacro((ushort)spell.GetID()));
+                Interpreter.Pause(ScriptManager.MACRO_ACTION_DELAY);
             }
             else if (!quiet)
             {
-                ScriptManager.Error(quiet, command, "spell name or number not valid");
+                ScriptManager.Message(quiet, command, "spell name or number not valid");
             }
 
             return true;
@@ -2048,13 +2494,13 @@ namespace Assistant.Scripts
 
         private static bool GuildButton(string command, Argument[] args, bool quiet, bool force)
         {
-            GameActions.OpenGuildGump(Client.Game.UO.World);
+            NetClient.Socket.Send_GuildMenuRequest(ClassicUO.Client.Game.UO.World);
             return true;
         }
 
         private static bool QuestsButton(string command, Argument[] args, bool quiet, bool force)
         {
-            GameActions.RequestQuestMenu(Client.Game.UO.World);
+            NetClient.Socket.Send_QuestMenuRequest(ClassicUO.Client.Game.UO.World);
             return true;
         }
 
@@ -2068,11 +2514,11 @@ namespace Assistant.Scripts
         {
             if (args.Length < 1)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
             byte id = 0;
-            switch(args[0].AsString().ToLowerInvariant())
+            switch(args[0].AsString().ToLower(XmlFileParser.Culture))
             {
                 case "honor":
                     id = 1; break;
@@ -2081,10 +2527,10 @@ namespace Assistant.Scripts
                 case "valor":
                     id = 3; break;
                 default:
-                    ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}"); break;
+                    ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}"); break;
             }
             if (id > 0)
-                Engine.Instance.SendToServer(new PInvokeVirtueRequest(id));
+                NetClient.Socket.PSend_InvokeVirtue(id);
             return true;
         }
 
@@ -2093,7 +2539,7 @@ namespace Assistant.Scripts
             if (!_hasAction)
             {
                 _hasAction = true;
-                Targeting.OneTimeTarget(false, FriendSelected, FriendTargetCancel);
+                Targeting.OneTimeTarget(false, FriendSelected, TargetCancel);
             }
             return !_hasAction;
         }
@@ -2103,8 +2549,27 @@ namespace Assistant.Scripts
             if (!_hasAction)
             {
                 _hasAction = true;
-                Targeting.OneTimeTarget(false, RemoveFriendSelected, FriendTargetCancel);
+                Targeting.OneTimeTarget(false, RemoveFriendSelected, TargetCancel);
             }
+            return !_hasAction;
+        }
+
+        private static bool IgnoreObject(string command, Argument[] args, bool quiet, bool force)
+        {
+            if (args.Length < 1)
+            {
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                return true;
+            }
+            uint serial = args[0].AsSerial();
+            if (SerialHelper.IsValid(serial))
+                Expressions.IgnoredObjects.Add(serial);
+            return true;
+        }
+
+        private static bool ClearIgnoreList(string command, Argument[] args, bool quiet, bool force)
+        {
+            Expressions.IgnoredObjects.Clear();
             return !_hasAction;
         }
 
@@ -2120,20 +2585,20 @@ namespace Assistant.Scripts
             Targeting.OnRemoveFriendSelected(loc, serial, p, itemid);
         }
 
-        private static void FriendTargetCancel()
+        private static void TargetCancel()
         {
             _hasAction = false;
         }
 
-        private static int _colorPick = 0;
+        internal static int ColorPick { get; set; }
         private static bool AutoColorPick(string command, Argument[] args, bool quiet, bool force)
         {
             if(args.Length < 1)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
-            _colorPick = args[0].AsInt();
+            ColorPick = args[0].AsUShort();
             return true;
         }
 
@@ -2141,30 +2606,23 @@ namespace Assistant.Scripts
         {
             if (args.Length < 2)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
             if(!_hasAction)
             {
-                if (_hasObject == 0)
+                uint ser = args[0].AsSerial();
+                if (SerialHelper.IsItem(ser))
                 {
-                    uint ser = args[0].AsSerial();
-                    if (SerialHelper.IsItem(ser))
-                    {
-                        _hasAction = true;
-                        PacketHandler.RegisterServerToClientViewer(0x3C, OnContentPacket);
-                    }
-                    else
-                        return true;
+                    _hasObject = ser;
+                    _hasAction = true;
+                    PacketHandler.RegisterServerToClientViewer(0x3C, OnContentPacket);
+                    NetClient.Socket.PSend_DoubleClick(ser);
                 }
                 else
-                {
-                    _hasAction = false;
-                    _hasObject = 0;
-                    PacketHandler.RemoveServerToClientViewer(0x3C, OnContentPacket);
                     return true;
-                }
             }
+
             Interpreter.Timeout(args[1].AsUInt(), () =>
             {
                 _hasAction = false;
@@ -2172,24 +2630,33 @@ namespace Assistant.Scripts
                 PacketHandler.RemoveServerToClientViewer(0x3C, OnContentPacket);
                 return true;
             });
+
+            if(!_hasAction)
+            {
+                _hasObject = 0;
+                PacketHandler.RemoveServerToClientViewer(0x3C, OnContentPacket);
+                return true;//ended with positive result
+            }
+
             return false;
         }
 
-        private static void OnContentPacket(ClassicUO.Network.Packet p, PacketHandlerEventArgs args)
+        private static void OnContentPacket(ref StackDataReader p, PacketHandlerEventArgs args)
         {
             if (!_hasAction)
                 return;
-            int count = p.ReadUShort();
+            int count = p.ReadUInt16BE();
             for (int i = 0; i < count; i++)
             {
-                if (!DragDropManager.EndHolding(p.ReadUInt()))
+                if (!DragDropManager.EndHolding(p.ReadUInt32BE()))
                     continue;
                 p.Skip(9 + (Engine.UsePostKRPackets ? 1 : 0));
-                if(_hasObject == p.ReadUInt())
+                if(_hasObject == p.ReadUInt32BE())
                 {
                     _hasAction = false;
+                    break;
                 }
-                p.ReadUShort();
+                p.ReadUInt16BE();
             }
         }
 
@@ -2197,10 +2664,9 @@ namespace Assistant.Scripts
         {
             if (args.Length != 2)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
-
 
             Interpreter.SetTimer(args[0].AsString(), args[1].AsInt());
             return true;
@@ -2210,7 +2676,7 @@ namespace Assistant.Scripts
         {
             if (args.Length != 1)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
@@ -2222,7 +2688,7 @@ namespace Assistant.Scripts
         {
             if (args.Length != 1)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
@@ -2234,13 +2700,13 @@ namespace Assistant.Scripts
         {
             if (args.Length != 2)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
             if (!Targeting.HasTarget && command == "targettilerelative")
             {
-                ScriptManager.Error(quiet, command, "No target cursor available. Consider using waitfortarget.");
+                ScriptManager.Message(quiet, command, "No target cursor available. Consider using waitfortarget.");
                 return true;
             }
 
@@ -2252,7 +2718,7 @@ namespace Assistant.Scripts
             if (mobile == null)
             {
                 /* TODO: Search items if mobile not found. Although this isn't very useful. */
-                ScriptManager.Error(quiet, command, "item or mobile not found.");
+                ScriptManager.Message(quiet, command, "item or mobile not found.");
                 return true;
             }
 
@@ -2260,35 +2726,36 @@ namespace Assistant.Scripts
 
             switch (mobile.Direction)
             {
-                case Direction.North:
+                case AssistDirection.North:
                     position.Y -= range;
                     break;
-                case Direction.Right:
+                case AssistDirection.Right:
                     position.X += range;
                     position.Y -= range;
                     break;
-                case Direction.East:
+                case AssistDirection.East:
                     position.X += range;
                     break;
-                case Direction.Down:
+                case AssistDirection.Down:
                     position.X += range;
                     position.Y += range;
                     break;
-                case Direction.South:
+                case AssistDirection.South:
                     position.Y += range;
                     break;
-                case Direction.Left:
+                case AssistDirection.Left:
                     position.X -= range;
                     position.Y += range;
                     break;
-                case Direction.West:
+                case AssistDirection.West:
                     position.X -= range;
                     break;
-                case Direction.Up:
+                case AssistDirection.Up:
                     position.X -= range;
                     position.Y -= range;
                     break;
             }
+
             if (command == "targettilerelative")
                 Targeting.Target(position);
             else
@@ -2300,7 +2767,7 @@ namespace Assistant.Scripts
         {
             if (args.Length != 1)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
@@ -2316,24 +2783,24 @@ namespace Assistant.Scripts
         {
             if (args.Length < 1 || args.Length > 3)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
             if (!Targeting.HasTarget && command == "targetground")
             {
-                ScriptManager.Error(quiet, command, "No target cursor available. Consider using waitfortarget.");
+                ScriptManager.Message(quiet, command, "No target cursor available. Consider using waitfortarget.");
                 return true;
             }
 
             ushort graphic = args[0].AsUShort();
             if (graphic == 0)
             {
-                ScriptManager.Error(quiet, command, "invalid graphic in targetground");
+                ScriptManager.Message(quiet, command, "invalid graphic in targetground");
                 return true;
             }
             int color = args.Length >= 2 ? args[1].AsUShort() : -1;
-            int range = args.Length >= 3 ? args[2].AsInt() : Client.Game.UO.World.ClientViewRange;
+            int range = args.Length >= 3 ? args[2].AsInt() : ClassicUO.Client.Game.UO.World.ClientViewRange;
             Point3D p = Point3D.MinusOne;
             foreach (UOEntity ie in UOSObjects.EntitiesInRange(range))
             {
@@ -2351,7 +2818,7 @@ namespace Assistant.Scripts
                     Targeting.SetAutoTargetAction(p.X, p.Y, p.Z);
             }
             else
-                ScriptManager.Error(quiet, command, "No valid target found");
+                ScriptManager.Message(quiet, command, "No valid target found");
             return true;
         }
 
@@ -2359,13 +2826,13 @@ namespace Assistant.Scripts
         {
             if (!(args.Length == 1 || args.Length == 3))
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
             if (!Targeting.HasTarget && command == "targettile")
             {
-                ScriptManager.Error(quiet, command, "No target cursor available. Consider using waitfortarget.");
+                ScriptManager.Message(quiet, command, "No target cursor available. Consider using waitfortarget.");
                 return true;
             }
 
@@ -2380,7 +2847,7 @@ namespace Assistant.Scripts
                     {
                         if (Targeting.LastTargetInfo.Type != 1)
                         {
-                            new RunTimeError(null, "Last target was not a ground target");
+                            ScriptManager.Message(quiet, command, "Last target was not a ground target");
                             return true;
                         }
 
@@ -2399,7 +2866,7 @@ namespace Assistant.Scripts
 
             if (position == Point3D.MinusOne)
             {
-                ScriptManager.Error(quiet, command, "No valid target found");
+                ScriptManager.Message(quiet, command, "No valid target found");
                 return true;
             }
             if(command == "targettile")
@@ -2413,13 +2880,13 @@ namespace Assistant.Scripts
         {
             if (args.Length != 3)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
             if (!Targeting.HasTarget && command == "targettileoffset")
             {
-                ScriptManager.Error(quiet, command, "No target cursor available. Consider using waitfortarget.");
+                ScriptManager.Message(quiet, command, "No target cursor available. Consider using waitfortarget.");
                 return true;
             }
 
@@ -2439,7 +2906,7 @@ namespace Assistant.Scripts
         {
             if (args.Length != 0)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
@@ -2451,7 +2918,7 @@ namespace Assistant.Scripts
 
         private static bool ClearTargetQueue(string command, Argument[] args, bool quiet, bool force)
         {
-            ScriptManager.Error(quiet, command, "There is no target queue for normal targets, to queue a target, consider using autotarget* commands");
+            Targeting.ClearQueue();
             return true;
         }
 
@@ -2459,7 +2926,7 @@ namespace Assistant.Scripts
         {
             if (args.Length != 0)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
             Targeting.SetAutoTargetAction();
@@ -2470,7 +2937,7 @@ namespace Assistant.Scripts
         {
             if (args.Length != 0)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
             Targeting.SetAutoTargetAction((int)UOSObjects.Player.Serial);
@@ -2481,12 +2948,12 @@ namespace Assistant.Scripts
         {
             if (args.Length != 1)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
             uint ser = args[0].AsSerial();
             if (!SerialHelper.IsValid(ser))
-                ScriptManager.Error(quiet, command, "invalid target serial");
+                ScriptManager.Message(quiet, command, "invalid target serial");
             else
                 Targeting.SetAutoTargetAction((int)ser);
             return true;
@@ -2496,7 +2963,7 @@ namespace Assistant.Scripts
         {
             if(args.Length < 1)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
             int range = args[0].AsInt();
@@ -2511,7 +2978,7 @@ namespace Assistant.Scripts
                 Targeting.SetAutoTargetAction((int)l[0].Serial);
             }
             else
-                ScriptManager.Error(quiet, command, "No valid target found");
+                ScriptManager.Message(quiet, command, "No valid target found");
             return true;
         }
 
@@ -2521,7 +2988,7 @@ namespace Assistant.Scripts
             return true;
         }
 
-        public static bool ToggleMounted(string command, Argument[] args, bool quiet, bool force)
+        internal static bool ToggleMounted(string command, Argument[] args, bool quiet, bool force)
         {
             if (UOSObjects.Gump.MountSerial == uint.MaxValue)
             {
@@ -2557,23 +3024,23 @@ namespace Assistant.Scripts
                     ser = UOSObjects.Player.GetItemOnLayer(Layer.Mount)?.Serial;
                 if (ser.HasValue)
                 {
-                    Engine.Instance.SendToServer(new DoubleClick(ser.Value));
+                    NetClient.Socket.PSend_DoubleClick(ser.Value);
                     return;
                 }
-                ScriptManager.Error(quiet, command, "Mount not found");
+                ScriptManager.Message(quiet, command, "Mount not found");
             }
             else
             {
-                ScriptManager.Error(quiet, command, "Invalid mount type selected");
+                ScriptManager.Message(quiet, command, "Invalid mount type selected");
             }
             UOSObjects.Gump.MountSerial = uint.MaxValue;
         }
 
-        public static bool ReplyGump(string command, Argument[] args, bool quiet, bool force)
+        private static bool ReplyGump(string command, Argument[] args, bool quiet, bool force)
         {
             if (args.Length < 2)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
             bool any = false;
@@ -2593,7 +3060,7 @@ namespace Assistant.Scripts
             }
             else if(!UOSObjects.Player.OpenedGumps.TryGetValue(gumpid, out gumps) || gumps.Count == 0)
             {
-                ScriptManager.Error(quiet, command, $"gump id 0x{gumpid:X} not found");
+                ScriptManager.Message(quiet, command, $"gump id 0x{gumpid:X} not found");
             }
             if (gumps != null && gumps.Count > 0)
             {
@@ -2608,23 +3075,29 @@ namespace Assistant.Scripts
                         string[] split = args[i].AsString().Split(' ');
                         if (split.Length > 1)
                         {
-                            textentries.Add(new GumpTextEntry(Utility.ToUInt16(split[0], 0), args[i].AsString().Remove(0, split[0].Length)));
+                            textentries.Add(new GumpTextEntry(Utility.ToUInt16(split[0], 0), args[i].AsString().Remove(0, split[0].Length + 1)));
                         }
                         else
                             checkboxes.Add(args[i].AsInt(false));
                     }
                 }
-                Engine.Instance.SendToServer(new GumpResponse(gump.ServerID, gump.GumpID, buttonId, checkboxes, textentries));
-                Engine.Instance.SendToClient(new CloseGump(gump.GumpID));
+
+                List<Gump> ie = new List<Gump>(UIManager.Gumps.Where(g => g.ServerSerial == gumpid));
+                foreach (var gmp in ie)
+                {
+                    UIManager.Gumps.Remove(gmp);
+                    gmp.Dispose();
+                }
+                NetClient.Socket.PSend_GumpResponse(gump.ServerID, gump.GumpID, buttonId, checkboxes, textentries);
             }
             return true;
         }
 
-        public static bool CloseGump(string command, Argument[] args, bool quiet, bool force)
+        private static bool CloseGump(string command, Argument[] args, bool quiet, bool force)
         {
             if (args.Length != 2)
             {
-                ScriptManager.Error(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
             uint serial = args[1].AsSerial();
@@ -2649,7 +3122,7 @@ namespace Assistant.Scripts
                     }
                     case "profile":
                     {
-                        UIManager.GetGump<ProfileGump>(serial == UOSObjects.Player.Serial ? Constants.PROFILE_LOCALSERIAL : serial)?.Dispose();
+                        UIManager.GetGump<ProfileGump>(serial)?.Dispose();
                         break;
                     }
                     case "container":
@@ -2660,83 +3133,85 @@ namespace Assistant.Scripts
                 }
             }
             else
-                ScriptManager.Error(quiet, command, "No objects with that serial was found");
+                ScriptManager.Message(quiet, command, "No objects with that serial was found");
             return true;
         }
 
-        /*private static bool LiftItem(string command, Argument[] args, bool quiet, bool force)
+        private static bool RandomNumber(string command, Argument[] args, bool quiet, bool force)
         {
             if (args.Length < 1)
             {
-                ScriptManager.Error(quiet, "Usage: lift (serial) [amount]");
+                ScriptManager.Message(quiet, command, $"Usage: {Interpreter.GetCmdHelper(command)}");
+                return true;
+            }
+
+            Expressions.RandomNumber(command, args, quiet, force);
+            return true;
+        }
+
+        private static bool _SentRequest = false;
+        private static bool WaitForProperties(string command, Argument[] args, bool quiet, bool force)
+        {
+            if (args.Length < 2)
+            {
+                ScriptManager.Message(quiet, $"Usage: {Interpreter.GetCmdHelper(command)}");
                 return true;
             }
 
             uint serial = args[0].AsSerial();
 
-            if (!SerialHelper.IsValid(serial))
+            if(!SerialHelper.IsValid(serial))
             {
-                ScriptManager.Error(quiet, "lift - invalid serial");
+                ScriptManager.Message(quiet, command, $"Invalid serial 0x{serial:X8}");
                 return true;
             }
 
-            ushort amount = Utility.ToUInt16(args[1].AsString(), 1);
-
-            UOItem item = UOSObjects.FindItem(serial);
-            if (item != null)
+            UOEntity entity = UOSObjects.FindEntity(serial);
+            if(!_SentRequest && (entity == null || entity.ObjPropList == null))
             {
-                DragDropManager.Drag(item, amount <= item.Amount ? amount : item.Amount);
-            }
-            else
-            {
-                UOSObjects.Player.SendMessage(MsgLevel.Warning, "Warning: Cannot find item (Out of Range)");
+                _SentRequest = true;
+                NetClient.Socket.PSend_SingleClick(serial);//look request
             }
 
-            return true;
+            Interpreter.Timeout(args[1].AsUInt(), () =>
+            {
+                _SentRequest = false;
+                return true;
+            });
+
+            if(entity != null && entity.ObjPropList != null)
+            {
+                _SentRequest = false;
+                return true;
+            }
+
+            return false;
         }
 
-        private static bool LiftType(string command, Argument[] args, bool quiet, bool force)
+        internal static void ClearAll()
         {
-            if (args.Length < 1)
-            {
-                ScriptManager.Error(quiet, "Usage: lifttype (gfx/'name of item') [amount]");
-                return true;
-            }
+            _SentRequest = false;
+            ColorPick = -1;
+            _DelayQueueTimer?.Stop();
+            _hasAction = false;
+            _nextPromptAliasName = "";
+            _MoveDirection.Clear();
+        }
 
-            string gfxStr = args[0].AsString();
-            ushort gfx = Utility.ToUInt16(gfxStr, 0);
-            ushort amount = Utility.ToUInt16(args[1].AsString(), 1);
-
-            UOItem item;
-
-            // No graphic id, maybe searching by name?
-            if (gfx == 0)
-            {
-                item = UOSObjects.Player.Backpack != null ? UOSObjects.Player.Backpack.FindItemByName(gfxStr, true) : null;
-
-                if (item == null)
-                {
-                    ScriptManager.Error(quiet, $"Script Error: Couldn't find '{gfxStr}'");
-                    return true;
-                }
-            }
-            else
-            {
-                item = UOSObjects.Player.Backpack != null ? UOSObjects.Player.Backpack.FindItemByID(gfx) : null;
-            }
-
-            if (item != null)
-            {
-                if (item.Amount < amount)
-                    amount = item.Amount;
-                DragDropManager.Drag(item, amount);
-            }
-            else
-            {
-                UOSObjects.Player.SendMessage(MsgLevel.Warning, "No item of type 0x{0} found!", gfx.ToString("X4"));
-            }
-
-            return true;
-        }*/
+        internal static void OnDisconnected()
+        {
+            _hasAction = false;
+            _hasObject = 0;
+            ColorPick = -1;
+            HasMessageGump = false;
+            MessageEnded = true;
+            _nextPromptAliasName = "";
+            _MoveDirection.Clear();
+            UsedOnce.Clear();
+            NextUsedOnce = 0;
+            _Temporary = null;
+            _SentRequest = false;
+            _DelayQueueTimer?.Stop();
+        }
     }
 }

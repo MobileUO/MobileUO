@@ -407,6 +407,8 @@ namespace ClassicUO.Game.Scenes
                                 NetClient.Socket.Disconnect();
                                 Client.Game.SetScene(new LoginScene(_world));
                             }
+
+                            Assistant.Engine.Instance.OnLogout();
                         }
                     }
                 )

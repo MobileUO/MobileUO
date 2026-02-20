@@ -1,12 +1,28 @@
-﻿using System;
+﻿#region License
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org/licenses/agpl-3.0.html> for details.
+#endregion
+
+using System;
 using System.Collections.Generic;
 
 namespace Assistant
 {
     public class MinHeap
     {
-        private List<Timer> m_List;
-        private int m_Size;
+        private List<Timer> _List;
+        private int _Size;
 
         public MinHeap() : this(20)
         {
@@ -14,55 +30,49 @@ namespace Assistant
 
         public MinHeap(int capacity)
         {
-            m_List = new List<Timer>(capacity + 1);
-            m_Size = 0;
-            m_List.Add(null); // 0th index is never used, always null
+            _List = new List<Timer>(capacity + 1)
+            {
+                null
+            };
+            _Size = 0;
         }
-
-        /*public MinHeap(Timer c) : this(c.Count)
-        {
-            foreach (IComparable o in c)
-                m_List.Add(o);
-            m_Size = c.Count;
-            Heapify();
-        }*/
 
         public void Heapify()
         {
-            for (int i = m_Size / 2; i > 0; i--)
+            for (int i = _Size >> 1; i > 0; i--)
                 PercolateDown(i);
         }
 
         private void PercolateDown(int hole)
         {
-            Timer tmp = m_List[hole];
+            Timer tmp = _List[hole];
             int child;
 
-            for (; hole * 2 <= m_Size; hole = child)
+            for (; hole * 2 <= _Size; hole = child)
             {
                 child = hole * 2;
-                if (child != m_Size && (m_List[child + 1]).CompareTo(m_List[child]) < 0)
+                if (child != _Size && (_List[child + 1]).CompareTo(_List[child]) < 0)
                     child++;
 
-                if (tmp.CompareTo(m_List[child]) >= 0)
-                    m_List[hole] = m_List[child];
+                if (tmp.CompareTo(_List[child]) >= 0)
+                    _List[hole] = _List[child];
                 else
                     break;
             }
 
-            m_List[hole] = tmp;
+            _List[hole] = tmp;
         }
 
         public Timer Peek()
         {
-            return m_List[1];
+            return _List[1];
         }
 
         public Timer Pop()
         {
             Timer top = Peek();
 
-            m_List[1] = m_List[m_Size--];
+            _List[1] = _List[_Size--];
             PercolateDown(1);
 
             return top;
@@ -70,13 +80,12 @@ namespace Assistant
 
         public void Remove(Timer o)
         {
-            for (int i = 1; i <= m_Size; i++)
+            for (int i = 1; i <= _Size; i++)
             {
-                if (m_List[i] == o)
+                if (_List[i] == o)
                 {
-                    m_List[i] = m_List[m_Size--];
+                    _List[i] = _List[_Size--];
                     PercolateDown(i);
-                    // TODO: Do we ever need to shrink?
                     return;
                 }
             }
@@ -84,26 +93,28 @@ namespace Assistant
 
         public void Clear()
         {
-            int capacity = m_List.Count / 2;
+            int capacity = _List.Count >> 1;
             if (capacity < 2)
                 capacity = 2;
-            m_Size = 0;
-            m_List = new List<Timer>(capacity);
-            m_List.Add(null);
+            _Size = 0;
+            _List = new List<Timer>(capacity)
+            {
+                null
+            };
         }
 
         public void Add(Timer o)
         {
             // PercolateUp
-            int hole = ++m_Size;
+            int hole = ++_Size;
 
             // Grow the list if needed
-            while (m_List.Count <= m_Size)
-                m_List.Add(null);
+            while (_List.Count <= _Size)
+                _List.Add(null);
 
-            for (; hole > 1 && o.CompareTo(m_List[hole / 2]) < 0; hole /= 2)
-                m_List[hole] = m_List[hole / 2];
-            m_List[hole] = o;
+            for (; hole > 1 && o.CompareTo(_List[(hole >> 1)]) < 0; hole >>= 1)
+                _List[hole] = _List[(hole >> 1)];
+            _List[hole] = o;
         }
 
         public void AddMultiple(ICollection<Timer> col)
@@ -112,13 +123,13 @@ namespace Assistant
             {
                 foreach (Timer o in col)
                 {
-                    int hole = ++m_Size;
+                    int hole = ++_Size;
 
                     // Grow the list as needed
-                    while (m_List.Count <= m_Size)
-                        m_List.Add(null);
+                    while (_List.Count <= _Size)
+                        _List.Add(null);
 
-                    m_List[hole] = o;
+                    _List[hole] = o;
                 }
 
                 Heapify();
@@ -127,7 +138,7 @@ namespace Assistant
 
         public int Count
         {
-            get { return m_Size; }
+            get { return _Size; }
         }
 
         public bool IsEmpty
@@ -137,9 +148,9 @@ namespace Assistant
 
         public List<Timer> GetRawList()
         {
-            var copy = new List<Timer>(m_Size);
-            for (int i = 1; i <= m_Size; i++)
-                copy.Add(m_List[i]);
+            var copy = new List<Timer>(_Size);
+            for (int i = 1; i <= _Size; i++)
+                copy.Add(_List[i]);
             return copy;
         }
     }
@@ -150,11 +161,11 @@ namespace Assistant
 
     public abstract class Timer : IComparable<Timer>
     {
-        private DateTime m_Next;
-        private TimeSpan m_Delay;
-        private TimeSpan m_Interval;
-        private bool m_Running;
-        private int m_Index, m_Count;
+        private DateTime _Next;
+        private TimeSpan _Delay;
+        private TimeSpan _Interval;
+        private bool _Running;
+        private int _Index, _Count;
 
         protected abstract void OnTick();
 
@@ -172,30 +183,29 @@ namespace Assistant
 
         public Timer(TimeSpan delay, TimeSpan interval, int count)
         {
-            m_Delay = delay;
-            m_Interval = interval;
-            m_Count = count;
+            _Delay = delay;
+            _Interval = interval;
+            _Count = count;
         }
 
         public void Start()
         {
-            if (!m_Running)
+            if (!_Running)
             {
-                m_Index = 0;
-                m_Next = DateTime.UtcNow + m_Delay;
-                m_Running = true;
-                m_Heap.Add(this);
+                _Index = 0;
+                _Next = DateTime.UtcNow + _Delay;
+                _Running = true;
+                _Heap.Add(this);
                 ChangedNextTick(true);
             }
         }
 
         public void Stop()
         {
-            if (m_Running)
+            if (_Running)
             {
-                m_Running = false;
-                m_Heap.Remove(this);
-                //ChangedNextTick();
+                _Running = false;
+                _Heap.Remove(this);
             }
         }
 
@@ -209,27 +219,27 @@ namespace Assistant
 
         public TimeSpan TimeUntilTick
         {
-            get { return m_Running ? m_Next - DateTime.UtcNow : TimeSpan.MaxValue; }
+            get { return _Running ? _Next - DateTime.UtcNow : TimeSpan.MaxValue; }
         }
 
         public bool Running
         {
-            get { return m_Running; }
+            get { return _Running; }
         }
 
         public TimeSpan Delay
         {
-            get { return m_Delay; }
-            set { m_Delay = value; }
+            get { return _Delay; }
+            set { _Delay = value; }
         }
 
         public TimeSpan Interval
         {
-            get { return m_Interval; }
-            set { m_Interval = value; }
+            get { return _Interval; }
+            set { _Interval = value; }
         }
 
-        private static MinHeap m_Heap = new MinHeap();
+        private static MinHeap _Heap = new MinHeap();
 
         private static void ChangedNextTick()
         {
@@ -238,19 +248,14 @@ namespace Assistant
 
         private static void ChangedNextTick(bool allowImmediate)
         {
-            if (!m_Heap.IsEmpty)
+            if (!_Heap.IsEmpty)
             {
-                Timer t = m_Heap.Peek();
+                Timer t = _Heap.Peek();
                 int interval = (int)Math.Round(t.TimeUntilTick.TotalMilliseconds);
                 if (allowImmediate && interval <= 0)
                 {
                     Slice();
                 }
-                /*else
-                {
-                    if (interval <= 0)
-                        
-                }*/
             }
         }
 
@@ -259,20 +264,20 @@ namespace Assistant
             int breakCount = 100;
             List<Timer> readd = new List<Timer>();
 
-            while (!m_Heap.IsEmpty && m_Heap.Peek().TimeUntilTick < TimeSpan.Zero)
+            while (!_Heap.IsEmpty && _Heap.Peek().TimeUntilTick < TimeSpan.Zero)
             {
                 if (breakCount-- <= 0)
                     break;
 
-                Timer t = m_Heap.Pop();
+                Timer t = _Heap.Pop();
 
                 if (t != null && t.Running)
                 {
                     t.OnTick();
 
-                    if (t.Running && (t.m_Count == 0 || (++t.m_Index) < t.m_Count))
+                    if (t.Running && (t._Count == 0 || (++t._Index) < t._Count))
                     {
-                        t.m_Next = DateTime.UtcNow + t.m_Interval;
+                        t._Next = DateTime.UtcNow + t._Interval;
                         readd.Add(t);
                     }
                     else
@@ -282,23 +287,23 @@ namespace Assistant
                 }
             }
 
-            m_Heap.AddMultiple(readd);
+            _Heap.AddMultiple(readd);
 
             ChangedNextTick();
         }
 
         private class OneTimeTimer : Timer
         {
-            private TimerCallback m_Call;
+            private TimerCallback _Call;
 
             public OneTimeTimer(TimeSpan d, TimerCallback call) : base(d)
             {
-                m_Call = call;
+                _Call = call;
             }
 
             protected override void OnTick()
             {
-                m_Call();
+                _Call();
             }
         }
 
@@ -309,18 +314,18 @@ namespace Assistant
 
         private class OneTimeTimerState<T> : Timer
         {
-            private TimerCallbackState<T> m_Call;
-            private T m_State;
+            private TimerCallbackState<T> _Call;
+            private T _State;
 
             public OneTimeTimerState(TimeSpan d, TimerCallbackState<T> call, T state) : base(d)
             {
-                m_Call = call;
-                m_State = state;
+                _Call = call;
+                _State = state;
             }
 
             protected override void OnTick()
             {
-                m_Call(m_State);
+                _Call(_State);
             }
         }
 

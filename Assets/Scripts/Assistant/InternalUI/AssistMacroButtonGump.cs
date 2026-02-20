@@ -1,34 +1,49 @@
-using System;
-using System.Xml;
+﻿#region License
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org/licenses/agpl-3.0.html> for details.
+#endregion
+
+using Assistant;
+using ClassicUO.Assets;
 using ClassicUO.Configuration;
+using ClassicUO.Game.Scenes;
 using ClassicUO.Game.UI.Controls;
 using ClassicUO.Input;
 using ClassicUO.Renderer;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
-using ClassicUO.Assets;
-
-//#if ENABLE_INTERNAL_ASSISTANT
-using Assistant;
-//#endif
+using System;
+using System.Xml;
 
 namespace ClassicUO.Game.UI.Gumps
 {
-    internal class AssistantHotkeyButtonGump : AnchorableGump
+    internal class AssistMacroButtonGump : AnchorableGump
     {
-        public string _hotkeyName;
+        public string _macroName;
         private Texture2D backgroundTexture;
         private Label label;
 
-        public AssistantHotkeyButtonGump(World world, string hotkeyName, int x, int y) : this(world)
+        public AssistMacroButtonGump(string macroName, int x, int y) : this()
         {
             X = x;
             Y = y;
-            _hotkeyName = hotkeyName;
+            _macroName = macroName;
             BuildGump();
         }
 
-        public AssistantHotkeyButtonGump(World world) : base(world, 0, 0)
+        public AssistMacroButtonGump() : base(ClassicUO.Client.Game.UO.World, 0, 0)
         {
             CanMove = true;
             AcceptMouseInput = true;
@@ -41,14 +56,14 @@ namespace ClassicUO.Game.UI.Gumps
             AnchorType = ANCHOR_TYPE.SPELL;
         }
 
-        public override GumpType GumpType => GumpType.AssistantHotkeyButton;
+        public override GumpType GumpType => GumpType.AssistantMacroButton;
 
         private void BuildGump()
         {
             Width = 88;
             Height = 44;
 
-            label = new Label(_hotkeyName, true, 1001, Width, 255, FontStyle.BlackBorder, TEXT_ALIGN_TYPE.TS_CENTER)
+            label = new Label(_macroName, true, 1001, Width, 255, FontStyle.BlackBorder, TEXT_ALIGN_TYPE.TS_CENTER)
             {
                 X = 0,
                 Width = Width - 10,
@@ -81,7 +96,7 @@ namespace ClassicUO.Game.UI.Gumps
 
             if (ProfileManager.CurrentProfile.CastSpellsByOneClick && button == MouseButtonType.Left && !Keyboard.Alt && Math.Abs(offset.X) < 5 && Math.Abs(offset.Y) < 5)
             {
-                RunHotkey();
+                RunMacro();
             }
         }
 
@@ -90,46 +105,49 @@ namespace ClassicUO.Game.UI.Gumps
             if (ProfileManager.CurrentProfile.CastSpellsByOneClick || button != MouseButtonType.Left)
                 return false;
 
-            RunHotkey();
+            RunMacro();
             
             return true;
         }
 
-        private void RunHotkey()
+        private void RunMacro()
         {
-//#if ENABLE_INTERNAL_ASSISTANT
-            HotKeys.PlayFunc(_hotkeyName);
-//#endif
+            if (!Engine.Instance.Initialized) return;
+
+            ScriptManager.PlayScript(_macroName);
         }
 
+        //public override bool AddToRenderLists(RenderLists renderLists, int x, int y, ref float layerDepthRef)
         public override bool Draw(UltimaBatcher2D batcher, int x, int y)
         {
-            // MobileUO: CUO 0.1.11.0 drops ResetHueVector()
-            var hueVector = ShaderHueTranslator.GetHueVector(0);
-            //ResetHueVector();
-            hueVector.Z = 0.9f;
+            //float layerDepth = layerDepthRef;
+            Vector3 hueVector = new Vector3(0, 0, 0.85f);
 
-            batcher.Draw2D(backgroundTexture, x, y, Width, Height, ref hueVector);
+            /*renderLists.AddGumpNoAtlas(
+                batcher =>
+                {*/
+            batcher.Draw(backgroundTexture, new Rectangle(x, y, Width, Height), hueVector);//, layerDepth);
+            hueVector.Z = 0;
+            batcher.DrawRectangle(SolidColorTextureCache.GetTexture(Color.Gray), x, y, Width, Height, hueVector);//, layerDepth);
+            /*return true;
+        }
+    );*/
 
-            hueVector.Z = 1;
-            batcher.DrawRectangle(SolidColorTextureCache.GetTexture(Color.Gray), x, y, Width, Height, hueVector);
-
-            base.Draw(batcher, x, y);
-            return true;
+            return base.Draw(batcher, x, y);//base.AddToRenderLists(renderLists, x, y, ref layerDepthRef);
         }
 
         public override void Save(XmlTextWriter writer)
         {
-            if (string.IsNullOrEmpty(_hotkeyName) == false)
+            if (!string.IsNullOrEmpty(_macroName))
             {
-                // hack to give hotkey buttons a unique id for use in anchor groups
-                int hotkeyid = _hotkeyName.GetHashCode();
+                // hack to give macro buttons a unique id for use in anchor groups
+                int macroid = _macroName.GetHashCode();
 
-                LocalSerial = (uint) hotkeyid + 2000;
+                LocalSerial = (uint) macroid + 1000;
 
                 base.Save(writer);
 
-                writer.WriteAttributeString("name", _hotkeyName);
+                writer.WriteAttributeString("name", _macroName);
             }
         }
 
@@ -137,9 +155,9 @@ namespace ClassicUO.Game.UI.Gumps
         {
             base.Restore(xml);
 
-            _hotkeyName = xml.GetAttribute("name");
+            _macroName = xml.GetAttribute("name");
 
-            if (string.IsNullOrEmpty(_hotkeyName) == false)
+            if (!string.IsNullOrEmpty(_macroName))
             {
                 BuildGump();
             }

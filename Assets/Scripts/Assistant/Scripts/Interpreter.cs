@@ -1,19 +1,34 @@
-﻿using System;
-using System.Threading;
+﻿#region License
+// Original interpreter logic by Jaedan (2022)
+// Modified and maintained by Sascha Puligheddu (2023-2025)
+// 
+// Copyright (C) 2023-2025 Sascha Puligheddu
+// 
+// This specific derivative work is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org/licenses/agpl-3.0.html> for details.
+#endregion
+
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Globalization;
 
 using Assistant;
 using ClassicUO.Utility.Logging;
-using System.Threading.Tasks;
 using ClassicUO.Game.UI.Controls;
+using ClassicUO.Game.Data;
 
 namespace UOScript
 {
-    internal class RunTimeError
+    internal static class RunTime
     {
-        internal RunTimeError(ASTNode node, string error)
+        internal static void Error(ASTNode node, string error)
         {
             if (node != null)
             {
@@ -42,7 +57,7 @@ namespace UOScript
             else if (int.TryParse(token, out val))
                 return val;
 
-            new RunTimeError(null, "Cannot convert argument to int");
+            RunTime.Error(null, "Cannot convert argument to int");
             return 0;
         }
 
@@ -58,7 +73,7 @@ namespace UOScript
             else if (uint.TryParse(token, out val))
                 return val;
 
-            new RunTimeError(null, "Cannot convert argument to uint");
+            RunTime.Error(null, "Cannot convert argument to uint");
             return 0;
         }
 
@@ -74,7 +89,7 @@ namespace UOScript
             else if (ushort.TryParse(token, out val))
                 return val;
 
-            new RunTimeError(null, "Cannot convert argument to ushort");
+            RunTime.Error(null, "Cannot convert argument to ushort");
             return 0;
         }
 
@@ -83,7 +98,7 @@ namespace UOScript
             if (double.TryParse(token, out double val))
                 return val;
 
-            new RunTimeError(null, "Cannot convert argument to double");
+            RunTime.Error(null, "Cannot convert argument to double");
             return 0.0;
         }
 
@@ -92,7 +107,7 @@ namespace UOScript
             if (bool.TryParse(token, out bool val))
                 return val;
 
-            new RunTimeError(null, "Cannot convert argument to bool");
+            RunTime.Error(null, "Cannot convert argument to bool");
             return false;
         }
     }
@@ -135,6 +150,8 @@ namespace UOScript
     {
         private ASTNode _node;
         private Script _script;
+        internal string Lexeme => _node?.Lexeme ?? string.Empty;
+        internal ASTNodeType Type => _node?.Type ?? ASTNodeType.STRING;
 
         internal Argument(Script script, ASTNode node)
         {
@@ -144,25 +161,41 @@ namespace UOScript
 
         internal Layer AsLayer()
         {
+            bool checkLayer(Layer l)
+            {
+                return l > Layer.Invalid && l < Layer.Mount;
+            }
+
             if (_node.Lexeme == null)
             {
-                new RunTimeError(_node, "Cannot convert argument to layer");
+                RunTime.Error(_node, "Cannot convert argument to layer");
                 return Layer.Invalid;
             }
 
             var arg = _script.Lookup(_node.Lexeme);
             if (arg != null)
                 return arg.AsLayer();
+
             int val;
             if (_node.Lexeme.StartsWith("0x"))
             {
-                int.TryParse(_node.Lexeme.Substring(2), NumberStyles.HexNumber, Interpreter.Culture, out val);
+                if(int.TryParse(_node.Lexeme.Substring(2), NumberStyles.HexNumber, Interpreter.Culture, out val) && checkLayer((Layer)val))
+                {
+                    return (Layer)val;
+                }
             }
-            else 
-                int.TryParse(_node.Lexeme, out val);
-            Layer lay = (Layer)val;
-            if (lay > Layer.Invalid && lay <= Layer.LastUserValid)
-                return lay;
+            else if(int.TryParse(_node.Lexeme, out val))
+            {
+                if (checkLayer((Layer)val))
+                {
+                    return (Layer)val;
+                }
+            }
+            else if(Interpreter.TryGetAlias(_node.Lexeme, out uint value) && checkLayer((Layer)value))//if there is an alias, return that, but the check is as a last resort
+            {
+                return (Layer)value;
+            }
+
             return Layer.Invalid;
         }
 
@@ -171,7 +204,7 @@ namespace UOScript
         {
             if (_node.Lexeme == null)
             {
-                new RunTimeError(_node, "Cannot convert argument to int");
+                RunTime.Error(_node, "Cannot convert argument to int");
                 return 0;
             }
 
@@ -188,9 +221,18 @@ namespace UOScript
                     return val;
             }
             else if (int.TryParse(_node.Lexeme, out val))
+            {
                 return val;
-            if(throwerror)
-                new RunTimeError(_node, "Cannot convert argument to int");
+            }
+
+            //if there is an alias, return that, but the check is as a last resort
+            if (Interpreter.TryGetAlias(_node.Lexeme, out uint value))
+            {
+                return (int)value;
+            }
+
+            if (throwerror)
+                RunTime.Error(_node, "Cannot convert argument to int");
             return 0;
         }
 
@@ -199,7 +241,7 @@ namespace UOScript
         {
             if (_node.Lexeme == null)
             {
-                new RunTimeError(_node, "Cannot convert argument to uint");
+                RunTime.Error(_node, "Cannot convert argument to uint");
                 return 0;
             }
 
@@ -208,17 +250,24 @@ namespace UOScript
             if (arg != null)
                 return arg.AsUInt(throwerror);
 
-            uint val;
-
             if (_node.Lexeme.StartsWith("0x"))
             {
-                if (uint.TryParse(_node.Lexeme.Substring(2), NumberStyles.HexNumber, Interpreter.Culture, out val))
-                    return val;
+                if (uint.TryParse(_node.Lexeme.Substring(2), NumberStyles.HexNumber, Interpreter.Culture, out uint uval))
+                    return uval;
             }
-            else if (uint.TryParse(_node.Lexeme, out val))
-                return val;
-            if(throwerror)
-                new RunTimeError(_node, "Cannot convert argument to uint");
+            else if (long.TryParse(_node.Lexeme, out long lval))
+            {
+                return (uint)lval;
+            }
+
+            //if there is an alias, return that, but the check is as a last resort
+            if (Interpreter.TryGetAlias(_node.Lexeme, out uint value))
+            {
+                return value;
+            }
+
+            if (throwerror)
+                RunTime.Error(_node, "Cannot convert argument to uint");
             return 0;
         }
 
@@ -226,7 +275,7 @@ namespace UOScript
         {
             if (_node.Lexeme == null)
             {
-                new RunTimeError(_node, "Cannot convert argument to ushort");
+                RunTime.Error(_node, "Cannot convert argument to ushort");
                 return 0;
             }
 
@@ -235,17 +284,24 @@ namespace UOScript
             if (arg != null)
                 return arg.AsUShort(throwerror);
 
-            ushort val;
-
             if (_node.Lexeme.StartsWith("0x"))
             {
-                if (ushort.TryParse(_node.Lexeme.Substring(2), NumberStyles.HexNumber, Interpreter.Culture, out val))
-                    return val;
+                if (ushort.TryParse(_node.Lexeme.Substring(2), NumberStyles.HexNumber, Interpreter.Culture, out ushort uval))
+                    return uval;
             }
-            else if (ushort.TryParse(_node.Lexeme, out val))
-                return val;
-            if(throwerror)
-                new RunTimeError(_node, "Cannot convert argument to ushort");
+            else if (int.TryParse(_node.Lexeme, out int ival))
+            {
+                return (ushort)ival;
+            }
+
+            //if there is an alias, return that, but the check is as a last resort
+            if (Interpreter.TryGetAlias(_node.Lexeme, out uint value))
+            {
+                return (ushort)value;
+            }
+
+            if (throwerror)
+                RunTime.Error(_node, "Cannot convert argument to ushort");
             return 0;
         }
 
@@ -255,7 +311,7 @@ namespace UOScript
         {
             if (_node.Lexeme == null)
             {
-                new RunTimeError(_node, "Cannot convert argument to serial");
+                RunTime.Error(_node, "Cannot convert argument to serial");
                 return 0;
             }
 
@@ -277,7 +333,7 @@ namespace UOScript
         {
             if (_node.Lexeme == null)
             {
-                new RunTimeError(_node, "Cannot convert argument to string");
+                RunTime.Error(_node, "Cannot convert argument to string");
                 return string.Empty;
             }
 
@@ -293,22 +349,26 @@ namespace UOScript
         {
             if (_node.Lexeme == null)
             {
-                new RunTimeError(_node, "Cannot convert argument to bool");
+                RunTime.Error(_node, "Cannot convert argument to bool");
                 return false;
             }
 
-            bool val;
-
-            if (bool.TryParse(_node.Lexeme, out val))
+            if (bool.TryParse(_node.Lexeme, out bool val))
                 return val;
+            else if (_node.Lexeme.ToLower(Interpreter.Culture) == "on")
+                return true;
+            else if (_node.Lexeme.ToLower(Interpreter.Culture) == "off")
+                return false;
+            else if (Interpreter.TryGetAlias(_node.Lexeme, out uint value))
+                return value > 0;
 
-            new RunTimeError(_node, "Cannot convert argument to bool");
+            RunTime.Error(_node, "Cannot convert argument to bool");
             return false;
         }
 
         public override bool Equals(object obj)
         {
-            if (obj == null || !(obj is Argument arg))
+            if (obj == null || obj is not Argument arg)
                 return false;
 
             return Equals(arg);
@@ -326,7 +386,7 @@ namespace UOScript
         {
             if (_node.Lexeme == null)
             {
-                new RunTimeError(_node, "Cannot convert argument to string");
+                RunTime.Error(_node, "Cannot convert argument to string");
                 return 0;
             }
             return _node.Lexeme.GetHashCode();
@@ -346,6 +406,41 @@ namespace UOScript
 
             while (scope != null)
             {
+                if(name[name.Length - 1] == ']')//do we have a list call?
+                {
+                    int idx = name.LastIndexOf('[');
+                    if(idx > 0 && idx + 1 < name.Length)
+                    {
+                        string tmp = name.Substring(idx + 1, name.Length - (idx + 2));
+                        if(string.IsNullOrWhiteSpace(tmp))//unaknownledged alias or number is threaded as a linear 'for' call with automated iteration
+                        {
+                            var node = scope.StartNode;
+                            var var = scope.GetVar(node.GetHashCode().ToString());
+                            if (var != null)
+                            {
+                                result = Interpreter.GetListValue(name.Substring(0, idx), var.AsUShort());
+                            }
+                            else//I'm called from inside other interactions inside brackets of for, use stored var with name, containing current list item
+                            {
+                                result = scope.GetVar(name.Substring(0, idx));
+                            }
+                        }
+                        else//incremental internal list call, with an alias as a variable in a 'for' list iteration
+                        {
+                            //first, lets see if the name is an alias and get that number instead
+                            uint pos = Interpreter.GetAlias(tmp);
+                            if (pos < ushort.MaxValue || (uint.TryParse(tmp, out pos) && pos < ushort.MaxValue))
+                            {
+                                //we have, in fact, a list[x] call
+                                result = Interpreter.GetListValue(name.Substring(0, idx), (ushort)pos);
+                            }
+                        }
+
+                        if (result != null)
+                            return result;
+                    }
+                }
+                
                 result = scope.GetVar(name);
                 if (result != null)
                     return result;
@@ -420,7 +515,7 @@ namespace UOScript
 
             if (_statement.Type != ASTNodeType.STATEMENT)
             {
-                new RunTimeError(_statement, "Invalid script");
+                RunTime.Error(_statement, "Invalid script");
                 return false;
             }
 
@@ -428,7 +523,7 @@ namespace UOScript
 
             if (node == null)
             {
-                new RunTimeError(_statement, "Invalid statement");
+                RunTime.Error(_statement, "Invalid statement");
                 return false;
             }
 
@@ -500,7 +595,7 @@ namespace UOScript
 
                     if (_statement == null)
                     {
-                        new RunTimeError(node, "If with no matching endif");
+                        RunTime.Error(node, "If with no matching endif");
                         return false;
                     }
 
@@ -532,7 +627,7 @@ namespace UOScript
 
                     if (_statement == null)
                     {
-                        new RunTimeError(node, "If with no matching endif");
+                        RunTime.Error(node, "If with no matching endif");
                         return false;
                     }
 
@@ -567,7 +662,7 @@ namespace UOScript
 
                     if (_statement == null)
                     {
-                        new RunTimeError(node, "If with no matching endif");
+                        RunTime.Error(node, "If with no matching endif");
                         return false;
                     }
 
@@ -596,21 +691,24 @@ namespace UOScript
                         {
                             node = _statement.FirstChild();
 
-                            if (node.Type == ASTNodeType.WHILE)
+                            if (node != null)
                             {
-                                depth++;
-                            }
-                            else if (node.Type == ASTNodeType.ENDWHILE)
-                            {
-                                if (depth == 0)
+                                if (node.Type == ASTNodeType.WHILE)
                                 {
-                                    PopScope();
-                                    // Go one past the endwhile so the loop doesn't repeat
-                                    Advance();
-                                    break;
+                                    depth++;
                                 }
+                                else if (node.Type == ASTNodeType.ENDWHILE)
+                                {
+                                    if (depth == 0)
+                                    {
+                                        PopScope();
+                                        // Go one past the endwhile so the loop doesn't repeat
+                                        Advance();
+                                        break;
+                                    }
 
-                                depth--;
+                                    depth--;
+                                }
                             }
 
                             Advance();
@@ -645,7 +743,7 @@ namespace UOScript
 
                     if (_statement == null)
                     {
-                        new RunTimeError(node, "Unexpected endwhile");
+                        RunTime.Error(node, "Unexpected endwhile");
                         return false;
                     }
 
@@ -667,7 +765,8 @@ namespace UOScript
                         idx = Utility.ToInt32(nnode.Next().Lexeme, 0);
                         var iter = new ASTNode(ASTNodeType.INTEGER, idx.ToString(), node, 0);
                         _scope.SetVar(iterName, new Argument(this, iter));
-                        iter = new ASTNode(ASTNodeType.INTEGER, nnode.Next().Next().Lexeme, node, 0);
+                        var inode = nnode.Next().Next();
+                        iter = new ASTNode(inode.Type, inode.Lexeme, node, 0);
                         _scope.SetVar(oterName, new Argument(this, iter));
                         // Make the user-chosen variable have the value for the front of the list
                         var arg = Interpreter.GetListValue(varName, idx);
@@ -695,7 +794,8 @@ namespace UOScript
                     }
 
                     // Check loop condition
-                    int end = _scope.GetVar(oterName).AsInt();
+                    var otern = _scope.GetVar(oterName);
+                    int end = otern.Type == ASTNodeType.STRING ? Interpreter.ListLength(varName) : otern.AsInt();
                     var i = _scope.GetVar(varName);
 
                     if (i != null && idx < end)
@@ -752,7 +852,7 @@ namespace UOScript
 
                         if (max.Type != ASTNodeType.INTEGER)
                         {
-                            new RunTimeError(max, "Invalid for loop syntax");
+                            RunTime.Error(max, "Invalid for loop syntax");
                             return false;
                         }
 
@@ -822,6 +922,7 @@ namespace UOScript
                     // foreach VAR in LIST
                     // The iterator's name is the hash code of the for loop's ASTNode.
                     var varName = node.FirstChild().Lexeme;
+                    var listName = node.FirstChild().Next()?.Lexeme;
                     var iterName = node.GetHashCode().ToString();
 
                     // When we first enter the loop, push a new scope
@@ -834,7 +935,7 @@ namespace UOScript
                         _scope.SetVar(iterName, new Argument(this, iter));
 
                         // Make the user-chosen variable have the value for the front of the list
-                        var arg = Interpreter.GetListValue(varName, 0);
+                        var arg = Interpreter.GetListValue(listName, 0);
 
                         if (arg != null)
                             _scope.SetVar(varName, arg);
@@ -849,7 +950,7 @@ namespace UOScript
                         _scope.SetVar(iterName, new Argument(this, iter));
 
                         // Update the user-chosen variable
-                        var arg = Interpreter.GetListValue(varName, idx);
+                        var arg = Interpreter.GetListValue(listName, idx);
 
                         if (arg != null)
                             _scope.SetVar(varName, arg);
@@ -903,15 +1004,24 @@ namespace UOScript
                     // Walk backward to the for statement
                     _statement = _statement.Prev();
 
+                    depth = 0;
+
                     while (_statement != null)
                     {
                         node = _statement.FirstChild();
 
-                        if (node.Type == ASTNodeType.FOR ||
+                        if(node.Type == ASTNodeType.ENDFOR)
+                        {
+                            depth++;
+                        }
+                        else if (node.Type == ASTNodeType.FOR ||
                             node.Type == ASTNodeType.FORINLIST ||
                             node.Type == ASTNodeType.FOREACH)
                         {
-                            break;
+                            if (depth == 0)
+                                break;
+
+                            depth--;
                         }
 
                         _statement = _statement.Prev();
@@ -919,7 +1029,7 @@ namespace UOScript
 
                     if (_statement == null)
                     {
-                        new RunTimeError(node, "Unexpected endfor");
+                        RunTime.Error(node, "Unexpected endfor");
                         return false;
                     }
 
@@ -946,7 +1056,7 @@ namespace UOScript
                         {
                             if (depth == 0)
                             {
-                                PopScope();
+                                //PopScope();//not needed, we don't need to break everything
 
                                 // Go one past the end so the loop doesn't repeat
                                 Advance();
@@ -954,6 +1064,27 @@ namespace UOScript
                             }
 
                             depth--;
+                        }
+                        else if(node.Type == ASTNodeType.ENDIF || node.Type == ASTNodeType.ELSEIF || node.Type == ASTNodeType.ELSE)
+                        {
+                            if(_scope != null)
+                            {
+                                if (_scope.Parent != null)
+                                {
+                                    ASTNodeType type = _scope.Parent.StartNode.Type;
+                                    if (type == ASTNodeType.WHILE ||
+                                        type == ASTNodeType.FOR ||
+                                        type == ASTNodeType.FORINLIST ||
+                                        type == ASTNodeType.FOREACH)
+                                    {
+                                        PopScope();//jump to the previous if it exists and is of a loop type
+                                    }
+                                    else
+                                    {
+                                        break;//on other types, no effect
+                                    }
+                                }
+                            }
                         }
 
                         Advance();
@@ -992,7 +1123,7 @@ namespace UOScript
 
                     if (_statement == null)
                     {
-                        new RunTimeError(node, "Unexpected continue");
+                        RunTime.Error(node, "Unexpected continue");
                         return false;
                     }
                     break;
@@ -1056,7 +1187,7 @@ namespace UOScript
 
             if (handler == null)
             {
-                new RunTimeError(node, "Unknown command");
+                RunTime.Error(node, "Unknown command");
                 return true;
             }
 
@@ -1064,7 +1195,7 @@ namespace UOScript
 
             if (node != null)
             {
-                new RunTimeError(node, "Command did not consume all available arguments");
+                RunTime.Error(node, "Command did not consume all available arguments");
                 return true;
             }
 
@@ -1075,23 +1206,30 @@ namespace UOScript
         {
             if (lhs.GetType() != rhs.GetType())
             {
-                // Different types. Try to convert one to match the other.
-
-                if (rhs is double)
+                try
                 {
-                    // Special case for rhs doubles because we don't want to lose precision.
-                    lhs = (double)lhs;
+                    // Different types. Try to convert one to match the other.
+                    if (rhs is double)
+                    {
+                        // Special case for rhs doubles because we don't want to lose precision.
+                        lhs = (double)lhs;
+                    }
+                    else if (rhs is bool)
+                    {
+                        // Special case for rhs bools because we want to down-convert the lhs.
+                        var tmp = Convert.ChangeType(lhs, typeof(bool));
+                        lhs = (IComparable)tmp;
+                    }
+                    else
+                    {
+                        var tmp = Convert.ChangeType(rhs, lhs.GetType());
+                        rhs = (IComparable)tmp;
+                    }
                 }
-                else if (rhs is bool)
+                catch(Exception e)
                 {
-                    // Special case for rhs bools because we want to down-convert the lhs.
-                    var tmp = Convert.ChangeType(lhs, typeof(bool));
-                    lhs = (IComparable)tmp;
-                }
-                else
-                {
-                    var tmp = Convert.ChangeType(rhs, lhs.GetType());
-                    rhs = (IComparable)tmp;
+                    RunTime.Error(null, $"Incorrect value evaluation in operands (< = >) - {e.Message}");
+                    return false;
                 }
             }
 
@@ -1116,11 +1254,11 @@ namespace UOScript
             }
             catch (ArgumentException e)
             {
-                new RunTimeError(null, e.Message);
+                RunTime.Error(null, e.Message);
                 return false;
             }
 
-            new RunTimeError(null, "Unknown operator in expression");
+            RunTime.Error(null, "Unknown operator in expression");
             return false;
 
         }
@@ -1129,7 +1267,7 @@ namespace UOScript
         {
             if (expr == null || (expr.Type != ASTNodeType.UNARY_EXPRESSION && expr.Type != ASTNodeType.BINARY_EXPRESSION && expr.Type != ASTNodeType.LOGICAL_EXPRESSION))
             {
-                new RunTimeError(expr, "No expression following control statement");
+                RunTime.Error(expr, "No expression following control statement");
                 return false;
             }
 
@@ -1137,7 +1275,7 @@ namespace UOScript
 
             if (node == null)
             {
-                new RunTimeError(expr, "Empty expression following control statement");
+                RunTime.Error(expr, "Empty expression following control statement");
                 return false;
             }
 
@@ -1161,7 +1299,7 @@ namespace UOScript
 
                 if (node == null)
                 {
-                    new RunTimeError(node, "Invalid logical expression");
+                    RunTime.Error(node, "Invalid logical expression");
                     return false;
                 }
 
@@ -1179,7 +1317,7 @@ namespace UOScript
                         break;
                     default:
                     {
-                        new RunTimeError(node, "Nested logical expressions are not possible");
+                        RunTime.Error(node, "Nested logical expressions are not possible");
                         return false;
                     }
                 }
@@ -1194,7 +1332,7 @@ namespace UOScript
                         break;
                     default:
                     {
-                        new RunTimeError(node, "Invalid logical operator");
+                        RunTime.Error(node, "Invalid logical operator");
                         return false;
                     }
                 }
@@ -1207,17 +1345,17 @@ namespace UOScript
 
         private bool EvaluateUnaryExpression(ref ASTNode node)
         {
-            node = EvaluateModifiers(node, out bool quiet, out _, out bool not);
+            node = EvaluateModifiers(node, out bool quiet, out bool force, out bool not);
 
             var handler = Interpreter.GetExpressionHandler(node.Lexeme);
 
             if (handler == null)
             {
-                new RunTimeError(node, "Unknown expression");
+                RunTime.Error(node, "Unknown expression");
                 return false;
             }
 
-            var result = handler(node.Lexeme, ConstructArguments(ref node), quiet);
+            var result = handler(node.Lexeme, ConstructArguments(ref node), quiet, force);
 
             if (not)
                 return CompareOperands(ASTNodeType.EQUAL, result, false);
@@ -1244,10 +1382,10 @@ namespace UOScript
         {
             IComparable val;
 
-            node = EvaluateModifiers(node, out bool quiet, out _, out _);
+            node = EvaluateModifiers(node, out bool quiet, out bool force, out _);
             if(node == null)
             {
-                new RunTimeError(node, "NULL node found in expression");
+                RunTime.Error(node, "NULL node found in expression");
                 return 0;
             }
             switch (node.Type)
@@ -1277,12 +1415,12 @@ namespace UOScript
                     }
                     else
                     {
-                        val = handler(node.Lexeme, ConstructArguments(ref node), quiet);
+                        val = handler(node.Lexeme, ConstructArguments(ref node), quiet, force);
                     }
                     break;
                 }
                 default:
-                    new RunTimeError(node, "Invalid type found in expression");
+                    RunTime.Error(node, "Invalid type found in expression");
                     val = 0;
                     break;
             }
@@ -1291,8 +1429,23 @@ namespace UOScript
         }
     }
 
+    internal enum CmdType : byte
+    {
+        Command = 0x01,
+        Expression = 0x02,
+        Both = 0x03
+    }
+
+    public struct CmdRule
+    {
+        public ushort MinArgs;
+        public ushort MaxArgs;
+    }
+
     internal static class Interpreter
     {
+        internal static Dictionary<string, CmdRule> CmdMap = new Dictionary<string, CmdRule>();
+
         // Aliases only hold serial numbers
         private static Dictionary<string, uint> _aliases = new Dictionary<string, uint>();
 
@@ -1303,8 +1456,8 @@ namespace UOScript
         private static Dictionary<string, DateTime> _timers = new Dictionary<string, DateTime>();
 
         // Expressions
-        internal delegate IComparable ExpressionHandler(string expression, Argument[] args, bool quiet);
-        internal delegate T ExpressionHandler<T>(string expression, Argument[] args, bool quiet) where T : IComparable;
+        internal delegate IComparable ExpressionHandler(string expression, Argument[] args, bool quiet, bool force);
+        internal delegate T ExpressionHandler<T>(string expression, Argument[] args, bool quiet, bool force) where T : IComparable;
 
         private static Dictionary<string, ExpressionHandler> _exprHandlers = new Dictionary<string, ExpressionHandler>();
 
@@ -1312,9 +1465,16 @@ namespace UOScript
 
         private static Dictionary<string, CommandHandler> _commandHandlers = new Dictionary<string, CommandHandler>();
 
+
+        internal static readonly HashSet<string> Expression = new HashSet<string>()
+        {
+            "if",
+            "elseif",
+            "while"
+        };
+
         private static HashSet<string> _exempts = new HashSet<string>()
         {
-            
             "if",
             "elseif",
             "else",
@@ -1355,17 +1515,23 @@ namespace UOScript
             if (_exempts.Contains(s))
                 return ScriptTextBox.BLUE_HUE;//blue
             if (_commandHelpers.ContainsKey(s))
-                return ScriptTextBox.RED_HUE;//red
+                return ScriptTextBox.VIOLET_HUE;//red
             if (_expressionHelpers.ContainsKey(s))
                 return ScriptTextBox.YELLOW_HUE;//yellow
             return 0;
         }
 
         internal static List<string> CmdArgs = new List<string>();
-        internal static void GetCmdArgs(string s)
-        {
-            CmdArgs.AddRange(_commandHelpers.Where(key => key.Key.StartsWith(s)).Select(pv => pv.Value));
-            CmdArgs.AddRange(_expressionHelpers.Where(key => key.Key.StartsWith(s)).Select(pv => pv.Value));
+        internal static void GetCmdArgs(string s, CmdType type)
+       {
+            if ((type & CmdType.Command) == CmdType.Command)
+            {
+                CmdArgs.AddRange(_commandHelpers.Where(key => key.Key.StartsWith(s)).Select(pv => pv.Value));
+            }
+            if ((type & CmdType.Expression) == CmdType.Expression)
+            {
+                CmdArgs.AddRange(_expressionHelpers.Where(key => key.Key.StartsWith(s)).Select(pv => pv.Value));
+            }
         }
 
         internal delegate uint AliasHandler(string alias);
@@ -1397,7 +1563,7 @@ namespace UOScript
 
         internal static void RegisterExpressionHandler<T>(string keyword, ExpressionHandler<T> handler, string helper) where T : IComparable
         {
-            _exprHandlers[keyword] = (expression, args, quiet) => handler(expression, args, quiet);
+            _exprHandlers[keyword] = (expression, args, quiet, force) => handler(expression, args, quiet, force);
             if(!string.IsNullOrEmpty(helper))
                 _expressionHelpers[keyword] = helper;
         }
@@ -1409,6 +1575,13 @@ namespace UOScript
             return string.Empty;
         }
 
+        internal static string GetExprHelper(string keyword)
+        {
+            if(_expressionHelpers.TryGetValue(keyword, out string s))
+                return s;
+            return string.Empty;
+        }
+
         internal static ExpressionHandler GetExpressionHandler(string keyword)
         {
             _exprHandlers.TryGetValue(keyword, out var expression);
@@ -1416,11 +1589,21 @@ namespace UOScript
             return expression;
         }
 
-        internal static void RegisterCommandHandler(string keyword, CommandHandler handler, string helper)
+        internal static void RegisterCommandHandler(string keyword, CommandHandler handler, string helper, ushort minargs, ushort maxargs)
         {
+            CmdMap.Add(keyword, new CmdRule(){ MinArgs = minargs, MaxArgs = maxargs });
             _commandHandlers.Add(keyword, handler);
             if (!string.IsNullOrEmpty(helper))
                 _commandHelpers[keyword] = helper;
+        }
+
+        public static bool IsSyntaxValid(string cmd, int argCount)
+        {
+            if (CmdMap.TryGetValue(cmd, out CmdRule rule))
+            {
+                return argCount >= rule.MinArgs && argCount <= rule.MaxArgs;
+            }
+            return true; // Se il comando non è in mappa, non segnaliamo errore
         }
 
         internal static CommandHandler GetCommandHandler(string keyword)
@@ -1442,6 +1625,7 @@ namespace UOScript
 
         internal static uint GetAlias(string alias)
         {
+            alias = alias.ToLower(XmlFileParser.Culture);
             // If a handler is explicitly registered, call that.
             if (_aliasHandlers.TryGetValue(alias, out AliasHandler handler))
                 return handler(alias);
@@ -1453,9 +1637,37 @@ namespace UOScript
             return uint.MaxValue;
         }
 
+        internal static uint GetMainAlias(string alias)
+        {
+            alias = alias.ToLower(XmlFileParser.Culture);
+
+            uint value;
+            if (_aliases.TryGetValue(alias, out value))
+                return value;
+
+            return uint.MaxValue;
+        }
+
+        internal static bool TryGetAlias(string alias, out uint value)
+        {
+            alias = alias.ToLower(XmlFileParser.Culture);
+            // If a handler is explicitly registered, call that.
+            if (_aliasHandlers.TryGetValue(alias, out AliasHandler handler))
+            {
+                value = handler(alias);
+                return true;
+            }
+            else if (_aliases.TryGetValue(alias, out value))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
         internal static void SetAlias(string alias, uint serial)
         {
-            _aliases[alias] = serial;
+            _aliases[alias.ToLower(XmlFileParser.Culture)] = serial;
         }
 
         internal static void CreateList(string name)
@@ -1484,22 +1696,27 @@ namespace UOScript
             return _lists.ContainsKey(name);
         }
 
-        internal static bool ListContains(string name, Argument arg)
+        internal static bool ListContains(string name, Argument arg, bool ignorecase)
         {
             if (!_lists.ContainsKey(name))
             {
-                new RunTimeError(null, "List does not exist");
+                RunTime.Error(null, "List does not exist");
                 return false;
             }
 
-            return _lists[name].Contains(arg);
+            if (ignorecase)
+            {
+                return _lists[name].Any(a => a.Lexeme.Length == arg.Lexeme.Length && arg.Lexeme.IndexOf(a.Lexeme) == 0);
+            }
+            else
+                return _lists[name].Contains(arg);
         }
 
         internal static int ListLength(string name)
         {
             if (!_lists.ContainsKey(name))
             {
-                new RunTimeError(null, "List does not exist");
+                RunTime.Error(null, "List does not exist");
                 return 0;
             }
             else
@@ -1510,7 +1727,7 @@ namespace UOScript
         {
             if (!_lists.ContainsKey(name))
             {
-                new RunTimeError(null, "List does not exist");
+                RunTime.Error(null, "List does not exist");
                 return;
             }
 
@@ -1527,7 +1744,7 @@ namespace UOScript
         {
             if (!_lists.ContainsKey(name))
             {
-                new RunTimeError(null, "List does not exist");
+                RunTime.Error(null, "List does not exist");
                 return true;
             }
 
@@ -1538,7 +1755,7 @@ namespace UOScript
         {
             if (!_lists.ContainsKey(name))
             {
-                new RunTimeError(null, "List does not exist");
+                RunTime.Error(null, "List does not exist");
                 return true;
             }
 
@@ -1553,7 +1770,7 @@ namespace UOScript
         {
             if (!_lists.ContainsKey(name))
             {
-                new RunTimeError(null, "List does not exist");
+                RunTime.Error(null, "List does not exist");
                 return null;
             }
 
@@ -1567,13 +1784,17 @@ namespace UOScript
 
         internal static void CreateTimer(string name)
         {
-            _timers[name] = DateTime.UtcNow;
+            if (!string.IsNullOrEmpty(name))
+                _timers[name.ToLower(Interpreter.Culture)] = DateTime.UtcNow;
         }
 
         internal static TimeSpan GetTimer(string name)
         {
-            if (!_timers.TryGetValue(name, out DateTime timestamp))
-                new RunTimeError(null, "Timer does not exist");
+            if (string.IsNullOrEmpty(name))
+                return TimeSpan.Zero;
+
+            if (!_timers.TryGetValue(name.ToLower(Interpreter.Culture), out DateTime timestamp))
+                RunTime.Error(null, "Timer does not exist");
 
             TimeSpan elapsed = DateTime.UtcNow - timestamp;
 
@@ -1584,17 +1805,39 @@ namespace UOScript
         {
             // Setting a timer to start at a given value is equivalent to
             // starting the timer that number of milliseconds in the past.
-            _timers[name] = DateTime.UtcNow.AddMilliseconds(-elapsed);
+            if(!string.IsNullOrEmpty(name))
+                _timers[name.ToLower(Interpreter.Culture)] = DateTime.UtcNow.AddMilliseconds(-elapsed);
         }
 
         internal static void RemoveTimer(string name)
         {
-            _timers.Remove(name);
+            if (!string.IsNullOrEmpty(name))
+                _timers.Remove(name.ToLower(Interpreter.Culture));
         }
 
         internal static bool TimerExists(string name)
         {
-            return _timers.ContainsKey(name);
+            if (string.IsNullOrEmpty(name))
+                return false;
+            return _timers.ContainsKey(name.ToLower(Interpreter.Culture));
+        }
+
+        internal static void GetTimersInDict(Dictionary<string, uint> ls)
+        {
+            List<string> excluded = ls.Keys.Except(_timers.Keys).ToList();
+            foreach (var key in excluded)
+            {
+                ls.Remove(key);
+            }
+            foreach(var kvp in _timers)
+            {
+                ls[$"{kvp.Key}"] = (uint)(DateTime.UtcNow - kvp.Value).TotalMilliseconds;
+            }
+        }
+
+        internal static void OnLogout()
+        {
+            _timers.Clear();
         }
 
         internal static bool StartScript(Script script)
@@ -1621,12 +1864,18 @@ namespace UOScript
             if (_activeScript == null)
                 return false;
 
+            ScriptManager.BeginInit();
+
             if (_executionState == ExecutionState.PAUSED)
             {
                 if (_pauseTimeout < DateTime.UtcNow.Ticks)
+                {
                     _executionState = ExecutionState.RUNNING;
+                }
                 else
+                {
                     return true;
+                }
             }
             else if (_executionState == ExecutionState.TIMING_OUT)
             {

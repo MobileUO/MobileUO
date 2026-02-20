@@ -1,10 +1,27 @@
-﻿using System.Diagnostics.Contracts;
+﻿#region License
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org/licenses/agpl-3.0.html> for details.
+#endregion
+
+using System.IO;
+using System.Diagnostics.Contracts;
 using System.Text;
 using System.Collections.Generic;
 
 using ClassicUO.Network;
+using ClassicUO.IO;
 using ClassicUO.Assets;
-using ClassicUO;
 
 namespace Assistant
 {
@@ -26,52 +43,59 @@ namespace Assistant
             }
         }
 
-        private List<int> m_StringNums = new List<int>();
+        private List<int> _StringNums { get; } = new List<int>();
         internal List<OPLEntry> Content { get; } = new List<OPLEntry>();
 
-        private uint m_CustomHash;
-        private uint m_Hash;
-        private List<OPLEntry> m_CustomContent = new List<OPLEntry>();
+        private uint _CustomHash;
+        private uint _Hash;
+        private List<OPLEntry> _CustomContent { get; } = new List<OPLEntry>();
         
         internal uint Hash
         {
-            get { return m_Hash ^ m_CustomHash; }
-            set { m_Hash = value; }
+            get { return _Hash ^ _CustomHash; }
+            set { _Hash = value; }
         }
 
         internal bool Customized
         {
-            get { return m_CustomHash != 0; }
+            get { return _CustomHash != 0; }
         }
 
         internal ObjectPropertyList(UOEntity owner)
         {
             Owner = owner;
 
-            m_StringNums.AddRange(m_DefaultStringNums);
+            _StringNums.AddRange(_DefaultStringNums);
         }
 
         internal UOEntity Owner { get; } = null;
 
-        internal void Read(Packet p, out string name)
+        internal void Read(StackDataReader reader, out string name)
         {
             Content.Clear();
             name = "";
 
-            p.Seek(11); // seek to packet data
+            reader.Seek(11); // seek to packet data
 
             //p.ReadUInt(); // serial from 5 to 9
             //p.ReadByte(); // 10
             //p.ReadByte(); // 11
-            m_Hash = p.ReadUInt();
+            _Hash = reader.ReadUInt32BE();
 
-            m_StringNums.Clear();
-            m_StringNums.AddRange(m_DefaultStringNums);
+            _StringNums.Clear();
+            _StringNums.AddRange(_DefaultStringNums);
             int cliloc;
             List<(int, string)> list = new List<(int, string)>();
-            while ((cliloc = (int)p.ReadUInt()) != 0)
+            while ((cliloc = reader.ReadInt32BE()) != 0)
             {
-                string argument = p.ReadUnicodeReversed(p.ReadUShort());
+                ushort length = reader.ReadUInt16BE();
+
+                string argument = string.Empty;
+
+                if(length != 0)
+                {
+                    argument = reader.ReadUnicodeLE(length / 2);
+                }
 
                 for (int i = 0; i < list.Count; i++)
                 {
@@ -89,22 +113,22 @@ namespace Assistant
             for(int i = 0; i < list.Count; i++)
             {
                 if(i == 0)
-                    name = Client.Game.UO.FileManager.Clilocs.Translate(list[i].Item1, list[i].Item2, true);
+                    name = ClassicUO.Client.Game.UO.FileManager.Clilocs.Translate(list[i].Item1, list[i].Item2, true);
                 Content.Add(new OPLEntry(list[i].Item1, list[i].Item2));
             }
  
-            for (int i = 0; i < m_CustomContent.Count; i++)
+            for (int i = 0; i < _CustomContent.Count; i++)
             {
-                OPLEntry ent = m_CustomContent[i];
-                if (m_StringNums.Contains(ent.Number))
+                OPLEntry ent = _CustomContent[i];
+                if (_StringNums.Contains(ent.Number))
                 {
-                    m_StringNums.Remove(ent.Number);
+                    _StringNums.Remove(ent.Number);
                 }
                 else
                 {
-                    for (int s = 0; s < m_DefaultStringNums.Length; s++)
+                    for (int s = 0; s < _DefaultStringNums.Length; s++)
                     {
-                        if (ent.Number == m_DefaultStringNums[s])
+                        if (ent.Number == _DefaultStringNums[s])
                         {
                             ent.Number = GetStringNumber();
                             break;
@@ -121,15 +145,13 @@ namespace Assistant
 
             AddHash((uint)number);
 
-            m_CustomContent.Add(new OPLEntry(number));
+            _CustomContent.Add(new OPLEntry(number));
         }
-
-        private static byte[] m_Buffer = new byte[0];
 
         internal void AddHash(uint val)
         {
-            m_CustomHash ^= (val & 0x3FFFFFF);
-            m_CustomHash ^= (val >> 26) & 0x3F;
+            _CustomHash ^= (val & 0x3FFFFFF);
+            _CustomHash ^= (val >> 26) & 0x3F;
         }
 
         static int GetHashCode32(string s)
@@ -171,7 +193,7 @@ namespace Assistant
 
             AddHash((uint)number);
             AddHash((uint)GetHashCode32(arguments));
-            m_CustomContent.Add(new OPLEntry(number, arguments));
+            _CustomContent.Add(new OPLEntry(number, arguments));
         }
 
         internal void Add(int number, string format, object arg0)
@@ -194,7 +216,7 @@ namespace Assistant
             Add(number, string.Format(format, args));
         }
 
-        private static int[] m_DefaultStringNums = new int[]
+        private static int[] _DefaultStringNums = new int[]
         {
             1042971,
             1070722,
@@ -206,10 +228,10 @@ namespace Assistant
 
         private int GetStringNumber()
         {
-            if (m_StringNums.Count > 0)
+            if (_StringNums.Count > 0)
             {
-                int num = m_StringNums[0];
-                m_StringNums.RemoveAt(0);
+                int num = _StringNums[0];
+                _StringNums.RemoveAt(0);
                 return num;
             }
             else
@@ -255,11 +277,11 @@ namespace Assistant
 
                 if (ent.Number == number)
                 {
-                    for (int s = 0; s < m_DefaultStringNums.Length; s++)
+                    for (int s = 0; s < _DefaultStringNums.Length; s++)
                     {
-                        if (m_DefaultStringNums[s] == ent.Number)
+                        if (_DefaultStringNums[s] == ent.Number)
                         {
-                            m_StringNums.Insert(0, ent.Number);
+                            _StringNums.Insert(0, ent.Number);
                             break;
                         }
                     }
@@ -273,29 +295,29 @@ namespace Assistant
                 }
             }
 
-            for (int i = 0; i < m_CustomContent.Count; i++)
+            for (int i = 0; i < _CustomContent.Count; i++)
             {
-                OPLEntry ent = m_CustomContent[i];
+                OPLEntry ent = _CustomContent[i];
                 if (ent == null)
                     continue;
 
                 if (ent.Number == number)
                 {
-                    for (int s = 0; s < m_DefaultStringNums.Length; s++)
+                    for (int s = 0; s < _DefaultStringNums.Length; s++)
                     {
-                        if (m_DefaultStringNums[s] == ent.Number)
+                        if (_DefaultStringNums[s] == ent.Number)
                         {
-                            m_StringNums.Insert(0, ent.Number);
+                            _StringNums.Insert(0, ent.Number);
                             break;
                         }
                     }
 
-                    m_CustomContent.RemoveAt(i);
+                    _CustomContent.RemoveAt(i);
                     AddHash((uint)ent.Number);
                     if (!string.IsNullOrEmpty(ent.Args))
                         AddHash((uint)GetHashCode32(ent.Args));
-                    if (m_CustomContent.Count == 0)
-                        m_CustomHash = 0;
+                    if (_CustomContent.Count == 0)
+                        _CustomHash = 0;
                     return true;
                 }
             }
@@ -307,19 +329,19 @@ namespace Assistant
         {
             string htmlStr = string.Format(HTMLFormat, str);
 
-            for (int i = 0; i < m_CustomContent.Count; i++)
+            for (int i = 0; i < _CustomContent.Count; i++)
             {
-                OPLEntry ent = m_CustomContent[i];
+                OPLEntry ent = _CustomContent[i];
                 if (ent == null)
                     continue;
 
-                for (int s = 0; s < m_DefaultStringNums.Length; s++)
+                for (int s = 0; s < _DefaultStringNums.Length; s++)
                 {
-                    if (ent.Number == m_DefaultStringNums[s] && (ent.Args == htmlStr || ent.Args == str))
+                    if (ent.Number == _DefaultStringNums[s] && (ent.Args == htmlStr || ent.Args == str))
                     {
-                        m_StringNums.Insert(0, ent.Number);
+                        _StringNums.Insert(0, ent.Number);
 
-                        m_CustomContent.RemoveAt(i);
+                        _CustomContent.RemoveAt(i);
 
                         AddHash((uint)ent.Number);
                         if (!string.IsNullOrEmpty(ent.Args))
@@ -332,87 +354,100 @@ namespace Assistant
             return false;
         }
 
-        internal PacketWriter BuildPacket()
+        public static void PRecv_ObjectPropertyList(ObjectPropertyList opl)
         {
-            return new OPLPacket(this);
-        }
+            const byte ID = 0xD6;
 
-        private class OPLPacket : PacketWriter
-        {
-            internal OPLPacket(ObjectPropertyList opl) : base(0xD6)
+            int length = NetClient.Socket.PacketsTable.GetPacketLength(ID);
+
+            StackDataWriter writer = new StackDataWriter(length < 0 ? 64 : length);
+
+            writer.WriteUInt8(ID);
+
+            if (length < 0)
             {
-                EnsureSize(128);
-                WriteUShort(0x01);
-                WriteUInt((opl.Owner != null ? opl.Owner.Serial : 0));
-                WriteByte(0);
-                WriteByte(0);
-                WriteUInt(opl.m_Hash ^ opl.m_CustomHash);
-
-                foreach (OPLEntry ent in opl.Content)
-                {
-                    if (ent != null && ent.Number != 0)
-                    {
-                        WriteUInt((uint)ent.Number);
-                        if (!string.IsNullOrEmpty(ent.Args))
-                        {
-                            int byteCount = Encoding.Unicode.GetByteCount(ent.Args);
-
-                            if (byteCount > m_Buffer.Length)
-                                m_Buffer = new byte[byteCount];
-                            
-                            byteCount = Encoding.Unicode.GetBytes(ent.Args, 0, ent.Args.Length, m_Buffer, 0);
-                            WriteUShort((ushort)byteCount);
-                            WriteBytes(m_Buffer, 0, byteCount);
-                        }
-                        else
-                        {
-                            WriteUShort(0);
-                        }
-                    }
-                }
-
-                foreach (OPLEntry ent in opl.m_CustomContent)
-                {
-                    if (ent != null && ent.Number != 0)
-                    {
-                        string arguments = ent.Args;
-
-                        WriteUInt((uint)ent.Number);
-
-                        if (string.IsNullOrEmpty(arguments))
-                            arguments = " ";
-                        arguments += "\t ";
-
-                        if (!string.IsNullOrEmpty(arguments))
-                        {
-                            int byteCount = Encoding.Unicode.GetByteCount(arguments);
-
-                            if (byteCount > m_Buffer.Length)
-                                m_Buffer = new byte[byteCount];
-
-                            byteCount = Encoding.Unicode.GetBytes(arguments, 0, arguments.Length, m_Buffer, 0);
-
-                            WriteUShort((ushort)byteCount);
-                            WriteBytes(m_Buffer, 0, byteCount);
-                        }
-                        else
-                        {
-                            WriteUShort(0);
-                        }
-                    }
-                }
-
-                WriteUInt(0);
+                writer.WriteZero(2);
             }
-        }
-    }
 
-    internal class OPLInfo : PacketWriter
-    {
-        internal OPLInfo(uint ser, uint hash) : base(0xDC)
-        {
-            WriteUInt(ser);
-            WriteUInt(hash);
+            writer.WriteUInt16BE(0x01);
+            writer.WriteUInt32BE((opl.Owner != null ? opl.Owner.Serial : 0));
+            writer.WriteUInt8(0);
+            writer.WriteUInt8(0);
+            writer.WriteUInt32BE(opl._Hash ^ opl._CustomHash);
+
+            foreach (OPLEntry ent in opl.Content)
+            {
+                if (ent != null && ent.Number != 0)
+                {
+                    writer.WriteUInt32BE((uint)ent.Number);
+                    if (!string.IsNullOrEmpty(ent.Args))
+                    {
+                        ushort len = (ushort)Encoding.Unicode.GetByteCount(ent.Args);
+                        writer.WriteUInt16BE(len);
+                        writer.WriteUnicodeLE(ent.Args, len >> 1);
+
+                        /*int byteCount = Encoding.Unicode.GetByteCount(ent.Args);
+
+                        if (byteCount > _Buffer.Length)
+                            _Buffer = new byte[byteCount];
+
+                        byteCount = Encoding.Unicode.GetBytes(ent.Args, 0, ent.Args.Length, _Buffer, 0);
+                        writer.WriteUInt16BE((ushort)byteCount);
+                        writer.Write(_Buffer);*/
+                    }
+                    else
+                    {
+                        writer.WriteUInt16BE(0);
+                    }
+                }
+            }
+
+            foreach (OPLEntry ent in opl._CustomContent)
+            {
+                if (ent != null && ent.Number != 0)
+                {
+                    string arguments = ent.Args;
+
+                    if (string.IsNullOrEmpty(arguments))
+                        arguments = " ";
+                    arguments += "\t ";
+
+                    writer.WriteUInt32BE((uint)ent.Number);
+                    if (!string.IsNullOrEmpty(arguments))
+                    {
+                        ushort len = (ushort)Encoding.Unicode.GetByteCount(arguments);
+                        writer.WriteUInt16BE(len);
+                        writer.WriteUnicodeLE(arguments, len >> 1);
+                        /*int byteCount = Encoding.Unicode.GetByteCount(arguments);
+
+                        if (byteCount > _Buffer.Length)
+                            _Buffer = new byte[byteCount];
+
+                        byteCount = Encoding.Unicode.GetBytes(arguments, 0, arguments.Length, _Buffer, 0);
+
+                        writer.WriteUInt16BE((ushort)byteCount);
+                        writer.Write(_Buffer);*/
+                    }
+                    else
+                    {
+                        writer.WriteUInt16BE(0);
+                    }
+                }
+            }
+
+            writer.WriteUInt32BE(0);
+
+            if (length < 0)
+            {
+                writer.Seek(1, SeekOrigin.Begin);
+                writer.WriteUInt16BE((ushort)writer.BytesWritten);
+            }
+            else
+            {
+                writer.WriteZero(length - writer.BytesWritten);
+            }
+
+            ClassicUO.Network.PacketHandlers.Handler.Append(writer.BufferWritten, true);
         }
     }
 }

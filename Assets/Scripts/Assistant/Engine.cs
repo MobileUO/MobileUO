@@ -1,4 +1,20 @@
-﻿using System;
+﻿#region License
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org/licenses/agpl-3.0.html> for details.
+#endregion
+
+using System;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Collections.Generic;
@@ -7,15 +23,17 @@ using System.Runtime.InteropServices;
 using CUO_API;
 using ClassicUO.Network;
 using ClassicUO;
+using ClassicUO.Utility;
 using ClassicUO.Assets;
-
 using ClassicUO.Game;
+using ClassicUO.Game.Map;
+using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.Managers;
 using Assistant.Core;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.IO;
-using ClassicUO.Utility;
+using UOScript;
 
 namespace Assistant
 {
@@ -62,6 +80,9 @@ namespace Assistant
 
     internal static class UOSObjects
     {
+        public static bool GumpLoaded { get; private set; } = false;
+        public static bool GumpIsLoading { get; set; }
+
         private static ClassicUO.Game.UI.Gumps.AssistantGump _Gump;
 
         internal static ClassicUO.Game.UI.Gumps.AssistantGump Gump
@@ -70,7 +91,9 @@ namespace Assistant
             {
                 if (_Gump == null || _Gump.IsDisposed)
                 {
-                    _Gump = new ClassicUO.Game.UI.Gumps.AssistantGump(Client.Game.UO.World);
+                    GumpIsLoading = true;
+                    _Gump = new ClassicUO.Game.UI.Gumps.AssistantGump();
+                    GumpIsLoading = false;
                     AfterBuild();
                 }
                 return _Gump;
@@ -81,6 +104,7 @@ namespace Assistant
                 {
                     ClassicUO.Game.UI.Gumps.AssistantGump old = _Gump;
                     _Gump = value;
+                    GumpLoaded = false;
                     old?.Dispose();
                     if(_Gump != null)
                         AfterBuild();
@@ -92,8 +116,12 @@ namespace Assistant
         {
             if (_Gump != null && !_Gump.IsDisposed)
             {
+                UOSObjects.GumpIsLoading = true;
                 _Gump.LoadConfig();
+                XmlFileParser.LoadPrivate(_Gump);
                 XmlFileParser.LoadProfile(_Gump, _Gump.ProfileSelected);
+                UOSObjects.GumpIsLoading = false;
+                GumpLoaded = true;
             }
             else if(itr < 10)
                 Timer.DelayedCallbackState(TimeSpan.FromMilliseconds(200), AfterBuild, ++itr).Start();
@@ -106,6 +134,7 @@ namespace Assistant
         {
             Items.Clear();
             Mobiles.Clear();
+            GumpLoaded = false;
         }
 
         internal static PlayerData Player;
@@ -124,26 +153,56 @@ namespace Assistant
 
         internal static UOItem FindItemByType(int itemId, int color = -1, int range = -1, ContainerType cnttype = ContainerType.Any)
         {
+            List<UOItem> list = new List<UOItem>();
             foreach (UOItem item in Items.Values)
             {
                 if (item.ItemID == itemId && (color == -1 || item.Hue == color) && (range == -1 || Utility.InRange(Player.Position, item.WorldPosition, range)) && (cnttype == ContainerType.Any || (cnttype == ContainerType.Ground && item.OnGround) || (cnttype == ContainerType.Serial && item.Container != null)))
-                    return item;
+                    list.Add(item);
             }
 
-            return null;
+            list.RemoveAll(i => Scripts.Expressions.IgnoredObjects.Contains(i.Serial));
+
+            return GetObjectInList(list);
+        }
+
+        private static int _Pos = 0;
+        internal static void ResetPos()
+        {
+            _Pos = 0;
+        }
+
+        internal static T GetObjectInList<T>(List<T> list)
+        {
+            if (list.Count < 1)
+            {
+                return default;
+            }
+
+            _Pos = Math.Min(_Pos, list.Count - 1);
+            T found = list[_Pos];
+            
+            ++_Pos;
+            if(_Pos >= list.Count)
+            {
+                _Pos = 0;
+            }
+
+            return found;
         }
 
         internal static List<UOItem> FindItemsByTypes(HashSet<ushort> itemIds, int color = -1, int range = -1, ContainerType cnttype = ContainerType.Any)
         {
-            List<UOItem> items = new List<UOItem>();
+            List<UOItem> list = new List<UOItem>();
 
             Parallel.ForEach(Items.Values, item =>
             {
                 if (itemIds.Contains(item.ItemID) && (color == -1 || item.Hue == color) && (range == -1 || Utility.InRange(Player.Position, item.WorldPosition, range)) && (cnttype == ContainerType.Any || (cnttype == ContainerType.Ground && item.OnGround) || (cnttype == ContainerType.Serial && item.Container != null)))
-                    items.Add(item);
+                    list.Add(item);
             });
 
-            return items;
+            list.RemoveAll(i => Scripts.Expressions.IgnoredObjects.Contains(i.Serial));
+
+            return list;
         }
 
         internal static List<UOItem> FindItemsByName(string name)
@@ -189,16 +248,29 @@ namespace Assistant
 
         internal static UOEntity FindEntityByType(int graphic, int hue = -1, int range = 24)
         {
+            List<UOEntity> list = new List<UOEntity>();
             foreach (UOEntity ie in EntitiesInRange(range, false))
             {
                 if(ie.Graphic == graphic && (hue == -1 || hue  == ie.Hue))
-                    return ie;
+                    list.Add(ie);
             }
 
-            return null;
+            return GetObjectInList(list);
         }
 
-        internal static List<UOEntity> EntitiesInRange(int range, bool restrictrange = true)
+        internal static List<UOEntity> FindEntitiesByType(int graphic, int hue = -1, int range = 24, bool contained = true)
+        {
+            List<UOEntity> list = new List<UOEntity>();
+            foreach (UOEntity ie in EntitiesInRange(range, false, contained))
+            {
+                if (ie.Graphic == graphic && (hue == -1 || hue == ie.Hue))
+                    list.Add(ie);
+            }
+
+            return list;
+        }
+
+        internal static List<UOEntity> EntitiesInRange(int range, bool restrictrange = true, bool contained = true)
         {
             List<UOEntity> list = new List<UOEntity>();
 
@@ -207,7 +279,7 @@ namespace Assistant
 
             foreach (UOItem i in Items.Values)
             {
-                if (Utility.InRange(Player.Position, i.GetWorldPosition(), restrictrange ? Math.Min(range, Client.Game.UO.World.ClientViewRange) : range))
+                if (Utility.InRange(Player.Position, i.GetWorldPosition(), restrictrange ? Math.Min(range, Client.Game.UO.World.ClientViewRange) : range) && (contained || i.OnGround))
                     list.Add(i);
             }
             foreach (UOMobile m in Mobiles.Values)
@@ -215,6 +287,8 @@ namespace Assistant
                 if (Utility.InRange(UOSObjects.Player.Position, m.Position, restrictrange ? Math.Min(range, Client.Game.UO.World.ClientViewRange) : range))
                     list.Add(m);
             }
+
+            list.RemoveAll(e => Scripts.Expressions.IgnoredObjects.Contains(e.Serial));
 
             return list;
         }
@@ -263,38 +337,68 @@ namespace Assistant
             return list;
         }
 
+        internal static ushort GetTileNear(int x, int y, int z)
+        {
+            const int DIFF = 10;
+            Chunk chunk = Client.Game.UO.World.Map.GetChunk(x, y);
+            if (chunk == null) return 0;
+
+            ClassicUO.Game.GameObjects.GameObject gameObject = chunk.GetHeadObject(x % 8, y % 8);
+
+            ushort closestGraphic = 0;
+            int minDiff = int.MaxValue;
+
+            while (gameObject != null)
+            {
+                int currentDiff = Math.Abs(gameObject.Z - z);
+
+                if (gameObject is Static st)
+                {
+                    if (currentDiff <= DIFF && currentDiff <= minDiff)
+                    {
+                        minDiff = currentDiff;
+                        closestGraphic = st.Graphic;
+                    }
+                }
+                else if (gameObject is Land)
+                {
+                    if (currentDiff <= DIFF && currentDiff < minDiff)
+                    {
+                        minDiff = currentDiff;
+                        closestGraphic = 0;
+                    }
+                }
+
+                gameObject = gameObject.TNext;
+            }
+
+            return closestGraphic;
+        }
+
         internal static void SnapShot(bool quiet = true)
         {
-            // try
-            // {
-            //     int w = Client.Game.GraphicManager.GraphicsDevice.PresentationParameters.BackBufferWidth;
-            //     int h = Client.Game.GraphicManager.GraphicsDevice.PresentationParameters.BackBufferHeight;
-            //     //pull the picture from the buffer 
-            //     Color[] colors = new Color[w * h];
-            //     Client.Game.GraphicManager.GraphicsDevice.GetBackBufferData(colors);
-            //     string path = Path.Combine(ClassicUO.Configuration.Profile.DataPath, "Screenshots");
-            //     ClassicUO.Utility.FileSystemHelper.CreateFolderIfNotExists(path);
-            //     DateTime date = Engine.MistedDateTime;
-            //     path = Path.Combine(path, $"AssistUO_{date.Year}-{date.Month}-{date.Day}_{date.Hour}-{date.Minute}-{date.Second}_{date.Millisecond}.png");
-            //     Task.Factory.StartNew(() =>
-            //     {
-            //         using (Texture2D texture = new Texture2D(Client.Game.GraphicManager.GraphicsDevice, w, h, false, SurfaceFormat.Color))
-            //         {
-            //             texture.SetData(colors);
-            //
-            //             using (Stream stream = File.Create(path))
-            //             {
-            //                 texture.SaveAsPng(stream, texture.Width, texture.Height);
-            //
-            //                 if (!quiet)
-            //                     UOSObjects.Player.SendMessage(MsgLevel.Info, $"Screenshot stored in: {path}");
-            //             }
-            //         }
-            //     });
-            // }
-            // catch
-            // {
-            // }
+            /*try
+            {
+                UnityEngine.Texture2D tex = new UnityEngine.Texture2D(Screen.width, Screen.height, TextureFormat.RGB24, false);
+                tex.ReadPixels(new Rect(0, 0, Screen.width, UnityEngine.Screen.height), 0, 0);
+                byte[] pngdata = tex.EncodeToPNG();
+                string path = Engine.DataPath;
+                DateTime date = Engine.MistedDateTime;
+                path = Path.Combine(path, $"AssistUO_{date.Year}-{date.Month}-{date.Day}_{date.Hour}-{date.Minute}-{date.Second}_{date.Millisecond}.png");
+                Task.Run(() =>
+                {
+                    using (Stream stream = File.Create(path))
+                    {
+                        File.WriteAllBytes(path, pngdata);
+
+                        if (!quiet)
+                            UOSObjects.Player.SendMessage(MsgLevel.Info, $"Screenshot stored in: {path}");
+                    }
+                });
+            }
+            catch
+            {
+            }*/
         }
 
         internal static string GetDefaultItemName(ushort graphic)
@@ -304,11 +408,7 @@ namespace Assistant
 
         internal class PlayerDistanceComparer : IComparer<UOEntity>
         {
-            public static IComparer<UOEntity> Instance = new PlayerDistanceComparer();
-
-            public PlayerDistanceComparer()
-            {
-            }
+            public static IComparer<UOEntity> Instance { get; } = new PlayerDistanceComparer();
 
             public int Compare(UOEntity x, UOEntity y)
             {
@@ -333,7 +433,10 @@ namespace Assistant
 
         internal static void RequestMobileStatus(UOMobile m)
         {
-            Engine.Instance.SendToServer(new StatusQuery(m));
+            if (Client.Game.UO.FileManager.Version <= ClientVersion.CV_200)
+                NetClient.Socket.PSend_SingleClick(m.Serial);
+            else
+                NetClient.Socket.PSend_StatusQuery(m);
         }
 
         internal static void RemoveMobile(UOMobile mob)
@@ -360,20 +463,13 @@ namespace Assistant
 
     internal class Engine
     {
-        internal static readonly UOSteamClient Instance = new UOSteamClient();
+        internal static readonly AssistClient Instance = new AssistClient();
 
-        public static unsafe void Install(PluginHeader* plugin)
-        {
-            if(!Instance.Install(plugin))
-            {
-                Process.GetCurrentProcess().Kill();
-            }
-        }
-
-        internal static bool UsePostKRPackets => Client.Game.UO.Version >= ClientVersion.CV_6017;
-        internal static bool UseNewMobileIncoming => Client.Game.UO.Version >= ClientVersion.CV_70331;
-        internal static bool UsePostSAChanges => Client.Game.UO.Version >= ClientVersion.CV_7000;
-        internal static bool UsePostHSChanges => Client.Game.UO.Version >= ClientVersion.CV_7090;
+        internal static bool PreSAPackets => Client.Game.UO.FileManager.Version < ClientVersion.CV_60142;
+        internal static bool UsePostKRPackets => Client.Game.UO.FileManager.Version >= ClientVersion.CV_6017;
+        internal static bool UseNewMobileIncoming => Client.Game.UO.FileManager.Version >= ClientVersion.CV_70331;
+        internal static bool UsePostSAChanges => Client.Game.UO.FileManager.Version >= ClientVersion.CV_7000;
+        internal static bool UsePostHSChanges => Client.Game.UO.FileManager.Version >= ClientVersion.CV_7090;
 
         private static int _PreviousHour = -1;
         private static int _Differential;
@@ -391,31 +487,16 @@ namespace Assistant
         }
         public static DateTime MistedDateTime => DateTime.UtcNow.AddHours(Differential);
 
-        internal class UOSteamClient
+        internal static string ProfilePath { get; } = Path.Combine(CUOEnviroment.ExecutablePath, "Data", "Profiles");
+        internal static string DataPath { get; } = Path.Combine(CUOEnviroment.ExecutablePath, "Data");
+
+        internal class AssistClient
         {
-            public static OnPacketSendRecv _sendToClient, _sendToServer, _recv, _send;
-            public static OnGetPacketLength _getPacketLength;
-            public static OnGetPlayerPosition _getPlayerPosition;
-            public static OnCastSpell _castSpell;
-            public static OnGetStaticImage _getStaticImage;
-            public static OnTick _tick;
-            public static RequestMove _requestMove;
-            public static OnSetTitle _setTitle;
-            public static OnGetUOFilePath _uoFilePath;
-
-
-            public static OnHotkey _onHotkeyPressed;
-            public static OnMouse _onMouse;
-            public static OnUpdatePlayerPosition _onUpdatePlayerPosition;
-            public static OnClientClose _onClientClose;
-            public static OnInitialize _onInitialize;
-            public static OnConnected _onConnected;
-            public static OnDisconnected _onDisconnected;
-            public static OnFocusGained _onFocusGained;
-            public static OnFocusLost _onFocusLost;
-
-            public unsafe bool Install(PluginHeader* header)
+            internal bool Initialized { get; set; } = false;
+            public void Init()
             {
+                if (Initialized) return;
+
                 PacketHandlers.Initialize();
                 Filter.Initialize();
                 Targeting.Initialize();
@@ -423,55 +504,63 @@ namespace Assistant
                 Scavenger.Initialize();
                 Vendors.Buy.Initialize();
                 Vendors.Sell.Initialize();
-                // _sendToClient = (OnPacketSendRecv)Marshal.GetDelegateForFunctionPointer(header->Recv, typeof(OnPacketSendRecv));
-                // _sendToServer = (OnPacketSendRecv)Marshal.GetDelegateForFunctionPointer(header->Send, typeof(OnPacketSendRecv));
-                // _getPacketLength = (OnGetPacketLength)Marshal.GetDelegateForFunctionPointer(header->GetPacketLength, typeof(OnGetPacketLength));
-                // _getPlayerPosition = (OnGetPlayerPosition)Marshal.GetDelegateForFunctionPointer(header->GetPlayerPosition, typeof(OnGetPlayerPosition));
-                // _castSpell = (OnCastSpell)Marshal.GetDelegateForFunctionPointer(header->CastSpell, typeof(OnCastSpell));
-                // _getStaticImage = (OnGetStaticImage)Marshal.GetDelegateForFunctionPointer(header->GetStaticImage, typeof(OnGetStaticImage));
-                // _requestMove = (RequestMove)Marshal.GetDelegateForFunctionPointer(header->RequestMove, typeof(RequestMove));
-                // _setTitle = (OnSetTitle)Marshal.GetDelegateForFunctionPointer(header->SetTitle, typeof(OnSetTitle));
-                // _uoFilePath = (OnGetUOFilePath)Marshal.GetDelegateForFunctionPointer(header->GetUOFilePath, typeof(OnGetUOFilePath));
-                _tick = Tick;
-                _recv = OnRecv;
-                _send = OnSend;
-                _onHotkeyPressed = OnHotKeyHandler;
-                _onMouse = OnMouseHandler;
-                _onUpdatePlayerPosition = OnPlayerPositionChanged;
-                _onClientClose = OnClientClosing;
-                _onInitialize = OnInitialize;
-                _onConnected = OnConnected;
-                _onDisconnected = OnDisconnected;
-                _onFocusGained = OnFocusGained;
-                _onFocusLost = OnFocusLost;
-                // header->Tick = Marshal.GetFunctionPointerForDelegate(_tick);
-                // header->OnRecv = Marshal.GetFunctionPointerForDelegate(_recv);
-                // header->OnSend = Marshal.GetFunctionPointerForDelegate(_send);
-                // header->OnHotkeyPressed = Marshal.GetFunctionPointerForDelegate(_onHotkeyPressed);
-                // header->OnMouse = Marshal.GetFunctionPointerForDelegate(_onMouse);
-                // header->OnPlayerPositionChanged = Marshal.GetFunctionPointerForDelegate(_onUpdatePlayerPosition);
-                // header->OnClientClosing = Marshal.GetFunctionPointerForDelegate(_onClientClose);
-                // header->OnInitialize = Marshal.GetFunctionPointerForDelegate(_onInitialize);
-                // header->OnConnected = Marshal.GetFunctionPointerForDelegate(_onConnected);
-                // header->OnDisconnected = Marshal.GetFunctionPointerForDelegate(_onDisconnected);
-                // header->OnFocusGained = Marshal.GetFunctionPointerForDelegate(_onFocusGained);
-                // header->OnFocusLost = Marshal.GetFunctionPointerForDelegate(_onFocusLost);
-                return true;
+                Initialized = true;
             }
 
-            private void OnClientClosing()
+            internal void ReInit()
             {
+                PlayerMobile mobile;
+                if ((mobile = Client.Game.UO?.World?.Player) == null)
+                    return;
 
+                PlayerData m = new PlayerData(mobile.Serial)
+                {
+                    Name = UOSObjects.OrigPlayerName
+                };
+
+                UOMobile test = UOSObjects.FindMobile(mobile.Serial);
+                if (test != null)
+                    test.Remove();
+
+                UOSObjects.AddMobile(UOSObjects.Player = m);
+                Init();
+                OnConnected();
+                //needed for full resync of surrounding things plus ourselves
+                NetClient.Socket.PSend_Resync();
             }
 
-            private void OnConnected()
+            internal void OnClientClosing()
             {
+                OnDisconnected();
+                Initialized = false;
+            }
+
+            internal void OnConnected()
+            {
+                if (!Initialized) return;
+
                 ScriptManager.OnLogin();
                 UIManager.Add(UOSObjects.Gump);
+                ScriptManager.SetMacroButton();
+                ActionQueue.StartTimer();
+                Client.Game.UO.World.CommandManager.Register("ping", (str) =>
+                {
+                    if (str != null && str.Length > 1 && int.TryParse(str[1], out int num) && num > 0)
+                        Ping.StartPing(Math.Min(num, 10));
+                    else
+                        Ping.StartPing(5);
+                });
             }
 
-            private void OnDisconnected()
+            internal void OnDisconnected()
             {
+                if (!Initialized) return;
+
+                if (UOSObjects.GumpLoaded)
+                {
+                    XmlFileParser.SaveData();
+                }
+                ActionQueue.Stop();
                 UOSObjects.Gump?.Dispose();
                 ScriptManager.OnLogout();
                 UOSObjects.ClearAll();
@@ -480,84 +569,96 @@ namespace Assistant
                 Organizer.ClearAll();
                 Scavenger.ClearAll();
                 Vendors.Buy.ClearAll();
+                SearchExemption.ClearAll();
+                Targeting.ClearAll();
+                Client.Game.UO.World.CommandManager.UnRegister("ping");
             }
 
-            private void OnFocusGained()
+            internal void OnLogout()
+            {
+                if (!Initialized) return;
+
+                UOSObjects.ResetPos();
+                UOScript.Interpreter.OnLogout();
+            }
+
+            internal void OnFocusGained()
             {
 
             }
 
-            private void OnFocusLost()
+            internal void OnFocusLost()
             {
 
             }
 
-            private void Tick()
+            internal void Tick()
             {
+                if (!Initialized) return;
+
                 Timer.Slice();
             }
 
-            private void OnPlayerPositionChanged(int x, int y, int z)
+            internal void OnPlayerPositionChanged(int x, int y, int z)
             {
+                if (!Initialized) return;
+
                 UOSObjects.Player.Position = new Point3D(x, y, z);
             }
 
-            private bool OnRecv(ref byte[] data, ref int length)
+            internal bool OnRecv(byte[] message, ref int length)
             {
-                byte id = data[0];
+                if (!Initialized) return false;
+
+                byte id = message[0];
                 PacketAction pkta = PacketHandler.HasServerViewerFilter(id);
                 bool result = true;
-                //m_In += (uint)length;
 
-                Packet packet;
-                switch(pkta)
+                if (pkta != PacketAction.None)
                 {
-                    case PacketAction.Both:
-                    case PacketAction.Filter:
-                        packet = new Packet(data, length);
-                        result = !PacketHandler.OnServerPacket(id, packet, pkta);
+                    Span<byte> data = new ArraySegment<byte>(message, 0, length);
 
-                        data = packet.ToArray();
-                        length = packet.Length;
-                        break;
-                    case PacketAction.Viewer:
-                        packet = new Packet(data, length);
-                        result = !PacketHandler.OnServerPacket(id, packet, pkta);
-                        break;
+                    switch (pkta)
+                    {
+                        case PacketAction.Both://if we have both filter & viewer we must treat it as filter, so we must use stackdatawriter on it
+                        case PacketAction.Filter:
+                            result = !PacketHandler.OnServerPacket(id, ref data, ref length, pkta);
+
+                            break;
+                        case PacketAction.Viewer:
+                            result = !PacketHandler.OnServerPacket(id, ref data, ref length, pkta);
+                            break;
+                    }
                 }
 
                 return result;
             }
 
-            private bool OnSend(ref byte[] data, ref int length)
+            internal bool OnSend(ref Span<byte> data)
             {
-                //m_Out += (uint)length;
+                if (!Initialized) return false;
+
                 bool result = true;
                 byte id = data[0];
                 PacketAction pkta = PacketHandler.HasClientViewerFilter(id);
-
-                Packet packet;
                 switch (pkta)
                 {
                     case PacketAction.Both:
                     case PacketAction.Filter:
-                        packet = new Packet(data, length);
-                        result = !PacketHandler.OnClientPacket(id, packet, pkta);
-
-                        data = packet.ToArray();
-                        length = packet.Length;
+                        result = !PacketHandler.OnClientPacket(id, ref data, pkta);
                         break;
                     case PacketAction.Viewer:
-                        packet = new Packet(data, length);
-                        result = !PacketHandler.OnClientPacket(id, packet, pkta);
+                        result = !PacketHandler.OnClientPacket(id, ref data, pkta);
                         break;
                 }
 
                 return result;
             }
 
-            private void OnMouseHandler(int button, int wheel)
+            internal void OnMouseHandler(int button, int wheel)
             {
+                if (!Initialized) return;
+
                 if (Client.Game.UO.World.Player == null)
                     return;
                 if (wheel > 0)
@@ -570,13 +671,11 @@ namespace Assistant
                     HotKeys.NonBlockHotKeyAction(vkey);
             }
 
-            private void OnInitialize()
-            {
-            }
-
             private int _KeyMod;
-            private bool OnHotKeyHandler(int key, int mod, bool ispressed)
+            internal bool OnHotKeyHandler(int key, int mod, bool ispressed)
             {
+                if (!Initialized) return true;
+
                 if (ispressed)
                 {
                     if (HotKeys.GetVKfromSDL(key, mod, out uint vkey))
@@ -586,34 +685,20 @@ namespace Assistant
                 return true;
             }
 
-            internal void SendToClient(PacketBase p)
+            internal void RequestMove(AssistDirection _Dir, bool run = true)
             {
-                byte[] data = p.ToArray();
-                int l = p.Length;
-                _sendToClient(ref data, ref l);
+                Client.Game.UO.World.Player?.Walk((ClassicUO.Game.Data.Direction)_Dir, run);
             }
 
-            internal void SendToServer(PacketBase p)
-            {
-                byte[] data = p.ToArray();
-                int l = p.Length;
-                _sendToServer(ref data, ref l);
-            }
-
-            internal void RequestMove(Direction m_Dir, bool run = true)
-            {
-                _requestMove((int)m_Dir, run);
-            }
-
-            private ulong m_Features = 0;
+            private ulong _Features = 0;
             public bool AllowBit(int bit)
             {
-                return (m_Features & (1U << bit)) == 0;
+                return (_Features & (1U << bit)) == 0;
             }
 
             public void SetFeatures(ulong features)
             {
-                m_Features = features;
+                _Features = features;
                 if(!Engine.Instance.AllowBit(FeatureBit.AutolootAgent))
                 {
                     UOSObjects.Gump.DisableAutoLoot();
@@ -624,70 +709,120 @@ namespace Assistant
                 }
                 UOSObjects.Gump.UpdateVendorsListGump();
             }
+        }
 
-            private static char[] _Exceptions = new char[] { ' ', '-', '_' };
-            internal static bool Validate(string name, int minLength = 3, int maxLength = 24, bool allowLetters = true, bool allowDigits = true, int maxExceptions = 0, bool noExceptionsAtStart = true, char[] exceptions = null)
+        private static readonly char[] _Exceptions = new char[] { ' ', '-', '_' };
+        internal static bool Validate(string name, int minLength = 3, int maxLength = 24, bool allowLetters = true, bool allowDigits = true, int maxExceptions = 0, bool noExceptionsAtStart = true, char[] exceptions = null, string[] disallowed = null, bool allowSpaces = true)
+        {
+            if (name == null || name.Length < minLength || name.Length > maxLength)
             {
-                if (name == null || name.Length < minLength || name.Length > maxLength)
-                {
-                    return false;
-                }
-                if (exceptions == null)
-                    exceptions = _Exceptions;
-                int exceptCount = 0;
-                name = name.ToLower();
+                return false;
+            }
+            if (exceptions == null)
+                exceptions = _Exceptions;
+            int exceptCount = 0;
+            name = name.ToLower();
 
-                if (!allowLetters || !allowDigits || (exceptions.Length > 0 && (noExceptionsAtStart || maxExceptions < int.MaxValue)))
+            if (!allowSpaces || !allowLetters || !allowDigits || (exceptions.Length > 0 && (noExceptionsAtStart || maxExceptions < int.MaxValue)))
+            {
+                int length = name.Length;
+                for (int i = 0; i < length; ++i)
                 {
-                    int length = name.Length;
-                    for (int i = 0; i < length; ++i)
+                    char c = name[i];
+                    if (c >= 'a' && c <= 'z')
                     {
-                        char c = name[i];
-                        if (c >= 'a' && c <= 'z')
+                        if (!allowLetters)
                         {
-                            if (!allowLetters)
-                            {
-                                return false;
-                            }
-
-                            exceptCount = 0;
+                            return false;
                         }
-                        else if (c >= '0' && c <= '9')
-                        {
-                            if (!allowDigits)
-                            {
-                                return false;
-                            }
 
-                            exceptCount = 0;
+                        exceptCount = 0;
+                    }
+                    else if (c >= '0' && c <= '9')
+                    {
+                        if (!allowDigits)
+                        {
+                            return false;
                         }
-                        else
+
+                        exceptCount = 0;
+                    }
+                    else
+                    {
+                        if(!allowSpaces && c == ' ')
                         {
-                            bool except = false;
+                            return false;
+                        }
 
-                            for (int j = 0; !except && j < exceptions.Length; ++j)
-                            {
-                                if (c == exceptions[j])
-                                {
-                                    except = true;
-                                }
-                            }
+                        bool except = false;
 
-                            if (!except || (i == 0 && noExceptionsAtStart))
+                        for (int j = 0; !except && j < exceptions.Length; ++j)
+                        {
+                            if (c == exceptions[j])
                             {
-                                return false;
+                                except = true;
                             }
+                        }
 
-                            if (exceptCount++ == maxExceptions)
-                            {
-                                return false;
-                            }
+                        if (!except || (i == 0 && noExceptionsAtStart))
+                        {
+                            return false;
+                        }
+
+                        if (exceptCount++ == maxExceptions)
+                        {
+                            return false;
                         }
                     }
                 }
-
-                return true;
             }
+
+            if (disallowed != null && disallowed.Length > 0)
+            {
+                for (int i = 0; i < disallowed.Length; ++i)
+                {
+                    int indexOf = name.IndexOf(disallowed[i]);
+
+                    if (indexOf == -1)
+                    {
+                        continue;
+                    }
+
+                    bool badPrefix = (indexOf == 0);
+
+                    for (int j = 0; !badPrefix && j < exceptions.Length; ++j)
+                    {
+                        badPrefix = (name[indexOf - 1] == exceptions[j]);
+                    }
+
+                    if (badPrefix)//we don't want those word in the start or in the end of a phrase
+                    {
+                        return false;
+                    }
+
+                    bool badSuffix = ((indexOf + disallowed[i].Length) >= name.Length);
+
+                    for (int j = 0; !badSuffix && j < exceptions.Length; ++j)
+                    {
+                        badSuffix = (name[indexOf + disallowed[i].Length] == exceptions[j]);
+                    }
+
+                    if (badSuffix)
+                    {
+                        return false;
+                    }
+
+                    if (indexOf > 0)
+                    {
+                        if (name[indexOf - 1] == ' ')
+                            return false;
+                        else if (indexOf + disallowed[i].Length < name.Length && name[indexOf + disallowed[i].Length] == ' ')
+                            return false;
+                    }
+                }
+            }
+
+            return true;
         }
     }
 }
