@@ -59,6 +59,7 @@ public class MenuPresenter : MonoBehaviour
         customizeJoystickButtonGameObject.SetActive(false);
 
         AddHeader("Developer");
+        GetOptionEnumViewInstance().Initialize(typeof(ShowErrorDetails), UserPreferences.ShowErrorDetails, "Show Error Details", false, false);        
         // MobileUO: TODO: only for master branch, comment these out as they aren't used yet (requires newer CUO changes from dev branch)
         //GetOptionEnumViewInstance().Initialize(typeof(UseDrawTexture), UserPreferences.UseDrawTexture, "Use DrawTexture", false, false);
         //GetOptionEnumViewInstance().Initialize(typeof(UseSpriteSheet), UserPreferences.UseSpriteSheet, "Use Sprite Sheets", false, false);

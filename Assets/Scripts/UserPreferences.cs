@@ -84,6 +84,12 @@ public static class UserPreferences
     public static IntPreference EnlargeSmallButtons;
     public static IntPreference UseLegacyJoystick;
     public static IntPreference JoystickCancelsFollow;
+    // MobileUO: TODO: only for master branch, comment these out as they aren't used yet (requires newer CUO changes from dev branch)
+    //public static IntPreference UseDrawTexture;
+    //public static IntPreference UseSpriteSheet;
+    //public static IntPreference SpriteSheetSize;
+    //public static IntPreference UseProfiler;
+    public static IntPreference ShowErrorDetails;
 
     public static void Initialize()
     {
@@ -107,5 +113,11 @@ public static class UserPreferences
         EnlargeSmallButtons = new IntPreference(nameof(EnlargeSmallButtons), (int) PreferenceEnums.EnlargeSmallButtons.Off);
         UseLegacyJoystick = new IntPreference(nameof(UseLegacyJoystick), (int) PreferenceEnums.UseLegacyJoystick.Off);
         JoystickCancelsFollow = new IntPreference(nameof(JoystickCancelsFollow), (int) PreferenceEnums.JoystickCancelsFollow.On);
+        // MobileUO: TODO: only for master branch, comment these out as they aren't used yet (requires newer CUO changes from dev branch)
+        //UseDrawTexture = new IntPreference(nameof(UseDrawTexture), (int)PreferenceEnums.UseDrawTexture.On);
+        //UseSpriteSheet = new IntPreference(nameof(UseSpriteSheet), (int)PreferenceEnums.UseSpriteSheet.On);
+        //SpriteSheetSize = new IntPreference(nameof(SpriteSheetSize), (int)PreferenceEnums.SpriteSheetSize.Small);
+        //UseProfiler = new IntPreference(nameof(UseProfiler), (int)PreferenceEnums.UseProfiler.Off);
+        ShowErrorDetails = new IntPreference(nameof(ShowErrorDetails), (int)PreferenceEnums.ShowErrorDetails.On);
     }
 }

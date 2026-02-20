@@ -132,4 +132,36 @@ namespace PreferenceEnums
         Off = 0,
         On = 1
     }
+
+    // MobileUO: TODO: only for master branch, comment these out as they aren't used yet (requires newer CUO changes from dev branch)
+    //public enum UseDrawTexture
+    //{
+    //    Off = 0,
+    //    On = 1
+    //}
+
+    //public enum UseSpriteSheet
+    //{
+    //    Off = 0,
+    //    On = 1
+    //}
+
+    //public enum SpriteSheetSize
+    //{
+    //    Small = 1024,
+    //    Medium = 2048,
+    //    Large = 4096,
+    //}
+
+    //public enum UseProfiler
+    //{
+    //    Off = 0,
+    //    On = 1
+    //}
+
+    public enum ShowErrorDetails
+    {
+        Off = 0,
+        On = 1
+    }
 }
