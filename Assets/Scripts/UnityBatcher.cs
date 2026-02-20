@@ -2004,7 +2004,7 @@ namespace ClassicUO.Renderer
 		    float rotationSin, float rotationCos,
 		    float depth,
 		    byte effects,
-		    bool isFromTextureAtlas
+		    bool isFromTextureAtlas //TODO remove this
 		)
 		{
 		    // move checks outside and render them a constant for the whole operation
@@ -2012,17 +2012,9 @@ namespace ClassicUO.Renderer
 		    if (DIVIDE_DEPTH) depth /= 1000f;
 		
 		    // prepare the UV inversion for atlas (zero multiple calls and external functions)
-		    if (isFromTextureAtlas)
-		    {
-		        sourceY += sourceH;
-		        sourceH = -sourceH;
-		    }
-		    else
-		    {
-		        sourceY += sourceH;
-		        sourceH = -sourceH;
-		    }
-		
+		    sourceY += sourceH;
+			sourceH = -sourceH;
+
 		    int eff = effects & 0x03;
 		
 		    fixed (PositionNormalTextureColor4* pSprite = &sprite)
