@@ -1994,101 +1994,80 @@ namespace ClassicUO.Renderer
             CustomEffect = null;
         }
 
-        private void SetVertex
-        (
-            ref PositionNormalTextureColor4 sprite,
-            float sourceX,
-            float sourceY,
-            float sourceW,
-            float sourceH,
-            float destinationX,
-            float destinationY,
-            float destinationW,
-            float destinationH,
-            XnaVector3 color,
-            float originX,
-            float originY,
-            float rotationSin,
-            float rotationCos,
-            float depth,
-            byte effects,
-            bool isFromTextureAtlas
-        )
-        {
-            // MobileUO: TODO: temp fix to keep things stable - hopefully future commit makes depth work
-            if(!USE_DEPTH)
-                depth = 0;
-
-            if(DIVIDE_DEPTH)
-                depth = depth / 1000f;
-
-            if(LOG_DEPTH)
-                Log.Info($"Depth: {depth}");
-
-            float cornerX = -originX * destinationW;
-            float cornerY = -originY * destinationH;
-            sprite.Position0.x = ((-rotationSin * cornerY) + (rotationCos * cornerX) + destinationX);
-            sprite.Position0.y = ((rotationCos * cornerY) + (rotationSin * cornerX) + destinationY);
-
-            cornerX = (1.0f - originX) * destinationW;
-            cornerY = -originY * destinationH;
-            sprite.Position1.x = ((-rotationSin * cornerY) + (rotationCos * cornerX) + destinationX);
-            sprite.Position1.y = ((rotationCos * cornerY) + (rotationSin * cornerX) + destinationY);
-
-            cornerX = -originX * destinationW;
-            cornerY = (1.0f - originY) * destinationH;
-            sprite.Position2.x = ((-rotationSin * cornerY) + (rotationCos * cornerX) + destinationX);
-            sprite.Position2.y = ((rotationCos * cornerY) + (rotationSin * cornerX) + destinationY);
-
-            cornerX = (1.0f - originX) * destinationW;
-            cornerY = (1.0f - originY) * destinationH;
-            sprite.Position3.x = ((-rotationSin * cornerY) + (rotationCos * cornerX) + destinationX);
-            sprite.Position3.y = ((rotationCos * cornerY) + (rotationSin * cornerX) + destinationY);
-
-
-            sprite.TextureCoordinate0.x = (_cornerOffsetX[0 ^ effects] * sourceW) + sourceX;
-            sprite.TextureCoordinate0.y = (_cornerOffsetY[0 ^ effects] * sourceH) + sourceY;
-            sprite.TextureCoordinate1.x = (_cornerOffsetX[1 ^ effects] * sourceW) + sourceX;
-            sprite.TextureCoordinate1.y = (_cornerOffsetY[1 ^ effects] * sourceH) + sourceY;
-            sprite.TextureCoordinate2.x = (_cornerOffsetX[2 ^ effects] * sourceW) + sourceX;
-            sprite.TextureCoordinate2.y = (_cornerOffsetY[2 ^ effects] * sourceH) + sourceY;
-            sprite.TextureCoordinate3.x = (_cornerOffsetX[3 ^ effects] * sourceW) + sourceX;
-            sprite.TextureCoordinate3.y = (_cornerOffsetY[3 ^ effects] * sourceH) + sourceY;
-
-            sprite.TextureCoordinate0.z = 0;
-            sprite.TextureCoordinate1.z = 0;
-            sprite.TextureCoordinate2.z = 0;
-            sprite.TextureCoordinate3.z = 0;
-
-            FlipTextureVertically(ref sprite, isFromTextureAtlas);
-
-            sprite.Position0.z = depth;
-            sprite.Position1.z = depth;
-            sprite.Position2.z = depth;
-            sprite.Position3.z = depth;
-
-
-            sprite.Hue0 = color;
-            sprite.Hue1 = color;
-            sprite.Hue2 = color;
-            sprite.Hue3 = color;
-
-            sprite.Normal0.x = 0;
-            sprite.Normal0.y = 0;
-            sprite.Normal0.z = 1;
-
-            sprite.Normal1.x = 0;
-            sprite.Normal1.y = 0;
-            sprite.Normal1.z = 1;
-
-            sprite.Normal2.x = 0;
-            sprite.Normal2.y = 0;
-            sprite.Normal2.z = 1;
-
-            sprite.Normal3.x = 0;
-            sprite.Normal3.y = 0;
-            sprite.Normal3.z = 1;
-        }
+        private unsafe void SetVertex //but fast
+		(
+		    ref PositionNormalTextureColor4 sprite,
+		    float sourceX, float sourceY, float sourceW, float sourceH,
+		    float destinationX, float destinationY, float destinationW, float destinationH,
+		    XnaVector3 color,
+		    float originX, float originY,
+		    float rotationSin, float rotationCos,
+		    float depth,
+		    byte effects,
+		    bool isFromTextureAtlas
+		)
+		{
+		    // move checks outside and render them a constant for the whole operation
+		    // TODO: USE_DEPTH and DIVIDE_DEPTH should be handled at the beginning of the batcher
+		    if (DIVIDE_DEPTH) depth /= 1000f;
+		
+		    // prepare the UV inversion for atlas (zero multiple calls and external functions)
+		    if (isFromTextureAtlas)
+		    {
+		        sourceY += sourceH;
+		        sourceH = -sourceH;
+		    }
+		    else
+		    {
+		        sourceY += sourceH;
+		        sourceH = -sourceH;
+		    }
+		
+		    int eff = effects & 0x03;
+		
+		    fixed (PositionNormalTextureColor4* pSprite = &sprite)
+		    {
+		        // pointer for the sprite memory
+		        float* f = (float*)pSprite;
+		
+		        // iterate on 4 vertices (0: TL, 1: TR, 2: BL, 3: BR)
+		        for (int i = 0; i < 4; i++)
+		        {
+		            // CALCULATE POSITION (Combinatory)
+		            // i & 1 è 0 for vertices Left, 1 for Right
+		            // i >> 1 è 0 for vertices Top, 1 for Bottom
+		            float vX = (i & 1) - originX;
+		            float vY = (i >> 1) - originY;
+		
+		            float cornerX = vX * destinationW;
+		            float cornerY = vY * destinationH;
+		
+		            // write directly on memory (offset 0, 1, 2: Position X, Y, Z)
+		            f[0] = (-rotationSin * cornerY) + (rotationCos * cornerX) + destinationX;
+		            f[1] = (rotationCos * cornerY) + (rotationSin * cornerX) + destinationY;
+		            f[2] = depth;
+		
+		            // NORMAL (Offset 3, 4, 5)
+		            // normal are constants (0,0,1). 
+		            // Extreme optimization: we should write them only if there is a change
+		            *((Vector3*)f + 3) = Vector3.forward;
+		
+		            // UV (Offset 6, 7, 8)
+		            // use pre-calculated index for correct angles (0,1,2,3)
+		            int cornerIdx = i ^ eff;
+		            f[6] = (_cornerOffsetX[cornerIdx] * sourceW) + sourceX;
+		            f[7] = (_cornerOffsetY[cornerIdx] * sourceH) + sourceY;
+		            f[8] = 0; // Z coord always 0
+		
+		            // HUE/COLOR (Offset 9, 10, 11)
+		            // Cast trick to just set the pointer address
+		            *(XnaVector3*)(f + 9) = color;
+		
+		            // Advance pointer of 12 for positions
+		            f += 12;
+		        }
+		    }
+		}
 
         private void FlipTextureVertically(ref PositionNormalTextureColor4 sprite, bool isFromTextureAtlas)
         {
