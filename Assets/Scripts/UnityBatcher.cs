@@ -2042,7 +2042,7 @@ namespace ClassicUO.Renderer
 		            // NORMAL (Offset 3, 4, 5)
 		            // normal are constants (0,0,1). 
 		            // Extreme optimization: we should write them only if there is a change
-		            *((Vector3*)f + 3) = Vector3.forward;
+		            *((Vector3*)(f + 3)) = Vector3.forward;
 		
 		            // UV (Offset 6, 7, 8)
 		            // use pre-calculated index for correct angles (0,1,2,3)
