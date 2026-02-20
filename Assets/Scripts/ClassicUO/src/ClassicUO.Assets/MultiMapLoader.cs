@@ -44,6 +44,11 @@ namespace ClassicUO.Assets
                 .ToArray();
         }
 
+        // MobileUO: switching LoadMap to not use unmanaged memory
+        // constants derived from 30800 => group 43, entry 4
+        const int HueGroupIndex = 43;
+        const int EntryIndex = 4;
+
         public unsafe MultiMapInfo LoadMap
         (
             int width,
@@ -150,38 +155,103 @@ namespace ClassicUO.Assets
                 return default;
             }
 
-            int s = Marshal.SizeOf<HuesGroup>();
-            IntPtr ptr = Marshal.AllocHGlobal(s * FileManager.Hues.HuesRange.Length);
+            // MobileUO: replace the old unmanaged memory allocation with a managed approach
+            //int s = Marshal.SizeOf<HuesGroup>();
+            //IntPtr ptr = Marshal.AllocHGlobal(s * FileManager.Hues.HuesRange.Length);
 
-            for (int i = 0; i < FileManager.Hues.HuesRange.Length; i++)
+            //Debug.Log("MultiMapLoader.LoadMap: Allocated " + (s * FileManager.Hues.HuesRange.Length) + " bytes for hues.");
+            //Debug.Log($"s size: {s}");
+            //Debug.Log($"Hues range: {FileManager.Hues.HuesRange.Length}");
+            //int count = FileManager.Hues.HuesRange.Length;
+            //int sizeHues = Marshal.SizeOf<HuesGroup>();
+
+            //// use long to avoid overflow on large arrays
+            //long totalBytes = (long)sizeHues * count;
+
+            //// optional: pretty-print
+            //string Pretty(long b) =>
+            //    b >= (1L << 30) ? $"{b / (double)(1L << 30):0.##} GB" :
+            //    b >= (1L << 20) ? $"{b / (double)(1L << 20):0.##} MB" :
+            //    b >= (1L << 10) ? $"{b / (double)(1L << 10):0.##} KB" :
+            //                      $"{b} B";
+
+            //Console.WriteLine($"AllocHGlobal size: {totalBytes} bytes (~{Pretty(totalBytes)})");
+
+            //for (int i = 0; i < FileManager.Hues.HuesRange.Length; i++)
+            //{
+            //    Marshal.StructureToPtr(FileManager.Hues.HuesRange[i], ptr + i * s, false);
+            //}
+
+            //ushort* huesData = (ushort*)(byte*)(ptr + 30800);
+
+            //Span<uint> colorTable = stackalloc uint[byte.MaxValue];
+            //var pixels = new uint[mapSize];
+
+            //try
+            //{
+            //    int colorOffset = 31 * maxPixelValue;
+
+            //    for (int i = 0; i < maxPixelValue; i++)
+            //    {
+            //        colorOffset -= 31;
+            //        colorTable[i] = HuesHelper.Color16To32(huesData[colorOffset / maxPixelValue]) | 0xFF_00_00_00;
+            //    }
+
+            //    for (int i = 0; i < mapSize; i++)
+            //    {
+            //        pixels[i] = data[i] != 0 ? colorTable[data[i] - 1] : 0;
+            //    }
+            //}
+            //finally
+            //{
+            //    if (ptr != IntPtr.Zero)
+            //        Marshal.FreeHGlobal(ptr);
+            //}
+
+            // --- pick the same hue as the old +30800 pointer: group 43, entry 4 ---
+            var huesRange = FileManager.Hues.HuesRange;
+            if (HueGroupIndex < 0 || HueGroupIndex >= huesRange.Length)
             {
-                Marshal.StructureToPtr(FileManager.Hues.HuesRange[i], ptr + i * s, false);
+                Log.Warn($"Hue group {HueGroupIndex} out of range.");
+                return default;
             }
 
-            ushort* huesData = (ushort*)(byte*)(ptr + 30800);
+            var group = huesRange[HueGroupIndex];
+            if (group.Entries == null || group.Entries.Length <= EntryIndex)
+            {
+                Log.Warn($"Hue group {HueGroupIndex} has no entry {EntryIndex}.");
+                return default;
+            }
 
+            var block = group.Entries[EntryIndex];
+            var ct = block.ColorTable;
+
+            if (ct == null || ct.Length < 32)
+            {
+                Log.Warn("Hue block ColorTable is missing or < 32.");
+                return default;
+            }
+
+            // --- build color lookup identical to your original logic ---
             Span<uint> colorTable = stackalloc uint[byte.MaxValue];
-            var pixels = new uint[mapSize];
+            int colorOffset = 31 * maxPixelValue;
 
-            try
+            for (int i = 0; i < maxPixelValue; i++)
             {
-                int colorOffset = 31 * maxPixelValue;
+                colorOffset -= 31;
+                int idx = colorOffset / maxPixelValue; // 0..31
+                if ((uint)idx >= 32u) 
+                    idx = Math.Clamp(idx, 0, 31);
 
-                for (int i = 0; i < maxPixelValue; i++)
-                {
-                    colorOffset -= 31;
-                    colorTable[i] = HuesHelper.Color16To32(huesData[colorOffset / maxPixelValue]) | 0xFF_00_00_00;
-                }
-
-                for (int i = 0; i < mapSize; i++)
-                {
-                    pixels[i] = data[i] != 0 ? colorTable[data[i] - 1] : 0;
-                }
+                ushort c16 = ct[idx];
+                colorTable[i] = HuesHelper.Color16To32(c16) | 0xFF_00_00_00;
             }
-            finally
+
+            var pixels = new uint[mapSize];
+            for (int i = 0; i < mapSize; i++)
             {
-                if (ptr != IntPtr.Zero)
-                    Marshal.FreeHGlobal(ptr);
+                byte v = data[i];
+                pixels[i] = v != 0 ? colorTable[v - 1] : 0u;
             }
 
             return new MultiMapInfo()

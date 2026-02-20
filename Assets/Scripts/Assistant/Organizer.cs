@@ -277,12 +277,13 @@ namespace Assistant
         internal uint Amount { get; set; }
         internal bool Enabled { get; set; }
 
-        internal ItemDisplay(ushort graphic, string name, short hue = -1, bool enabled = true)
+        internal ItemDisplay(ushort graphic, string name, short hue = -1, bool enabled = true, uint amount = 0)
         {
             Graphic = graphic;
             Name = name;
             Hue = hue;
             Enabled = enabled;
+            Amount = amount;
         }
 
         public override bool Equals(object obj)

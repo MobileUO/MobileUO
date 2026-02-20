@@ -96,6 +96,9 @@ namespace ClassicUO.Game.UI.Gumps
         private Checkbox _holdShiftForContext, _holdShiftToSplitStack, _reduceFPSWhenInactive, _sallosEasyGrab, _partyInviteGump, _objectsFading, _textFading, _holdAltToMoveGumps;
         private Combobox _hpComboBox, _healtbarType, _fieldsType, _hpComboBoxShowWhen;
 
+        // MobileUO: grid loot double click option
+        private Checkbox _doubleClickForGridLoot;
+
         // infobar
         private List<InfoBarBuilderControl> _infoBarBuilderControls;
         private Combobox _infoBarHighlightType;
@@ -121,7 +124,8 @@ namespace ClassicUO.Game.UI.Gumps
         private Checkbox _showHouseContent;
         private Checkbox _showInfoBar;
         private Checkbox _ignoreAllianceMessages;
-        private Checkbox _ignoreGuildMessages, _useAlternateJournal;
+        // MobileUO: added option to allow large chat box to be easier to click on
+        private Checkbox _ignoreGuildMessages, _useAlternateJournal, _useLargeSystemChatTextBox;
 
         // general
         private HSliderBar _sliderFPS, _circleOfTranspRadius;
@@ -1060,6 +1064,19 @@ namespace ClassicUO.Game.UI.Gumps
                     120
                 ),
                 2
+            );
+
+            // MobileUO: double click for grid loot option
+            section3.Add
+            (
+                _doubleClickForGridLoot = AddCheckBox
+                (
+                    null,
+                    ResGumps.DoubleClickForGridLoot,
+                    _currentProfile.DoubleClickForGridLoot,
+                    0,
+                    0
+                )
             );
 
             section3.Add
@@ -2514,6 +2531,18 @@ namespace ClassicUO.Game.UI.Gumps
                 startY
             );
 
+            // MobileUO: added option to allow large chat box to be easier to click on
+            startY += _useAlternateJournal.Height + 2;
+
+            _useLargeSystemChatTextBox = AddCheckBox
+            (
+                rightArea,
+                "Use large system chat text box",
+                _currentProfile.UseLargeSystemChatTextBox,
+                startX,
+                startY
+            );
+
             startY += 35;
 
             _randomizeColorsButton = new NiceButton
@@ -3512,6 +3541,8 @@ namespace ClassicUO.Game.UI.Gumps
                     _holdDownKeyTab.IsChecked = true;
                     _holdDownKeyAlt.IsChecked = true;
                     _closeAllAnchoredGumpsWithRClick.IsChecked = false;
+                    // MobileUO: double click for grid loot
+                    _doubleClickForGridLoot.IsChecked = false;
                     _holdShiftForContext.IsChecked = false;
                     _holdAltToMoveGumps.IsChecked = false;
                     _holdShiftToSplitStack.IsChecked = false;
@@ -3660,6 +3691,8 @@ namespace ClassicUO.Game.UI.Gumps
                     _ignoreGuildMessages.IsChecked = false;
                     _ignoreAllianceMessages.IsChecked = false;
                     _useAlternateJournal.IsChecked = false;
+                    // MobileUO: added option to allow large chat box to be easier to click on
+                    _useLargeSystemChatTextBox.IsChecked = false;
 
                     break;
 
@@ -3760,6 +3793,7 @@ namespace ClassicUO.Game.UI.Gumps
 
             _currentProfile.CloseAllAnchoredGumpsInGroupWithRightClick = _closeAllAnchoredGumpsWithRClick.IsChecked;
 
+            _currentProfile.DoubleClickForGridLoot = _doubleClickForGridLoot.IsChecked;
             _currentProfile.HoldShiftForContext = _holdShiftForContext.IsChecked;
             _currentProfile.HoldAltToMoveGumps = _holdAltToMoveGumps.IsChecked;
             _currentProfile.HoldShiftToSplitStack = _holdShiftToSplitStack.IsChecked;
@@ -4031,6 +4065,8 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.IgnoreGuildMessages = _ignoreGuildMessages.IsChecked;
             _currentProfile.IgnoreAllianceMessages = _ignoreAllianceMessages.IsChecked;
             _currentProfile.UseAlternateJournal = _useAlternateJournal.IsChecked;
+            // MobileUO: added option to allow large chat box to be easier to click on
+            _currentProfile.UseLargeSystemChatTextBox = _useLargeSystemChatTextBox.IsChecked;
 
             // fonts
             _currentProfile.ForceUnicodeJournal = _forceUnicodeJournal.IsChecked;

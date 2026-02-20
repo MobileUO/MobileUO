@@ -8,9 +8,9 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using ClassicUO.Assets;
 
-#if ENABLE_INTERNAL_ASSISTANT
+//#if ENABLE_INTERNAL_ASSISTANT
 using Assistant;
-#endif
+//#endif
 
 namespace ClassicUO.Game.UI.Gumps
 {
@@ -97,9 +97,9 @@ namespace ClassicUO.Game.UI.Gumps
 
         private void RunHotkey()
         {
-#if ENABLE_INTERNAL_ASSISTANT
+//#if ENABLE_INTERNAL_ASSISTANT
             HotKeys.PlayFunc(_hotkeyName);
-#endif
+//#endif
         }
 
         public override bool Draw(UltimaBatcher2D batcher, int x, int y)
