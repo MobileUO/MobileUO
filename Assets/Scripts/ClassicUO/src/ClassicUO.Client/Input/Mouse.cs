@@ -113,7 +113,7 @@ namespace ClassicUO.Input
 
         public static void Update()
         {
-            if (!MouseInWindow)
+            /*if (!MouseInWindow)
             {
                 SDL.SDL_GetGlobalMouseState(out int x, out int y);
                 SDL.SDL_GetWindowPosition(Client.Game.Window.Handle, out int winX, out int winY);
@@ -128,7 +128,7 @@ namespace ClassicUO.Input
             // Scale the mouse coordinates for the faux-backbuffer
             Position.X = (int) ((double) Position.X * Client.Game.GraphicManager.PreferredBackBufferWidth / Client.Game.Window.ClientBounds.Width);
 
-            Position.Y = (int) ((double) Position.Y * Client.Game.GraphicManager.PreferredBackBufferHeight / Client.Game.Window.ClientBounds.Height);
+            Position.Y = (int) ((double) Position.Y * Client.Game.GraphicManager.PreferredBackBufferHeight / Client.Game.Window.ClientBounds.Height);*/
 
             IsDragging = LButtonPressed || RButtonPressed || MButtonPressed;
         }
