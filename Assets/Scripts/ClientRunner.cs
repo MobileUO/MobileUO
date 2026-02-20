@@ -16,6 +16,7 @@ using ClassicUO.Game.UI.Gumps.Login;
 using Newtonsoft.Json;
 using ClassicUO.Network;
 using Microsoft.Xna.Framework;
+using PreferenceEnums;
 using SDL2;
 using GameObject = UnityEngine.GameObject;
 using Texture2D = Microsoft.Xna.Framework.Graphics.Texture2D;
@@ -127,7 +128,6 @@ public class ClientRunner : MonoBehaviour
 
 	private void OnEnableAssistantChanged(int enableAssistantCurrentValue)
 	{
-#if ENABLE_INTERNAL_ASSISTANT
 		if (UserPreferences.EnableAssistant.CurrentValue == (int) PreferenceEnums.EnableAssistant.On && Client.Game != null)
 		{
 			if (Plugin.LoadInternalAssistant())
@@ -140,7 +140,6 @@ public class ClientRunner : MonoBehaviour
 				}
 			}
 		}
-#endif
 	}
 
 	private void OnShowModifierKeyButtonsChanged(int currentValue)
@@ -179,8 +178,11 @@ public class ClientRunner : MonoBehaviour
 
 	private static void OnTargetFrameRateChanged(int frameRate)
 	{
-		Application.targetFrameRate = frameRate;
-	}
+        if (frameRate == (int)TargetFrameRates.InGameFPS)
+            frameRate = Settings.GlobalSettings.FPS;
+
+        Application.targetFrameRate = frameRate;
+    }
     
 	private void UpdateTextureFiltering(int textureFiltering)
 	{
@@ -355,12 +357,10 @@ public class ClientRunner : MonoBehaviour
 	    {
 		    Client.SceneChanged += OnSceneChanged;
 		    Client.Run();
-#if ENABLE_INTERNAL_ASSISTANT
 		    if (UserPreferences.EnableAssistant.CurrentValue == (int) PreferenceEnums.EnableAssistant.On)
 		    {
 			    Plugin.LoadInternalAssistant();
 		    }
-#endif
 		    Client.Game.Exiting += OnGameExiting;
 		    ApplyScalingFactor();
 
@@ -368,8 +368,8 @@ public class ClientRunner : MonoBehaviour
 		    {
 			    modifierKeyButtonsParent.SetActive(true);
 		    }
-	    }
-	    catch (Exception e)
+		}
+        catch (Exception e)
 	    {
 		    Console.WriteLine(e);
 		    OnError?.Invoke(e.ToString());
@@ -435,7 +435,7 @@ public class ClientRunner : MonoBehaviour
 		    scale = isGameScene ? gameScale : loginScale;
 	    }
 
-	    if (UserPreferences.ScaleSize.CurrentValue != (int) PreferenceEnums.ScaleSizes.Default && isGameScene)
+	    if (UserPreferences.ScaleSize.CurrentValue != (int) PreferenceEnums.ScaleSizes.One && isGameScene)
 	    {
 		    scale *= UserPreferences.ScaleSize.CurrentValue / 100f;
 	    }

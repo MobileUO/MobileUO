@@ -273,6 +273,10 @@ namespace ClassicUO.Game.UI.Gumps
             _options["show_coordinates"] = new ContextMenuItemEntry("Show your coordinates", () => { _showCoordinates = !_showCoordinates; }, true, _showCoordinates);
 
             _options["saveclose"] = new ContextMenuItemEntry("Save & Close", Dispose);
+
+            // MobileUO: added zoom buttons
+            _options["zoom_in"] = new ContextMenuItemEntry("Zoom In (+)", () => OnMouseWheel(MouseEventType.WheelScrollUp));
+            _options["zoom_out"] = new ContextMenuItemEntry("Zoom Out ()", () => OnMouseWheel(MouseEventType.WheelScrollDown));
         }
 
         private void BuildContextMenu()
@@ -349,6 +353,9 @@ namespace ClassicUO.Game.UI.Gumps
             ContextMenu.Add(_options["flip_map"]);
             ContextMenu.Add(_options["top_most"]);
             ContextMenu.Add(_options["free_view"]);
+            // MobileUO: added zoom buttons
+            ContextMenu.Add(_options["zoom_in"]);
+            ContextMenu.Add(_options["zoom_out"]);
             ContextMenu.Add("", null);
             ContextMenu.Add(_options["show_party_members"]);
             ContextMenu.Add(_options["show_mobiles"]);

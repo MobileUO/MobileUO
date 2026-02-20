@@ -94,6 +94,9 @@ namespace ClassicUO.Game.UI.Gumps
         private Checkbox _highlightObjects, /*_smoothMovements,*/ _enablePathfind, _useShiftPathfind, _alwaysRun, _alwaysRunUnlessHidden, _showHpMobile, _highlightByState, _drawRoofs, _treeToStumps, _hideVegetation, _noColorOutOfRangeObjects, _useCircleOfTransparency, _enableTopbar, _holdDownKeyTab, _holdDownKeyAlt, _closeAllAnchoredGumpsWithRClick, _chatAfterEnter, _chatAdditionalButtonsCheckbox, _chatShiftEnterCheckbox, _enableCaveBorder;
         private Combobox _hpComboBox, _healtbarType, _fieldsType, _hpComboBoxShowWhen;
 
+        // MobileUO: grid loot double click option
+        private Checkbox _doubleClickForGridLoot;
+
         // combat & spells
         private ColorBox _innocentColorPickerBox, _friendColorPickerBox, _crimialColorPickerBox, _genericColorPickerBox, _enemyColorPickerBox, _murdererColorPickerBox, _neutralColorPickerBox, _beneficColorPickerBox, _harmfulColorPickerBox;
         private HSliderBar _lightBar;
@@ -106,6 +109,9 @@ namespace ClassicUO.Game.UI.Gumps
         private List<InfoBarBuilderControl> _infoBarBuilderControls;
         private Checkbox _showInfoBar;
         private Combobox _infoBarHighlightType;
+
+        // MobileUO: added option to allow large chat box to be easier to click on
+        private Checkbox _useLargeSystemChatTextBox;
 
         // speech
         private Checkbox _scaleSpeechDelay, _saveJournalCheckBox;
@@ -409,6 +415,16 @@ namespace ClassicUO.Game.UI.Gumps
             fpsItem.Add(_gridLoot);
 
             rightArea.Add(fpsItem);
+
+            // MobileUO: double click for grid loot option
+            _doubleClickForGridLoot = CreateCheckBox
+                (
+                    rightArea,
+                    "Double click to loot items inside containers",
+                    ProfileManager.Current.DoubleClickForGridLoot,
+                    0,
+                    0
+                );
 
             _autoOpenCorpseArea.IsVisible = _autoOpenCorpse.IsChecked;
             _dragSelectArea.IsVisible = _enableDragSelect.IsChecked;
@@ -1085,7 +1101,15 @@ namespace ClassicUO.Game.UI.Gumps
                 rightArea.Add(_activeChatArea);
             }
 
-            
+            // MobileUO: added option to allow large chat box to be easier to click on
+            _useLargeSystemChatTextBox = CreateCheckBox
+            (
+                rightArea,
+                "Use large system chat text box",
+                ProfileManager.Current.UseLargeSystemChatTextBox,
+                0,
+                SPACE_Y
+            );
 
             _randomizeColorsButton = new NiceButton(0, 20 + SPACE_Y, 140, 25, ButtonAction.Activate, "Randomize speech hues") { ButtonParameter = (int)Buttons.Disabled };
             _randomizeColorsButton.MouseUp += (sender, e) =>
@@ -1474,6 +1498,8 @@ namespace ClassicUO.Game.UI.Gumps
                     _holdDownKeyTab.IsChecked = true;
                     _holdDownKeyAlt.IsChecked = true;
                     _closeAllAnchoredGumpsWithRClick.IsChecked = false;
+                    // MobileUO: double click for grid loot
+                    _doubleClickForGridLoot.IsChecked = false;
                     _holdShiftForContext.IsChecked = false;
                     _holdAltToMoveGumps.IsChecked = false;
                     _holdShiftToSplitStack.IsChecked = false;
@@ -1606,6 +1632,8 @@ namespace ClassicUO.Game.UI.Gumps
                     _chatShiftEnterCheckbox.IsChecked = true;
                     _activeChatArea.IsVisible = _chatAfterEnter.IsChecked;
                     _saveJournalCheckBox.IsChecked = false;
+                    // MobileUO: added option to allow large chat box to be easier to click on
+                    _useLargeSystemChatTextBox.IsChecked = false;
 
                     break;
 
@@ -1695,6 +1723,7 @@ namespace ClassicUO.Game.UI.Gumps
             ProfileManager.Current.HoldDownKeyTab = _holdDownKeyTab.IsChecked;
             ProfileManager.Current.HoldDownKeyAltToCloseAnchored = _holdDownKeyAlt.IsChecked;
             ProfileManager.Current.CloseAllAnchoredGumpsInGroupWithRightClick = _closeAllAnchoredGumpsWithRClick.IsChecked;
+            ProfileManager.Current.DoubleClickForGridLoot = _doubleClickForGridLoot.IsChecked;
             ProfileManager.Current.HoldShiftForContext = _holdShiftForContext.IsChecked;
             ProfileManager.Current.HoldAltToMoveGumps = _holdAltToMoveGumps.IsChecked;
             ProfileManager.Current.HoldShiftToSplitStack = _holdShiftToSplitStack.IsChecked;
@@ -1944,6 +1973,8 @@ namespace ClassicUO.Game.UI.Gumps
             ProfileManager.Current.PartyAura = _partyAura.IsChecked;
             ProfileManager.Current.PartyAuraHue = _partyAuraColorPickerBox.Hue;
             ProfileManager.Current.HideChatGradient = _hideChatGradient.IsChecked;
+            // MobileUO: added option to allow large chat box to be easier to click on
+            ProfileManager.Current.UseLargeSystemChatTextBox = _useLargeSystemChatTextBox.IsChecked;
 
             // fonts
             ProfileManager.Current.ForceUnicodeJournal = _forceUnicodeJournal.IsChecked;

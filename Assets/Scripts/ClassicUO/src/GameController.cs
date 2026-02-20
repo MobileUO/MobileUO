@@ -44,7 +44,7 @@ using ClassicUO.Utility.Logging;
 
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-
+using PreferenceEnums;
 using SDL2;
 using static SDL2.SDL;
 
@@ -243,6 +243,12 @@ namespace ClassicUO
 
             _intervalFixedUpdate[0] = 1000.0f / rate;
             _intervalFixedUpdate[1] = 217;  // 5 FPS
+
+            // MobileUO: Use this frame rate if we aren't capped by MobileUO FPS settings
+            if (UserPreferences.TargetFrameRate.CurrentValue == (int)TargetFrameRates.InGameFPS)
+            {
+                UnityEngine.Application.targetFrameRate = rate;
+            }
         }
 
         public void SetWindowPosition(int x, int y)
@@ -1084,6 +1090,13 @@ namespace ClassicUO
                         UIManager.KeyboardFocusControl.InvokeKeyDown(SDL_Keycode.SDLK_RETURN, SDL_Keymod.KMOD_NONE);
                         //Revert chat mode to default
                         UIManager.SystemChat.Mode = ChatMode.Default;
+                    }
+                    // similarly, for renaming pets or renaming a skill group, press enter
+                    else if (UIManager.KeyboardFocusControl != null && UIManager.KeyboardFocusControl is StbTextBox stb &&
+                             stb.IsEditable && stb.RootParent is BaseHealthBarGump or StandardSkillsGump)
+                    {
+                        //"Press" return
+                        UIManager.KeyboardFocusControl.InvokeKeyDown(SDL_Keycode.SDLK_RETURN, SDL_Keymod.KMOD_NONE);
                     }
                 }
             }

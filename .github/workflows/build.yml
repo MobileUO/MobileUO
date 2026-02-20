@@ -1,0 +1,276 @@
+name: Build & Release
+
+on:
+  push:
+    branches:
+      - dev
+      # - github-workflow
+  pull_request:
+    branches:
+      - dev
+
+permissions:
+  contents: write
+
+env:
+  BLEEDING_EDGE_TAG: "MandoUO-BleedingEdge"
+
+jobs:
+  getVersionNumber:
+    name: Get version number
+    runs-on: ubuntu-latest
+    outputs: 
+      baseVersionNumber: ${{ steps.version.outputs.baseVersionNumber }}
+      fullVersionNumber: ${{ steps.version.outputs.fullVersionNumber }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+          fetch-tags: true
+      - name: Extract version and build number
+        id: version
+        run: |
+          version=$(cat Assets/Scripts/VersionNumber.txt | tr -d '\n')
+          echo "baseVersionNumber=$version" >> $GITHUB_OUTPUT
+          echo "fullVersionNumber=${version}+${{ github.run_number }}" >> $GITHUB_OUTPUT
+  buildForAllSupportedPlatforms:
+    name: Build for ${{ matrix.targetPlatform }}
+    needs: getVersionNumber
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        targetPlatform:
+          #- StandaloneOSX # Build a macOS standalone (Intel 64-bit).
+          #- StandaloneWindows # Build a Windows standalone.
+          #- StandaloneWindows64 # Build a Windows 64-bit standalone.
+          #- StandaloneLinux64 # Build a Linux 64-bit standalone.
+          #- iOS # Build an iOS player.
+          - Android # Build an Android .apk standalone app.
+          #- WebGL # WebGL.
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+          fetch-tags: true
+      - uses: actions/cache@v3
+        with:
+          path: ${{ github.workspace }}/Library
+          key: Library-${{ matrix.targetPlatform }}
+          # We don't want this as it cache busts too often:
+          #-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+                Library-${{ matrix.targetPlatform }}-
+                Library-
+      # this takes ~3 minutes
+      - if: matrix.targetPlatform == 'Android'
+        uses: jlumbroso/free-disk-space@v1.3.1
+      # this takes ~1 minute
+      # - name: Check disk space before cleanup
+      #   run: df -h
+      # - if: matrix.targetPlatform == 'Android'
+      #   name: Fast manual cleanup
+      #   run: |
+      #       sudo rm -rf /usr/local/lib/android       # ~9GB
+      #       sudo rm -rf /opt/ghc                     # ~6GB
+      #       sudo swapoff -a
+      #       sudo rm -rf /mnt/swapfile                # ~4GB
+      #       sudo rm -rf /usr/share/swift             # ~3-4GB
+      - name: Check disk space after cleanup
+        run: df -h
+      # test step for generating a dummy apk for testing build integrations without having to wait for longer Unity build
+      # - name: Generate fake APK
+      #   if: matrix.targetPlatform == 'Android'
+      #   run: |
+      #     echo "Creating fake APK for ${{ matrix.targetPlatform }} build"
+      #     mkdir -p build/${{ matrix.targetPlatform }}
+      #     # write a tiny placeholder file named Android.apk
+      #     echo "FAKE APK CONTENT" > build/${{ matrix.targetPlatform }}/Android.apk
+      - uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          BUILD_ENV: Staging
+          GITHUB_BUILD_NUMBER: ${{ github.run_number }}
+        with:
+          dockerWorkspacePath: /github/workspace
+          targetPlatform: ${{ matrix.targetPlatform }}
+          customParameters: >
+            -BUILD_ENV ${{ env.BUILD_ENV }}
+            -GITHUB_BUILD_NUMBER ${{ env.GITHUB_BUILD_NUMBER }}
+          androidKeystoreName: user.keystore # This file won't exist, but this property needs to exist
+          androidKeystoreBase64: ${{ secrets.ANDROID_STAGING_KEYSTORE_BASE64 }}
+          androidKeystorePass:  ${{ secrets.ANDROID_STAGING_KEYSTORE_PASS }}
+          androidKeyaliasName:  ${{ secrets.ANDROID_STAGING_KEYALIAS_NAME }}
+          androidKeyaliasPass:  ${{ secrets.ANDROID_STAGING_KEYALIAS_PASS }}
+      - name: Rename output APK
+        if: matrix.targetPlatform == 'Android'
+        run: |
+          mkdir -p final/${{ matrix.targetPlatform }} # have to copy renamed APK due to permission issues - can't just rename'
+          cp build/${{ matrix.targetPlatform }}/Android.apk final/${{ matrix.targetPlatform }}/MandoUO-${{ needs.getVersionNumber.outputs.fullVersionNumber }}.apk
+      - name: Upload Android artifact
+        if: matrix.targetPlatform == 'Android'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Build-${{ matrix.targetPlatform }}-MandoUO-${{ needs.getVersionNumber.outputs.fullVersionNumber }}
+          path: final/${{ matrix.targetPlatform }}
+      - name: Upload non-Android artifact
+        if: matrix.targetPlatform != 'Android'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Build-${{ matrix.targetPlatform }}-MandoUO-${{ needs.getVersionNumber.outputs.fullVersionNumber }}
+          path: build/${{ matrix.targetPlatform }}
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    needs: 
+      - getVersionNumber
+      - buildForAllSupportedPlatforms
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+          fetch-tags: true
+      - name: Download all builds
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Get last BleedingEdge commit
+        id: bleed_base
+        run: |
+          if git rev-parse "${{ env.BLEEDING_EDGE_TAG }}" >/dev/null 2>&1; then
+            echo "BLEED_BASE=$(git rev-parse ${BLEEDING_EDGE_TAG})" >> $GITHUB_ENV
+          else
+            echo "BLEED_BASE=" >> $GITHUB_ENV
+          fi
+      - name: BleedingEdge release notes
+        id: bleed_notes
+        run: |
+          if [ -z "$BLEED_BASE" ]; then
+            echo "No previous release found. Listing 10 latest commits."
+            notes=$(git log -10 --pretty=format:%B)
+          else
+            echo "Generating release notes from commit $BLEED_BASE to HEAD."
+            notes=$(git log $BLEED_BASE..HEAD --pretty=format:%B)
+          fi
+          printf "BLEED_NOTES<<EOF\n%s\nEOF\n" "$notes" >> $GITHUB_OUTPUT
+      - name: Remove old MandoUO BleedingEdge Release
+        uses: dev-drprasad/delete-tag-and-release@v0.2.1
+        continue-on-error: true  # In case the tag/release doesn't exist yet
+        with:
+          delete_release: true
+          tag_name: ${{ env.BLEEDING_EDGE_TAG }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Force tag BleedingEdge to HEAD
+        run: |
+            git config user.name "github-actions"
+            git config user.email "github-actions@github.com"
+            git tag -f ${{ env.BLEEDING_EDGE_TAG }}
+            git push --force origin ${{ env.BLEEDING_EDGE_TAG }}
+      - name: Upload MandoUO BleedingEdge Release
+        uses: ncipollo/release-action@v1.16.0
+        with:
+          artifacts: artifacts/**
+          name: 'MandoUO BleedingEdge Build v${{ needs.getVersionNumber.outputs.fullVersionNumber }}'
+          body: |
+            This is a bleeding-edge development build for all platform builds.
+            These are built automatically on the dev branch. 
+            These may include features that are still being worked on/not complete.
+
+            Version: `${{ needs.getVersionNumber.outputs.fullVersionNumber }}`
+
+            These builds may include incomplete or experimental features.
+
+            # Release notes
+            ${{ steps.bleed_notes.outputs.BLEED_NOTES }}
+          tag: ${{ env.BLEEDING_EDGE_TAG }}
+          makeLatest: false
+          allowUpdates: true
+          prerelease: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check if version already released
+        id: version_check
+        run: |
+          version="v${{ needs.getVersionNumber.outputs.baseVersionNumber }}"
+          if git rev-parse "$version" >/dev/null 2>&1; then
+            echo "Version $version already tagged"
+            echo "new_release=false" >> $GITHUB_OUTPUT
+          else
+            echo "Version $version is new"
+            echo "new_release=true" >> $GITHUB_OUTPUT
+          fi
+      - name: Get last semver tag commit
+        if: steps.version_check.outputs.new_release == 'true'
+        id: ver_base
+        run: |
+          prev=$(git tag --list "v[0-9]*\.[0-9]*\.[0-9]*" --sort=-v:refname | grep -v "^v${{ needs.getVersionNumber.outputs.baseVersionNumber }}$" | head -n 1)
+          if [ -n "$prev" ]; then
+            echo "VER_BASE=$(git rev-parse $prev)" >> $GITHUB_ENV
+          else
+            echo "VER_BASE=" >> $GITHUB_ENV
+          fi
+      - name: Versioned release notes
+        if: steps.version_check.outputs.new_release == 'true'
+        id: ver_notes
+        run: |
+          if [ -z "$VER_BASE" ]; then
+            echo "No previous release found. Listing 10 latest commits."
+            notes=$(git log -10 --pretty=format:%B)
+          else
+            echo "Generating release notes from commit $VER_BASE to HEAD."
+            notes=$(git log $VER_BASE..HEAD --pretty=format:%B)
+          fi
+          printf "VER_NOTES<<EOF\n%s\nEOF\n" "$notes" >> $GITHUB_OUTPUT
+      - name: Tag and push new version if needed
+        if: steps.version_check.outputs.new_release == 'true'
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git tag v${{ needs.getVersionNumber.outputs.baseVersionNumber }}
+          git push origin v${{ needs.getVersionNumber.outputs.baseVersionNumber }}
+      - name: Create versioned GitHub Release
+        if: steps.version_check.outputs.new_release == 'true'
+        uses: ncipollo/release-action@v1.16.0
+        with:
+          tag: v${{ needs.getVersionNumber.outputs.baseVersionNumber }}
+          name: "MandoUO v${{ needs.getVersionNumber.outputs.baseVersionNumber }}"
+          body: |
+            This is an official dev versioned release of MandoUO.
+            Version: `${{ needs.getVersionNumber.outputs.baseVersionNumber }}`
+
+            # Release notes
+            ${{ steps.ver_notes.outputs.VER_NOTES }}
+          artifacts: artifacts/**
+          prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Discord Github Updates - BleedingEdge Release
+        uses: tsickert/discord-webhook@v7.0.0
+        with:
+          webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
+          content: |
+            # v${{ needs.getVersionNumber.outputs.fullVersionNumber }} (MandoUO - BleedingEdge Development build) is available.
+
+            [Download here](<https://github.com/MobileUO/MobileUO/releases/tag/MandoUO-BleedingEdge>)  
+          
+            # Release notes 
+            `These are automatically generated`
+            ${{ steps.bleed_notes.outputs.BLEED_NOTES }}
+      - name: Discord Github Updates - Versioned Release
+        if: steps.version_check.outputs.new_release == 'true'
+        uses: tsickert/discord-webhook@v7.0.0
+        with:
+          webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
+          content: |
+            # v${{ needs.getVersionNumber.outputs.baseVersionNumber }} (MandoUO - Versioned Development build) is available.
+
+            [Download here](<https://github.com/MobileUO/MobileUO/releases/tag/v${{ needs.getVersionNumber.outputs.baseVersionNumber }}>)  
+          
+            # Release notes 
+            `These are automatically generated`
+            ${{ steps.ver_notes.outputs.VER_NOTES }}

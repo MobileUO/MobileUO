@@ -399,7 +399,6 @@ namespace ClassicUO.Network
                 _on_wnd_proc = Marshal.GetDelegateForFunctionPointer<OnWndProc>(header.OnWndProc);
             */
             
-#if ENABLE_INTERNAL_ASSISTANT
             if (_path == hardcodedInternalAssistantPath)
             {
                 try
@@ -437,7 +436,6 @@ namespace ClassicUO.Network
                     return;
                 }
             }
-#endif
 
             IsValid = true;
 

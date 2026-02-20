@@ -59,6 +59,8 @@ namespace ClassicUO.Game.UI.Gumps
     {
         private const int MAX_MESSAGE_LENGHT = 100;
         private readonly Label _currentChatModeLabel;
+        // MobileUO: added option to allow large chat box to be easier to click on
+        private int CHAT_HEIGHT = ProfileManager.Current != null && ProfileManager.Current.UseLargeSystemChatTextBox ? 30 : 15;
         private static readonly List<Tuple<ChatMode, string>> _messageHistory = new List<Tuple<ChatMode, string>>();
         private static int _messageHistoryIndex = -1;
 
@@ -88,9 +90,9 @@ namespace ClassicUO.Game.UI.Gumps
             TextBoxControl = new StbTextBox(ProfileManager.Current.ChatFont, MAX_MESSAGE_LENGHT, Width, true, FontStyle.BlackBorder | FontStyle.Fixed, 33)
             {
                 X = 0,
-                Y = Height - height,
+                Y = Height - CHAT_HEIGHT,
                 Width = Width,
-                Height = height
+                Height = CHAT_HEIGHT
             };
 
             float gradientTransparency = (ProfileManager.Current != null && ProfileManager.Current.HideChatGradient) ? 1.0f : 0.5f;
@@ -100,7 +102,7 @@ namespace ClassicUO.Game.UI.Gumps
                 X = TextBoxControl.X,
                 Y = TextBoxControl.Y,
                 Width = Width,
-                Height = height + 5,
+                Height = CHAT_HEIGHT + 5,
                 IsVisible = !ProfileManager.Current.ActivateChatAfterEnter,
                 AcceptMouseInput = true
             });
@@ -319,12 +321,12 @@ namespace ClassicUO.Game.UI.Gumps
             if (TextBoxControl != null)
             {
                 int height = FontsLoader.Instance.GetHeightUnicode(ProfileManager.Current.ChatFont, "123ABC", Width, 0, (ushort) (FontStyle.BlackBorder | FontStyle.Fixed));
-                TextBoxControl.Y = Height - height - 3;
+                TextBoxControl.Y = Height - CHAT_HEIGHT - 3;
                 TextBoxControl.Width = IsActive ? Width : 1;
-                TextBoxControl.Height = height + 3;
+                TextBoxControl.Height = CHAT_HEIGHT + 3;
                 _trans.Location = TextBoxControl.Location;
                 _trans.Width = Width;
-                _trans.Height = height + 5;
+                _trans.Height = CHAT_HEIGHT + 5;
             }
         }
 
@@ -408,6 +410,17 @@ namespace ClassicUO.Game.UI.Gumps
                 TextBoxControl.Hue = ProfileManager.Current.SpeechHue;
 
             _trans.Alpha = (ProfileManager.Current != null && ProfileManager.Current.HideChatGradient) ? 1.0f : 0.5f;
+
+            // MobileUO: added option to allow large chat box to be easier to click on
+            CHAT_HEIGHT = ProfileManager.Current != null && ProfileManager.Current.UseLargeSystemChatTextBox ? 30 : 15;
+            Resize();
+
+            int newChatHeight = ProfileManager.Current != null && ProfileManager.Current.UseLargeSystemChatTextBox ? 30 : 15;
+            if (CHAT_HEIGHT != newChatHeight)
+            {
+                CHAT_HEIGHT = newChatHeight;
+                Resize();
+            }
 
             base.Update(totalMS, frameMS);
         }
