@@ -11,6 +11,8 @@ using ClassicUO.Renderer;
 using ClassicUO.Resources;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
+// MobileUO: added import
+using System;
 
 namespace ClassicUO.Game.UI.Gumps
 {
@@ -199,6 +201,12 @@ namespace ClassicUO.Game.UI.Gumps
             // MobileUO: don't adjust position of camera by border
             _scene.Camera.Bounds.X = ScreenCoordinateX /*+ BORDER_WIDTH*/;
             _scene.Camera.Bounds.Y = ScreenCoordinateY /*+ BORDER_WIDTH*/;
+
+            // MobileUO: need to save the position of the game window any time it moves - otherwise mouse will be incorrect in game space
+            ProfileManager.CurrentProfile.GameWindowPosition = new Point(
+                Math.Max(0, _scene.Camera.Bounds.X),
+                Math.Max(0, _scene.Camera.Bounds.Y)
+            );
 
             UpdateGameWindowPos();
         }

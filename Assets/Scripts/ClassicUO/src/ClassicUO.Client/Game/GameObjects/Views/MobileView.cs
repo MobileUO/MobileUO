@@ -788,10 +788,21 @@ namespace ClassicUO.Game.GameObjects
                         rect.Height = Math.Min(value, rect.Height);
                         int remains = spriteInfo.UV.Height - rect.Height;
 
+                        // MobileUO: adjust for sprite sheet
+                        if (UserPreferences.UseSpriteSheet.CurrentValue == (int)PreferenceEnums.UseSpriteSheet.On)
+                            rect.Y += remains;
+
                         int tiles = (byte)owner.Direction % 2 == 0 ? 2 : 2;
 
                         for (int i = 0; i < count; ++i)
                         {
+                            if(rect.Height <= 0)
+                            {
+                                break;
+                            }
+
+                            // MobileUO: A way to visually see the bands:
+                            //hueVec.X = i * 10f + 10f;
                             batcher.Draw(
                                 spriteInfo.Texture,
                                 pos,
@@ -805,7 +816,15 @@ namespace ClassicUO.Game.GameObjects
                             );
 
                             pos.Y += rect.Height;
-                            rect.Y += rect.Height;
+                            // MobileUO: adjust for spritesheet
+                            if (UserPreferences.UseSpriteSheet.CurrentValue == (int)PreferenceEnums.UseSpriteSheet.On)
+                            {
+                                rect.Y -= remains;
+                            }
+                            else
+                            {
+                                rect.Y += rect.Height;
+                            }
                             rect.Height = remains;
                             remains -= rect.Height;
                         }
