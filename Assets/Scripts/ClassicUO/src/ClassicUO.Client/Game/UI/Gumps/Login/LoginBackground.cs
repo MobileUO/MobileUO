@@ -1,5 +1,6 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
+using System;
 using ClassicUO.Game.UI.Controls;
 using ClassicUO.Utility;
 
@@ -66,6 +67,7 @@ namespace ClassicUO.Game.UI.Gumps.Login
             AcceptKeyboardInput = false;
 
             LayerOrder = UILayer.Under;
+            X = Math.Max(0, (int)((UnityEngine.Screen.width / Client.Game.Batcher.scale) - 640) / 2);
         }
 
 

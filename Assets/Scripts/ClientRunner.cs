@@ -56,7 +56,7 @@ public class ClientRunner : MonoBehaviour
 
 	private void Awake()
 	{
-		UserPreferences.ScaleSize.ValueChanged += OnCustomScaleSizeChanged;
+        UserPreferences.ScaleSize.ValueChanged += OnCustomScaleSizeChanged;
 		UserPreferences.ForceUseXbr.ValueChanged += OnForceUseXbrChanged;
 		UserPreferences.ShowCloseButtons.ValueChanged += OnShowCloseButtonsChanged;
 		UserPreferences.UseMouseOnMobile.ValueChanged += OnUseMouseOnMobileChanged;
@@ -130,7 +130,7 @@ public class ClientRunner : MonoBehaviour
 //#if ENABLE_INTERNAL_ASSISTANT
 		if (UserPreferences.EnableAssistant.CurrentValue == (int) PreferenceEnums.EnableAssistant.On && Client.Game != null)
 		{
-			if (Plugin.LoadInternalAssistant())
+            if (Plugin.LoadInternalAssistant())
 			{
 				//If we're already in the GameScene, trigger OnConnected callback since the Assistant won't receive it and
 				//because it's needed for initialization
@@ -139,7 +139,7 @@ public class ClientRunner : MonoBehaviour
 					Plugin.OnConnected();
 				}
 			}
-		}
+        }
 //#endif
 	}
 
@@ -443,7 +443,15 @@ public class ClientRunner : MonoBehaviour
 		    scale = isGameScene ? gameScale : loginScale;
 	    }
 
-	    if (UserPreferences.ScaleSize.CurrentValue != (int) PreferenceEnums.ScaleSizes.One && isGameScene)
+        if (isGameScene == false)
+        {
+            int disp = Math.Max(0, (int)((Screen.width / scale) - 640) / 2);
+            foreach (Gump g in UIManager.Gumps)
+            {
+                g.X = disp;
+            }
+        }
+        else if (UserPreferences.ScaleSize.CurrentValue != (int) PreferenceEnums.ScaleSizes.One && isGameScene)
 	    {
 		    scale *= UserPreferences.ScaleSize.CurrentValue / 100f;
 	    }
