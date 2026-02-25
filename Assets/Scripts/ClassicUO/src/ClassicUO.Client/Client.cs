@@ -250,6 +250,11 @@ namespace ClassicUO
                     Log.Trace("HIGH DPI - ENABLED");
                 }
 
+                if (UserPreferences.EnableAssistant.CurrentValue == (int)PreferenceEnums.EnableAssistant.On)
+                {
+                    Assistant.Engine.Instance.Init();
+                }
+
                 Game.Run();
             }
 

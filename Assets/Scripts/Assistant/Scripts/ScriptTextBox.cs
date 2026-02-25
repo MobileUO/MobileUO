@@ -1,58 +1,82 @@
-﻿using ClassicUO.Input;
+﻿﻿#region License
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org/licenses/agpl-3.0.html> for details.
+#endregion
+
+using Assistant;
 using ClassicUO.Assets;
+using ClassicUO.Game.Managers;
+using ClassicUO.Game.Scenes;
+using ClassicUO.Input;
 using ClassicUO.Renderer;
 using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-
 using UOScript;
-using Assistant;
-using ClassicUO.Game.Managers;
-using ClassicUO.Game.UI.Gumps;
 
 namespace ClassicUO.Game.UI.Controls
 {
-    internal class ScriptTextBox : StbTextBox
+    internal class ScriptTextBox : AssistStbTextBox
     {
         static StringBuilder _ssb = new StringBuilder();
+        internal const ushort DARKGRAY_HUE = 0x386;
         internal const ushort GRAY_HUE = 0x384;
         internal const ushort GREEN_HUE = 0x3F;
-        internal const ushort RED_HUE = 0x23;
+        internal const ushort RED_HUE = 0x21;
         internal const ushort BLUE_HUE = 0x5A;
         internal const ushort YELLOW_HUE = 0x90;
+        internal const ushort WHITE_DARK = 0x7A6;
+        internal const ushort VIOLET_HUE = 0x14;
         static Dictionary<ushort, List<Rectangle2D>> HuedText = new Dictionary<ushort, List<Rectangle2D>>();
-        private readonly Gump _gump;
 
+        //public override bool AddToRenderLists(RenderLists renderLists, int x, int y, ref float layerDepthRef)
         public override bool Draw(UltimaBatcher2D batcher, int x, int y)
         {
-            Rectangle scissor = ScissorStack.CalculateScissors(Matrix.Identity, x, y, Width, Height);
-
-            if (batcher.ClipBegin(x, y, Width, Height))
-            {
-
-                DrawSelection(batcher, x, y);
-
-                _rendererText.Draw(batcher, x, y);
-                foreach (KeyValuePair<ushort, List<Rectangle2D>> kvp in HuedText)
-                {
-                    foreach (Rectangle2D r in kvp.Value)
+            //float layerDepth = layerDepthRef;
+            /*renderLists.AddGumpNoAtlas(
+                batcher =>
+                {*/
+                    if (batcher.ClipBegin(x, y, Width, Height))
                     {
-                        _rendererText.Draw(batcher, x + r.X, y + r.Y, r.X, r.Y, r.Width, r.Height, kvp.Key);
-                    }
-                }
-                DrawCaret(batcher, x, y);
+                        //RenderLists childRenderLists = new();
+                        //base.AddToRenderLists(childRenderLists, x, y, ref layerDepth);
+                        base.Draw(batcher, x, y);
+                        //childRenderLists.DrawRenderLists(batcher, sbyte.MaxValue);
+                        DrawSelection(batcher, x, y);//, layerDepth);
+                        //_rendererText.Draw(batcher, x, y);//, layerDepth);
+                        foreach (KeyValuePair<ushort, List<Rectangle2D>> kvp in HuedText)
+                        {
+                            foreach (Rectangle2D r in kvp.Value)
+                            {
+                                _rendererText.Draw(batcher, x + r.X, y + r.Y, r.X, r.Y, r.Width, r.Height, kvp.Key);//, layerDepth, kvp.Key);
+                            }
+                        }
+                        DrawCaret(batcher, x, y);//, layerDepth);
 
-                batcher.ClipEnd();
-            }
+                        batcher.ClipEnd();
+                    }
+                    /*return true;
+                }
+            );*/
 
             return true;
         }
 
-        public ScriptTextBox(Gump gump, byte font, int width) : base(font, -1, width - 28, true, FontStyle.BlackBorder, 1153, TEXT_ALIGN_TYPE.TS_LEFT)
+        public ScriptTextBox(byte font, int width) : base(font, -1, width - 28, true, FontStyle.BlackBorder, 1153, TEXT_ALIGN_TYPE.TS_LEFT)
         {
-            _gump = gump;
             Height = 40;
             Width = width - 14;
             Multiline = true;
@@ -89,37 +113,26 @@ namespace ClassicUO.Game.UI.Controls
                     ++len;
             }
             ContextMenu?.Dispose();
-            // MobileUO: TODO: verify this gump works
-            ContextMenu = new ContextMenuControl(_gump);
+            ContextMenu = new ContextMenuControl(UOSObjects.Gump);
             foreach(string s in Interpreter.CmdArgs)
             {
-                ContextMenu.Add(new ContextMenuItemEntry(s, () => OnContextClicked(s, startidx, len), true));
+                ContextMenu.Add(new ContextMenuItemEntry(s, () =>OnContextClicked(s, startidx, len), true));
             }
 
-            ContextMenu?.Show();
-        }
-
-        /*private void Show()
-        {
-            UIManager.ShowContextMenu(null);
-
-            if (_items.Count == 0)
-                return;
-
-            UIManager.ShowContextMenu
-            (
-                new ContextMenuShowMenu(_items)
+            if(ContextMenu != null)
+            {
+                var cmsm = ContextMenu.Show();
+                if(cmsm != null)
                 {
-                    X = Mouse.Position.X + 5,
-                    Y = Mouse.Position.Y - 20
+                    cmsm.X = ScreenCoordinateX + 10;
+                    cmsm.Y = ParentY + 20 + _caretScreenPosition.Y;
                 }
-            );
-        }*/
+            }
+        }
 
         private void OnContextClicked(string text, int start, int oldlen)
         {
             SetText(Text.Remove(start, oldlen).Insert(start, text));
-            //CaretIndex += text.Length - oldlen;
         }
 
         private ScriptFileParser _sfp = new ScriptFileParser(new char[] { ' ', '(', ')', '\\', '/' }, new char[] { '/', '/' }, new char[] { '\'', '\'', '"', '"' });
@@ -190,8 +203,6 @@ namespace ClassicUO.Game.UI.Controls
                                     {
                                         if (i >= _info.CharStart + _info.CharCount)
                                         {
-                                            /*p = _r.GetCaretPosition(i - 1);
-                                            w = p.X + _r.GetCharWidth(_string[i - 1]);*/
                                             _rect.Add(new Rectangle2D(x, y, w, h));
                                             Point p = _r.GetCaretPosition(i);
                                             x = p.X;
@@ -263,9 +274,17 @@ namespace ClassicUO.Game.UI.Controls
 
             private void ObtainData()
             {
-                while (Pos < _Size && _string[Pos] != '\n' && !IsComment())
+                while (Pos < _Size)
                 {
-                    if (IsDelimiter())
+                    if(_string[Pos] == '\n')
+                    {
+                        break;
+                    }
+                    else if(IsComment())
+                    {
+                        break;
+                    }
+                    else if (IsDelimiter())
                     {
                         break;
                     }
@@ -278,19 +297,107 @@ namespace ClassicUO.Game.UI.Controls
                             //autocomplete code
                             if (_CaretIdx - 1 == Pos)
                                 --_CaretIdx;
-                            Interpreter.GetCmdArgs(_ssb.ToString());
+                            CmdType type = CmdType.Both;
+                            int idx = FindPrevInterruption();
+                            if(idx >= 0)
+                            {
+                                int lastspace = _string.IndexOf(' ', idx, (Pos - idx) + 1);
+                                if(lastspace > 0 && Interpreter.Expression.Contains(_string.Substring(idx, lastspace - idx)))
+                                {
+                                    type = CmdType.Expression;
+                                }
+                            }
+
+                            Interpreter.GetCmdArgs(_ssb.ToString(), type);
                         }
                     }
                     else
                         break;
+
                     Pos++;
                 }
                 if (Grab)
                 {
-                    ushort col = Interpreter.ReferenceColor(_ssb.ToString().Trim('@', '!'));
+                    string cmdName = _ssb.ToString().Trim('@', '!');
+                    ushort col = Interpreter.ReferenceColor(cmdName);
+
+
                     if (col > 0)
+                    {
+                        int numArgs = CountArgsOnCurrentLine(Pos);
+                        if (!Interpreter.IsSyntaxValid(cmdName, numArgs))
+                            col = RED_HUE;
                         AddHuedCoords(col);
+                    }
                 }
+            }
+
+            private int CountArgsOnCurrentLine(int startSearchPos)
+            {
+                int argCount = 0;
+                bool inArg = false;
+                bool inQuotes = false;
+                char quoteChar = '\0';
+
+                for (int i = startSearchPos; i < _Size; i++)
+                {
+                    char c = _string[i];
+
+                    // Fine riga o commenti
+                    if (c == '\n' || c == '\r') break;
+                    if (c == '/' && i + 1 < _Size && _string[i + 1] == '/') break;
+
+                    if (inQuotes)
+                    {
+                        // Se siamo nelle virgolette, usciamo solo se troviamo la stessa virgoletta
+                        if (c == quoteChar)
+                        {
+                            inQuotes = false;
+                            inArg = false; // Fine dell'argomento quotato
+                        }
+                        // Tutto ciò che è dentro le virgolette viene ignorato (già contato all'apertura)
+                        continue;
+                    }
+
+                    // Inizio virgolette
+                    if (c == '"' || c == '\'')
+                    {
+                        inQuotes = true;
+                        quoteChar = c;
+                        argCount++; // Contiamo l'argomento appena iniziano le virgolette
+                        inArg = true;
+                        continue;
+                    }
+
+                    // Delimitatori (spazi, virgole, parentesi)
+                    if (c == ' ' || c == ',' || c == '(' || c == ')')
+                    {
+                        inArg = false;
+                    }
+                    else
+                    {
+                        // Inizio di un argomento normale (non quotato)
+                        if (!inArg)
+                        {
+                            argCount++;
+                            inArg = true;
+                        }
+                    }
+                }
+
+                return argCount;
+            }
+
+            private int FindPrevInterruption()
+            {
+                if (_string == null || Pos < 0 || Pos >= _string.Length)
+                    return -1;
+                for(int i = Pos - 1; i > 0; --i)
+                {
+                    if (_string[i] == '\n')
+                        return i + 1;
+                }
+                return 0;
             }
 
             private void ObtainQuotedData(bool grab = true)
@@ -321,7 +428,7 @@ namespace ClassicUO.Game.UI.Controls
                         Pos++;
                         int size = pos - start;
 
-                        if (size > 0)
+                        if (size >= 0)
                         {
                             Pos = pos;
 

@@ -592,11 +592,12 @@ namespace ClassicUO.Configuration
                                     break;
                                 // MobileUO: added assistant gumps
                                 case GumpType.AssistantMacroButton:
-                                    gump = new AssistantMacroButtonGump(world);
+                                    gump = new AssistMacroButtonGump();
                                     break;
                                 case GumpType.AssistantHotkeyButton:
-                                    gump = new AssistantHotkeyButtonGump(world);
+                                    gump = new AssistHotkeyButtonGump();
                                     break;
+                                // END MobileUO
 
                                 case GumpType.MiniMap:
                                     gump = new MiniMapGump(world);
@@ -756,11 +757,12 @@ namespace ClassicUO.Configuration
                                         break;
                                     // MobileUO: added assistant gumps
                                     case GumpType.AssistantMacroButton:
-                                        gump = new AssistantMacroButtonGump(world);
+                                        gump = new AssistMacroButtonGump();
                                         break;
                                     case GumpType.AssistantHotkeyButton:
-                                        gump = new AssistantHotkeyButtonGump(world);
+                                        gump = new AssistHotkeyButtonGump();
                                         break;
+                                    // END MobileUO
                                 }
 
                                 if (gump != null)

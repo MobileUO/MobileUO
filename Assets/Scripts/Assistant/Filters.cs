@@ -1,6 +1,23 @@
-﻿using System.Xml;
+﻿#region License
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org/licenses/agpl-3.0.html> for details.
+#endregion
+
+using System.Xml;
 using System.Collections.Generic;
 
+using ClassicUO.IO;
 using ClassicUO.Network;
 using ClassicUO.Game.UI.Controls;
 
@@ -12,7 +29,7 @@ namespace Assistant
 		{
 			Name = name;
 			XmlName = $"Filter{Name.Replace(" ", "").Replace("'", "")}";
-			m_Callback = new PacketViewerCallback(OnFilter);
+			_Callback = new PacketViewerCallback(OnFilter);
 		}
 
         internal static void Initialize()
@@ -34,12 +51,12 @@ namespace Assistant
 			List.Add(filter);
 		}
 
-        internal abstract void OnFilter(Packet p, PacketHandlerEventArgs args);
+        internal abstract void OnFilter(ref StackDataReader p, PacketHandlerEventArgs args);
         internal abstract byte[] PacketIDs { get; }
         internal string Name { get; }
 		internal string XmlName { get; }
 
-		private PacketViewerCallback m_Callback { get; }
+		private PacketViewerCallback _Callback { get; }
 
 		public override string ToString()
 		{
@@ -54,12 +71,12 @@ namespace Assistant
 				if (Enabled)
 				{
 					for (int i = 0; i < PacketIDs.Length; i++)
-						PacketHandler.RegisterServerToClientViewer(PacketIDs[i], m_Callback);
+						PacketHandler.RegisterServerToClientViewer(PacketIDs[i], _Callback);
 				}
 				else
 				{
 					for (int i = 0; i < PacketIDs.Length; i++)
-						PacketHandler.RemoveServerToClientViewer(PacketIDs[i], m_Callback);
+						PacketHandler.RemoveServerToClientViewer(PacketIDs[i], _Callback);
 				}
 			}
 		}
@@ -130,21 +147,21 @@ namespace Assistant
 		}
 
 		private static HashSet<ushort> _Sounds = new HashSet<ushort>();
-        private ushort[] m_Sounds;
+        private ushort[] _SoundsArr;
 
         private SoundFilter(string name, params ushort[] blockSounds) : base(name)
         {
-            m_Sounds = blockSounds;
+            _SoundsArr = blockSounds;
         }
 
 		private static byte[] Instance { get; } = new byte[] { 0x54 };
 		internal override byte[] PacketIDs => Instance;
 
-        internal override void OnFilter(Packet p, PacketHandlerEventArgs args)
+        internal override void OnFilter(ref StackDataReader p, PacketHandlerEventArgs args)
         {
-            p.ReadByte(); // flags
+            p.ReadUInt8(); // flags
 
-            ushort sound = p.ReadUShort();
+            ushort sound = p.ReadUInt16BE();
 			if (_Sounds.Contains(sound))
 				args.Block = true;
         }
@@ -152,12 +169,12 @@ namespace Assistant
 		internal override void OnCheckChanged(bool enabled)
 		{
 			base.OnCheckChanged(enabled);
-			for (int i = 0; i < m_Sounds.Length; i++)
+			for (int i = 0; i < _SoundsArr.Length; i++)
 			{
 				if(enabled)
-					_Sounds.Add(m_Sounds[i]);
+					_Sounds.Add(_SoundsArr[i]);
 				else
-					_Sounds.Remove(m_Sounds[i]);
+					_Sounds.Remove(_SoundsArr[i]);
 			}
 		}
 	}
@@ -168,39 +185,39 @@ namespace Assistant
 		{
 		}
 
-		private string[] m_Strings;
-		private MessageType m_Type;
+		private string[] _Strings;
+		private MessageType _Type;
 
 		private TextMessageFilter(string name, MessageType type, string[] msgs) : base(name)
 		{
-			m_Strings = msgs;
-			m_Type = type;
+			_Strings = msgs;
+			_Type = type;
 		}
 
 		private static byte[] Instance { get; } = new byte[] { 0x1C };
 		internal override byte[] PacketIDs => Instance;
 
-		internal override void OnFilter(Packet p, PacketHandlerEventArgs args)
+		internal override void OnFilter(ref StackDataReader p, PacketHandlerEventArgs args)
 		{
 			if (args.Block)
 				return;
 
 			// 0, 1, 2
-			uint serial = p.ReadUInt(); // 3, 4, 5, 6
-			ushort body = p.ReadUShort(); // 7, 8
-			MessageType type = (MessageType)p.ReadByte(); // 9
+			uint serial = p.ReadUInt32BE(); // 3, 4, 5, 6
+			ushort body = p.ReadUInt16BE(); // 7, 8
+			MessageType type = (MessageType)p.ReadUInt8(); // 9
 
-			if (type != m_Type)
+			if (type != _Type)
 				return;
 
-			ushort hue = p.ReadUShort(); // 10, 11
-			ushort font = p.ReadUShort();
+			ushort hue = p.ReadUInt16BE(); // 10, 11
+			ushort font = p.ReadUInt16BE();
 			string name = p.ReadASCII(30);
 			string text = p.ReadASCII();
 
-			for (int i = 0; i < m_Strings.Length; i++)
+			for (int i = 0; i < _Strings.Length; i++)
 			{
-				if (text.IndexOf(m_Strings[i]) != -1)
+				if (text.IndexOf(_Strings[i]) != -1)
 				{
 					args.Block = true;
 					return;
@@ -215,39 +232,39 @@ namespace Assistant
 		{
 		}
 
-		private int[] m_Nums;
-		private MessageType m_Type;
+		private int[] _Nums;
+		private MessageType _Type;
 
 		private LocMessageFilter(string name, MessageType type, int[] msgs) : base(name)
 		{
-			m_Nums = msgs;
-			m_Type = type;
+			_Nums = msgs;
+			_Type = type;
 		}
 
 		private static byte[] Instance { get; } = new byte[] { 0xC1 };
 		internal override byte[] PacketIDs => Instance;
 
-		internal override void OnFilter(Packet p, PacketHandlerEventArgs args)
+		internal override void OnFilter(ref StackDataReader p, PacketHandlerEventArgs args)
 		{
 			if (args.Block)
 				return;
 
-			uint serial = p.ReadUInt();
-			ushort body = p.ReadUShort();
-			MessageType type = (MessageType)p.ReadByte();
-			ushort hue = p.ReadUShort();
-			ushort font = p.ReadUShort();
-			int num = (int)p.ReadUInt();
+			uint serial = p.ReadUInt32BE();
+			ushort body = p.ReadUInt16BE();
+			MessageType type = (MessageType)p.ReadUInt8();
+			ushort hue = p.ReadUInt16BE();
+			ushort font = p.ReadUInt16BE();
+			int num = (int)p.ReadUInt32BE();
 
 			// paladin spells
 			if (num >= 1060718 && num <= 1060727)
 				type = MessageType.Spell;
-			if (type != m_Type)
+			if (type != _Type)
 				return;
 
-			for (int i = 0; i < m_Nums.Length; i++)
+			for (int i = 0; i < _Nums.Length; i++)
 			{
-				if (num == m_Nums[i])
+				if (num == _Nums[i])
 				{
 					args.Block = true;
 					return;
@@ -270,7 +287,7 @@ namespace Assistant
 		private static byte[] Instance { get; } = new byte[] { 0x2C };
 		internal override byte[] PacketIDs => Instance;
 
-		internal override void OnFilter(Packet p, PacketHandlerEventArgs args)
+		internal override void OnFilter(ref StackDataReader p, PacketHandlerEventArgs args)
 		{
 			args.Block = true;
 		}
@@ -301,32 +318,32 @@ namespace Assistant
 			return i.OnGround && (IsStaffItem(i.ItemID) || !i.Visible);
 		}
 
-		internal override void OnFilter(Packet p, PacketHandlerEventArgs args)
+		internal override void OnFilter(ref StackDataReader p, PacketHandlerEventArgs args)
 		{
-			uint serial = p.ReadUInt();
-			ushort itemID = p.ReadUShort();
+			uint serial = p.ReadUInt32BE();
+			ushort itemID = p.ReadUInt16BE();
 
 			if ((serial & 0x80000000) != 0)
-				p.ReadUShort(); // amount
+				p.ReadUInt16BE(); // amount
 
 			if ((itemID & 0x8000) != 0)
-				itemID = (ushort)((itemID & 0x7FFF) + p.ReadSByte()); // itemID offset
+				itemID = (ushort)((itemID & 0x7FFF) + p.ReadInt8()); // itemID offset
 
-			ushort x = p.ReadUShort();
-			ushort y = p.ReadUShort();
+			ushort x = p.ReadUInt16BE();
+			ushort y = p.ReadUInt16BE();
 
 			if ((x & 0x8000) != 0)
-				p.ReadByte(); // direction
+				p.ReadUInt8(); // direction
 
-			short z = p.ReadSByte();
+			short z = p.ReadInt8();
 
 			if ((y & 0x8000) != 0)
-				p.ReadUShort(); // hue
+				p.ReadUInt16BE(); // hue
 
 			bool visible = true;
 			if ((y & 0x4000) != 0)
 			{
-				int flags = p.ReadByte();
+				int flags = p.ReadUInt8();
 
 				visible = ((flags & 0x80) == 0);
 			}
@@ -344,16 +361,16 @@ namespace Assistant
 				{
 					foreach (UOItem i in UOSObjects.Items.Values)
 					{
-						if (IsStaffItem(i))
-							Engine.Instance.SendToClient(new RemoveObject(i));
+                        if (IsStaffItem(i))
+                            ClientPackets.PRecv_RemoveObject(i.Serial);
 					}
 				}
 				else
 				{
 					foreach (UOItem i in UOSObjects.Items.Values)
 					{
-						if (IsStaffItem(i))
-							Engine.Instance.SendToClient(new WorldItem(i));
+                        if (IsStaffItem(i))
+                            ClientPackets.PRecv_WorldItem(i);
 					}
 				}
 			}
@@ -374,27 +391,27 @@ namespace Assistant
 		private static byte[] Instance { get; } = new byte[] { 0x1C, 0xAE };
 		internal override byte[] PacketIDs => Instance;
 
-		internal override void OnFilter(Packet p, PacketHandlerEventArgs args)
+		internal override void OnFilter(ref StackDataReader p, PacketHandlerEventArgs args)
 		{
 			if (args.Block)
 				return;
 
 			// 0, 1, 2
-			uint serial = p.ReadUInt(); // 3, 4, 5, 6
-			ushort body = p.ReadUShort(); // 7, 8
-			MessageType type = (MessageType)p.ReadByte(); // 9
+			uint serial = p.ReadUInt32BE(); // 3, 4, 5, 6
+			ushort body = p.ReadUInt16BE(); // 7, 8
+			MessageType type = (MessageType)p.ReadUInt8(); // 9
 
 			if (type != MessageType.System)
 				return;
 
-			ushort hue = p.ReadUShort(); // 10, 11
-			ushort font = p.ReadUShort();
+			ushort hue = p.ReadUInt16BE(); // 10, 11
+			ushort font = p.ReadUInt16BE();
 			string text;
-			if (p.ID == 0xAE)
+			if (p[0] == 0xAE)
 			{
 				p.ReadASCII(4);
 				p.ReadASCII(30);
-				text = p.ReadUnicode();
+				text = p.ReadUnicodeBE();
 			}
 			else
 			{
@@ -423,54 +440,12 @@ namespace Assistant
 		private static byte[] Instance { get; } = new byte[] { 0x6F };
 		internal override byte[] PacketIDs => Instance;
 
-		internal override void OnFilter(Packet p, PacketHandlerEventArgs args)
+		internal override void OnFilter(ref StackDataReader p, PacketHandlerEventArgs args)
 		{
 			args.Block = true;
 			p.Skip(1);
-			uint serial = p.ReadUInt();
-			Engine.Instance.SendToServer(new TradeCancel(serial));
-		}
-
-		private sealed class TradeCancel : PacketWriter
-		{
-			internal TradeCancel(uint serial) : base(0x6F)
-			{
-				WriteByte(0x01);//cancel
-				WriteUInt(serial);
-			}
+			uint serial = p.ReadUInt32BE();
+            NetClient.Socket.PSend_TradeResponse(serial, 1, false);//cancel
 		}
 	}
-
-	/*internal class DragonFilter : Filter
-	{
-		internal static void Initialize()
-		{
-			Filter.Register(new DragonFilter());
-		}
-
-		internal DragonFilter() : base("Dragon Graphic")
-		{
-		}
-
-		internal override byte[] PacketIDs { get { return new byte[] { 0x77, 0x78 }; } }
-
-		internal override void OnFilter(Packet p, PacketHandlerEventArgs args)
-		{
-			uint serial = p.ReadUInt();
-			if (SerialHelper.IsMobile(serial))
-			{
-				UOMobile m = UOSObjects.FindMobile(serial);
-				if (m == null)
-					UOSObjects.AddMobile(m = new UOMobile(serial));
-				ushort body = p.ReadUShort();
-			}
-		}
-
-
-		internal override void OnCheckChanged()
-		{
-			base.OnCheckChanged();
-			AnimationsLoader.Instance.GetBodyAnimationGroup()
-		}
-	}*/
 }

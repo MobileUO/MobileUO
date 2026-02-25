@@ -1,8 +1,25 @@
-﻿using System;
+﻿#region License
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org/licenses/agpl-3.0.html> for details.
+#endregion
+
+using System;
 using System.Collections.Generic;
 
 using ClassicUO.Network;
 using ClassicUO.Game;
+using ClassicUO.IO;
 
 namespace Assistant
 {
@@ -17,40 +34,40 @@ namespace Assistant
             }
         }
 
-        private uint m_Serial;
-        private Point3D m_Pos;
-        private ushort m_Hue;
-        private bool m_Deleted;
-        private ContextMenuList m_ContextMenu = new ContextMenuList();
-        protected ObjectPropertyList m_ObjPropList = null;
+        private uint _Serial;
+        private Point3D _Pos;
+        private ushort _Hue;
+        private bool _Deleted;
+        private ContextMenuList _ContextMenu = new ContextMenuList();
+        protected ObjectPropertyList _ObjPropList = null;
 
         internal ObjectPropertyList ObjPropList
         {
-            get { return m_ObjPropList; }
+            get { return _ObjPropList; }
         }
 
         internal UOEntity(uint ser)
         {
-            m_ObjPropList = new ObjectPropertyList(this);
+            _ObjPropList = new ObjectPropertyList(this);
 
-            m_Serial = ser;
-            m_Deleted = false;
+            _Serial = ser;
+            _Deleted = false;
         }
 
         internal uint Serial
         {
-            get { return m_Serial; }
+            get { return _Serial; }
         }
 
         internal virtual Point3D Position
         {
-            get { return m_Pos; }
+            get { return _Pos; }
             set
             {
-                if (value != m_Pos)
+                if (value != _Pos)
                 {
-                    var oldPos = m_Pos;
-                    m_Pos = value;
+                    var oldPos = _Pos;
+                    _Pos = value;
                     OnPositionChanging(oldPos);
                 }
             }
@@ -60,23 +77,23 @@ namespace Assistant
 
         internal bool Deleted
         {
-            get { return m_Deleted; }
+            get { return _Deleted; }
         }
 
         internal ContextMenuList ContextMenu
         {
-            get { return m_ContextMenu; }
+            get { return _ContextMenu; }
         }
 
         internal virtual ushort Hue
         {
-            get { return m_Hue; }
-            set { m_Hue = value; }
+            get { return _Hue; }
+            set { _Hue = value; }
         }
 
         internal virtual void Remove()
         {
-            m_Deleted = true;
+            _Deleted = true;
         }
 
         internal virtual void OnPositionChanging(Point3D oldPos)
@@ -85,30 +102,30 @@ namespace Assistant
 
         public double GetDistanceToSqrt(UOEntity e)
         {
-            int xDelta = WorldPosition.m_X - e.WorldPosition.m_X;
-            int yDelta = WorldPosition.m_Y - e.WorldPosition.m_Y;
+            int xDelta = WorldPosition._X - e.WorldPosition._X;
+            int yDelta = WorldPosition._Y - e.WorldPosition._Y;
 
             return Math.Sqrt((xDelta * xDelta) + (yDelta * yDelta));
         }
 
         public override int GetHashCode()
         {
-            return (int)m_Serial;
+            return (int)_Serial;
         }
 
         internal uint OPLHash
         {
             get
             {
-                if (m_ObjPropList != null)
-                    return m_ObjPropList.Hash;
+                if (_ObjPropList != null)
+                    return _ObjPropList.Hash;
                 else
                     return 0;
             }
             set
             {
-                if (m_ObjPropList != null)
-                    m_ObjPropList.Hash = value;
+                if (_ObjPropList != null)
+                    _ObjPropList.Hash = value;
             }
         }
 
@@ -116,27 +133,32 @@ namespace Assistant
 
         internal bool ModifiedOPL
         {
-            get { return m_ObjPropList.Customized; }
+            get { return _ObjPropList.Customized; }
         }
 
-        internal void ReadPropertyList(Packet p, out string name)
+        internal void ReadPropertyList(ref StackDataReader p, out string name)
         {
-            m_ObjPropList.Read(p, out name);
+            _ObjPropList.Read(p, out name);
         }
-
-        /*internal Packet BuildOPLPacket()
-        { 
-            return m_ObjPropList.BuildPacket();
-        }*/
 
         internal void OPLChanged()
         {
-            Engine.Instance.SendToClient(new OPLInfo(Serial, OPLHash));
+            ClientPackets.PRecv_OPLInfo(Serial, OPLHash);
         }
 
         internal virtual string GetName()
         {
             return null;
+        }
+
+        internal bool Equals(UOEntity other)
+        {
+            return other != null && other._Serial == _Serial;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return Equals(obj as UOEntity);
         }
     }
 }

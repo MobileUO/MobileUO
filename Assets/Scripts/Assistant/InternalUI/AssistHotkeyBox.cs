@@ -1,26 +1,20 @@
-﻿#region license
-// Copyright (C) 2020 ClassicUO Development Community on Github
+﻿#region License
+// Copyright (C) 2022-2025 Sascha Puligheddu
 // 
-// This project is an alternative client for the game Ultima Online.
-// The goal of this is to develop a lightweight client considering
-// new technologies.
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
 // 
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
 // 
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-// 
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org/licenses/agpl-3.0.html> for details.
 #endregion
 
 using System;
-using System.Linq;
 using System.Text;
 
 using ClassicUO.Input;
@@ -29,15 +23,14 @@ using ClassicUO.Renderer;
 using ClassicUO.Utility;
 
 using Assistant;
-using ClassicUO.Game.Managers;
-using ClassicUO.Game.UI.Gumps;
+
 using SDL2;
 
 namespace ClassicUO.Game.UI.Controls
 {
     internal class AssistHotkeyBox : Control
     {
-        private readonly NiceButton _buttonSave, _buttonClear;
+        private readonly AssistNiceButton _buttonClear;
         private readonly Checkbox _PassToUO;
         private readonly HoveredLabel _label;
         private readonly GumpPicTiled _pic;
@@ -55,34 +48,28 @@ namespace ClassicUO.Game.UI.Controls
             Height = height;
 
             Add(_pic = new GumpPicTiled(1, 0, width, 20, 0xBBC) { AcceptKeyboardInput = true, Hue = 666 });
-            Add(_label = new HoveredLabel(string.Empty, false, 0x0025, 0x0025, 0x0025, width - 4, font, FontStyle.Cropped, TEXT_ALIGN_TYPE.TS_CENTER)
+            Add(_label = new HoveredLabel(string.Empty, true, 0x0025, 0x0025, 0x0025, width - 4, font, FontStyle.Cropped, TEXT_ALIGN_TYPE.TS_CENTER)
             {
                 X = 1,
-                Y = 5
+                Y = 1
             });
             _pic.MouseExit += AssistHotkeyBox_FocusLost;
             _label.MouseExit += AssistHotkeyBox_FocusLost;
             _pic.MouseEnter += AssistHotkeyBox_FocusEnter;
             _label.MouseEnter += AssistHotkeyBox_FocusEnter;
-            Add(_PassToUO = new Checkbox(210, 211, "Pass to CUO", font, hue, true) { X = 0, Y = _label.Height + 10 });
+            Add(_PassToUO = new Checkbox(210, 211, "Pass to CUO", font, hue, true) { X = 0, Y = _label.Height + 12 });
 
-            Add(_buttonClear = new NiceButton(10, _PassToUO.Y + _PassToUO.Height + 10, (width >> 2) + (width >> 3), 20, ButtonAction.Activate, "Clear")
+            Add(_buttonClear = new AssistNiceButton(10, _PassToUO.Y + _PassToUO.Height + 10, (width >> 2) + (width >> 3), 20, ButtonAction.Activate, "Clear")
             {
                 IsSelectable = false,
                 ButtonParameter = (int)ButtonState.Clear
             });
 
-            Add(_buttonSave = new NiceButton(_buttonClear.X + _buttonClear.Width + (width >> 3), _buttonClear.Y, (width >> 2) + (width >> 3), 20, ButtonAction.Activate, "Save")
-            {
-                IsSelectable = false,
-                ButtonParameter = (int)ButtonState.Save
-            });
-
             //NOTE: Added Add Button
-            Add(new NiceButton(10, _buttonClear.Y + _buttonClear.Height + 10, width - 20, 20, ButtonAction.Activate, "Add Button")
+            Add(new AssistNiceButton(10, _buttonClear.Y + _buttonClear.Height + 10, width - 20, 20, ButtonAction.Activate, "Add Button")
             {
                 IsSelectable = false,
-                ButtonParameter = (int) ButtonState.AddMacroButton
+                ButtonParameter = (int)ButtonState.AddMacroButton
             });
 
             Height += 20;
@@ -136,26 +123,28 @@ namespace ClassicUO.Game.UI.Controls
             if (IsActive)
             {
                 _KeyMod = mod;
-                if(key != SDL.SDL_Keycode.SDLK_UNKNOWN)
+                if (key != SDL.SDL_Keycode.SDLK_UNKNOWN)
+                {
                     SetKey(key, mod);
+                }
             }
         }
 
         protected override void OnKeyUp(SDL.SDL_Keycode key, SDL.SDL_Keymod mod)
         {
-            if (IsActive)
-            {
-                _KeyMod = SDL.SDL_Keymod.KMOD_NONE;
-            }
+            _KeyMod = SDL.SDL_Keymod.KMOD_NONE;
         }
 
         private SDL.SDL_Keymod _KeyMod { get; set; }
         protected override void OnMouseUp(int x, int y, MouseButtonType button)
         {
             base.OnMouseUp(x, y, button);
-            if (IsActive && (int)button >= 2 && (int)button <= 6)
+            int but = (int)button;
+            if (IsActive && but >= 2 && but <= 6 && but != 3)
             {
-                SetKey((SDL.SDL_Keycode)button, _KeyMod);
+                if (but > 1)
+                    --but;
+                SetKey((SDL.SDL_Keycode)but, _KeyMod);
             }
         }
 
@@ -168,8 +157,12 @@ namespace ClassicUO.Game.UI.Controls
             }
         }
 
+        private bool _raisedEvent = false;
         public void SetKey(SDL.SDL_Keycode key, SDL.SDL_Keymod mod)
         {
+            if (_raisedEvent)
+                return;
+            _raisedEvent = true;
             mod = (SDL.SDL_Keymod)((ushort)mod & 0x3C3);
             if (key == SDL.SDL_Keycode.SDLK_UNKNOWN && mod == SDL.SDL_Keymod.KMOD_NONE)
             {
@@ -177,28 +170,42 @@ namespace ClassicUO.Game.UI.Controls
                 Mod = mod;
                 _label.Text = string.Empty;
             }
-            else
+            else if (key != SDL.SDL_Keycode.SDLK_UNKNOWN)
             {
+                retry:
                 string newvalue = TryGetKey(key, mod);
 
-                if (!string.IsNullOrEmpty(newvalue) && key != SDL.SDL_Keycode.SDLK_UNKNOWN)
+                if(string.IsNullOrEmpty(newvalue))
                 {
-                    Key = key;
-                    Mod = mod;
-                    _label.Text = newvalue;
+                    uint nkey = (uint)key + 0x100;
+                    if (nkey >= 0x110 && nkey <= 0x1FF)
+                    {
+                        newvalue = Char.ToString((char)key);
+                        XmlFileParser.SDLkeyToVK[key] = (nkey, newvalue);
+                        XmlFileParser.vkToSDLkey[nkey] = key;
+                        goto retry;
+                    }
+                    else
+                    {
+                        _raisedEvent = false;
+                        return;
+                    }
                 }
+                Key = key;
+                Mod = mod;
+                _label.Text = newvalue;
+                HotkeyChanged.Raise(this);
             }
+            _raisedEvent = false;
         }
 
         public override void OnButtonClick(int buttonID)
         {
+            if (_raisedEvent)
+                return;
+            _raisedEvent = true;
             switch ((ButtonState)buttonID)
             {
-                case ButtonState.Save:
-                    HotkeyChanged.Raise(this);
-
-                    break;
-
                 case ButtonState.Clear:
                     _label.Text = string.Empty;
 
@@ -208,19 +215,21 @@ namespace ClassicUO.Game.UI.Controls
                     Mod = SDL.SDL_Keymod.KMOD_NONE;
 
                     break;
+
                 case ButtonState.AddMacroButton:
+
                     AddButton.Raise(this);
+
                     break;
             }
-
+            _raisedEvent = false;
             IsActive = false;
         }
 
         private enum ButtonState
         {
-            Save=111,
             Clear=222,
-            AddMacroButton=333
+            AddMacroButton = 333
         }
 
         public static string TryGetKey(SDL.SDL_Keycode key, SDL.SDL_Keymod mod = SDL.SDL_Keymod.KMOD_NONE)
@@ -229,10 +238,7 @@ namespace ClassicUO.Game.UI.Controls
             {
                 StringBuilder sb = new StringBuilder();
 
-                bool isshift = (mod & SDL.SDL_Keymod.KMOD_SHIFT) != SDL.SDL_Keymod.KMOD_NONE;
-                bool isctrl = (mod & SDL.SDL_Keymod.KMOD_CTRL) != SDL.SDL_Keymod.KMOD_NONE;
-                bool isalt = (mod & SDL.SDL_Keymod.KMOD_ALT) != SDL.SDL_Keymod.KMOD_NONE;
-
+                GetModType(mod, out bool isshift, out bool isctrl, out bool isalt);
 
                 if (isshift)
                     sb.Append("Shift ");
@@ -250,6 +256,13 @@ namespace ClassicUO.Game.UI.Controls
             }
 
             return string.Empty;
+        }
+
+        internal static void GetModType(SDL.SDL_Keymod mod, out bool isshift, out bool isctrl, out bool isalt)
+        {
+            isshift = (mod & SDL.SDL_Keymod.KMOD_SHIFT) != SDL.SDL_Keymod.KMOD_NONE;
+            isctrl = (mod & SDL.SDL_Keymod.KMOD_CTRL) != SDL.SDL_Keymod.KMOD_NONE && ((mod & SDL.SDL_Keymod.KMOD_RALT) == 0 || (mod & SDL.SDL_Keymod.KMOD_LCTRL) == 0);//for ALTGR
+            isalt = (mod & SDL.SDL_Keymod.KMOD_ALT) != SDL.SDL_Keymod.KMOD_NONE;
         }
     }
 }

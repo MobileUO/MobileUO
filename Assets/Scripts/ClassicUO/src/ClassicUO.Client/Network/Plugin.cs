@@ -21,6 +21,10 @@ using Microsoft.Xna.Framework.Graphics;
 using SDL2;
 // MobileUO: added import
 using System.Linq;
+using Unity.Android.Gradle.Manifest;
+using UnityEngine.UIElements;
+using Assistant;
+using System.Buffers;
 
 namespace ClassicUO.Network
 {
@@ -143,7 +147,8 @@ namespace ClassicUO.Network
             }
             
             //NOTE: Temporary fix for empty xml files created with initial version of Assistant
-            var dataPath = Path.Combine(Profile.DataPath, "Data");
+            //NOTE: This is not necessary anymore
+            /*var dataPath = Path.Combine(Profile.DataPath, "Data");
             var spellsXmlPath = Path.Combine(dataPath, "spells.xml");
             if (File.Exists(spellsXmlPath) && File.ReadAllText(Path.Combine(Profile.DataPath, "Data", "spells.xml")).Trim().Length == 0)
             {
@@ -154,7 +159,7 @@ namespace ClassicUO.Network
                 File.Delete(Path.Combine(dataPath, "foods.xml"));
                 File.Delete(Path.Combine(dataPath, "assistant.xml"));
                 File.Delete(Path.Combine(Profile.ProfilePath, "Default.xml"));
-            }
+            }*/
             
             var plugin = new Plugin(hardcodedInternalAssistantPath);
             plugin.Load();
@@ -414,7 +419,7 @@ namespace ClassicUO.Network
             */
 
             //#if ENABLE_INTERNAL_ASSISTANT
-            if (PluginPath == hardcodedInternalAssistantPath)
+            /*if (PluginPath == hardcodedInternalAssistantPath)
             {
                 try
                 {
@@ -454,7 +459,7 @@ namespace ClassicUO.Network
 
                     return;
                 }
-            }
+            }*/
 //#endif
 
             IsValid = true;
@@ -567,6 +572,8 @@ namespace ClassicUO.Network
         {
             Client.Game.PluginHost?.Tick();
 
+            Engine.Instance.Tick();
+
             foreach (Plugin t in Plugins)
             {
                 if (t._tick != null)
@@ -579,6 +586,11 @@ namespace ClassicUO.Network
         internal static bool ProcessRecvPacket(byte[] data, ref int length)
         {
             bool result = Client.Game.PluginHost?.PacketIn(new ArraySegment<byte>(data, 0, length)) ?? true;
+
+            if (!Assistant.Engine.Instance.OnRecv(data, ref length))
+            {
+                result = false;
+            }
 
             foreach (Plugin plugin in Plugins)
             {
@@ -614,6 +626,16 @@ namespace ClassicUO.Network
         internal static bool ProcessSendPacket(ref Span<byte> message)
         {
             bool result = Client.Game.PluginHost?.PacketOut(message) ?? true;
+
+            if (Engine.Instance.Initialized)
+            {
+                // at the moment we aren't resizing any packet in the viewer
+                // TODO: make sure that length is updated so we can output modified packet even in legth
+                if (!Engine.Instance.OnSend(ref message))
+                {
+                    result = false;
+                }
+            }
 
             foreach (Plugin plugin in Plugins)
             {
@@ -652,6 +674,8 @@ namespace ClassicUO.Network
         {
             Client.Game.PluginHost?.Closing();
 
+            Assistant.Engine.Instance.OnClientClosing();
+
             for (int i = 0; i < Plugins.Count; i++)
             {
                 if (Plugins[i]._onClientClose != null)
@@ -667,6 +691,8 @@ namespace ClassicUO.Network
         {
             Client.Game.PluginHost?.FocusGained();
 
+            Assistant.Engine.Instance.OnFocusGained();
+
             foreach (Plugin t in Plugins)
             {
                 if (t._onFocusGained != null)
@@ -679,6 +705,8 @@ namespace ClassicUO.Network
         internal static void OnFocusLost()
         {
             Client.Game.PluginHost?.FocusLost();
+
+            Assistant.Engine.Instance.OnFocusLost();
 
             foreach (Plugin t in Plugins)
             {
@@ -693,6 +721,8 @@ namespace ClassicUO.Network
         {
             Client.Game.PluginHost?.Connected();
 
+            Assistant.Engine.Instance.OnConnected();
+
             foreach (Plugin t in Plugins)
             {
                 if (t._onConnected != null)
@@ -705,6 +735,8 @@ namespace ClassicUO.Network
         internal static void OnDisconnected()
         {
             Client.Game.PluginHost?.Disconnected();
+
+            Assistant.Engine.Instance.OnDisconnected();
 
             foreach (Plugin t in Plugins)
             {
@@ -732,6 +764,8 @@ namespace ClassicUO.Network
 
             bool result = ok ?? true;
 
+            result = Assistant.Engine.Instance.OnHotKeyHandler(key, mod, ispressed);
+
             foreach (Plugin plugin in Plugins)
             {
                 if (
@@ -748,6 +782,8 @@ namespace ClassicUO.Network
         internal static void ProcessMouse(int button, int wheel)
         {
             Client.Game.PluginHost?.Mouse(button, wheel);
+
+            Assistant.Engine.Instance.OnMouseHandler(button, wheel);
 
             foreach (Plugin plugin in Plugins)
             {
@@ -798,6 +834,8 @@ namespace ClassicUO.Network
         internal static void UpdatePlayerPosition(int x, int y, int z)
         {
             Client.Game.PluginHost?.UpdatePlayerPosition(x, y, z);
+
+            Assistant.Engine.Instance.OnPlayerPositionChanged(x, y, z);
 
             foreach (Plugin plugin in Plugins)
             {

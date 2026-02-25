@@ -1,4 +1,20 @@
-﻿using System;
+﻿#region License
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org/licenses/agpl-3.0.html> for details.
+#endregion
+
+using System;
 
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
@@ -7,11 +23,14 @@ namespace ClassicUO.Game.UI.Controls
 {
     internal class AssistArrowNumbersTextBox : Control
     {
-        private const int TIME_BETWEEN_CLICKS = 250;
+        private const uint TIME_BETWEEN_CLICKS = 250;
+        private const uint TIME_BETWEEN_CLICKS_FAST = 125;
+        private const uint TIME_BETWEEN_CLICKS_FASTEST = 50;
         private readonly int _Min, _Max;
-        private readonly StbTextBox _textBox;
+        private readonly AssistStbTextBox _textBox;
         private readonly Button _up, _down;
-        private float _timeUntilNextClick;
+        private uint _timeUntilNextClick, _timeFirstClick;
+        private bool _autoRepeatInitialized;
 
         public AssistArrowNumbersTextBox(int x, int y, int width, int raiseamount, int minvalue, int maxvalue, byte font = 0, int maxcharlength = -1, bool isunicode = true, FontStyle style = FontStyle.None, ushort hue = 0)
         {
@@ -40,8 +59,12 @@ namespace ClassicUO.Game.UI.Controls
                 if (_up.IsClicked)
                 {
                     UpdateValue();
-                    _timeUntilNextClick = TIME_BETWEEN_CLICKS * 2;
+                    _timeUntilNextClick = Time.Ticks + TIME_BETWEEN_CLICKS * 2;
                 }
+            };
+            _up.MouseUp += (sender, e) =>
+            {
+                _autoRepeatInitialized = false;
             };
             Add(_up);
 
@@ -57,11 +80,15 @@ namespace ClassicUO.Game.UI.Controls
                 if (_down.IsClicked)
                 {
                     UpdateValue();
-                    _timeUntilNextClick = TIME_BETWEEN_CLICKS * 2;
+                    _timeUntilNextClick = Time.Ticks + TIME_BETWEEN_CLICKS * 2;
                 }
             };
+            _down.MouseUp += (sender, e) =>
+            {
+                _autoRepeatInitialized = false;
+            };
             Add(_down);
-            Add(_textBox = new StbTextBox(font, maxcharlength, width, isunicode, style, hue)
+            Add(_textBox = new AssistStbTextBox(font, maxcharlength, width, isunicode, style, hue)
             {
                 X = 2,
                 Y = 2,
@@ -95,6 +122,12 @@ namespace ClassicUO.Game.UI.Controls
 
         private void UpdateValue()
         {
+            if(!_autoRepeatInitialized)
+            {
+                _autoRepeatInitialized = true;
+                _timeFirstClick = Time.Ticks;
+            }
+
             int.TryParse(_textBox.Text, out int i);
 
             if (_up.IsClicked)
@@ -115,19 +148,15 @@ namespace ClassicUO.Game.UI.Controls
 
         public override void Update()
         {
-             if (IsDisposed)
-            {
+            if (IsDisposed)
                 return;
-            }
 
             if (_up.IsClicked || _down.IsClicked)
             {
                 if (Time.Ticks > _timeUntilNextClick)
                 {
-                    // MobileUO: CUO 0.1.11.0 removed frameMS from the Update method
-                    //_timeUntilNextClick -= (float)frameMS;
-                    _timeUntilNextClick = Time.Ticks + TIME_BETWEEN_CLICKS;
-
+                    var elapsed = Time.Ticks - _timeFirstClick;
+                    _timeUntilNextClick = Time.Ticks + (elapsed > 4000 ? (elapsed > 8000 ? TIME_BETWEEN_CLICKS_FASTEST : TIME_BETWEEN_CLICKS_FAST) : TIME_BETWEEN_CLICKS);
                     UpdateValue();
                 }
             }
