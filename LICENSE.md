@@ -13,5 +13,8 @@ Files originating from ClassicUO remain licensed under the
 BSD 2-Clause License and retain their original copyright
 and license notices.
 
-The BSD 2-Clause license text can be found in LICENSES/BSD-2-CLAUSE.md
-The AGPLv3 license text can be found in LICENSES/GNU-AGPL-V3.md
+The BSD 2-Clause license text can be found in
+[LICENSES/BSD-2-CLAUSE.md](LICENSES/BSD-2-CLAUSE.md)
+
+The AGPLv3 license text can be found in
+[LICENSES/GNU-AGPL-V3.md](LICENSES/GNU-AGPL-V3.md)
