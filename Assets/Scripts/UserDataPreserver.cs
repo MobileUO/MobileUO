@@ -67,6 +67,23 @@ public sealed class UserDataPreserver : IDisposable
             return null;
         }
 
+        if (Path.IsPathRooted(relativePath))
+        {
+            return null;
+        }
+
+        if (Uri.TryCreate(relativePath, UriKind.Absolute, out var uri) && uri.IsAbsoluteUri)
+        {
+            return null;
+        }
+
+        var colonIndex = relativePath.IndexOf(':');
+        var separatorIndex = relativePath.IndexOfAny(new[] {'/', '\\'});
+        if (colonIndex >= 0 && (separatorIndex < 0 || colonIndex < separatorIndex))
+        {
+            return null;
+        }
+
         var normalizedPath = relativePath.Replace('\\', '/').TrimStart('/');
         var pathSegments = normalizedPath
             .Split(new[] {'/'}, StringSplitOptions.RemoveEmptyEntries);

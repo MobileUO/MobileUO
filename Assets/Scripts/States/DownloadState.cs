@@ -98,12 +98,28 @@ public class DownloadState : IState
                     {
                         if (contentType.Contains("application/json"))
                         {
-                            Debug.Log($"Json response: {request.downloadHandler.text}");
-                            ManifestFilesToDownload = ManifestParser.ParseJson(request.downloadHandler.text);
+                            try
+                            {
+                                Debug.Log($"Json response: {request.downloadHandler.text}");
+                                ManifestFilesToDownload = ManifestParser.ParseJson(request.downloadHandler.text);
+                            }
+                            catch (Exception exception)
+                            {
+                                Debug.LogWarning($"Could not parse json manifest: {exception}");
+                                ManifestFilesToDownload = null;
+                            }
                         }
                         else if (contentType.Contains("application/xml") || contentType.Contains("text/xml"))
                         {
-                            ManifestFilesToDownload = ManifestParser.ParseXml(request.downloadHandler.text);
+                            try
+                            {
+                                ManifestFilesToDownload = ManifestParser.ParseXml(request.downloadHandler.text);
+                            }
+                            catch (Exception exception)
+                            {
+                                Debug.LogWarning($"Could not parse xml manifest: {exception}");
+                                ManifestFilesToDownload = null;
+                            }
                         }
                         else if (contentType.Contains("text/html"))
                         {
@@ -190,15 +206,12 @@ public class DownloadState : IState
             return uriBuilder.Uri;
         }
 
-        var baseUri = uriBuilder.Uri;
-        if (baseUri.AbsolutePath.EndsWith("/") == false)
+        if (uriBuilder.Path.EndsWith("/") == false)
         {
-            var directoryPath = baseUri.AbsolutePath;
-            var slashIndex = directoryPath.LastIndexOf('/');
-            uriBuilder.Path = slashIndex >= 0 ? directoryPath.Substring(0, slashIndex + 1) : "/";
-            baseUri = uriBuilder.Uri;
+            uriBuilder.Path = $"{uriBuilder.Path}/";
         }
 
+        var baseUri = uriBuilder.Uri;
         return new Uri(baseUri, fileName);
     }
 

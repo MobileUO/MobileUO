@@ -241,6 +241,13 @@ public class DirectoryDownloader : DownloaderBase
     {
         if (downloadAttemptsPerFile[fileName] >= MAX_DOWNLOAD_ATTEMPTS)
         {
+            activeRequestAndFileNameTupleList?.ForEach(tuple =>
+            {
+                tuple.Item1?.Abort();
+                tuple.Item1?.Dispose();
+            });
+            activeRequestAndFileNameTupleList?.Clear();
+            concurrentDownloadCounter = 0;
             downloadPresenter.StopCoroutine(downloadCoroutine);
             downloadCoroutine = null;
             downloadState.StopAndShowError(error);
