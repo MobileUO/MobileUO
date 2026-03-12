@@ -25,10 +25,26 @@ Click to play the video
 [![MobileUO Renaissance capture](https://raw.githubusercontent.com/VoxelBoy/MobileUO/master/docs/images/MobileUORenaissanceCaptureVideoThumbnail.png)](http://www.youtube.com/watch?v=fT_gdb_X9oc "MobileUO - UO Renaissance capture")
 
 # Legal
-This project uses the ClassicUO client code inside of Unity
+
+MobileUO is an open-source Ultima Online client built using Unity
+and derived in part from the ClassicUO project.
 
 * [ClassicUO](https://github.com/andreakarasho/ClassicUO)
 
-This work is released under the GPLv3 license. This project does not distribute any copyrighted game assets. In order to run this client you'll need to legally obtain a copy of the Ultima Online Classic Client.
+# Licensing
+
+MobileUO is licensed under the GNU Affero General Public License v3 (AGPLv3).
+
+This project contains source code derived from the ClassicUO project,
+which is licensed under the BSD 2-Clause License. Files originating
+from ClassicUO retain their original copyright notices and BSD license.
+
+# Game Assets
+
+This project does not distribute any copyrighted Ultima Online
+game assets. In order to run this client, you must legally obtain
+a copy of the Ultima Online Classic Client. Using a custom client
+to connect to official UO servers is strictly forbidden. 
+We do not assume any responsibility of the usage of this client.
 
 Ultima Online(R) © 2020 Electronic Arts Inc. All Rights Reserved.
