@@ -1,4 +1,7 @@
-﻿using System;
+﻿// Original logic from original Razor Assistant
+// 
+// This specific derivative work is licensed under GNU AGPLv3.
+using System;
 
 namespace Assistant
 {
