@@ -8,6 +8,7 @@ using UnityEngine.Networking;
 public class DownloadState : IState
 {
     public List<string> FilesToDownload;
+    public List<ManifestFile> ManifestFilesToDownload;
     public string ResourcePathForFilesToDownload;
     
     public static readonly List<string> NeededUoFileExtensions = new() {".def", ".mul", ".idx", ".uop", ".enu", ".rle", ".txt"};
@@ -97,23 +98,46 @@ public class DownloadState : IState
                     {
                         if (contentType.Contains("application/json"))
                         {
-                            //Parse json response to get list of files
-                            Debug.Log($"Json response: {request.downloadHandler.text}");
-                            FilesToDownload = Newtonsoft.Json.JsonConvert.DeserializeObject<List<string>>(request.downloadHandler.text);
+                            try
+                            {
+                                Debug.Log($"Json response: {request.downloadHandler.text}");
+                                ManifestFilesToDownload = ManifestParser.ParseJson(request.downloadHandler.text);
+                            }
+                            catch (Exception exception)
+                            {
+                                Debug.LogWarning($"Could not parse json manifest: {exception}");
+                                ManifestFilesToDownload = null;
+                            }
+                        }
+                        else if (contentType.Contains("application/xml") || contentType.Contains("text/xml"))
+                        {
+                            try
+                            {
+                                ManifestFilesToDownload = ManifestParser.ParseXml(request.downloadHandler.text);
+                            }
+                            catch (Exception exception)
+                            {
+                                Debug.LogWarning($"Could not parse xml manifest: {exception}");
+                                ManifestFilesToDownload = null;
+                            }
                         }
                         else if (contentType.Contains("text/html"))
                         {
-                            FilesToDownload = new List<string>(Regex
+                            ManifestFilesToDownload = new List<ManifestFile>(Regex
                                 .Matches(request.downloadHandler.text, H_REF_PATTERN, RegexOptions.IgnoreCase)
                                 .Cast<Match>()
-                                .Select(match => match.Groups[1].Value));
+                                .Select(match => new ManifestFile { FileName = match.Groups[1].Value }));
                         }
                     }
 
-                    if (FilesToDownload != null)
+                    if (ManifestFilesToDownload == null)
                     {
-                        FilesToDownload.RemoveAll(file => NeededUoFileExtensions.Any(file.Contains) == false);
-                        SetFileListAndDownload(FilesToDownload);
+                        ManifestFilesToDownload = ParseManifestWithoutContentType(request.downloadHandler.text);
+                    }
+
+                    if (ManifestFilesToDownload != null)
+                    {
+                        SetManifestAndDownload(ManifestFilesToDownload, GetResourcePathForDownloads(request.uri));
                     }
                     else
                     {
@@ -126,7 +150,13 @@ public class DownloadState : IState
 
     public void SetFileListAndDownload(List<string> filesList, string resourcePathForFilesToDownload = null)
     {
-        FilesToDownload = filesList;
+        SetManifestAndDownload(filesList.Select(fileName => new ManifestFile { FileName = fileName }).ToList(), resourcePathForFilesToDownload);
+    }
+
+    public void SetManifestAndDownload(List<ManifestFile> manifestFiles, string resourcePathForFilesToDownload = null)
+    {
+        ManifestFilesToDownload = FilterManifestFiles(manifestFiles);
+        FilesToDownload = ManifestFilesToDownload.Select(file => file.FileName).ToList();
         ResourcePathForFilesToDownload = resourcePathForFilesToDownload;
 
         //Check that some of the essential UO files exist
@@ -162,14 +192,27 @@ public class DownloadState : IState
 
     public static Uri GetUri(string serverUrl, int port, string fileName = null)
     {
-        var httpPort = port == 80;
-        var httpsPort = port == 443;
-        var defaultPort = httpPort || httpsPort;
-        var scheme = httpsPort ? "https" : "http";
-        var serverUrlWithoutHttp = serverUrl.Replace("http://", "");
-        serverUrlWithoutHttp = serverUrlWithoutHttp.Replace("https://", "");
-        var uriBuilder = new UriBuilder(scheme, serverUrlWithoutHttp, defaultPort ? - 1 : port, fileName);
-        return uriBuilder.Uri;
+        var scheme = port == 443 ? "https" : "http";
+        var serverUrlWithScheme = serverUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                                  || serverUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+            ? serverUrl
+            : $"{scheme}://{serverUrl}";
+
+        var uriBuilder = new UriBuilder(serverUrlWithScheme);
+        uriBuilder.Port = port == 80 || port == 443 ? -1 : port;
+
+        if (string.IsNullOrEmpty(fileName))
+        {
+            return uriBuilder.Uri;
+        }
+
+        if (uriBuilder.Path.EndsWith("/") == false)
+        {
+            uriBuilder.Path = $"{uriBuilder.Path}/";
+        }
+
+        var baseUri = uriBuilder.Uri;
+        return new Uri(baseUri, fileName);
     }
 
     public void StopAndShowError(string error)
@@ -189,6 +232,87 @@ public class DownloadState : IState
         downloader?.Dispose();
         
         FilesToDownload = null;
+        ManifestFilesToDownload = null;
         serverConfiguration = null;
+    }
+
+    private static List<ManifestFile> FilterManifestFiles(List<ManifestFile> manifestFiles)
+    {
+        if (manifestFiles == null)
+        {
+            return null;
+        }
+
+        var filteredFiles = new List<ManifestFile>();
+
+        foreach (var file in manifestFiles)
+        {
+            var normalizedPath = UserDataPreserver.NormalizeRelativePath(file?.FileName);
+            if (string.IsNullOrWhiteSpace(normalizedPath))
+            {
+                continue;
+            }
+
+            if (NeededUoFileExtensions.Any(extension => normalizedPath.Contains(extension, StringComparison.OrdinalIgnoreCase)) == false)
+            {
+                continue;
+            }
+
+            filteredFiles.Add(new ManifestFile
+            {
+                FileName = normalizedPath,
+                DownloadPath = UserDataPreserver.NormalizeRelativePath(file.DownloadPath) ?? normalizedPath,
+                Hash = file.Hash,
+                Size = file.Size
+            });
+        }
+
+        return filteredFiles
+            .GroupBy(file => file.FileName, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.Last())
+            .ToList();
+    }
+
+    private static List<ManifestFile> ParseManifestWithoutContentType(string content)
+    {
+        try
+        {
+            return ManifestParser.ParseJson(content);
+        }
+        catch
+        {
+        }
+
+        try
+        {
+            return ManifestParser.ParseXml(content);
+        }
+        catch
+        {
+        }
+
+        return null;
+    }
+
+    private static string GetResourcePathForDownloads(Uri manifestUri)
+    {
+        var path = manifestUri.AbsolutePath;
+        if (string.IsNullOrEmpty(path) || path == "/")
+        {
+            return null;
+        }
+
+        if (path.EndsWith("/"))
+        {
+            return path.TrimStart('/');
+        }
+
+        var lastSlashIndex = path.LastIndexOf('/');
+        if (lastSlashIndex < 0)
+        {
+            return null;
+        }
+
+        return path.Substring(1, lastSlashIndex);
     }
 }
