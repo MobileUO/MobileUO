@@ -24,7 +24,9 @@ namespace ClassicUO.Game.UI.Gumps
         private readonly AlphaBlendControl _background;
         private readonly NiceButton _buttonPrev,
             _buttonNext,
-            _setlootbag;
+            _setlootbag,
+            // MobileUO: added close button
+            _buttonClose;
         private readonly Item _corpse;
 
         private int _currentPage = 1;
@@ -119,6 +121,22 @@ namespace ClassicUO.Game.UI.Gumps
             Add(_buttonPrev);
             Add(_buttonNext);
 
+            // MobileUO: added close button
+            _buttonClose = new NiceButton(
+                0,
+                0,
+                40,
+                40,
+                ButtonAction.Activate,
+                "X"
+            )
+            {
+                ButtonParameter = 3,
+                IsSelectable = false
+            };
+
+            Add(_buttonClose);
+
             Add(
                 _currentPageLabel = new Label("1", true, 999, align: TEXT_ALIGN_TYPE.TS_CENTER)
                 {
@@ -182,6 +200,11 @@ namespace ClassicUO.Game.UI.Gumps
             {
                 GameActions.Print(World, ResGumps.TargetContainerToGrabItemsInto);
                 World.TargetManager.SetTargeting(CursorTarget.SetGrabBag, 0, TargetType.Neutral);
+            }
+            // MobileUO: added close button
+            else if (buttonID == 3)
+            {
+                Dispose();
             }
             else
             {
@@ -373,6 +396,10 @@ namespace ClassicUO.Game.UI.Gumps
             _currentPageLabel.X = Width / 2 - 5;
             _currentPageLabel.Y = Height - 20;
 
+            // MobileUO: added close button
+            _buttonClose.X = Width - _buttonClose.Width - 3;
+            _buttonClose.Y = 3;
+
             _corpseNameLabel.Text = GetCorpseName();
 
             WantUpdateSize = true;
@@ -403,6 +430,28 @@ namespace ClassicUO.Game.UI.Gumps
         private string GetCorpseName()
         {
             return _corpse.Name?.Length > 0 ? _corpse.Name : "a corpse";
+        }
+
+        // MobileUO: only loot item if user clicks it twice
+        private uint _selectedItemSerial; // 0 = none
+        internal uint SelectedItemSerial => _selectedItemSerial;
+
+        internal void HandleItemClick(uint serial, Item item, ushort amount)
+        {
+            if (serial == 0 || item == null)
+                return;
+
+            if (_selectedItemSerial == serial || !ProfileManager.CurrentProfile.DoubleClickForGridLoot)
+            {
+                // second click on the same item -> loot it
+                GameActions.GrabItem(World, item, amount);
+                _selectedItemSerial = 0;
+            }
+            else
+            {
+                // first click on this item -> set as selected
+                _selectedItemSerial = serial;
+            }
         }
 
         private class GridLootItem : Control
@@ -464,7 +513,11 @@ namespace ClassicUO.Game.UI.Gumps
                 {
                     if (e.Button == MouseButtonType.Left)
                     {
-                        GameActions.GrabItem(_gump.World, item, (ushort)amount.Value);
+                        // MobileUO: handle item click depending on if double click to loot is enabled
+                        var serial = LocalSerial;
+                        var item = _gump.World.Items.Get(serial);
+
+                        _gump.HandleItemClick(serial, item, (ushort)amount.Value);
                     }
                 };
 
@@ -538,7 +591,9 @@ namespace ClassicUO.Game.UI.Gumps
                     hueVector
                 );
 
-                if (_hit.MouseIsOver)
+                // MobileUO: highlight on first selection click
+                bool isSelected = LocalSerial == _gump.SelectedItemSerial && ProfileManager.CurrentProfile.DoubleClickForGridLoot;
+                if (_hit.MouseIsOver || isSelected)
                 {
                     hueVector.Z = 0.7f;
 

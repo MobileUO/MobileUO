@@ -1,24 +1,18 @@
 ﻿#region license
-//  Copyright (C) 2019 ClassicUO Development Community on Github
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
 //
-//	This project is an alternative client for the game Ultima Online.
-//	The goal of this is to develop a lightweight client considering 
-//	new technologies.  
-//      
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org> for details.
 #endregion
-
 using Assistant;
 using Assistant.Scripts;
 using ClassicUO.Configuration;
@@ -42,6 +36,8 @@ namespace ClassicUO.Game.UI.Gumps
 {
     internal class AssistantGump : Gump
     {
+        public bool AssistantEnabled;
+
         internal class MessageBoxGump : Gump
         {
             internal MessageBoxGump(World world, string title, string body) : base(world, 0, 0)
@@ -925,6 +921,8 @@ namespace ClassicUO.Game.UI.Gumps
         private static bool _updated = false;
         public override void Update()
         {
+            AssistantEnabled = UserPreferences.EnableAssistant.CurrentValue == (int)PreferenceEnums.EnableAssistant.On;
+
             base.Update();
             if(!_updated)
             {
@@ -3694,16 +3692,22 @@ namespace ClassicUO.Game.UI.Gumps
         private Texture2D _edge;
         public override bool Draw(UltimaBatcher2D batcher, int x, int y)
         {
-            if (_edge == null)
+            // MobileUO: TODO: this only hides the assistant if disabled - it should probably actually unload it but this is sufficient for now ~mandlar
+            if (AssistantEnabled)
             {
-                _edge = new Texture2D(batcher.GraphicsDevice, 1, 1, false, SurfaceFormat.Color);
-                _edge.SetData(new Color[] { Color.Gray });
+                if (_edge == null)
+                {
+                    _edge = new Texture2D(batcher.GraphicsDevice, 1, 1, false, SurfaceFormat.Color);
+                    _edge.SetData(new Color[] { Color.Gray });
+                }
+                // MobileUO: TODO: should this be... 1?
+                Vector3 vec = ShaderHueTranslator.GetHueVector(0, false, 1);
+                //Vector3 vec = Vector3.Zero;
+                batcher.DrawRectangle(_edge, x, y, Width, Height, vec);
+                return base.Draw(batcher, x, y);
             }
-            // MobileUO: TODO: should this be... 1?
-            Vector3 vec = ShaderHueTranslator.GetHueVector(0, false, 1);
-            //Vector3 vec = Vector3.Zero;
-            batcher.DrawRectangle(_edge, x, y, Width, Height, vec);
-            return base.Draw(batcher, x, y);
+
+            return false;
         }
 
         public override void Dispose()

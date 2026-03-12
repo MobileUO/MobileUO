@@ -1,11 +1,5 @@
-using System;
-using System.IO;
-using System.Linq;
-using UnityEngine;
 using ClassicUO;
-using ClassicUO.Utility.Logging;
 using ClassicUO.Configuration;
-using ClassicUO.Utility;
 using ClassicUO.Game;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.Managers;
@@ -13,13 +7,18 @@ using ClassicUO.Game.Scenes;
 using ClassicUO.Game.UI.Controls;
 using ClassicUO.Game.UI.Gumps;
 using ClassicUO.Game.UI.Gumps.Login;
-using Newtonsoft.Json;
 using ClassicUO.Network;
+using ClassicUO.Utility.Logging;
 using Microsoft.Xna.Framework;
+using Newtonsoft.Json;
+using PreferenceEnums;
 using SDL2;
+using System;
+using System.IO;
+using System.Linq;
+using UnityEngine;
 using GameObject = UnityEngine.GameObject;
 using Texture2D = Microsoft.Xna.Framework.Graphics.Texture2D;
-using ClassicUO.Network.Encryption;
 
 public class ClientRunner : MonoBehaviour
 {
@@ -62,7 +61,7 @@ public class ClientRunner : MonoBehaviour
 		UserPreferences.ShowCloseButtons.ValueChanged += OnShowCloseButtonsChanged;
 		UserPreferences.UseMouseOnMobile.ValueChanged += OnUseMouseOnMobileChanged;
 		UserPreferences.TargetFrameRate.ValueChanged += OnTargetFrameRateChanged;
-		UserPreferences.TextureFiltering.ValueChanged += UpdateTextureFiltering;
+        UserPreferences.TextureFiltering.ValueChanged += UpdateTextureFiltering;
 		UserPreferences.JoystickDeadZone.ValueChanged += OnJoystickDeadZoneChanged;
 		UserPreferences.JoystickRunThreshold.ValueChanged += OnJoystickRunThresholdChanged;
 		UserPreferences.ContainerItemSelection.ValueChanged += OnContainerItemSelectionChanged;
@@ -128,7 +127,7 @@ public class ClientRunner : MonoBehaviour
 
 	private void OnEnableAssistantChanged(int enableAssistantCurrentValue)
 	{
-#if ENABLE_INTERNAL_ASSISTANT
+//#if ENABLE_INTERNAL_ASSISTANT
 		if (UserPreferences.EnableAssistant.CurrentValue == (int) PreferenceEnums.EnableAssistant.On && Client.Game != null)
 		{
 			if (Plugin.LoadInternalAssistant())
@@ -141,7 +140,7 @@ public class ClientRunner : MonoBehaviour
 				}
 			}
 		}
-#endif
+//#endif
 	}
 
 	private void OnShowModifierKeyButtonsChanged(int currentValue)
@@ -180,13 +179,16 @@ public class ClientRunner : MonoBehaviour
 
 	private static void OnTargetFrameRateChanged(int frameRate)
 	{
-		Application.targetFrameRate = frameRate;
+        if (frameRate == (int)TargetFrameRates.InGameFPS)
+			frameRate = Settings.GlobalSettings.FPS;
+
+        Application.targetFrameRate = frameRate;
 	}
     
 	private void UpdateTextureFiltering(int textureFiltering)
 	{
 		var filterMode = (FilterMode) textureFiltering;
-		Texture2D.defaultFilterMode = filterMode;
+        Texture2D.defaultFilterMode = filterMode;
 		if (Client.Game != null)
 		{
 			var textures = FindObjectsOfType<Texture>();
@@ -196,7 +198,7 @@ public class ClientRunner : MonoBehaviour
 			}
 			Client.Game.GraphicsDevice.Textures[1].UnityTexture.filterMode = FilterMode.Point;
 			Client.Game.GraphicsDevice.Textures[2].UnityTexture.filterMode = FilterMode.Point;
-			Client.Game.GraphicsDevice.Textures[3].UnityTexture.filterMode = FilterMode.Point;
+			//Client.Game.GraphicsDevice.Textures[3].UnityTexture.filterMode = FilterMode.Point;
 		}
 	}
 	
@@ -299,7 +301,7 @@ public class ClientRunner : MonoBehaviour
 
 	    //Load and adjust settings
 	    var settingsFilePath = Settings.GetSettingsFilepath();
-	    if (File.Exists(settingsFilePath))
+        if (File.Exists(settingsFilePath))
 	    {
 		    Settings.GlobalSettings = JsonConvert.DeserializeObject<Settings>(File.ReadAllText(settingsFilePath));
 	    }
@@ -361,12 +363,12 @@ public class ClientRunner : MonoBehaviour
 		    Client.SceneChanged += OnSceneChanged;
 			// MobileUO: TODO: will passing null be a problem?
 		    Client.Run(null);
-#if ENABLE_INTERNAL_ASSISTANT
+//#if ENABLE_INTERNAL_ASSISTANT
 		    if (UserPreferences.EnableAssistant.CurrentValue == (int) PreferenceEnums.EnableAssistant.On)
 		    {
 			    Plugin.LoadInternalAssistant();
 		    }
-#endif
+//#endif
 		    Client.Game.Exiting += OnGameExiting;
 		    ApplyScalingFactor();
 
@@ -374,8 +376,8 @@ public class ClientRunner : MonoBehaviour
 		    {
 			    modifierKeyButtonsParent.SetActive(true);
 		    }
-	    }
-	    catch (Exception e)
+		}
+        catch (Exception e)
 	    {
 		    Console.WriteLine(e);
 		    OnError?.Invoke(e.ToString());
@@ -441,7 +443,7 @@ public class ClientRunner : MonoBehaviour
 		    scale = isGameScene ? gameScale : loginScale;
 	    }
 
-	    if (UserPreferences.ScaleSize.CurrentValue != (int) PreferenceEnums.ScaleSizes.Default && isGameScene)
+	    if (UserPreferences.ScaleSize.CurrentValue != (int) PreferenceEnums.ScaleSizes.One && isGameScene)
 	    {
 		    scale *= UserPreferences.ScaleSize.CurrentValue / 100f;
 	    }

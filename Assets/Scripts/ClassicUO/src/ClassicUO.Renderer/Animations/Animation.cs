@@ -10,7 +10,8 @@ namespace ClassicUO.Renderer.Animations
     {
         const int MAX_ANIMATIONS_DATA_INDEX_COUNT = 2048;
 
-        private readonly TextureAtlas _atlas;
+        // MobileUO: TODO: #19: temporarily made public
+        public readonly TextureAtlas _atlas;
         private readonly PixelPicker _picker = new PixelPicker();
         private readonly AnimationsLoader _animationLoader;
         private IndexAnimation[] _dataIndex = new IndexAnimation[MAX_ANIMATIONS_DATA_INDEX_COUNT];
@@ -20,7 +21,8 @@ namespace ClassicUO.Renderer.Animations
         public Animations(AnimationsLoader animationLoader, GraphicsDevice device)
         {
             _animationLoader = animationLoader;
-            _atlas = new TextureAtlas(device, 4096, 4096, SurfaceFormat.Color);
+            // MobileUO: use atlas size from settings 
+            _atlas = new TextureAtlas(device, UserPreferences.SpriteSheetSize.CurrentValue, UserPreferences.SpriteSheetSize.CurrentValue, SurfaceFormat.Color);
         }
 
 
@@ -419,6 +421,12 @@ namespace ClassicUO.Renderer.Animations
             }
 
             return false;
+        }
+
+        // MobileUO: added way to clear sprite arrays when toggling using sprite sheets or not
+        public void ClearSpriteInfo()
+        {
+            Array.Clear(_dataIndex, 0, _dataIndex.Length);
         }
 
         private sealed class IndexAnimation
