@@ -29,16 +29,14 @@ SOFTWARE.
 #endregion License
 
 using System;
-using System.ComponentModel;
-//using Microsoft.Xna.Framework.Design;
 using System.Text;
 using System.Runtime.InteropServices;
+using UnityVector2 = UnityEngine.Vector2;
 
 namespace Microsoft.Xna.Framework
 {
     [Serializable]
     [StructLayout(LayoutKind.Sequential)]
-    //[TypeConverter(typeof(Vector2Converter))]
     public struct Vector2 : IEquatable<Vector2>
     {
         #region Private Fields
@@ -595,5 +593,12 @@ namespace Microsoft.Xna.Framework
         }
 
         #endregion Operators
+
+        #region Converters
+        public static unsafe implicit operator UnityVector2(Vector2 v)
+        {
+            return *(UnityVector2*)&v;
+        }
+        #endregion
     }
 }

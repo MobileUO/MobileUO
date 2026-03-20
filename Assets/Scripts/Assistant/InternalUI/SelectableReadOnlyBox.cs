@@ -1,4 +1,4 @@
-﻿#region license
+﻿#region License
 // Copyright (C) 2022-2025 Sascha Puligheddu
 // 
 // This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
@@ -11,8 +11,9 @@
 // and the AGPL-3.0 terms are respected for this specific module.
 //
 // This program is distributed WITHOUT ANY WARRANTY. 
-// See <https://www.gnu.org> for details.
+// See <https://www.gnu.org/licenses/agpl-3.0.html> for details.
 #endregion
+
 using ClassicUO.Input;
 using ClassicUO.Assets;
 using ClassicUO.Renderer;
@@ -31,7 +32,7 @@ using ClassicUO.Utility.Logging;
 
 namespace ClassicUO.Game.UI.Controls
 {
-    class SelectableReadOnlyBox : StbTextBox
+    class SelectableReadOnlyBox : AssistStbTextBox
     {
         public SelectableReadOnlyBox(byte font, int max_char_count = -1, int maxWidth = 0, bool isunicode = true, FontStyle style = FontStyle.None, ushort hue = 0, TEXT_ALIGN_TYPE align = 0) : base(font, max_char_count, maxWidth, isunicode, style, hue, align)
         {

@@ -3,6 +3,7 @@
 using ClassicUO.IO;
 using ClassicUO.Utility;
 using System;
+using System.Buffers;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -68,7 +69,8 @@ namespace ClassicUO.Assets
 
             file.Seek(entry.Offset, SeekOrigin.Begin);
 
-            var data = new uint[width * height];
+            var data = ArrayPool<uint>.Shared.Rent(width * height);
+            Array.Clear(data, 0, width * height);
 
             for (int i = 0; i < 22; ++i)
             {
@@ -128,53 +130,61 @@ namespace ClassicUO.Assets
             width = file.ReadInt16();
             height = file.ReadInt16();
 
-            var buf = new byte[entry.Length];
-            file.Read(buf);
+            var buf = ArrayPool<byte>.Shared.Rent(entry.Length);
+            file.Read(buf.AsSpan(0, entry.Length));
 
-            var data = new uint[width * height];
+            var data = ArrayPool<uint>.Shared.Rent(width * height);
+            Array.Clear(data, 0, width * height);
 
-            fixed (byte* startPtr = buf)
+            try
             {
-                ushort* lineoffsets = (ushort*)startPtr;
-                byte* datastart = (byte*)startPtr + height * 2;
-                int x = 0;
-                int y = 0;
-                var ptr = (ushort*)(datastart + lineoffsets[0] * 2);
-
-                while (y < height)
+                fixed (byte* startPtr = buf)
                 {
-                    ushort xoffs = *ptr++;
-                    ushort run = *ptr++;
+                    ushort* lineoffsets = (ushort*)startPtr;
+                    byte* datastart = (byte*)startPtr + height * 2;
+                    int x = 0;
+                    int y = 0;
+                    var ptr = (ushort*)(datastart + lineoffsets[0] * 2);
 
-                    if (xoffs + run >= 2048)
+                    while (y < height)
                     {
-                        break;
-                    }
+                        ushort xoffs = *ptr++;
+                        ushort run = *ptr++;
 
-                    if (xoffs + run != 0)
-                    {
-                        x += xoffs;
-                        int pos = y * width + x;
-
-                        for (int j = 0; j < run; ++j, ++pos)
+                        if (xoffs + run >= 2048)
                         {
-                            ushort val = *ptr++;
-
-                            if (val != 0)
-                            {
-                                data[pos] = HuesHelper.Color16To32(val) | 0xFF_00_00_00;
-                            }
+                            break;
                         }
 
-                        x += run;
-                    }
-                    else
-                    {
-                        x = 0;
-                        ++y;
-                        ptr = (ushort*)(datastart + lineoffsets[y] * 2);
+                        if (xoffs + run != 0)
+                        {
+                            x += xoffs;
+                            int pos = y * width + x;
+
+                            for (int j = 0; j < run; ++j, ++pos)
+                            {
+                                ushort val = *ptr++;
+
+                                if (val != 0)
+                                {
+                                    data[pos] = HuesHelper.Color16To32(val) | 0xFF_00_00_00;
+                                }
+                            }
+
+                            x += run;
+                        }
+                        else
+                        {
+                            x = 0;
+                            ++y;
+                            ptr = (ushort*)(datastart + lineoffsets[y] * 2);
+                        }
                     }
                 }
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buf, clearArray: false);
             }
 
             return data;
@@ -229,11 +239,13 @@ namespace ClassicUO.Assets
                 :
                 LoadArt(_file, ref /*in*/ entry, out width, out height);
 
+            bool isRented = width > 0 && height > 0;
             return new ArtInfo()
             {
-                Pixels = pixels,
+                Pixels = pixels.AsSpan(0, width * height),
                 Width = width,
-                Height = height
+                Height = height,
+                _rentedPixels = isRented ? pixels : null
             };
         }
     }
@@ -243,5 +255,16 @@ namespace ClassicUO.Assets
         public Span<uint> Pixels;
         public int Width;
         public int Height;
+        internal uint[] _rentedPixels;
+
+        public void Return()
+        {
+            if (_rentedPixels != null)
+            {
+                ArrayPool<uint>.Shared.Return(_rentedPixels, clearArray: false);
+                _rentedPixels = null;
+            }
+            Pixels = default;
+        }
     }
 }

@@ -1,4 +1,4 @@
-﻿#region license
+﻿#region License
 // Copyright (C) 2022-2025 Sascha Puligheddu
 // 
 // This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
@@ -11,8 +11,9 @@
 // and the AGPL-3.0 terms are respected for this specific module.
 //
 // This program is distributed WITHOUT ANY WARRANTY. 
-// See <https://www.gnu.org> for details.
+// See <https://www.gnu.org/licenses/agpl-3.0.html> for details.
 #endregion
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -35,7 +36,7 @@ namespace Assistant.Core
         private static readonly uint _largeBodGumpId = 2703603018;
         private static readonly uint _smallBodGumpId = 1526454082;
 
-        private static readonly string _bodFile = Path.GetDirectoryName(Profile.DataPath);
+        private static readonly string _bodFile = Path.Combine(Engine.DataPath, "bod.csv");
 
         public static bool IsBodGump(uint gumpId)
         {

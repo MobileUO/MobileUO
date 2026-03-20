@@ -1,5 +1,22 @@
-﻿using System;
+﻿#region License
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org/licenses/agpl-3.0.html> for details.
+#endregion
 
+using System;
+
+using ClassicUO.Network;
 using ClassicUO.Game.Data;
 
 namespace Assistant
@@ -8,23 +25,23 @@ namespace Assistant
     {
         private class AbilityInfo
         {
-            private int[][] m_Items;
+            private int[][] _Items;
 
             public AbilityInfo(Ability ab, params int[][] items)
             {
                 Ability = ab;
-                m_Items = items;
+                _Items = items;
             }
 
             public Ability Ability { get; }
 
             public bool HasItem(int item)
             {
-                for (int a = 0; a < m_Items.Length; a++)
+                for (int a = 0; a < _Items.Length; a++)
                 {
-                    for (int b = 0; b < m_Items[a].Length; b++)
+                    for (int b = 0; b < _Items[a].Length; b++)
                     {
-                        if (m_Items[a][b] == item)
+                        if (_Items[a][b] == item)
                             return true;
                     }
                 }
@@ -33,7 +50,7 @@ namespace Assistant
             }
         }
 
-        private static DateTime m_LastToggle = DateTime.MinValue;
+        private static DateTime _LastToggle = DateTime.MinValue;
 
         private static int[] HatchetID = new int[] { 0xF43, 0xF44 };
         private static int[] LongSwordID = new int[] { 0xF60, 0xF61 };
@@ -89,7 +106,7 @@ namespace Assistant
         private static int[] BlackStaffID = new int[] { 0xDF0, 0xDF1 };
         private static int[] FistsID = new int[] { 0 };
 
-        private static AbilityInfo[] m_Primary = new AbilityInfo[]
+        private static AbilityInfo[] _Primary = new AbilityInfo[]
         {
             new AbilityInfo(Ability.ArmorIgnore, HatchetID, LongSwordID, BladedStaffID, HammerPickID, WarAxeID,
                 KryssID, SpearID, CompositeBowID),
@@ -103,14 +120,14 @@ namespace Assistant
             new AbilityInfo(Ability.DoubleStrike, PickaxeID, TwoHandedAxeID, DoubleAxeID, ScimitarID, KatanaID,
                 CrescentBladeID, QuarterStaffID, DoubleBladedStaffID, RepeatingCrossbowID),
             new AbilityInfo(Ability.InfectiousStrike, ButcherKnifeID, DaggerID),
-            //new AbilityInfo( AOSAbility.MortalStrike ), // not primary for anything
+            //new AbilityInfo( Ability.MortalStrike ), // not primary for anything
             new AbilityInfo(Ability.MovingShot, HeavyCrossbowID),
             new AbilityInfo(Ability.ParalyzingBlow, BardicheID, BoneHarvesterID, PikeID, BowID),
             new AbilityInfo(Ability.ShadowStrike, SkinningKnifeID, ClubID, ShortSpearID),
             new AbilityInfo(Ability.WhirlwindAttack, LargeBattleAxeID, HalberdID, WarHammerID, BlackStaffID)
         };
 
-        private static AbilityInfo[] m_Secondary = new AbilityInfo[]
+        private static AbilityInfo[] _Secondary = new AbilityInfo[]
         {
             new AbilityInfo(Ability.ArmorIgnore, LargeBattleAxeID, BroadswordID, KatanaID),
             new AbilityInfo(Ability.BleedAttack, WarMaceID, WarAxeID),
@@ -121,7 +138,7 @@ namespace Assistant
                 ShepherdsCrookID, MaceID, WarForkID),
             new AbilityInfo(Ability.Dismount, BardicheID, AxeID, BladedStaffID, ClubID, PitchforkID,
                 HeavyCrossbowID),
-            //new AbilityInfo( AOSAbility.DoubleStrike ), // secondary on none
+            //new AbilityInfo( Ability.DoubleStrike ), // secondary on none
             new AbilityInfo(Ability.InfectiousStrike, CleaverID, PikeID, KryssID, DoubleBladedStaffID),
             new AbilityInfo(Ability.MortalStrike, ExecAxeID, BoneHarvesterID, CrescentBladeID, HammerPickID,
                 ScepterID, ShortSpearID, CrossbowID, BowID),
@@ -133,38 +150,21 @@ namespace Assistant
             new AbilityInfo(Ability.WhirlwindAttack, DoubleAxeID)
         };
 
-        private static void ToggleWarPeace()
-        {
-            Engine.Instance.SendToServer(new SetWarMode(!UOSObjects.Player.Warmode));
-        }
-
-        private static void ToggleWar()
-        {
-            Engine.Instance.SendToClient(new SetWarMode(true));
-            Engine.Instance.SendToServer(new SetWarMode(true));
-        }
-
-        private static void TogglePeace()
-        {
-            Engine.Instance.SendToClient(new SetWarMode(false));
-            Engine.Instance.SendToServer(new SetWarMode(false));
-        }
-
         internal static void OnStun()
         {
-            if (m_LastToggle + TimeSpan.FromSeconds(0.5) < DateTime.UtcNow)
+            if (_LastToggle + TimeSpan.FromSeconds(0.5) < DateTime.UtcNow)
             {
-                m_LastToggle = DateTime.UtcNow;
-                Engine.Instance.SendToServer(new StunRequest());
+                _LastToggle = DateTime.UtcNow;
+                NetClient.Socket.PSend_StunDisarm(true);
             }
         }
 
         internal static void OnDisarm()
         {
-            if (m_LastToggle + TimeSpan.FromSeconds(0.5) < DateTime.UtcNow)
+            if (_LastToggle + TimeSpan.FromSeconds(0.5) < DateTime.UtcNow)
             {
-                m_LastToggle = DateTime.UtcNow;
-                Engine.Instance.SendToServer(new DisarmRequest());
+                _LastToggle = DateTime.UtcNow;
+                NetClient.Socket.PSend_StunDisarm(false);
             }
         }
 
@@ -181,54 +181,54 @@ namespace Assistant
 
         public static void SetPrimaryAbility()
         {
-            UOItem right = UOSObjects.Player.GetItemOnLayer(Layer.RightHand);
-            UOItem left = UOSObjects.Player.GetItemOnLayer(Layer.LeftHand);
+            UOItem right = UOSObjects.Player.GetItemOnLayer(Layer.OneHanded);
+            UOItem left = UOSObjects.Player.GetItemOnLayer(Layer.TwoHanded);
 
             Ability a = Ability.Invalid;
             if (right != null)
-                a = GetAbility(right.ItemID, m_Primary);
+                a = GetAbility(right.ItemID, _Primary);
 
             if (a == Ability.Invalid && left != null)
-                a = GetAbility(left.ItemID, m_Primary);
+                a = GetAbility(left.ItemID, _Primary);
 
             if (a == Ability.Invalid)
-                a = GetAbility(FistsID[0], m_Primary);
+                a = GetAbility(FistsID[0], _Primary);
 
             if (a != Ability.Invalid)
             {
-                Engine.Instance.SendToServer(new UseAbility(a));
-                Engine.Instance.SendToClient(ClearAbility.Instance);
+                ClientPackets.PRecv_ClearAbility();
+                NetClient.Socket.PSend_UseAbility(a);
                 UOSObjects.Player.SendMessage($"Setting ability: {a}");
             }
         }
 
         public static void SetSecondaryAbility()
         {
-            UOItem right = UOSObjects.Player.GetItemOnLayer(Layer.RightHand);
-            UOItem left = UOSObjects.Player.GetItemOnLayer(Layer.LeftHand);
+            UOItem right = UOSObjects.Player.GetItemOnLayer(Layer.OneHanded);
+            UOItem left = UOSObjects.Player.GetItemOnLayer(Layer.TwoHanded);
 
             Ability a = Ability.Invalid;
             if (right != null)
-                a = GetAbility(right.ItemID, m_Secondary);
+                a = GetAbility(right.ItemID, _Secondary);
 
             if (a == Ability.Invalid && left != null)
-                a = GetAbility(left.ItemID, m_Secondary);
+                a = GetAbility(left.ItemID, _Secondary);
 
             if (a == Ability.Invalid)
-                a = GetAbility(FistsID[0], m_Secondary);
+                a = GetAbility(FistsID[0], _Secondary);
 
             if (a != Ability.Invalid)
             {
-                Engine.Instance.SendToServer(new UseAbility(a));
-                Engine.Instance.SendToClient(ClearAbility.Instance);
+                ClientPackets.PRecv_ClearAbility();
+                NetClient.Socket.PSend_UseAbility(a);
                 UOSObjects.Player.SendMessage($"Setting ability: {a}");
             }
         }
 
         public static void ClearAbilities()
         {
-            Engine.Instance.SendToServer(new UseAbility(Ability.None));
-            Engine.Instance.SendToClient(ClearAbility.Instance);
+            ClientPackets.PRecv_ClearAbility();
+            NetClient.Socket.PSend_UseAbility(Ability.None);
             UOSObjects.Player.SendMessage("Abilities cleared");
         }
     }

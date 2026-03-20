@@ -26,16 +26,15 @@ SOFTWARE.
 #endregion License
 
 using System;
-using System.ComponentModel;
-//using Microsoft.Xna.Framework.Design;
 using System.Text;
 using System.Runtime.InteropServices;
+using UnityColor = UnityEngine.Color;
+using UnityVector4 = UnityEngine.Vector4;
 
 namespace Microsoft.Xna.Framework
 {
     [Serializable]
     [StructLayout(LayoutKind.Sequential)]
-    //[TypeConverter(typeof(Vector4Converter))]
     public struct Vector4 : IEquatable<Vector4>
     {
         #region Private Fields
@@ -705,5 +704,17 @@ namespace Microsoft.Xna.Framework
         }
 
         #endregion Operators
+
+        #region Converters
+        public static unsafe implicit operator UnityVector4(Vector4 v)
+        {
+            return *(UnityVector4*)&v;
+        }
+
+        public static unsafe implicit operator UnityColor(Vector4 v)
+        {
+            return *(UnityColor*)&v;
+        }
+        #endregion
     }
 }

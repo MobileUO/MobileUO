@@ -21,7 +21,7 @@ namespace ClassicUO.Game.UI.Gumps.Login
         private readonly Action<int> _buttonClick;
         private readonly Label _label;
 
-        public LoadingGump(World world, string labelText, LoginButtons showButtons, Action<int> buttonClick = null) : base(world, 0, 0)
+        public LoadingGump(World world, string labelText, LoginButtons showButtons, Action<int> buttonClick = null, bool center = true) : base(world, 0, 0)
         {
             _buttonClick = buttonClick;
             CanCloseWithRightClick = false;
@@ -99,6 +99,8 @@ namespace ClassicUO.Game.UI.Gumps.Login
                     }
                 );
             }
+            if (center)
+                X = Math.Max(0, (int)((UnityEngine.Screen.width / Client.Game.Batcher.scale) - 640) / 2);
         }
 
         public void SetText(string text)

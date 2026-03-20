@@ -9,7 +9,7 @@ using ClassicUO.Game.Scenes;
 using ClassicUO.Input;
 using ClassicUO.Assets;
 using ClassicUO.Renderer;
-using ClassicUO.Utility;
+//using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -67,7 +67,7 @@ namespace ClassicUO.Game.GameObjects
             bool isHuman = IsHuman;
 
             bool isGargoyle =
-                Client.Game.UO.Version >= ClientVersion.CV_7000
+                Client.Game.UO.Version >= Utility.ClientVersion.CV_7000
                 && (Graphic == 666 || Graphic == 667 || Graphic == 0x02B7 || Graphic == 0x02B6);
 
             Vector3 hueVec = ShaderHueTranslator.GetHueVector(0, false, AlphaHue / 255f);
@@ -868,120 +868,48 @@ namespace ClassicUO.Game.GameObjects
             }
         }
 
-        private static Vector3 CalculateSitAnimation(
-            int y,
-            Item entity,
-            bool isHuman,
-            ref SpriteInfo spriteInfo
-        )
+        private static Vector3 CalculateSitAnimation(int y, Item entity, bool isHuman, ref SpriteInfo spriteInfo)
         {
-            Vector3 mod = new Vector3();
+            // 1. Setup proporzioni base (Default)
+            Vector3 mod = new Vector3(0.35f, 0.60f, 0.94f);
+            int frameHeight = spriteInfo.UV.Height > 0 ? spriteInfo.UV.Height : 61;
 
-            const float UPPER_BODY_RATIO = 0.35f;
-            const float MID_BODY_RATIO = 0.60f;
-            const float LOWER_BODY_RATIO = 0.94f;
-
+            // 2. Se è il corpo umano, aggiorniamo le "fasce" globali di riferimento
             if (entity == null && isHuman)
             {
-                int frameHeight = spriteInfo.UV.Height;
-                if (frameHeight == 0)
-                {
-                    frameHeight = 61;
-                }
-
-                _characterFrameStartY =
-                    y - (spriteInfo.Texture != null ? 0 : frameHeight - SIT_OFFSET_Y);
+                _characterFrameStartY = y - (spriteInfo.Texture != null ? 0 : frameHeight - SIT_OFFSET_Y);
                 _characterFrameHeight = frameHeight;
-                _startCharacterWaistY =
-                    (int)(frameHeight * UPPER_BODY_RATIO) + _characterFrameStartY;
-                _startCharacterKneesY = (int)(frameHeight * MID_BODY_RATIO) + _characterFrameStartY;
-                _startCharacterFeetY =
-                    (int)(frameHeight * LOWER_BODY_RATIO) + _characterFrameStartY;
+                _startCharacterWaistY = (int)(frameHeight * 0.35f) + _characterFrameStartY;
+                _startCharacterKneesY = (int)(frameHeight * 0.60f) + _characterFrameStartY;
+                _startCharacterFeetY = (int)(frameHeight * 0.94f) + _characterFrameStartY;
 
-                if (spriteInfo.Texture == null)
-                {
-                    return mod;
-                }
+                if (spriteInfo.Texture == null) return mod;
             }
 
-            mod.X = UPPER_BODY_RATIO;
-            mod.Y = MID_BODY_RATIO;
-            mod.Z = LOWER_BODY_RATIO;
-
+            // 3. Se è un item (vestito), calcoliamo lo slicing basandoci sulle fasce del corpo
             if (entity != null)
             {
-                float itemsEndY = y + spriteInfo.UV.Height;
+                float itemTop = (float)y;
+                float itemBottom = (float)(y + spriteInfo.UV.Height);
+                float h = (float)spriteInfo.UV.Height;
 
-                if (y >= _startCharacterWaistY)
-                {
-                    mod.X = 0;
-                }
-                else if (itemsEndY <= _startCharacterWaistY)
-                {
-                    mod.X = 1.0f;
-                }
-                else
-                {
-                    float upperBodyDiff = _startCharacterWaistY - y;
-                    mod.X = upperBodyDiff / spriteInfo.UV.Height;
+                if (h <= 0) return mod;
 
-                    if (mod.X < 0)
-                    {
-                        mod.X = 0;
-                    }
-                }
+                // Busto: quanto dell'item sta sopra la vita?
+                float bustoFine = Math.Min(itemBottom, _startCharacterWaistY);
+                mod.X = MathHelper.Clamp((bustoFine - itemTop) / h, 0f, 1f);
 
-                if (_startCharacterWaistY >= itemsEndY || y >= _startCharacterKneesY)
-                {
-                    mod.Y = 0;
-                }
-                else if (_startCharacterWaistY <= y && itemsEndY <= _startCharacterKneesY)
-                {
-                    mod.Y = 1.0f;
-                }
-                else
-                {
-                    float midBodyDiff;
+                // Bacino: quanto dell'item sta tra vita e ginocchia?
+                float bacinoInizio = Math.Max(itemTop, _startCharacterWaistY);
+                float bacinoFine = Math.Min(itemBottom, _startCharacterKneesY);
+                float altezzaBacino = Math.Max(0, bacinoFine - bacinoInizio);
+                mod.Y = MathHelper.Clamp(mod.X + (altezzaBacino / h), mod.X, 1f);
 
-                    if (y >= _startCharacterWaistY)
-                    {
-                        midBodyDiff = _startCharacterKneesY - y;
-                    }
-                    else if (itemsEndY <= _startCharacterKneesY)
-                    {
-                        midBodyDiff = itemsEndY - _startCharacterWaistY;
-                    }
-                    else
-                    {
-                        midBodyDiff = _startCharacterKneesY - _startCharacterWaistY;
-                    }
-
-                    mod.Y = mod.X + midBodyDiff / spriteInfo.UV.Height;
-
-                    if (mod.Y < 0)
-                    {
-                        mod.Y = 0;
-                    }
-                }
-
-                if (itemsEndY <= _startCharacterKneesY)
-                {
-                    mod.Z = 0;
-                }
-                else if (y >= _startCharacterKneesY)
-                {
-                    mod.Z = 1.0f;
-                }
-                else
-                {
-                    float lowerBodyDiff = itemsEndY - _startCharacterKneesY;
-                    mod.Z = mod.Y + lowerBodyDiff / spriteInfo.UV.Height;
-
-                    if (mod.Z < 0)
-                    {
-                        mod.Z = 0;
-                    }
-                }
+                // Gambe: quanto dell'item sta tra ginocchia e piedi?
+                float gambeInizio = Math.Max(itemTop, _startCharacterKneesY);
+                float gambeFine = Math.Min(itemBottom, _startCharacterFeetY);
+                float altezzaGambe = Math.Max(0, gambeFine - gambeInizio);
+                mod.Z = MathHelper.Clamp(mod.Y + (altezzaGambe / h), mod.Y, 1f);
             }
 
             return mod;
@@ -1005,7 +933,7 @@ namespace ClassicUO.Game.GameObjects
 
             bool isHuman = IsHuman;
             bool isGargoyle =
-                Client.Game.UO.Version >= ClientVersion.CV_7000
+                Client.Game.UO.Version >= Utility.ClientVersion.CV_7000
                 && (Graphic == 666 || Graphic == 667 || Graphic == 0x02B7 || Graphic == 0x02B6);
 
             var animations = Client.Game.UO.Animations;

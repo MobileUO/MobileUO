@@ -6,6 +6,7 @@ using UnityEngine.Rendering;
 using static ClassicUO.Renderer.UltimaBatcher2D;
 using UnityVector2 = UnityEngine.Vector2;
 using UnityVector3 = UnityEngine.Vector3;
+using UnityVector4 = UnityEngine.Vector4;
 
 namespace Microsoft.Xna.Framework.Graphics
 {
@@ -16,6 +17,7 @@ namespace Microsoft.Xna.Framework.Graphics
             public UnityVector3 Position;
             public UnityVector3 Normal;
             public UnityVector2 TexCoord;
+            public UnityVector4 Hue;
         }
 
         public readonly Mesh Mesh;
@@ -37,9 +39,10 @@ namespace Microsoft.Xna.Framework.Graphics
 
             _vertexLayout = new[]
             {
-                new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3),
-                new VertexAttributeDescriptor(VertexAttribute.Normal, VertexAttributeFormat.Float32, 3),
-                new VertexAttributeDescriptor(VertexAttribute.TexCoord0, VertexAttributeFormat.Float32, 2)
+                new VertexAttributeDescriptor(VertexAttribute.Position,  VertexAttributeFormat.Float32, 3),
+                new VertexAttributeDescriptor(VertexAttribute.Normal,    VertexAttributeFormat.Float32, 3),
+                new VertexAttributeDescriptor(VertexAttribute.TexCoord0, VertexAttributeFormat.Float32, 2),
+                new VertexAttributeDescriptor(VertexAttribute.TexCoord1, VertexAttributeFormat.Float32, 4),
             };
 
             EnsureCapacity(Mathf.Max(1, quadCount));
@@ -65,11 +68,10 @@ namespace Microsoft.Xna.Framework.Graphics
                 for (int q = 0, v = 0; q < quadCount; q++, v += 4)
                 {
                     var quad = quads[q];
-
-                    WriteVertex(ref _vertexBuffer[v + 0], quad.Position0, quad.Normal0, quad.TextureCoordinate0);
-                    WriteVertex(ref _vertexBuffer[v + 1], quad.Position1, quad.Normal1, quad.TextureCoordinate1);
-                    WriteVertex(ref _vertexBuffer[v + 2], quad.Position2, quad.Normal2, quad.TextureCoordinate2);
-                    WriteVertex(ref _vertexBuffer[v + 3], quad.Position3, quad.Normal3, quad.TextureCoordinate3);
+                    WriteVertex(ref _vertexBuffer[v + 0], quad.Position0, quad.Normal0, quad.TextureCoordinate0, quad.Hue0);
+                    WriteVertex(ref _vertexBuffer[v + 1], quad.Position1, quad.Normal1, quad.TextureCoordinate1, quad.Hue1);
+                    WriteVertex(ref _vertexBuffer[v + 2], quad.Position2, quad.Normal2, quad.TextureCoordinate2, quad.Hue2);
+                    WriteVertex(ref _vertexBuffer[v + 3], quad.Position3, quad.Normal3, quad.TextureCoordinate3, quad.Hue3);
                 }
 
                 using (UnityProfiler.Auto(UnityProfiler.Mk_SetVB))
@@ -111,11 +113,10 @@ namespace Microsoft.Xna.Framework.Graphics
                 for (int i = 0, v = 0; i < count; i++, v += 4)
                 {
                     ref readonly var quad = ref quads[start + i];
-
-                    WriteVertex(ref _vertexBuffer[v + 0], quad.Position0, quad.Normal0, quad.TextureCoordinate0);
-                    WriteVertex(ref _vertexBuffer[v + 1], quad.Position1, quad.Normal1, quad.TextureCoordinate1);
-                    WriteVertex(ref _vertexBuffer[v + 2], quad.Position2, quad.Normal2, quad.TextureCoordinate2);
-                    WriteVertex(ref _vertexBuffer[v + 3], quad.Position3, quad.Normal3, quad.TextureCoordinate3);
+                    WriteVertex(ref _vertexBuffer[v + 0], quad.Position0, quad.Normal0, quad.TextureCoordinate0, quad.Hue0);
+                    WriteVertex(ref _vertexBuffer[v + 1], quad.Position1, quad.Normal1, quad.TextureCoordinate1, quad.Hue1);
+                    WriteVertex(ref _vertexBuffer[v + 2], quad.Position2, quad.Normal2, quad.TextureCoordinate2, quad.Hue2);
+                    WriteVertex(ref _vertexBuffer[v + 3], quad.Position3, quad.Normal3, quad.TextureCoordinate3, quad.Hue3);
                 }
 
                 using (UnityProfiler.Auto(UnityProfiler.Mk_SetVB))
@@ -181,7 +182,7 @@ namespace Microsoft.Xna.Framework.Graphics
             }
         }
 
-        private static void WriteVertex(ref MeshVertex dst, UnityVector3 position, UnityVector3 normal, UnityVector3 texCoord)
+        private static void WriteVertex(ref MeshVertex dst, UnityVector3 position, UnityVector3 normal, UnityVector3 texCoord, UnityVector4 hue)
         {
             dst.Position.x = Mathf.Round(position.x);
             dst.Position.y = Mathf.Round(position.y);
@@ -189,6 +190,7 @@ namespace Microsoft.Xna.Framework.Graphics
             dst.Normal = normal;
             dst.TexCoord.x = texCoord.x;
             dst.TexCoord.y = texCoord.y;
+            dst.Hue = hue;
         }
     }
 }

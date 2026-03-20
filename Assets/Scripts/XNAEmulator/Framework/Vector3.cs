@@ -31,13 +31,14 @@ SOFTWARE.
 using System;
 using System.Text;
 using System.Runtime.InteropServices;
+using UnityVector4 = UnityEngine.Vector4;
 using UnityVector3 = UnityEngine.Vector3;
+using UnityColor = UnityEngine.Color;
 
 namespace Microsoft.Xna.Framework
 {
     [Serializable]
     [StructLayout(LayoutKind.Sequential)]
-    //[TypeConverter(typeof(Vector3Converter))]
     public struct Vector3 : IEquatable<Vector3>
     {
         #region Private Fields
@@ -678,11 +679,26 @@ namespace Microsoft.Xna.Framework
             return value;
         }
 
-        public static implicit operator UnityVector3(Vector3 v)
+        #endregion
+
+        #region Converters
+        public static unsafe implicit operator UnityVector4(Vector3 v)
         {
-            return new UnityVector3(v.X, v.Y, v.Z);
+            var r = *(UnityVector4*)&v;
+            r.w = 0f;
+            return r;
         }
 
+        public static unsafe implicit operator UnityVector3(Vector3 v)
+        {
+            return *(UnityVector3*)&v;
+        }
+
+        public static unsafe implicit operator UnityColor(Vector3 v)
+        {
+            return *(UnityColor*)&v;
+        }
         #endregion
+
     }
 }
