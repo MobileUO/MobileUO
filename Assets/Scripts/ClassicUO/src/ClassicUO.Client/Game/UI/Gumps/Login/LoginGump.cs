@@ -1,5 +1,6 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
+using System;
 using ClassicUO.Configuration;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.Scenes;
@@ -486,6 +487,8 @@ namespace ClassicUO.Game.UI.Gumps.Login
             {
                 _textboxAccount.SetKeyboardFocus();
             }
+
+            X = Math.Max(0, (int)((UnityEngine.Screen.width / Client.Game.Batcher.scale) - 640) / 2);
         }
 
         // MobileUO: added method

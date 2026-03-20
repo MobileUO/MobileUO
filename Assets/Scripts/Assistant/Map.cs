@@ -1,4 +1,4 @@
-﻿#region license
+﻿#region License
 // Copyright (C) 2022-2025 Sascha Puligheddu
 // 
 // This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
@@ -11,15 +11,16 @@
 // and the AGPL-3.0 terms are respected for this specific module.
 //
 // This program is distributed WITHOUT ANY WARRANTY. 
-// See <https://www.gnu.org> for details.
+// See <https://www.gnu.org/licenses/agpl-3.0.html> for details.
 #endregion
+
 namespace Assistant
 {
     public class MultiTileEntry
     {
-        public ushort m_ItemID;
-        public short m_OffsetX;
-        public short m_OffsetY;
-        public short m_OffsetZ;
+        public ushort _ItemID;
+        public short _OffsetX;
+        public short _OffsetY;
+        public short _OffsetZ;
     }
 }

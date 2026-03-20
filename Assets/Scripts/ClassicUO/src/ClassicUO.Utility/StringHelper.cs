@@ -3,8 +3,6 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using System.Security;
-using System.Text;
 using SDL2;
 
 namespace ClassicUO.Utility
@@ -375,5 +373,48 @@ namespace ClassicUO.Utility
 
             return true;
         }
+
+        // BEGIN: Sascha Puligheddu Addition on AGPLv3
+        private static readonly Dictionary<char, char> Replacements = new();
+        public static string Asciify(ReadOnlySpan<char> str)
+        {
+            if (Replacements.Count == 0)
+                PopulateReplacements();
+
+            ValueStringBuilder sb = new ValueStringBuilder(str);
+
+            for (int i = 0; i < sb.Length; ++i)
+            {
+                if (Replacements.TryGetValue(sb[i], out char n))
+                {
+                    sb[i] = n;
+                }
+            }
+
+            string ss = sb.ToString();
+
+            sb.Dispose();
+
+            return ss;
+        }
+
+        private static void PopulateReplacements()
+        {
+            Replacements['’'] = '\'';
+            Replacements['–'] = '-';
+            Replacements['‘'] = '\'';
+            Replacements['”'] = '\"';
+            Replacements['“'] = '\"';
+            Replacements['•'] = '*';
+            Replacements[' '] = ' ';
+            Replacements['´'] = '\'';
+            Replacements['—'] = '-';
+            Replacements['·'] = '*';
+            Replacements['„'] = '\"';
+            Replacements['¸'] = ',';
+            Replacements['˜'] = '~';
+            Replacements['‹'] = '<';
+        }
+        // END: Sascha Puligheddu Addition on AGPLv3
     }
 }

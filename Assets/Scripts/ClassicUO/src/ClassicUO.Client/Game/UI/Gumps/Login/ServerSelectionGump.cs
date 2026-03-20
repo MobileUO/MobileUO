@@ -1,16 +1,13 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
+using System;
 using System.Linq;
-using System.Net;
 using System.Net.NetworkInformation;
-using ClassicUO.Configuration;
 using ClassicUO.Game.Scenes;
 using ClassicUO.Game.UI.Controls;
 using ClassicUO.Input;
-using ClassicUO.Assets;
 using ClassicUO.Resources;
 using ClassicUO.Utility;
-using ClassicUO.Utility.Logging;
 using SDL2;
 
 namespace ClassicUO.Game.UI.Gumps.Login
@@ -204,6 +201,7 @@ namespace ClassicUO.Game.UI.Gumps.Login
 
             AcceptKeyboardInput = true;
             CanCloseWithRightClick = false;
+            X = Math.Max(0, (int)((UnityEngine.Screen.width / Client.Game.Batcher.scale) - 640) / 2);
         }
 
         public override void OnButtonClick(int buttonID)

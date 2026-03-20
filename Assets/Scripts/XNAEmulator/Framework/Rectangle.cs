@@ -26,14 +26,14 @@ SOFTWARE.
 #endregion License
 
 using System;
-using System.Globalization;
-using System.ComponentModel;
-//using Microsoft.Xna.Framework.Design;
+using System.Runtime.InteropServices;
+using UnityRectInt = UnityEngine.RectInt;
 
 namespace Microsoft.Xna.Framework
 {
 
-    //[Serializable, TypeConverter(typeof(RectangleConverter))]
+    [Serializable]
+    [StructLayout(LayoutKind.Sequential)]
     public struct Rectangle : IEquatable<Rectangle>
     {
         #region Private Fields
@@ -308,5 +308,12 @@ namespace Microsoft.Xna.Framework
         }
 
         #endregion Public Methods
+
+        #region Converters
+        public static unsafe implicit operator UnityRectInt(Rectangle r)
+        {
+            return *(UnityRectInt*)&r;
+        }
+        #endregion
     }
 }

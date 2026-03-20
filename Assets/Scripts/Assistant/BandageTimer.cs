@@ -1,4 +1,4 @@
-﻿#region license
+﻿#region License
 // Copyright (C) 2022-2025 Sascha Puligheddu
 // 
 // This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
@@ -11,10 +11,11 @@
 // and the AGPL-3.0 terms are respected for this specific module.
 //
 // This program is distributed WITHOUT ANY WARRANTY. 
-// See <https://www.gnu.org> for details.
+// See <https://www.gnu.org/licenses/agpl-3.0.html> for details.
 #endregion
+
 using System;
-using ClassicUO;
+
 using ClassicUO.Assets;
 
 namespace Assistant
@@ -109,7 +110,7 @@ namespace Assistant
 
                 foreach (var t in ClilocNums)
                 {
-                    if (Client.Game.UO.FileManager.Clilocs.GetString(t) == msg)
+                    if (ClassicUO.Client.Game.UO.FileManager.Clilocs.GetString(t) == msg)
                     {
                         Stop();
 
@@ -184,11 +185,7 @@ namespace Assistant
 
                 if (UOSObjects.Gump.ShowBandageTimerStart || UOSObjects.Gump.ShowBandageTimerEnd)
                 {
-                    /*bool showMessage = !(Config.GetBool("OnlyShowBandageTimerEvery") &&
-                                         m_Count % Config.GetInt("OnlyShowBandageTimerSeconds") != 0);
-
-                    if (showMessage)*/
-                        ShowBandagingStatusMessage($"Bandage: {Count}s");
+                    ShowBandagingStatusMessage($"Bandage: {Count}s");
                 }
 
                 if (Count > 30)

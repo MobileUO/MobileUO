@@ -159,6 +159,7 @@ namespace ClassicUO.Game.UI.Gumps.Login
 
             AcceptKeyboardInput = true;
             ChangePage(1);
+            X = Math.Max(0, (int)((UnityEngine.Screen.width / Client.Game.Batcher.scale) - 640) / 2);
         }
 
         private bool CanCreateChar(LoginScene scene)
@@ -244,7 +245,8 @@ namespace ClassicUO.Game.UI.Gumps.Login
                             {
                                 ChangePage(1);
                             }
-                        }
+                        },
+                        false
                     ),
                     2
                 );

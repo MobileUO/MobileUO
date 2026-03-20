@@ -88,7 +88,6 @@ public static class UserPreferences
     public static IntPreference UseSpriteSheet;
     public static IntPreference SpriteSheetSize;
     public static IntPreference UseProfiler;
-    public static IntPreference ShowErrorDetails;
 
     public static void Initialize()
     {
@@ -116,6 +115,5 @@ public static class UserPreferences
         UseSpriteSheet = new IntPreference(nameof(UseSpriteSheet), (int)PreferenceEnums.UseSpriteSheet.On);
         SpriteSheetSize = new IntPreference(nameof(SpriteSheetSize), (int)PreferenceEnums.SpriteSheetSize.Small);
         UseProfiler = new IntPreference(nameof(UseProfiler), (int)PreferenceEnums.UseProfiler.Off);
-        ShowErrorDetails = new IntPreference(nameof(ShowErrorDetails), (int)PreferenceEnums.ShowErrorDetails.On);
     }
 }

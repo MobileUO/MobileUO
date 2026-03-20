@@ -83,6 +83,8 @@ namespace ClassicUO.Renderer.Arts
                         else
                             _realArtBounds[idx] = new Rectangle(minX, minY, maxX - minX, maxY - minY);
                     }
+
+                    artInfo.Return();
                 }
             }
 

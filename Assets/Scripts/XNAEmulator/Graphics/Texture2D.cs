@@ -1,7 +1,12 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
 
 namespace Microsoft.Xna.Framework.Graphics
 {
@@ -15,9 +20,35 @@ namespace Microsoft.Xna.Framework.Graphics
 
         public static FilterMode defaultFilterMode = FilterMode.Point;
 
+        // Textures written to but not yet Apply'd — flushed with a per-frame time budget.
+        private static readonly HashSet<UnityEngine.Texture2D> _pendingApplySet = new HashSet<UnityEngine.Texture2D>();
+        private static readonly Queue<UnityEngine.Texture2D> _pendingApplyQueue = new Queue<UnityEngine.Texture2D>();
+        private static readonly Stopwatch _flushTimer = new Stopwatch();
+        private const long FlushBudgetMs = 2;
+
+        private static void MarkPendingApply(UnityEngine.Texture2D tex)
+        {
+            if (_pendingApplySet.Add(tex))
+                _pendingApplyQueue.Enqueue(tex);
+        }
+
+        public static void FlushPendingApplies()
+        {
+            if (_pendingApplyQueue.Count == 0) return;
+            _flushTimer.Restart();
+            while (_pendingApplyQueue.Count > 0)
+            {
+                var tex = _pendingApplyQueue.Dequeue();
+                _pendingApplySet.Remove(tex);
+                if (tex != null)
+                    tex.Apply(false, false);
+                if (_flushTimer.ElapsedMilliseconds >= FlushBudgetMs)
+                    break;
+            }
+        }
+
         protected Texture2D(GraphicsDevice graphicsDevice) : base(graphicsDevice)
         {
-
         }
 
         public Rectangle Bounds => new Rectangle(0, 0, Width, Height);
@@ -42,9 +73,7 @@ namespace Microsoft.Xna.Framework.Graphics
         }
 
         public int Width { get; protected set; }
-
         public int Height { get; protected set; }
-
         public bool IsDisposed { get; private set; }
 
         protected virtual void Dispose(bool disposing)
@@ -53,6 +82,8 @@ namespace Microsoft.Xna.Framework.Graphics
             {
                 if (disposing && UnityTexture != null)
                 {
+                    var texToRemove = UnityTexture as UnityEngine.Texture2D;
+                    _pendingApplySet.Remove(texToRemove);
                     if (UnityTexture is RenderTexture renderTexture)
                     {
                         renderTexture.Release();
@@ -89,29 +120,25 @@ namespace Microsoft.Xna.Framework.Graphics
             UnityMainThreadDispatcher.Dispatch(SetDataBytes);
         }
 
-        private void SetDataBytes()
+        private unsafe void SetDataBytes()
         {
             try
             {
-                var dataLength = tempByteData.Length;
                 var destText = UnityTexture as UnityEngine.Texture2D;
                 var dst = destText.GetRawTextureData<byte>();
-                var tmp = new byte[dataLength];
-                var textureBytesWidth = Width * 4;
-                var textureBytesHeight = Height;
-
-                for (int i = 0; i < dataLength; i++)
+                int rowBytes = Width * 4;
+                int h = Height;
+                byte* dstPtr = (byte*)NativeArrayUnsafeUtility.GetUnsafePtr(dst);
+                fixed (byte* srcBase = tempByteData)
                 {
-                    int x = i % textureBytesWidth;
-                    int y = i / textureBytesWidth;
-                    y = textureBytesHeight - y - 1;
-                    var index = y * textureBytesWidth + x;
-                    var colorByte = tempByteData[index];
-                    tmp[i] = colorByte;
+                    for (int y = 0; y < h; y++)
+                    {
+                        byte* srcRow = srcBase + (h - 1 - y) * rowBytes;
+                        byte* dstRow = dstPtr + y * rowBytes;
+                        Buffer.MemoryCopy(srcRow, dstRow, rowBytes, rowBytes);
+                    }
                 }
-
-                dst.CopyFrom(tmp);
-                destText.Apply();
+                MarkPendingApply(destText);
             }
             finally
             {
@@ -131,23 +158,18 @@ namespace Microsoft.Xna.Framework.Graphics
         {
             try
             {
-                var dataLength = tempColorData.Length;
+                int w = Width;
+                int h = Height;
                 var destText = UnityTexture as UnityEngine.Texture2D;
                 var dst = destText.GetRawTextureData<uint>();
-                var tmp = new uint[dataLength];
-                var textureWidth = Width;
-
-                for (int i = 0; i < dataLength; i++)
+                for (int y = 0; y < h; y++)
                 {
-                    int x = i % textureWidth;
-                    int y = i / textureWidth;
-                    var index = y * textureWidth + (textureWidth - x - 1);
-                    var color = tempColorData[dataLength - index - 1];
-                    tmp[i] = color.PackedValue;
+                    int srcRowStart = (h - 1 - y) * w;
+                    int dstRowStart = y * w;
+                    for (int x = 0; x < w; x++)
+                        dst[dstRowStart + x] = tempColorData[srcRowStart + x].PackedValue;
                 }
-
-                dst.CopyFrom(tmp);
-                destText.Apply();
+                MarkPendingApply(destText);
             }
             finally
             {
@@ -169,40 +191,33 @@ namespace Microsoft.Xna.Framework.Graphics
             UnityMainThreadDispatcher.Dispatch(SetDataUInt);
         }
 
-        private void SetDataUInt()
+        private unsafe void SetDataUInt()
         {
             try
             {
-                var textureWidth = Width;
-                var textureHeight = Height;
-
-                if (tempElementCount == 0)
-                {
-                    tempElementCount = tempUIntData.Length;
-                }
-
+                int w = Width;
+                int h = Height;
+                int count = (tempElementCount == 0) ? tempUIntData.Length : tempElementCount;
                 var destText = UnityTexture as UnityEngine.Texture2D;
                 var dst = destText.GetRawTextureData<uint>();
-                var dstLength = dst.Length;
-                var tmp = new uint[dstLength];
-
-                for (int i = 0; i < tempElementCount; i++)
+                uint* dstPtr = (uint*)NativeArrayUnsafeUtility.GetUnsafePtr(dst);
+                fixed (uint* srcBase = tempUIntData)
                 {
-                    int x = i % textureWidth;
-                    int y = i / textureWidth;
-                    if (tempInvertY)
+                    for (int y = 0; y < h; y++)
                     {
-                        y = textureHeight - y - 1;
-                    }
-                    var index = y * textureWidth + (textureWidth - x - 1);
-                    if (index < tempElementCount && i < dstLength)
-                    {
-                        tmp[i] = tempUIntData[tempElementCount + tempStartOffset - index - 1];
+                        int srcRow = tempInvertY ? y : (h - 1 - y);
+                        int srcRowStart = tempStartOffset + srcRow * w;
+                        int rowLen = Math.Min(w, count - srcRowStart);
+                        if (rowLen <= 0) break;
+                        Buffer.MemoryCopy(
+                            srcBase + srcRowStart,
+                            dstPtr + y * w,
+                            (long)(h - y) * w * 4,
+                            (long)rowLen * 4
+                        );
                     }
                 }
-
-                dst.CopyFrom(tmp);
-                destText.Apply();
+                MarkPendingApply(destText);
             }
             finally
             {
@@ -220,7 +235,6 @@ namespace Microsoft.Xna.Framework.Graphics
 
             try
             {
-                // Read the stream into a byte array
                 byte[] imageData;
                 using (var memoryStream = new MemoryStream())
                 {
@@ -228,7 +242,6 @@ namespace Microsoft.Xna.Framework.Graphics
                     imageData = memoryStream.ToArray();
                 }
 
-                // Create a new Unity texture
                 var texture = new UnityEngine.Texture2D(2, 2);
                 if (!texture.LoadImage(imageData))
                 {
@@ -236,7 +249,6 @@ namespace Microsoft.Xna.Framework.Graphics
                     throw new InvalidOperationException("Failed to load texture from stream.");
                 }
 
-                // Initialize the XNA texture wrapper
                 var xnaTexture = new Texture2D(graphicsDevice, texture.width, texture.height)
                 {
                     UnityTexture = texture
@@ -263,25 +275,17 @@ namespace Microsoft.Xna.Framework.Graphics
             SetDataPointerEXTInt(level, rect, data, dataLength);
         }
 
-        private void SetDataPointerEXTInt(int level, Rectangle? rect, IntPtr data, int dataLength)
+        private unsafe void SetDataPointerEXTInt(int level, Rectangle? rect, IntPtr data, int dataLength)
         {
             if (data == IntPtr.Zero)
-            {
                 throw new ArgumentNullException(nameof(data));
-            }
 
             var destTex = UnityTexture as UnityEngine.Texture2D;
             if (destTex == null)
-            {
                 throw new InvalidOperationException("UnityTexture is not a Texture2D");
-            }
 
             try
             {
-                // Create a temporary buffer to hold the data
-                byte[] buffer = new byte[dataLength];
-                Marshal.Copy(data, buffer, 0, dataLength);
-
                 int x, y, w, h;
                 if (rect.HasValue)
                 {
@@ -298,51 +302,26 @@ namespace Microsoft.Xna.Framework.Graphics
                     h = Math.Max(Height >> level, 1);
                 }
 
-                // MobileUO: TODO: #19: added logging output
-                //Debug.Log($"Texture width: {destTex.width}, height: {destTex.height}, rect: {x},{y},{w},{h}");
-
-                // Check if dimensions are valid
                 if (x < 0 || y < 0 || x + w > destTex.width || y + h > destTex.height)
                 {
                     Debug.LogError($"Texture width: {destTex.width}, height: {destTex.height}, rect: {x},{y},{w},{h}");
                     throw new ArgumentException("The specified block is outside the texture bounds.");
                 }
 
-                var colors = new Color32[w * h];
+                var rawDst = destTex.GetRawTextureData<byte>();
+                byte* src = (byte*)data.ToPointer();
+                byte* dst = (byte*)NativeArrayUnsafeUtility.GetUnsafePtr(rawDst);
+                int texRowBytes = destTex.width * 4;
+                int rectRowBytes = w * 4;
 
-                // Copy data from the buffer to the colors array, flipping vertically
                 for (int row = 0; row < h; row++)
                 {
-                    for (int col = 0; col < w; col++)
-                    {
-                        int bufferIndex = (row * w + col) * 4;
-                        int colorIndex = ((h - 1 - row) * w) + col;
-
-                        if (tempInvertY)
-                        {
-                            colorIndex = row * w + col;
-                        }
-
-                    // Ensure the buffer index is within bounds
-                        if (bufferIndex + 3 < buffer.Length)
-                        {
-                        // Create the Color32 object, assuming the buffer is in RGBA format
-                            colors[colorIndex] = new Color32(
-                            buffer[bufferIndex + 0], // R
-                            buffer[bufferIndex + 1], // G
-                            buffer[bufferIndex + 2], // B
-                            buffer[bufferIndex + 3]  // A
-                            );
-                        }
-                        else
-                        {
-                            Debug.LogError($"Buffer index out of bounds: {bufferIndex}");
-                        }
-                    }
+                    byte* srcRow = src + (tempInvertY ? row : (h - 1 - row)) * rectRowBytes;
+                    byte* dstRow = dst + (y + row) * texRowBytes + x * 4;
+                    Buffer.MemoryCopy(srcRow, dstRow, texRowBytes - x * 4, rectRowBytes);
                 }
 
-                destTex.SetPixels32(x, y, w, h, colors, level);
-                destTex.Apply();
+                MarkPendingApply(destTex);
             }
             catch (Exception ex)
             {
@@ -366,22 +345,14 @@ namespace Microsoft.Xna.Framework.Graphics
             }
 
             if (data == null || data.Length == 0)
-            {
                 throw new ArgumentException("data cannot be null or empty");
-            }
 
             if (data.Length < startIndex + elementCount)
-            {
-                throw new ArgumentException(
-                    $"The data array length is {data.Length}, but {elementCount} elements were requested from start index {startIndex}."
-                );
-            }
+                throw new ArgumentException($"The data array length is {data.Length}, but {elementCount} elements were requested from start index {startIndex}.");
 
             var destTex = UnityTexture as UnityEngine.Texture2D;
             if (destTex == null)
-            {
                 throw new InvalidOperationException("UnityTexture is not a Texture2D");
-            }
 
             try
             {
@@ -401,52 +372,27 @@ namespace Microsoft.Xna.Framework.Graphics
                     h = Math.Max(Height >> level, 1);
                 }
 
-                Color32[] colors = destTex.GetPixels32(level);
+                var rawSrc = destTex.GetRawTextureData<byte>();
                 int elementSizeInBytes = Marshal.SizeOf(typeof(T));
-                GCHandle handle = GCHandle.Alloc(data, GCHandleType.Pinned);
+                int texRowBytes = Math.Max(destTex.width >> level, 1) * elementSizeInBytes;
+                int rectRowBytes = w * elementSizeInBytes;
+                int xMip = x >> level;
+                int yMip = y >> level;
 
+                GCHandle handle = GCHandle.Alloc(data, GCHandleType.Pinned);
                 try
                 {
-                    IntPtr dataPtr = handle.AddrOfPinnedObject() + (startIndex * elementSizeInBytes);
-
-                    // Compute the actual dimensions of this mipmap level:
-                    int mipWidth = Math.Max(destTex.width >> level, 1);
-                    int mipHeight = Math.Max(destTex.height >> level, 1);
-
-                    // Convert rect origin from base-texture coords into this mip level’s coords:
-                    int xMip = x >> level;
-                    int yMip = y >> level;
-
-                    for (int row = 0; row < h; row++)
+                    unsafe
                     {
-                        // srcY: the Y row in the full mipmap we’re sampling from
-                        int srcY = yMip + row;
-
-                        // destY: the Y row in the output buffer, flipped so row 0 ends up at the bottom
-                        int destY = (h - 1) - row;
-
-                        for (int col = 0; col < w; col++)
+                        byte* dstPtr = (byte*)handle.AddrOfPinnedObject() + startIndex * elementSizeInBytes;
+                        byte* srcPtr = (byte*)NativeArrayUnsafeUtility.GetUnsafePtr(rawSrc);
+                        for (int row = 0; row < h; row++)
                         {
-                            // srcX: the X column in the full mipmap we’re sampling from
-                            int srcX = xMip + col;
-
-                            // Flatten (x, y) into a single index into the Color32[] array:
-                            int srcIndex = srcY * mipWidth + srcX;
-
-                            // Compute the linear index within the destination rectangle (width = w):
-                            int destIndex = destY * w + col;
-
-                            // Safety check to avoid overruns in either array:
-                            if (srcIndex >= 0 && srcIndex < colors.Length &&
-                                destIndex >= 0 && destIndex < elementCount)
-                            {
-                                // Marshal the Color32 at srcIndex into the pinned T[] memory
-                                Marshal.StructureToPtr(
-                                    colors[srcIndex],
-                                    dataPtr + destIndex * elementSizeInBytes,
-                                    false
-                                );
-                            }
+                            int srcRow = (h - 1) - row;
+                            int srcOffset = (yMip + srcRow) * texRowBytes + xMip * elementSizeInBytes;
+                            int copyLen = Math.Min(rectRowBytes, rawSrc.Length - srcOffset);
+                            if (copyLen <= 0) break;
+                            Buffer.MemoryCopy(srcPtr + srcOffset, dstPtr + row * rectRowBytes, copyLen, copyLen);
                         }
                     }
                 }
@@ -472,34 +418,20 @@ namespace Microsoft.Xna.Framework.Graphics
             }
 
             if (UnityTexture == null)
-            {
                 throw new InvalidOperationException("Texture is not initialized.");
-            }
 
             var texture2D = UnityTexture as UnityEngine.Texture2D;
-
             if (texture2D == null)
-            {
                 throw new InvalidOperationException("UnityTexture is not a Texture2D.");
-            }
 
-            // Ensure the texture dimensions match the requested width and height
             if (texture2D.width != width || texture2D.height != height)
-            {
                 throw new ArgumentException("Texture dimensions do not match the requested width and height.");
-            }
 
             try
             {
-                // Encode the texture to PNG format
                 byte[] pngData = texture2D.EncodeToPNG();
-
                 if (pngData == null)
-                {
                     throw new InvalidOperationException("Failed to encode texture to PNG.");
-                }
-
-                // Write the PNG data to the provided stream
                 stream.Write(pngData, 0, pngData.Length);
             }
             catch (Exception ex)

@@ -27,6 +27,7 @@ namespace ClassicUO.Game.UI.Gumps.CharCreation
             Add(new CreateCharAppearanceGump(world), 1);
             SetStep(CharCreationStep.Appearence);
             CanCloseWithRightClick = false;
+            X = System.Math.Max(0, (int)((UnityEngine.Screen.width / Client.Game.Batcher.scale) - 640) / 2);
         }
 
         internal static int _skillsCount => Client.Game.UO.Version >= ClientVersion.CV_70160 ? 4 : 3;
@@ -133,7 +134,7 @@ namespace ClassicUO.Game.UI.Gumps.CharCreation
                 Remove(_loadingGump);
             }
 
-            Add(_loadingGump = new LoadingGump(World, message, LoginButtons.OK, a => ChangePage(currentPage)), 4);
+            Add(_loadingGump = new LoadingGump(World, message, LoginButtons.OK, a => ChangePage(currentPage), false), 4);
             ChangePage(4);
         }
 
