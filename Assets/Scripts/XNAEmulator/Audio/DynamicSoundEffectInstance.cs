@@ -113,6 +113,11 @@ namespace Microsoft.Xna.Framework.Audio
 
         public void SubmitBuffer(byte[] newBuffer, bool stream = false, int count = 0)
         {
+            if (count <= 0)
+            {
+                count = newBuffer.Length;
+            }
+
             if (buffer == null)
             {
                 if (stream)
@@ -125,12 +130,21 @@ namespace Microsoft.Xna.Framework.Audio
                     Array.Copy(conversionBuffer, 0, buffer, 0, floatDataLength);
                     bufferEndPosition = floatDataLength;
                     loop = true;
-                    Clip = AudioClip.Create("clip", newBuffer.Length, 2, sampleRate, true, PcmRead, PcmSet);
+
+                    int sampleCount = count / 2; // 16-bit samples = 2 bytes per sample
+                    Clip = AudioClip.Create("clip", sampleCount, channels, sampleRate, true, PcmRead, PcmSet);
                 }
                 else
                 {
-                    Clip = AudioClip.Create("clip", newBuffer.Length, 1, sampleRate, false);
-                    Clip.SetData(ConvertByteToFloat16(newBuffer), 0);
+                    int sampleCount = count / 2; // 16-bit samples = 2 bytes per sample
+                    Clip = AudioClip.Create("clip", sampleCount, channels, sampleRate, false);
+
+                    float[] floatData = new float[sampleCount];
+                    for (int i = 0; i < sampleCount; i++)
+                    {
+                        floatData[i] = BitConverter.ToInt16(newBuffer, i * 2) / 32768.0f;
+                    }
+                    Clip.SetData(floatData, 0);
                 }
             }
             else
@@ -139,8 +153,8 @@ namespace Microsoft.Xna.Framework.Audio
                 var bufferDataLength = bufferEndPosition - bufferPosition;
                 Array.Copy(buffer, bufferPosition, buffer, 0, bufferDataLength);
                 bufferPosition = 0;
-                ConvertByteToFloat16(newBuffer, conversionBuffer);
-                var floatDataLength = buffer.Length / 2;
+                ConvertByteToFloat16(newBuffer, conversionBuffer, count);
+                var floatDataLength = count / 2;
                 Array.Copy(conversionBuffer, 0, buffer, bufferDataLength, floatDataLength);
                 bufferEndPosition = bufferDataLength + floatDataLength;
             }
@@ -162,16 +176,18 @@ namespace Microsoft.Xna.Framework.Audio
             }
         }
 
-        private static float[] ConvertByteToFloat16(byte[] array)
-        {
-            var floatArr = new float[array.Length / 2];
-            ConvertByteToFloat16(array, floatArr);
-            return floatArr;
-        }
-
         private static void ConvertByteToFloat16(byte[] array, float[] destination)
         {
             int length = array.Length / 2;
+            for (int i = 0; i < length; i++)
+            {
+                destination[i] = BitConverter.ToInt16(array, i * 2) / 32768.0f;
+            }
+        }
+
+        private static void ConvertByteToFloat16(byte[] array, float[] destination, int byteCount)
+        {
+            int length = byteCount / 2;
             for (int i = 0; i < length; i++)
             {
                 destination[i] = BitConverter.ToInt16(array, i * 2) / 32768.0f;
