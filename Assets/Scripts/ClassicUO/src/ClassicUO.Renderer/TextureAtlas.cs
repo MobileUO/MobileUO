@@ -66,7 +66,7 @@ namespace ClassicUO.Renderer
             // MobileUO: handle 0x0 textures - this shouldn't happen unless the client data is missing newer textures
             if (width <= 0 || height <= 0)
             {
-                Utility.Logging.Log.Trace($"Texture width and height must be greater than zero. Width: {width} Height: {height} Index: {_currentAtlasIndex}\");");
+                Utility.Logging.Log.Trace($"Texture width and height must be greater than zero. Width: {width} Height: {height} Index: {_currentAtlasIndex}");
                 pr = new Rectangle(0, 0, width, height);
                 return null;
             }
