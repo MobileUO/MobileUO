@@ -125,7 +125,6 @@ namespace ClassicUO.Renderer
             return texture;
         }
 
-        // MobileUO: TODO: figure out how to get packer working correctly
         private void CreateNewTexture2D(int width, int height)
         {
             // MobileUO: TODO: #19: added logging output; added toggle for sprite sheet
