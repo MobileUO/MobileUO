@@ -18,6 +18,8 @@ namespace ClassicUO.Renderer
         private Packer _packer;
         // MobileUO: added variable
         private bool _useSpriteSheet;
+        // MobileUO: track which texture atlas the packer is managing
+        private int _currentAtlasIndex = -1;
 
         public TextureAtlas(GraphicsDevice device, int width, int height, SurfaceFormat format)
         {
@@ -49,6 +51,7 @@ namespace ClassicUO.Renderer
 
                 _packer?.Dispose();
                 _packer = new Packer(_width, _height);
+                _currentAtlasIndex = -1;
 
                 foreach (var tex in _textureList)
                 {
@@ -60,20 +63,16 @@ namespace ClassicUO.Renderer
                 _textureList.Clear();
             }
 
-            var index = _textureList.Count - 1;
-            //pr = new Rectangle(0, 0, width, height);
-
             // MobileUO: handle 0x0 textures - this shouldn't happen unless the client data is missing newer textures
             if (width <= 0 || height <= 0)
             {
-                Utility.Logging.Log.Trace($"Texture width and height must be greater than zero. Width: {width} Height: {height} Index: {index}");
+                Utility.Logging.Log.Trace($"Texture width and height must be greater than zero. Width: {width} Height: {height} Index: {_currentAtlasIndex}\");");
                 pr = new Rectangle(0, 0, width, height);
                 return null;
             }
 
-            if (index < 0)
+            if (_currentAtlasIndex < 0)
             {
-                index = 0;
                 CreateNewTexture2D(width, height);
             }
 
@@ -81,6 +80,7 @@ namespace ClassicUO.Renderer
             //pr = new Rectangle(0, 0, width, height);
             // MobileUO: added sprite sheet logic
             bool isOversizedSprite = false;
+            int index;
             if (_useSpriteSheet)
             {
                 // MobileUO: check if sprite is larger than atlas dimensions
@@ -100,8 +100,9 @@ namespace ClassicUO.Renderer
                     while (!_packer.PackRect(width, height, out pr))
                     {
                         CreateNewTexture2D(width, height);
-                        index = _textureList.Count - 1;
                     }
+                    // Use the current atlas index that the packer is managing
+                    index = _currentAtlasIndex;
                 }
             }
             else
@@ -109,7 +110,7 @@ namespace ClassicUO.Renderer
                 pr = new Rectangle(0, 0, width, height);
 
                 CreateNewTexture2D(width, height);
-                index = _textureList.Count - 1;
+                index = _currentAtlasIndex;
             }
 
             Texture2D texture = _textureList[index];
@@ -139,6 +140,7 @@ namespace ClassicUO.Renderer
             //Utility.Logging.Log.Trace($"creating texture: {width}x{height} for Atlas {textureWidth}x{textureHeight} {_format}");
             Texture2D texture = new Texture2D(_device, textureWidth, textureHeight, false, _format);
             _textureList.Add(texture);
+            _currentAtlasIndex = _textureList.Count - 1;
 
             _packer?.Dispose();
             _packer = new Packer(_width, _height);
