@@ -80,12 +80,28 @@ namespace ClassicUO.Renderer
             //ref Rectangle pr = ref _spriteBounds[hash];
             //pr = new Rectangle(0, 0, width, height);
             // MobileUO: added sprite sheet logic
+            bool isOversizedSprite = false;
             if (_useSpriteSheet)
             {
-                while (!_packer.PackRect(width, height, out pr))
+                // MobileUO: check if sprite is larger than atlas dimensions
+                if (width > _width || height > _height)
                 {
-                        CreateNewTexture2D(width, height);
+                    Utility.Logging.Log.Trace($"Sprite size ({width}x{height}) exceeds atlas size ({_width}x{_height}). Creating dedicated texture.");
+                    pr = new Rectangle(0, 0, width, height);
+
+                    Texture2D oversizedTexture = new Texture2D(_device, width, height, false, _format);
+                    _textureList.Add(oversizedTexture);
                     index = _textureList.Count - 1;
+
+                    isOversizedSprite = true;
+                }
+                else
+                {
+                    while (!_packer.PackRect(width, height, out pr))
+                    {
+                        CreateNewTexture2D(width, height);
+                        index = _textureList.Count - 1;
+                    }
                 }
             }
             else
@@ -97,8 +113,8 @@ namespace ClassicUO.Renderer
             }
 
             Texture2D texture = _textureList[index];
-            // MobileUO: added flagging if texture is from sprite sheet
-            if (_useSpriteSheet)
+            // MobileUO: added flagging if texture is from sprite sheet (but not if it's an oversized dedicated texture)
+            if (_useSpriteSheet && !isOversizedSprite)
                 texture.IsFromTextureAtlas = true;
 
             fixed (uint* src = pixels)
