@@ -913,7 +913,7 @@ namespace ClassicUO.Renderer
             bool flip,
             float depth
         )
-        { 
+        {
             if (texture.UnityTexture == null)
             {
                 return;
@@ -931,208 +931,239 @@ namespace ClassicUO.Renderer
 
             EnsureSize();
 
-            float h03 = sourceRect.Height * mod.X;
-            float h06 = sourceRect.Height * mod.Y;
-            float h09 = sourceRect.Height * mod.Z;
+            float invW = 1.0f / texture.Width;
+            float invH = 1.0f / texture.Height;
+            bool isAtlas = texture.IsFromTextureAtlas;
+
+            float srcX = sourceRect.X * invW;
+            float srcW = sourceRect.Width * invW;
+            if (flip) 
+            { 
+                srcX += srcW; 
+                srcW = -srcW; 
+            }
 
             float sittingOffset = flip ? -8.0f : 8.0f;
-
             float width = sourceRect.Width;
-            float widthOffset = sourceRect.Width + sittingOffset;
+            int totalHeight = sourceRect.Height;
 
+            float spriteEndY = (sourceRect.Y + sourceRect.Height) * invH;
+
+            int h03 = (int)Math.Round(totalHeight * mod.X);
+            int h06 = (int)Math.Round(totalHeight * mod.Y);
+            int h09 = (int)Math.Round(totalHeight * mod.Z);
+
+            // upper body
             if (mod.X != 0.0f)
             {
-                EnsureSize();
+                int prevPixel = 0;
+                int endPixel = h03;
+                int segH = endPixel - prevPixel;
+                if (segH > 0)
+                {
+                    EnsureSize();
+                    ref PositionNormalTextureColor4 vertex = ref _vertexInfo[_numSprites];
 
-                ref PositionNormalTextureColor4 vertex = ref _vertexInfo[_numSprites];
+                    float drawY = position.Y + prevPixel;
+                    float topX = position.X + sittingOffset;
+                    float botX = position.X + sittingOffset;
 
-                vertex.Position0.x = position.X + sittingOffset;
-                vertex.Position0.y = position.Y;
+                    vertex.Position0.x = topX;
+                    vertex.Position0.y = drawY;
+                    vertex.Position0.z = depth;
 
-                vertex.Position1.x = position.X + widthOffset;
-                vertex.Position1.y = position.Y;
+                    vertex.Position1.x = topX + width;
+                    vertex.Position1.y = drawY;
+                    vertex.Position1.z = depth;
 
-                vertex.Position2.x = position.X + sittingOffset;
-                vertex.Position2.y = position.Y + h03;
+                    vertex.Position2.x = botX;
+                    vertex.Position2.y = drawY + segH;
+                    vertex.Position2.z = depth;
 
-                vertex.Position3.x = position.X + widthOffset;
-                vertex.Position3.y = position.Y + h03;
+                    vertex.Position3.x = botX + width;
+                    vertex.Position3.y = drawY + segH;
+                    vertex.Position3.z = depth;
 
-                vertex.Position0.z = depth;
-                vertex.Position1.z = depth;
-                vertex.Position2.z = depth;
-                vertex.Position3.z = depth;
+                    float segUVH = segH * invH;
+                    float uvTop = isAtlas ? (spriteEndY - prevPixel * invH) : (1f - prevPixel * invH);
+                    float uvBot = uvTop - segUVH;
 
-                float sourceX = ((sourceRect.X + 0.5f) / (float)texture.Width);
-                float sourceY = ((sourceRect.Y + 0.5f) / (float)texture.Height);
-                float sourceW = ((sourceRect.Width - 1f) / (float)texture.Width);
-                float sourceH = ((sourceRect.Height - 1f) / (float)texture.Height);
+                    vertex.TextureCoordinate0.x = srcX;
+                    vertex.TextureCoordinate0.y = uvTop;
+                    vertex.TextureCoordinate0.z = 0;
 
-                byte effects = (byte)((flip ? SpriteEffects.FlipHorizontally : SpriteEffects.None) & (SpriteEffects)0x03);
+                    vertex.TextureCoordinate1.x = srcX + srcW;
+                    vertex.TextureCoordinate1.y = uvTop;
+                    vertex.TextureCoordinate1.z = 0;
 
-                vertex.TextureCoordinate0.x = (_cornerOffsetX[0 ^ effects] * sourceW) + sourceX;
-                vertex.TextureCoordinate0.y = (_cornerOffsetY[0 ^ effects] * sourceH) + sourceY;
-                vertex.TextureCoordinate1.x = (_cornerOffsetX[1 ^ effects] * sourceW) + sourceX;
-                vertex.TextureCoordinate1.y = (_cornerOffsetY[1 ^ effects] * sourceH) + sourceY;
-                vertex.TextureCoordinate2.x = (_cornerOffsetX[2 ^ effects] * sourceW) + sourceX;
-                vertex.TextureCoordinate2.y = (_cornerOffsetY[2 ^ effects] * sourceH * mod.X) + sourceY;
-                vertex.TextureCoordinate3.x = (_cornerOffsetX[3 ^ effects] * sourceW) + sourceX;
-                vertex.TextureCoordinate3.y = (_cornerOffsetY[3 ^ effects] * sourceH * mod.X) + sourceY;
-                vertex.TextureCoordinate0.z = 0;
-                vertex.TextureCoordinate1.z = 0;
-                vertex.TextureCoordinate2.z = 0;
-                vertex.TextureCoordinate3.z = 0;
+                    vertex.TextureCoordinate2.x = srcX;
+                    vertex.TextureCoordinate2.y = uvBot;
+                    vertex.TextureCoordinate2.z = 0;
 
-                vertex.Normal0.x = 0;
-                vertex.Normal0.y = 0;
-                vertex.Normal0.z = 1;
+                    vertex.TextureCoordinate3.x = srcX + srcW;
+                    vertex.TextureCoordinate3.y = uvBot;
+                    vertex.TextureCoordinate3.z = 0;
 
-                vertex.Normal1.x = 0;
-                vertex.Normal1.y = 0;
-                vertex.Normal1.z = 1;
+                    vertex.Normal0.x = 0;
+                    vertex.Normal0.y = 0;
+                    vertex.Normal0.z = 1;
+                    vertex.Normal1.x = 0;
+                    vertex.Normal1.y = 0;
+                    vertex.Normal1.z = 1;
+                    vertex.Normal2.x = 0;
+                    vertex.Normal2.y = 0;
+                    vertex.Normal2.z = 1;
+                    vertex.Normal3.x = 0;
+                    vertex.Normal3.y = 0;
+                    vertex.Normal3.z = 1;
 
-                vertex.Normal2.x = 0;
-                vertex.Normal2.y = 0;
-                vertex.Normal2.z = 1;
+                    vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
 
-                vertex.Normal3.x = 0;
-                vertex.Normal3.y = 0;
-                vertex.Normal3.z = 1;
-
-                vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
-
-                FinalizeVertex(ref vertex);
-                PushSprite(texture);
+                    FinalizeVertex(ref vertex, true);
+                    PushSprite(texture);
+                }
             }
 
+            // mid body
             if (mod.Y != 0.0f)
             {
-                EnsureSize();
+                int prevPixel = h03;
+                int endPixel = h06;
+                int segH = endPixel - prevPixel;
+                if (segH > 0)
+                {
+                    EnsureSize();
+                    ref PositionNormalTextureColor4 vertex = ref _vertexInfo[_numSprites];
 
-                ref PositionNormalTextureColor4 vertex = ref _vertexInfo[_numSprites];
+                    float drawY = position.Y + prevPixel;
+                    float topX = position.X + sittingOffset;
+                    float botX = position.X;
 
-                vertex.Position0.x = position.X + sittingOffset;
-                vertex.Position0.y = position.Y + h03;
+                    vertex.Position0.x = topX;
+                    vertex.Position0.y = drawY;
+                    vertex.Position0.z = depth;
 
-                vertex.Position1.x = position.X + widthOffset;
-                vertex.Position1.y = position.Y + h03;
+                    vertex.Position1.x = topX + width;
+                    vertex.Position1.y = drawY;
+                    vertex.Position1.z = depth;
 
-                vertex.Position2.x = position.X;
-                vertex.Position2.y = position.Y + h06;
+                    vertex.Position2.x = botX;
+                    vertex.Position2.y = drawY + segH;
+                    vertex.Position2.z = depth;
 
-                vertex.Position3.x = position.X + width;
-                vertex.Position3.y = position.Y + h06;
+                    vertex.Position3.x = botX + width;
+                    vertex.Position3.y = drawY + segH;
+                    vertex.Position3.z = depth;
 
-                vertex.Position0.z = depth;
-                vertex.Position1.z = depth;
-                vertex.Position2.z = depth;
-                vertex.Position3.z = depth;
+                    float segUVH = segH * invH;
+                    float uvTop = isAtlas ? (spriteEndY - prevPixel * invH) : (1f - prevPixel * invH);
+                    float uvBot = uvTop - segUVH;
 
-                float sourceX = ((sourceRect.X + 0.5f) / (float)texture.Width);
-                float sourceY = ((sourceRect.Y + 0.5f + h03) / (float)texture.Height);
-                float sourceW = ((sourceRect.Width - 1f) / (float)texture.Width);
-                float sourceH = ((sourceRect.Height - 1f - h03) / (float)texture.Height);
+                    vertex.TextureCoordinate0.x = srcX;
+                    vertex.TextureCoordinate0.y = uvTop;
+                    vertex.TextureCoordinate0.z = 0;
 
-                byte effects = (byte)((flip ? SpriteEffects.FlipHorizontally : SpriteEffects.None) & (SpriteEffects)0x03);
+                    vertex.TextureCoordinate1.x = srcX + srcW;
+                    vertex.TextureCoordinate1.y = uvTop;
+                    vertex.TextureCoordinate1.z = 0;
 
-                vertex.TextureCoordinate0.x = (_cornerOffsetX[0 ^ effects] * sourceW) + sourceX;
-                vertex.TextureCoordinate0.y = (_cornerOffsetY[0 ^ effects] * sourceH) + sourceY;
-                vertex.TextureCoordinate1.x = (_cornerOffsetX[1 ^ effects] * sourceW) + sourceX;
-                vertex.TextureCoordinate1.y = (_cornerOffsetY[1 ^ effects] * sourceH) + sourceY;
-                vertex.TextureCoordinate2.x = (_cornerOffsetX[2 ^ effects] * sourceW) + sourceX;
-                vertex.TextureCoordinate2.y = (_cornerOffsetY[2 ^ effects] * sourceH * mod.Y) + sourceY;
-                vertex.TextureCoordinate3.x = (_cornerOffsetX[3 ^ effects] * sourceW) + sourceX;
-                vertex.TextureCoordinate3.y = (_cornerOffsetY[3 ^ effects] * sourceH * mod.Y) + sourceY;
-                vertex.TextureCoordinate0.z = 0;
-                vertex.TextureCoordinate1.z = 0;
-                vertex.TextureCoordinate2.z = 0;
-                vertex.TextureCoordinate3.z = 0;
+                    vertex.TextureCoordinate2.x = srcX;
+                    vertex.TextureCoordinate2.y = uvBot;
+                    vertex.TextureCoordinate2.z = 0;
 
-                vertex.Normal0.x = 0;
-                vertex.Normal0.y = 0;
-                vertex.Normal0.z = 1;
+                    vertex.TextureCoordinate3.x = srcX + srcW;
+                    vertex.TextureCoordinate3.y = uvBot;
+                    vertex.TextureCoordinate3.z = 0;
 
-                vertex.Normal1.x = 0;
-                vertex.Normal1.y = 0;
-                vertex.Normal1.z = 1;
+                    vertex.Normal0.x = 0;
+                    vertex.Normal0.y = 0;
+                    vertex.Normal0.z = 1;
+                    vertex.Normal1.x = 0;
+                    vertex.Normal1.y = 0;
+                    vertex.Normal1.z = 1;
+                    vertex.Normal2.x = 0;
+                    vertex.Normal2.y = 0;
+                    vertex.Normal2.z = 1;
+                    vertex.Normal3.x = 0;
+                    vertex.Normal3.y = 0;
+                    vertex.Normal3.z = 1;
 
-                vertex.Normal2.x = 0;
-                vertex.Normal2.y = 0;
-                vertex.Normal2.z = 1;
+                    vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
 
-                vertex.Normal3.x = 0;
-                vertex.Normal3.y = 0;
-                vertex.Normal3.z = 1;
-
-                vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
-
-                FinalizeVertex(ref vertex);
-                PushSprite(texture);
+                    FinalizeVertex(ref vertex, true);
+                    PushSprite(texture);
+                }
             }
 
+            // lower body
             if (mod.Z != 0.0f)
             {
-                EnsureSize();
+                int prevPixel = h06;
+                int endPixel = h09;
+                int segH = endPixel - prevPixel;
+                if (segH > 0)
+                {
+                    EnsureSize();
+                    ref PositionNormalTextureColor4 vertex = ref _vertexInfo[_numSprites];
 
-                ref PositionNormalTextureColor4 vertex = ref _vertexInfo[_numSprites];
+                    float drawY = position.Y + prevPixel;
+                    float topX = position.X;
+                    float botX = position.X;
 
-                vertex.Position0.x = position.X;
-                vertex.Position0.y = position.Y + h06;
+                    vertex.Position0.x = topX;
+                    vertex.Position0.y = drawY;
+                    vertex.Position0.z = depth;
 
-                vertex.Position1.x = position.X + width;
-                vertex.Position1.y = position.Y + h06;
+                    vertex.Position1.x = topX + width;
+                    vertex.Position1.y = drawY;
+                    vertex.Position1.z = depth;
 
-                vertex.Position2.x = position.X;
-                vertex.Position2.y = position.Y + h09;
+                    vertex.Position2.x = botX;
+                    vertex.Position2.y = drawY + segH;
+                    vertex.Position2.z = depth;
 
-                vertex.Position3.x = position.X + width;
-                vertex.Position3.y = position.Y + h09;
+                    vertex.Position3.x = botX + width;
+                    vertex.Position3.y = drawY + segH;
+                    vertex.Position3.z = depth;
 
-                vertex.Position0.z = depth;
-                vertex.Position1.z = depth;
-                vertex.Position2.z = depth;
-                vertex.Position3.z = depth;
+                    float segUVH = segH * invH;
+                    float uvTop = isAtlas ? (spriteEndY - prevPixel * invH) : (1f - prevPixel * invH);
+                    float uvBot = uvTop - segUVH;
 
-                float sourceX = ((sourceRect.X + 0.5f) / (float)texture.Width);
-                float sourceY = ((sourceRect.Y + 0.5f + h06) / (float)texture.Height);
-                float sourceW = ((sourceRect.Width - 1f) / (float)texture.Width);
-                float sourceH = ((sourceRect.Height - 1f - h06) / (float)texture.Height);
+                    vertex.TextureCoordinate0.x = srcX;
+                    vertex.TextureCoordinate0.y = uvTop;
+                    vertex.TextureCoordinate0.z = 0;
 
-                byte effects = (byte)((flip ? SpriteEffects.FlipHorizontally : SpriteEffects.None) & (SpriteEffects)0x03);
+                    vertex.TextureCoordinate1.x = srcX + srcW;
+                    vertex.TextureCoordinate1.y = uvTop;
+                    vertex.TextureCoordinate1.z = 0;
 
-                vertex.TextureCoordinate0.x = (_cornerOffsetX[0 ^ effects] * sourceW) + sourceX;
-                vertex.TextureCoordinate0.y = (_cornerOffsetY[0 ^ effects] * sourceH) + sourceY;
-                vertex.TextureCoordinate1.x = (_cornerOffsetX[1 ^ effects] * sourceW) + sourceX;
-                vertex.TextureCoordinate1.y = (_cornerOffsetY[1 ^ effects] * sourceH) + sourceY;
-                vertex.TextureCoordinate2.x = (_cornerOffsetX[2 ^ effects] * sourceW) + sourceX;
-                vertex.TextureCoordinate2.y = (_cornerOffsetY[2 ^ effects] * sourceH * mod.Z) + sourceY;
-                vertex.TextureCoordinate3.x = (_cornerOffsetX[3 ^ effects] * sourceW) + sourceX;
-                vertex.TextureCoordinate3.y = (_cornerOffsetY[3 ^ effects] * sourceH * mod.Z) + sourceY;
-                vertex.TextureCoordinate0.z = 0;
-                vertex.TextureCoordinate1.z = 0;
-                vertex.TextureCoordinate2.z = 0;
-                vertex.TextureCoordinate3.z = 0;
+                    vertex.TextureCoordinate2.x = srcX;
+                    vertex.TextureCoordinate2.y = uvBot;
+                    vertex.TextureCoordinate2.z = 0;
 
-                vertex.Normal0.x = 0;
-                vertex.Normal0.y = 0;
-                vertex.Normal0.z = 1;
+                    vertex.TextureCoordinate3.x = srcX + srcW;
+                    vertex.TextureCoordinate3.y = uvBot;
+                    vertex.TextureCoordinate3.z = 0;
 
-                vertex.Normal1.x = 0;
-                vertex.Normal1.y = 0;
-                vertex.Normal1.z = 1;
+                    vertex.Normal0.x = 0;
+                    vertex.Normal0.y = 0;
+                    vertex.Normal0.z = 1;
+                    vertex.Normal1.x = 0;
+                    vertex.Normal1.y = 0;
+                    vertex.Normal1.z = 1;
+                    vertex.Normal2.x = 0;
+                    vertex.Normal2.y = 0;
+                    vertex.Normal2.z = 1;
+                    vertex.Normal3.x = 0;
+                    vertex.Normal3.y = 0;
+                    vertex.Normal3.z = 1;
 
-                vertex.Normal2.x = 0;
-                vertex.Normal2.y = 0;
-                vertex.Normal2.z = 1;
+                    vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
 
-                vertex.Normal3.x = 0;
-                vertex.Normal3.y = 0;
-                vertex.Normal3.z = 1;
-
-                vertex.Hue0 = vertex.Hue1 = vertex.Hue2 = vertex.Hue3 = hue;
-
-                FinalizeVertex(ref vertex);
-                PushSprite(texture);
+                    FinalizeVertex(ref vertex, true);
+                    PushSprite(texture);
+                }
             }
         }
 
