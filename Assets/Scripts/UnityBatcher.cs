@@ -95,7 +95,9 @@ namespace ClassicUO.Renderer
             _textureInfo = new Texture2D[MAX_SPRITES];
             _vertexInfo = new PositionNormalTextureColor4[MAX_SPRITES];
 
-            _blendState = BlendState.AlphaBlend;
+            // Switched from AlphaBlend to NonPremultiplied
+            // to fix hard sprite edges when texture filtering is smooth instead of sharp
+            _blendState = BlendState.NonPremultiplied;//BlendState.AlphaBlend;
             //_rasterizerState = RasterizerState.CullNone;
             _sampler = SamplerState.PointClamp;
 
@@ -864,15 +866,15 @@ namespace ClassicUO.Renderer
         }
 
         public void DrawCharacterSitted
-        (
-            Texture2D texture,
-            XnaVector2 position,
-            Rectangle sourceRect,
-            XnaVector3 mod,
-            XnaVector3 hue,
-            bool flip,
-            float depth
-        )
+(
+    Texture2D texture,
+    XnaVector2 position,
+    Rectangle sourceRect,
+    XnaVector3 mod,
+    XnaVector3 hue,
+    bool flip,
+    float depth
+)
         {
             if (texture.UnityTexture == null)
             {
@@ -895,12 +897,19 @@ namespace ClassicUO.Renderer
             float invH = 1.0f / texture.Height;
             bool isAtlas = texture.IsFromTextureAtlas;
 
-            float srcX = sourceRect.X * invW;
-            float srcW = sourceRect.Width * invW;
-            if (flip) 
-            { 
-                srcX += srcW; 
-                srcW = -srcW; 
+            // Apply half-pixel inset for bilinear filtering when using texture atlas
+            // Only apply horizontal inset, vertical inset is handled per-segment
+            float offsetX = isAtlas ? 0.5f : 0.0f;
+            float sizeReductionX = isAtlas ? 1.0f : 0.0f;
+            float offsetYTop = isAtlas ? 1.0f : 0.0f;    // Only for top edge
+            float offsetYBottom = isAtlas ? 1.0f : 0.0f;  // Only for bottom edge
+
+            float srcX = (sourceRect.X + offsetX) * invW;
+            float srcW = (sourceRect.Width - sizeReductionX) * invW;
+            if (flip)
+            {
+                srcX += srcW;
+                srcW = -srcW;
             }
 
             float sittingOffset = flip ? -8.0f : 8.0f;
@@ -945,7 +954,8 @@ namespace ClassicUO.Renderer
                     vertex.Position3.z = depth;
 
                     float segUVH = segH * invH;
-                    float uvTop = isAtlas ? (spriteEndY - prevPixel * invH) : (1f - prevPixel * invH);
+                    // Apply top offset only for the first segment
+                    float uvTop = isAtlas ? (spriteEndY - (prevPixel + offsetYTop) * invH) : (1f - prevPixel * invH);
                     float uvBot = uvTop - segUVH;
 
                     vertex.TextureCoordinate0.x = srcX;
@@ -1016,6 +1026,7 @@ namespace ClassicUO.Renderer
                     vertex.Position3.z = depth;
 
                     float segUVH = segH * invH;
+                    // No vertical offset for middle segment
                     float uvTop = isAtlas ? (spriteEndY - prevPixel * invH) : (1f - prevPixel * invH);
                     float uvBot = uvTop - segUVH;
 
@@ -1087,8 +1098,10 @@ namespace ClassicUO.Renderer
                     vertex.Position3.z = depth;
 
                     float segUVH = segH * invH;
+                    // No vertical offset at top of this segment, but apply at bottom since this is the last segment
                     float uvTop = isAtlas ? (spriteEndY - prevPixel * invH) : (1f - prevPixel * invH);
-                    float uvBot = uvTop - segUVH;
+                    // Adjust the bottom UV to account for the bottom offset
+                    float uvBot = isAtlas ? (uvTop - segUVH + offsetYBottom * invH) : (uvTop - segUVH);
 
                     vertex.TextureCoordinate0.x = srcX;
                     vertex.TextureCoordinate0.y = uvTop;
@@ -1204,10 +1217,23 @@ namespace ClassicUO.Renderer
             //float maxX = (((sx + swidth) - 1f) / (float)texture.Width);
             //float maxY = (((sy + sheight) - 1f) / (float)texture.Height);
 
-            float minX = sx / (float)texture.Width;
-            float maxX = (sx + swidth) / texture.Width;
-            float minY = sy / (float)texture.Height;
-            float maxY = (sy + sheight) / texture.Height;
+            // Apply half-pixel inset for bilinear (smooth) filtering when using texture atlas
+            float minX, maxX, minY, maxY;
+
+            if (texture.IsFromTextureAtlas)
+            {
+                minX = (sx + 0.5f) / texture.Width;
+                maxX = (sx + swidth - 1.0f) / texture.Width;
+                minY = (sy + 0.5f) / texture.Height;
+                maxY = (sy + sheight - 1.0f) / texture.Height;
+            }
+            else
+            {
+                minX = sx / texture.Width;
+                maxX = (sx + swidth) / texture.Width;
+                minY = sy / texture.Height;
+                maxY = (sy + sheight) / texture.Height;
+            }
 
             if (UseGraphicsDrawTexture)
             {
@@ -1691,10 +1717,24 @@ namespace ClassicUO.Renderer
 
             if (sourceRectangle.HasValue)
             {
-                sourceX = sourceRectangle.Value.X / (float)texture.Width;
-                sourceY = sourceRectangle.Value.Y / (float)texture.Height;
-                sourceW = sourceRectangle.Value.Width / (float)texture.Width;
-                sourceH = sourceRectangle.Value.Height / (float)texture.Height;
+                // Apply half-pixel inset for bilinear (smooth) filtering when using texture atlas
+                float invW = 1.0f / texture.Width;
+                float invH = 1.0f / texture.Height;
+
+                if (texture.IsFromTextureAtlas)
+                {
+                    sourceX = (sourceRectangle.Value.X + 0.5f) * invW;
+                    sourceY = (sourceRectangle.Value.Y + 0.5f) * invH;
+                    sourceW = (sourceRectangle.Value.Width - 1.0f) * invW;
+                    sourceH = (sourceRectangle.Value.Height - 1.0f) * invH;
+                }
+                else
+                {
+                    sourceX = sourceRectangle.Value.X * invW;
+                    sourceY = sourceRectangle.Value.Y * invH;
+                    sourceW = sourceRectangle.Value.Width * invW;
+                    sourceH = sourceRectangle.Value.Height * invH;
+                }
                 destW = sourceRectangle.Value.Width;
                 destH = sourceRectangle.Value.Height;
             }
@@ -1730,10 +1770,24 @@ namespace ClassicUO.Renderer
 
             if (sourceRectangle.HasValue)
             {
-                sourceX = sourceRectangle.Value.X / (float)texture.Width;
-                sourceY = sourceRectangle.Value.Y / (float)texture.Height;
-                sourceW = Math.Sign(sourceRectangle.Value.Width) * Math.Max(Math.Abs(sourceRectangle.Value.Width), Utility.MathHelper.MachineEpsilonFloat) / (float)texture.Width;
-                sourceH = Math.Sign(sourceRectangle.Value.Height) * Math.Max(Math.Abs(sourceRectangle.Value.Height), Utility.MathHelper.MachineEpsilonFloat) / (float)texture.Height;
+                // Apply half-pixel inset for bilinear (smooth) filtering when using texture atlas
+                float invW = 1.0f / texture.Width;
+                float invH = 1.0f / texture.Height;
+
+                if (texture.IsFromTextureAtlas)
+                {
+                    sourceX = (sourceRectangle.Value.X + 0.5f) * invW;
+                    sourceY = (sourceRectangle.Value.Y + 0.5f) * invH;
+                    sourceW = Math.Sign(sourceRectangle.Value.Width) * Math.Max(Math.Abs(sourceRectangle.Value.Width) - 1.0f, Utility.MathHelper.MachineEpsilonFloat) * invW;
+                    sourceH = Math.Sign(sourceRectangle.Value.Height) * Math.Max(Math.Abs(sourceRectangle.Value.Height) - 1.0f, Utility.MathHelper.MachineEpsilonFloat) * invH;
+                }
+                else
+                {
+                    sourceX = sourceRectangle.Value.X * invW;
+                    sourceY = sourceRectangle.Value.Y * invH;
+                    sourceW = Math.Sign(sourceRectangle.Value.Width) * Math.Max(Math.Abs(sourceRectangle.Value.Width), Utility.MathHelper.MachineEpsilonFloat) * invW;
+                    sourceH = Math.Sign(sourceRectangle.Value.Height) * Math.Max(Math.Abs(sourceRectangle.Value.Height), Utility.MathHelper.MachineEpsilonFloat) * invH;
+                }
                 destW *= sourceRectangle.Value.Width;
                 destH *= sourceRectangle.Value.Height;
             }
@@ -1779,16 +1833,33 @@ namespace ClassicUO.Renderer
             XnaVector2 origin,
             XnaVector2 scale,
             SpriteEffects effects,
-            float layerDepth
+            float layerDepth,
+            bool skipUVInsets = false
         )
         {
             float sourceX, sourceY, sourceW, sourceH;
             if (sourceRectangle.HasValue)
             {
-                sourceX = sourceRectangle.Value.X / (float)texture.Width;
-                sourceY = sourceRectangle.Value.Y / (float)texture.Height;
-                sourceW = Math.Sign(sourceRectangle.Value.Width) * Math.Max(Math.Abs(sourceRectangle.Value.Width), Utility.MathHelper.MachineEpsilonFloat) / (float)texture.Width;
-                sourceH = Math.Sign(sourceRectangle.Value.Height) * Math.Max(Math.Abs(sourceRectangle.Value.Height), Utility.MathHelper.MachineEpsilonFloat) / (float)texture.Height;
+                // Apply half-pixel inset for bilinear (smooth) filtering when using texture atlas
+                float invW = 1.0f / texture.Width;
+                float invH = 1.0f / texture.Height;
+
+                // UV insets cause issues with land textures gaining borders when applying smooth filtering
+                // so don't apply them for land tiles via skipUVInserts flag
+                if (texture.IsFromTextureAtlas && !skipUVInsets)
+                {
+                    sourceX = (sourceRectangle.Value.X + 0.5f) * invW;
+                    sourceY = (sourceRectangle.Value.Y + 0.5f) * invH;
+                    sourceW = Math.Sign(sourceRectangle.Value.Width) * Math.Max(Math.Abs(sourceRectangle.Value.Width) - 1.0f, Utility.MathHelper.MachineEpsilonFloat) * invW;
+                    sourceH = Math.Sign(sourceRectangle.Value.Height) * Math.Max(Math.Abs(sourceRectangle.Value.Height) - 1.0f, Utility.MathHelper.MachineEpsilonFloat) * invH;
+                }
+                else
+                {
+                    sourceX = sourceRectangle.Value.X * invW;
+                    sourceY = sourceRectangle.Value.Y * invH;
+                    sourceW = Math.Sign(sourceRectangle.Value.Width) * Math.Max(Math.Abs(sourceRectangle.Value.Width), Utility.MathHelper.MachineEpsilonFloat) * invW;
+                    sourceH = Math.Sign(sourceRectangle.Value.Height) * Math.Max(Math.Abs(sourceRectangle.Value.Height), Utility.MathHelper.MachineEpsilonFloat) * invH;
+                }
                 scale.X *= sourceRectangle.Value.Width;
                 scale.Y *= sourceRectangle.Value.Height;
             }
@@ -1862,10 +1933,24 @@ namespace ClassicUO.Renderer
             float sourceX, sourceY, sourceW, sourceH;
             if (sourceRectangle.HasValue)
             {
-                sourceX = sourceRectangle.Value.X / (float)texture.Width;
-                sourceY = sourceRectangle.Value.Y / (float)texture.Height;
-                sourceW = sourceRectangle.Value.Width / (float)texture.Width;
-                sourceH = sourceRectangle.Value.Height / (float)texture.Height;
+                // Apply half-pixel inset for bilinear (smooth) filtering when using texture atlas
+                float invW = 1.0f / texture.Width;
+                float invH = 1.0f / texture.Height;
+
+                if (texture.IsFromTextureAtlas)
+                {
+                    sourceX = (sourceRectangle.Value.X + 0.5f) * invW;
+                    sourceY = (sourceRectangle.Value.Y + 0.5f) * invH;
+                    sourceW = (sourceRectangle.Value.Width - 1.0f) * invW;
+                    sourceH = (sourceRectangle.Value.Height - 1.0f) * invH;
+                }
+                else
+                {
+                    sourceX = sourceRectangle.Value.X * invW;
+                    sourceY = sourceRectangle.Value.Y * invH;
+                    sourceW = sourceRectangle.Value.Width * invW;
+                    sourceH = sourceRectangle.Value.Height * invH;
+                }
             }
             else
             {
@@ -1911,16 +1996,37 @@ namespace ClassicUO.Renderer
             float sourceX, sourceY, sourceW, sourceH;
             if (sourceRectangle.HasValue)
             {
-                sourceX = sourceRectangle.Value.X / (float)texture.Width;
-                sourceY = sourceRectangle.Value.Y / (float)texture.Height;
-                sourceW = Math.Sign(sourceRectangle.Value.Width) * Math.Max(
-                    Math.Abs(sourceRectangle.Value.Width),
-                    Utility.MathHelper.MachineEpsilonFloat
-                ) / (float)texture.Width;
-                sourceH = Math.Sign(sourceRectangle.Value.Height) * Math.Max(
-                    Math.Abs(sourceRectangle.Value.Height),
-                    Utility.MathHelper.MachineEpsilonFloat
-                ) / (float)texture.Height;
+                // Apply half-pixel inset for bilinear (smooth) filtering when using texture atlas
+                float invW = 1.0f / texture.Width;
+                float invH = 1.0f / texture.Height;
+
+                if (texture.IsFromTextureAtlas)
+                {
+                    // Apply half-pixel inset for bilinear filtering
+                    sourceX = (sourceRectangle.Value.X + 0.5f) * invW;
+                    sourceY = (sourceRectangle.Value.Y + 0.5f) * invH;
+                    sourceW = Math.Sign(sourceRectangle.Value.Width) * Math.Max(
+                        Math.Abs(sourceRectangle.Value.Width) - 1.0f,
+                        Utility.MathHelper.MachineEpsilonFloat
+                    ) * invW;
+                    sourceH = Math.Sign(sourceRectangle.Value.Height) * Math.Max(
+                        Math.Abs(sourceRectangle.Value.Height) - 1.0f,
+                        Utility.MathHelper.MachineEpsilonFloat
+                    ) * invH;
+                }
+                else
+                {
+                    sourceX = sourceRectangle.Value.X * invW;
+                    sourceY = sourceRectangle.Value.Y * invH;
+                    sourceW = Math.Sign(sourceRectangle.Value.Width) * Math.Max(
+                        Math.Abs(sourceRectangle.Value.Width),
+                        Utility.MathHelper.MachineEpsilonFloat
+                    ) * invW;
+                    sourceH = Math.Sign(sourceRectangle.Value.Height) * Math.Max(
+                        Math.Abs(sourceRectangle.Value.Height),
+                        Utility.MathHelper.MachineEpsilonFloat
+                    ) * invH;
+                }
             }
             else
             {
@@ -2571,7 +2677,9 @@ namespace ClassicUO.Renderer
         {
             Flush();
 
-            _blendState = blend ?? BlendState.AlphaBlend;
+            // Switched from AlphaBlend to NonPremultiplied
+            // to fix hard sprite edges when texture filtering is smooth instead of sharp
+            _blendState = blend ?? BlendState.NonPremultiplied;//BlendState.AlphaBlend;
             //ApplyStates();
         }
 
