@@ -131,7 +131,8 @@ namespace ClassicUO.Game.GameObjects
                             Vector2.Zero,
                             scale,
                             SpriteEffects.None,
-                            depth + 0.5f
+                            depth + 0.5f,
+                            true
                         );
 
                         var sin = (float)Math.Sin(Time.Ticks / 1000f);
@@ -148,7 +149,8 @@ namespace ClassicUO.Game.GameObjects
                         Vector2.Zero,
                         scale,
                         SpriteEffects.None,
-                        depth + 0.5f
+                        depth + 0.5f,
+                        true
                     );
 
                 }
