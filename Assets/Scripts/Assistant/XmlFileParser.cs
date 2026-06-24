@@ -425,6 +425,14 @@ namespace Assistant
         internal static void LoadSkillDef(FileInfo info, AssistantGump gump)
         {
             List<SkillEntry> skillEntries = new List<SkillEntry>();
+
+            // MobileUO: Use skills already loaded from skills.mul instead of XML file to preserve custom skill names
+            // This fixes the issue where the assistant loading this .xml file was breaking shards like Memento
+            // where they have custom skill names
+            skillEntries.AddRange(Client.Game.UO.FileManager.Skills.SortedSkills);
+
+            // Old XML loading code commented out
+            /*
             XmlDocument doc = new XmlDocument();
             if(!info.Exists)
             {
@@ -473,12 +481,13 @@ namespace Assistant
             {
                 skillEntries.AddRange(Client.Game.UO.FileManager.Skills.Skills);
             }
+            */
 
             Dictionary<int, string> skn = new Dictionary<int, string>
             {
                 [-1] = "Last"
             };
-            for (i = 0; i < skillEntries.Count; i++)
+            for (int i = 0; i < skillEntries.Count; i++)
             {
                 SkillEntry sk = skillEntries[i];
                 if (sk.HasAction)
