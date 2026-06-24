@@ -394,6 +394,17 @@ public class ClientRunner : MonoBehaviour
 	    loginGump?.OnButtonClick((int) LoginGump.Buttons.NextArrow);
     }
 
+    // MobileUO: add a way to quit from Login when a shard doesn't have a Quit button in the login gump
+    public static void Quit()
+    {
+        if (Client.Game == null || !(Client.Game.Scene is LoginScene loginScene) || loginScene.CurrentLoginStep != LoginSteps.Main)
+        {
+            return;
+        }
+
+        Client.Game.Exit();
+    }
+
     private void OnProfileLoaded()
     {
 	    //Disable auto move on mobile platform
