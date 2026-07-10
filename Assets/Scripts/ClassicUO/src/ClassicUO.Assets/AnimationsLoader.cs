@@ -137,6 +137,7 @@ namespace ClassicUO.Assets
                                 continue;
                             }
 
+                            // MobileUO: backported .Trim() fix to handle extra spaces in mobtypes.txt
                             uint number = uint.Parse(parts[2].Trim(), NumberStyles.HexNumber);
 
                             for (int i = 0; i < 5; i++)
