@@ -97,7 +97,8 @@ namespace ClassicUO.Renderer
 
             // Switched from AlphaBlend to NonPremultiplied
             // to fix hard sprite edges when texture filtering is smooth instead of sharp
-            _blendState = BlendState.NonPremultiplied;//BlendState.AlphaBlend;
+            // 7/23/26 - switched back to AlphaBlend because this was affecting alpha levels of other things like PopUpMenuGump on hover of a menu item - I don't see hard sprite edges anymore?
+            _blendState = BlendState.AlphaBlend;//BlendState.NonPremultiplied;
             //_rasterizerState = RasterizerState.CullNone;
             _sampler = SamplerState.PointClamp;
 
@@ -2679,7 +2680,8 @@ namespace ClassicUO.Renderer
 
             // Switched from AlphaBlend to NonPremultiplied
             // to fix hard sprite edges when texture filtering is smooth instead of sharp
-            _blendState = blend ?? BlendState.NonPremultiplied;//BlendState.AlphaBlend;
+            // 7/23/26 - switched back to AlphaBlend because this was affecting alpha levels of other things like PopUpMenuGump on hover of a menu item - I don't see hard sprite edges anymore?
+            _blendState = blend ?? BlendState.AlphaBlend;//BlendState.NonPremultiplied;
             //ApplyStates();
         }
 
