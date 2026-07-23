@@ -368,7 +368,10 @@ namespace ClassicUO.Game.UI.Gumps
                     // MobileUO: backported linewrap fix
                     foreach (JournalData jdata in journalDatas)
                     {
-                        jdata.EntryText = new Label(jdata.EntryText.Text, jdata.EntryText.Unicode, jdata.EntryText.Hue, Width - BORDER_WIDTH - jdata.TimeStamp.Width, font: jdata.EntryText.Font);
+                        // MobileUO: added option to use alternate journal text border for better readability
+                        var fontStyle = GetJournalFontStyle();
+
+                        jdata.EntryText = new Label(jdata.EntryText.Text, jdata.EntryText.Unicode, jdata.EntryText.Hue, Width - BORDER_WIDTH - jdata.TimeStamp.Width, font: jdata.EntryText.Font, style: fontStyle);
                         jdata.EntryText.Update();
                     }
 
@@ -415,12 +418,15 @@ namespace ClassicUO.Game.UI.Gumps
                 while (journalDatas.Count > Constants.MAX_JOURNAL_HISTORY_COUNT)
                     journalDatas.RemoveFromFront().Destroy();
 
-                Label timeS = new Label($"{e.Time:t}", e.IsUnicode, e.Hue, font: e.Font);
+                // MobileUO: added option to use alternate journal text border for better readability
+                var fontStyle = GetJournalFontStyle();
+
+                Label timeS = new Label($"{e.Time:t}", e.IsUnicode, e.Hue, font: e.Font, style: fontStyle);
 
                 journalDatas.AddToBack(
                     new JournalData(
                         // MobileUO: backported linewrap fix
-                        new Label($"{e.Name}: {e.Text}", e.IsUnicode, e.Hue, Width - BORDER_WIDTH - timeS.Width, font: e.Font),
+                        new Label($"{e.Name}: {e.Text}", e.IsUnicode, e.Hue, Width - BORDER_WIDTH - timeS.Width, font: e.Font, style: fontStyle),
                         timeS,
                         e.TextType,
                         e.MessageType
@@ -462,6 +468,13 @@ namespace ClassicUO.Game.UI.Gumps
                     _.Destroy();
 
                 journalDatas.Clear();
+            }
+
+            private FontStyle GetJournalFontStyle()
+            {
+                return ProfileManager.CurrentProfile.UseAlternateJournalTextBorder
+                    ? FontStyle.LightBlackBorder
+                    : FontStyle.None;
             }
 
             public override void Dispose()

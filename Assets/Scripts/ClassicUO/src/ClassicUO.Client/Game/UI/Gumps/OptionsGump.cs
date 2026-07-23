@@ -125,7 +125,8 @@ namespace ClassicUO.Game.UI.Gumps
         private Checkbox _showInfoBar;
         private Checkbox _ignoreAllianceMessages;
         // MobileUO: added option to allow large chat box to be easier to click on
-        private Checkbox _ignoreGuildMessages, _useAlternateJournal, _useLargeSystemChatTextBox;
+        // MobileUO: added option to use alternate journal text border for better readability
+        private Checkbox _ignoreGuildMessages, _useAlternateJournal, _useLargeSystemChatTextBox, _useAlternateJournalTextBorder;
 
         // general
         private HSliderBar _sliderFPS, _circleOfTranspRadius;
@@ -2531,8 +2532,22 @@ namespace ClassicUO.Game.UI.Gumps
                 startY
             );
 
-            // MobileUO: added option to allow large chat box to be easier to click on
+            // MobileUO: added option to use alternate journal text border for better readability
+            startX += 40;
             startY += _useAlternateJournal.Height + 2;
+
+            _useAlternateJournalTextBorder = AddCheckBox
+            (
+                rightArea,
+                "Add text border to alternate journal text",
+                _currentProfile.UseAlternateJournalTextBorder,
+                startX,
+                startY
+            );
+
+            // MobileUO: added option to allow large chat box to be easier to click on
+            startY += _useAlternateJournalTextBorder.Height + 2;
+            startX = 5;
 
             _useLargeSystemChatTextBox = AddCheckBox
             (
@@ -3691,6 +3706,8 @@ namespace ClassicUO.Game.UI.Gumps
                     _ignoreGuildMessages.IsChecked = false;
                     _ignoreAllianceMessages.IsChecked = false;
                     _useAlternateJournal.IsChecked = false;
+                    // MobileUO: added option to use alternate journal text border for better readability
+                    _useAlternateJournalTextBorder.IsChecked = false;
                     // MobileUO: added option to allow large chat box to be easier to click on
                     _useLargeSystemChatTextBox.IsChecked = false;
 
@@ -4065,6 +4082,8 @@ namespace ClassicUO.Game.UI.Gumps
             _currentProfile.IgnoreGuildMessages = _ignoreGuildMessages.IsChecked;
             _currentProfile.IgnoreAllianceMessages = _ignoreAllianceMessages.IsChecked;
             _currentProfile.UseAlternateJournal = _useAlternateJournal.IsChecked;
+            // MobileUO: added option to use alternate journal text border for better readability
+            _currentProfile.UseAlternateJournalTextBorder = _useAlternateJournalTextBorder.IsChecked;
             // MobileUO: added option to allow large chat box to be easier to click on
             _currentProfile.UseLargeSystemChatTextBox = _useLargeSystemChatTextBox.IsChecked;
 
