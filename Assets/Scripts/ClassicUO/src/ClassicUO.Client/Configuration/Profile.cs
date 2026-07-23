@@ -355,6 +355,10 @@ namespace ClassicUO.Configuration
         internal static string ProfilePath { get; } = Path.Combine(CUOEnviroment.ExecutablePath, "Data", "Profiles");
         internal static string DataPath { get; } = Path.Combine(CUOEnviroment.ExecutablePath, "Data");
 
+        //Alternate Journal
+        public bool UseAlternateJournal { get; set; }
+        // MobileUO: added option to use alternate journal text border for better readability
+        public bool UseAlternateJournalTextBorder { get; set; }
         // MobileUO: added option to allow large chat box to be easier to click on
         public bool UseLargeSystemChatTextBox { get; set; }
 

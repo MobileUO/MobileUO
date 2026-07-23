@@ -26,7 +26,8 @@ namespace ClassicUO.Game
         Cropped = 0x0040,
         BQ = 0x0080,
         ExtraHeight = 0x0100,
-        CropTexture = 0x0200
+        CropTexture = 0x0200,
+        LightBlackBorder = 0x0800
     }
 
     public sealed class RenderedText

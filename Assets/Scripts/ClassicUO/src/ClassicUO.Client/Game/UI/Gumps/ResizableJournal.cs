@@ -550,6 +550,12 @@ namespace ClassicUO.Game.UI.Gumps
 
                     foreach (JournalData _ in journalDatas)
                     {
+                        // MobileUO: added option to use alternate journal text border for better readability
+                        //var fontStyle = GetJournalFontStyle();
+
+                        //jdata.EntryText = new Label(jdata.EntryText.Text, jdata.EntryText.Unicode, jdata.EntryText.Hue, Width - BORDER_WIDTH - jdata.TimeStamp.Width, font: jdata.EntryText.Font, style: fontStyle);
+                        //jdata.EntryText.Update();
+
                         if (_ is null)
                             continue;
                         _.EntryText.Width = Width - BORDER_WIDTH - (ProfileManager.CurrentProfile.HideJournalTimestamp ? 0 : _.TimeStamp.Width);
@@ -598,6 +604,11 @@ namespace ClassicUO.Game.UI.Gumps
 
                 while (journalDatas.Count > (ProfileManager.CurrentProfile == null ? 200 : ProfileManager.CurrentProfile.MaxJournalEntries))
                     journalDatas.RemoveFromFront().Destroy();
+
+                // MobileUO: added option to use alternate journal text border for better readability
+                //var fontStyle = GetJournalFontStyle();
+
+                //Label timeS = new Label($"{e.Time:t}", e.IsUnicode, e.Hue, font: e.Font, style: fontStyle);
 
                 TextBox timeS = TextBox.GetOne($"{time:t}", ProfileManager.CurrentProfile.SelectedTTFJournalFont, ProfileManager.CurrentProfile.SelectedJournalFontSize - 2, 1150, TextBox.RTLOptions.Default());
                 TextBox je = TextBox.GetOne(text, ProfileManager.CurrentProfile.SelectedTTFJournalFont, ProfileManager.CurrentProfile.SelectedJournalFontSize, hue,
@@ -656,6 +667,13 @@ namespace ClassicUO.Game.UI.Gumps
                     _.Destroy();
 
                 journalDatas.Clear();
+            }
+
+            private FontStyle GetJournalFontStyle()
+            {
+                return ProfileManager.CurrentProfile.UseAlternateJournalTextBorder
+                    ? FontStyle.LightBlackBorder
+                    : FontStyle.None;
             }
 
             public override void Dispose()

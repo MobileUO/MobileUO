@@ -126,7 +126,8 @@
 //        private Checkbox _showInfoBar;
 //        private Checkbox _ignoreAllianceMessages;
 //        // MobileUO: added option to allow large chat box to be easier to click on
-//        private Checkbox _ignoreGuildMessages, _useAlternateJournal, _useLargeSystemChatTextBox;
+//        // MobileUO: added option to use alternate journal text border for better readability
+//        private Checkbox _ignoreGuildMessages, _useAlternateJournal, _useLargeSystemChatTextBox, _useAlternateJournalTextBorder;
 
 //        // general
 //        private HSliderBar _sliderFPS, _circleOfTranspRadius;
@@ -966,7 +967,7 @@
 //            );
 
 //            _use_old_status_gump.IsVisible = true;
-            
+
 //            section3.Add
 //            (
 //                _statusGumpBarMutuallyExclusive = AddCheckBox
@@ -978,7 +979,7 @@
 //                    startY
 //                )
 //            );
-            
+
 //            _statusGumpBarMutuallyExclusive.IsVisible = true;
 
 //            section3.Add
@@ -1247,7 +1248,7 @@
 //                    startY
 //                )
 //            );
-            
+
 //            section4.Add
 //            (
 //                _dragSelectHostileOnly = AddCheckBox
@@ -2532,8 +2533,22 @@
 //                startY
 //            );
 
-//            // MobileUO: added option to allow large chat box to be easier to click on
-//            startY += _useAlternateJournal.Height + 2;
+            // MobileUO: added option to use alternate journal text border for better readability
+            //startX += 40;
+            //startY += _useAlternateJournal.Height + 2;
+
+            //_useAlternateJournalTextBorder = AddCheckBox
+            //(
+            //    rightArea,
+            //    "Add text border to alternate journal text",
+            //    _currentProfile.UseAlternateJournalTextBorder,
+            //    startX,
+            //    startY
+            //);
+
+            //// MobileUO: added option to allow large chat box to be easier to click on
+            //startY += _useAlternateJournalTextBorder.Height + 2;
+            //startX = 5;
 
 //            _useLargeSystemChatTextBox = AddCheckBox
 //            (
@@ -3672,400 +3687,404 @@
 
 //                    break;
 
-//                case 7: // speech
-//                    _scaleSpeechDelay.IsChecked = true;
-//                    _sliderSpeechDelay.Value = 100;
-//                    _speechColorPickerBox.Hue = 0x02B2;
-//                    _emoteColorPickerBox.Hue = 0x0021;
-//                    _yellColorPickerBox.Hue = 0x0021;
-//                    _whisperColorPickerBox.Hue = 0x0033;
-//                    _partyMessageColorPickerBox.Hue = 0x0044;
-//                    _guildMessageColorPickerBox.Hue = 0x0044;
-//                    _allyMessageColorPickerBox.Hue = 0x0057;
-//                    _chatMessageColorPickerBox.Hue = 0x0256;
-//                    _chatAfterEnter.IsChecked = false;
-//                    UIManager.SystemChat.IsActive = !_chatAfterEnter.IsChecked;
-//                    _chatAdditionalButtonsCheckbox.IsChecked = true;
-//                    _chatShiftEnterCheckbox.IsChecked = true;
-//                    _saveJournalCheckBox.IsChecked = false;
-//                    _hideChatGradient.IsChecked = false;
-//                    _ignoreGuildMessages.IsChecked = false;
-//                    _ignoreAllianceMessages.IsChecked = false;
-//                    _useAlternateJournal.IsChecked = false;
-//                    // MobileUO: added option to allow large chat box to be easier to click on
-//                    _useLargeSystemChatTextBox.IsChecked = false;
-
-//                    break;
-
-//                case 8: // combat
-//                    _showDPSCheckbox.IsChecked = false;
-//                    _innocentColorPickerBox.Hue = 0x005A;
-//                    _friendColorPickerBox.Hue = 0x0044;
-//                    _crimialColorPickerBox.Hue = 0x03b2;
-//                    _canAttackColorPickerBox.Hue = 0x03b2;
-//                    _murdererColorPickerBox.Hue = 0x0023;
-//                    _enemyColorPickerBox.Hue = 0x0031;
-//                    _queryBeforAttackCheckbox.IsChecked = true;
-//                    _queryBeforeBeneficialCheckbox.IsChecked = false;
-//                    _uiButtonsSingleClick.IsChecked = false;
-//                    _buffBarTime.IsChecked = false;
-//                    _enableFastSpellsAssign.IsChecked = false;
-//                    _beneficColorPickerBox.Hue = 0x0059;
-//                    _harmfulColorPickerBox.Hue = 0x0020;
-//                    _neutralColorPickerBox.Hue = 0x03b2;
-//                    _spellFormatBox.SetText(ResGumps.SpellFormat_Default);
-//                    _spellColoringCheckbox.IsChecked = false;
-//                    _spellFormatCheckbox.IsChecked = false;
-
-//                    break;
-
-//                case 9: // counters
-//                    _enableCounters.IsChecked = false;
-//                    _highlightOnUse.IsChecked = false;
-//                    _enableAbbreviatedAmount.IsChecked = false;
-//                    _columns.SetText("1");
-//                    _rows.SetText("1");
-//                    _cellSize.Value = 40;
-//                    _highlightOnAmount.IsChecked = false;
-//                    _highlightAmount.SetText("5");
-//                    _abbreviatedAmount.SetText("1000");
-
-//                    break;
-
-//                case 10: // info bar
-
-
-//                    break;
-
-//                case 11: // containers
-//                    _containersScale.Value = 100;
-//                    _containerScaleItems.IsChecked = false;
-//                    _useLargeContianersGumps.IsChecked = false;
-//                    _containerDoubleClickToLoot.IsChecked = false;
-//                    _relativeDragAnDropItems.IsChecked = false;
-//                    _highlightContainersWhenMouseIsOver.IsChecked = false;
-//                    _overrideContainerLocation.IsChecked = false;
-//                    _overrideContainerLocationSetting.SelectedIndex = 0;
-//                    _backpackStyle.SelectedIndex = 0;
-//                    _hueContainerGumps.IsChecked = true;
-
-//                    break;
-
-//                case 12: // experimental
-
-//                    _disableDefaultHotkeys.IsChecked = false;
-//                    _disableArrowBtn.IsChecked = false;
-//                    _disableTabBtn.IsChecked = false;
-//                    _disableCtrlQWBtn.IsChecked = false;
-//                    _disableAutoMove.IsChecked = false;
-
-//                    break;
-//            }
-//        }
-
-//        private void Apply()
-//        {
-//            WorldViewportGump vp = UIManager.GetGump<WorldViewportGump>();
-
-//            // general
-//            if (Settings.GlobalSettings.FPS != _sliderFPS.Value)
-//            {
-//                Client.Game.SetRefreshRate(_sliderFPS.Value);
-//            }
-
-//            _currentProfile.HighlightGameObjects = _highlightObjects.IsChecked;
-//            _currentProfile.ReduceFPSWhenInactive = _reduceFPSWhenInactive.IsChecked;
-//            _currentProfile.EnablePathfind = _enablePathfind.IsChecked;
-//            _currentProfile.UseShiftToPathfind = _useShiftPathfind.IsChecked;
-//            _currentProfile.AlwaysRun = _alwaysRun.IsChecked;
-//            _currentProfile.AlwaysRunUnlessHidden = _alwaysRunUnlessHidden.IsChecked;
-//            _currentProfile.ShowMobilesHP = _showHpMobile.IsChecked;
-//            _currentProfile.HighlightMobilesByPoisoned = _highlightByPoisoned.IsChecked;
-//            _currentProfile.HighlightMobilesByParalize = _highlightByParalyzed.IsChecked;
-//            _currentProfile.HighlightMobilesByInvul = _highlightByInvul.IsChecked;
-//            _currentProfile.PoisonHue = _poisonColorPickerBox.Hue;
-//            _currentProfile.ParalyzedHue = _paralyzedColorPickerBox.Hue;
-//            _currentProfile.InvulnerableHue = _invulnerableColorPickerBox.Hue;
-//            _currentProfile.MobileHPType = _hpComboBox.SelectedIndex;
-//            _currentProfile.MobileHPShowWhen = _hpComboBoxShowWhen.SelectedIndex;
-//            _currentProfile.UseNewTargetSystem = _newTargetSystem.IsChecked;
-//            _currentProfile.HoldDownKeyTab = _holdDownKeyTab.IsChecked;
-//            _currentProfile.HoldDownKeyAltToCloseAnchored = _holdDownKeyAlt.IsChecked;
-
-//            _currentProfile.CloseAllAnchoredGumpsInGroupWithRightClick = _closeAllAnchoredGumpsWithRClick.IsChecked;
-
-//            _currentProfile.DoubleClickForGridLoot = _doubleClickForGridLoot.IsChecked;
-//            _currentProfile.HoldShiftForContext = _holdShiftForContext.IsChecked;
-//            _currentProfile.HoldAltToMoveGumps = _holdAltToMoveGumps.IsChecked;
-//            _currentProfile.HoldShiftToSplitStack = _holdShiftToSplitStack.IsChecked;
-//            _currentProfile.CloseHealthBarType = _healtbarType.SelectedIndex;
-//            _currentProfile.HideScreenshotStoredInMessage = _hideScreenshotStoredInMessage.IsChecked;
-
-//            if (_currentProfile.DrawRoofs == _drawRoofs.IsChecked)
-//            {
-//                _currentProfile.DrawRoofs = !_drawRoofs.IsChecked;
-
-//                Client.Game.GetScene<GameScene>()?.UpdateMaxDrawZ(true);
-//            }
-
-//            if (_currentProfile.TopbarGumpIsDisabled != _enableTopbar.IsChecked)
-//            {
-//                if (_enableTopbar.IsChecked)
-//                {
-//                    UIManager.GetGump<TopBarGump>()?.Dispose();
-//                }
-//                else
-//                {
-//                    TopBarGump.Create(World);
-//                }
-
-//                _currentProfile.TopbarGumpIsDisabled = _enableTopbar.IsChecked;
-//            }
-
-//            if (_currentProfile.EnableCaveBorder != _enableCaveBorder.IsChecked)
-//            {
-//                StaticFilters.CleanCaveTextures();
-//                _currentProfile.EnableCaveBorder = _enableCaveBorder.IsChecked;
-//            }
-
-//            if (_currentProfile.TreeToStumps != _treeToStumps.IsChecked)
-//            {
-//                StaticFilters.CleanTreeTextures();
-//                _currentProfile.TreeToStumps = _treeToStumps.IsChecked;
-//            }
-
-//            _currentProfile.FieldsType = _fieldsType.SelectedIndex;
-//            _currentProfile.HideVegetation = _hideVegetation.IsChecked;
-//            _currentProfile.NoColorObjectsOutOfRange = _noColorOutOfRangeObjects.IsChecked;
-//            _currentProfile.UseCircleOfTransparency = _useCircleOfTransparency.IsChecked;
-//            _currentProfile.CircleOfTransparencyRadius = _circleOfTranspRadius.Value;
-//            _currentProfile.CircleOfTransparencyType = _cotType.SelectedIndex;
-//            _currentProfile.StandardSkillsGump = _useStandardSkillsGump.IsChecked;
-
-//            if (_useStandardSkillsGump.IsChecked)
-//            {
-//                SkillGumpAdvanced newGump = UIManager.GetGump<SkillGumpAdvanced>();
-
-//                if (newGump != null)
-//                {
-//                    UIManager.Add(new StandardSkillsGump(World) { X = newGump.X, Y = newGump.Y });
-
-//                    newGump.Dispose();
-//                }
-//            }
-//            else
-//            {
-//                StandardSkillsGump standardGump = UIManager.GetGump<StandardSkillsGump>();
-
-//                if (standardGump != null)
-//                {
-//                    UIManager.Add(new SkillGumpAdvanced(World) { X = standardGump.X, Y = standardGump.Y });
-
-//                    standardGump.Dispose();
-//                }
-//            }
-
-//            _currentProfile.ShowNewMobileNameIncoming = _showMobileNameIncoming.IsChecked;
-//            _currentProfile.ShowNewCorpseNameIncoming = _showCorpseNameIncoming.IsChecked;
-//            _currentProfile.GridLootType = _gridLoot.SelectedIndex;
-//            _currentProfile.SallosEasyGrab = _sallosEasyGrab.IsChecked;
-//            _currentProfile.PartyInviteGump = _partyInviteGump.IsChecked;
-//            _currentProfile.UseObjectsFading = _objectsFading.IsChecked;
-//            _currentProfile.TextFading = _textFading.IsChecked;
-//            _currentProfile.UseSmoothBoatMovement = _use_smooth_boat_movement.IsChecked;
-
-//            if (_currentProfile.ShowHouseContent != _showHouseContent.IsChecked)
-//            {
-//                _currentProfile.ShowHouseContent = _showHouseContent.IsChecked;
-//                NetClient.Socket.Send_ShowPublicHouseContent(_currentProfile.ShowHouseContent);
-//            }
-
-
-//            // sounds
-//            _currentProfile.EnableSound = _enableSounds.IsChecked;
-//            _currentProfile.EnableMusic = _enableMusic.IsChecked;
-//            _currentProfile.EnableFootstepsSound = _footStepsSound.IsChecked;
-//            _currentProfile.EnableCombatMusic = _combatMusic.IsChecked;
-//            _currentProfile.ReproduceSoundsInBackground = _musicInBackground.IsChecked;
-//            _currentProfile.SoundVolume = _soundsVolume.Value;
-//            _currentProfile.MusicVolume = _musicVolume.Value;
-//            Settings.GlobalSettings.LoginMusicVolume = _loginMusicVolume.Value;
-//            Settings.GlobalSettings.LoginMusic = _loginMusic.IsChecked;
-
-//            Client.Game.Audio.UpdateCurrentMusicVolume();
-//            Client.Game.Audio.UpdateCurrentSoundsVolume();
-
-//            if (!_currentProfile.EnableMusic)
-//            {
-//                Client.Game.Audio.StopMusic();
-//            }
-
-//            if (!_currentProfile.EnableSound)
-//            {
-//                Client.Game.Audio.StopSounds();
-//            }
-
-//            // speech
-//            _currentProfile.ScaleSpeechDelay = _scaleSpeechDelay.IsChecked;
-//            _currentProfile.SpeechDelay = _sliderSpeechDelay.Value;
-//            _currentProfile.SpeechHue = _speechColorPickerBox.Hue;
-//            _currentProfile.EmoteHue = _emoteColorPickerBox.Hue;
-//            _currentProfile.YellHue = _yellColorPickerBox.Hue;
-//            _currentProfile.WhisperHue = _whisperColorPickerBox.Hue;
-//            _currentProfile.PartyMessageHue = _partyMessageColorPickerBox.Hue;
-//            _currentProfile.GuildMessageHue = _guildMessageColorPickerBox.Hue;
-//            _currentProfile.AllyMessageHue = _allyMessageColorPickerBox.Hue;
-//            _currentProfile.ChatMessageHue = _chatMessageColorPickerBox.Hue;
-
-//            if (_currentProfile.ActivateChatAfterEnter != _chatAfterEnter.IsChecked)
-//            {
-//                UIManager.SystemChat.IsActive = !_chatAfterEnter.IsChecked;
-//                _currentProfile.ActivateChatAfterEnter = _chatAfterEnter.IsChecked;
-//            }
-
-//            _currentProfile.ActivateChatAdditionalButtons = _chatAdditionalButtonsCheckbox.IsChecked;
-//            _currentProfile.ActivateChatShiftEnterSupport = _chatShiftEnterCheckbox.IsChecked;
-//            _currentProfile.SaveJournalToFile = _saveJournalCheckBox.IsChecked;
-
-//            // video
-//            _currentProfile.EnableDeathScreen = _enableDeathScreen.IsChecked;
-//            _currentProfile.EnableBlackWhiteEffect = _enableBlackWhiteEffect.IsChecked;
-
-//            var camera = Client.Game.Scene.Camera;
-//            _currentProfile.DefaultScale = camera.Zoom = (_sliderZoom.Value * camera.ZoomStep) + camera.ZoomMin;
-
-//            _currentProfile.EnableMousewheelScaleZoom = _zoomCheckbox.IsChecked;
-//            _currentProfile.RestoreScaleAfterUnpressCtrl = _restorezoomCheckbox.IsChecked;
-
-//            if (_use_old_status_gump.IsChecked != _currentProfile.UseOldStatusGump)
-//            {
-//                StatusGumpBase status = StatusGumpBase.GetStatusGump();
-
-//                _currentProfile.UseOldStatusGump = _use_old_status_gump.IsChecked;
-
-//                if (status != null)
-//                {
-//                    if (_currentProfile.StatusGumpBarMutuallyExclusive)
-//                        status.Dispose();
-//                    UIManager.Add(StatusGumpBase.AddStatusGump(World, status.ScreenCoordinateX, status.ScreenCoordinateY));
-//                }
-//            }
-            
-//            if (_statusGumpBarMutuallyExclusive.IsChecked != _currentProfile.StatusGumpBarMutuallyExclusive)
-//            {
-//                var active = _currentProfile.StatusGumpBarMutuallyExclusive = _statusGumpBarMutuallyExclusive.IsChecked;
-
-//                if (active && StatusGumpBase.GetStatusGump() != null && UIManager.GetGump<BaseHealthBarGump>(World.Player) is {} bar)
-//                    bar.Dispose();
-//            }
-
-
-//            int.TryParse(_gameWindowWidth.Text, out int gameWindowSizeWidth);
-//            int.TryParse(_gameWindowHeight.Text, out int gameWindowSizeHeight);
-
-//            if (gameWindowSizeWidth != Client.Game.Scene.Camera.Bounds.Width || gameWindowSizeHeight != Client.Game.Scene.Camera.Bounds.Height)
-//            {
-//                if (vp != null)
-//                {
-//                    Point n = vp.ResizeGameWindow(new Point(gameWindowSizeWidth, gameWindowSizeHeight));
-
-//                    _gameWindowWidth.SetText(n.X.ToString());
-//                    _gameWindowHeight.SetText(n.Y.ToString());
-//                }
-//            }
-
-//            int.TryParse(_gameWindowPositionX.Text, out int gameWindowPositionX);
-//            int.TryParse(_gameWindowPositionY.Text, out int gameWindowPositionY);
-
-//            if (gameWindowPositionX != camera.Bounds.X || gameWindowPositionY != camera.Bounds.Y)
-//            {
-//                if (vp != null)
-//                {
-//                    vp.SetGameWindowPosition(new Point(gameWindowPositionX, gameWindowPositionY));
-//                    _currentProfile.GameWindowPosition = vp.Location;
-//                }
-//            }
-
-//            if (_currentProfile.GameWindowLock != _gameWindowLock.IsChecked)
-//            {
-//                if (vp != null)
-//                {
-//                    vp.CanMove = !_gameWindowLock.IsChecked;
-//                }
-
-//                _currentProfile.GameWindowLock = _gameWindowLock.IsChecked;
-//            }
-
-//            if (_currentProfile.GameWindowFullSize != _gameWindowFullsize.IsChecked)
-//            {
-//                Point n = Point.Zero, loc = Point.Zero;
-
-//                if (_gameWindowFullsize.IsChecked)
-//                {
-//                    if (vp != null)
-//                    {
-//                        n = vp.ResizeGameWindow(new Point(Client.Game.Window.ClientBounds.Width, Client.Game.Window.ClientBounds.Height));
-//                        vp.SetGameWindowPosition(new Point(-5, -5));
-//                        _currentProfile.GameWindowPosition = vp.Location;
-//                    }
-//                }
-//                else
-//                {
-//                    if (vp != null)
-//                    {
-//                        n = vp.ResizeGameWindow(new Point(600, 480));
-//                        vp.SetGameWindowPosition(new Point(20, 20));
-//                        _currentProfile.GameWindowPosition = vp.Location;
-//                    }
-//                }
-
-//                _gameWindowPositionX.SetText(loc.X.ToString());
-//                _gameWindowPositionY.SetText(loc.Y.ToString());
-//                _gameWindowWidth.SetText(n.X.ToString());
-//                _gameWindowHeight.SetText(n.Y.ToString());
-
-//                _currentProfile.GameWindowFullSize = _gameWindowFullsize.IsChecked;
-//            }
-
-//            if (_currentProfile.WindowBorderless != _windowBorderless.IsChecked)
-//            {
-//                _currentProfile.WindowBorderless = _windowBorderless.IsChecked;
-//                Client.Game.SetWindowBorderless(_windowBorderless.IsChecked);
-//            }
-
-//            _currentProfile.UseAlternativeLights = _altLights.IsChecked;
-//            _currentProfile.UseCustomLightLevel = _enableLight.IsChecked;
-//            _currentProfile.LightLevel = (byte) (_lightBar.MaxValue - _lightBar.Value);
-//            _currentProfile.LightLevelType = _lightLevelType.SelectedIndex;
-
-//            if (_enableLight.IsChecked)
-//            {
-//                World.Light.Overall = _currentProfile.LightLevelType == 1 ? Math.Min(World.Light.RealOverall, _currentProfile.LightLevel) : _currentProfile.LightLevel;
-//                World.Light.Personal = 0;
-//            }
-//            else
-//            {
-//                World.Light.Overall = World.Light.RealOverall;
-//                World.Light.Personal = World.Light.RealPersonal;
-//            }
-
-//            _currentProfile.UseColoredLights = _useColoredLights.IsChecked;
-//            _currentProfile.UseDarkNights = _darkNights.IsChecked;
-//            _currentProfile.ShadowsEnabled = _enableShadows.IsChecked;
-//            _currentProfile.ShadowsStatics = _enableShadowsStatics.IsChecked;
-//            _currentProfile.TerrainShadowsLevel = _terrainShadowLevel.Value;
-//            _currentProfile.AuraUnderFeetType = _auraType.SelectedIndex;
-
-//            Client.Game.IsMouseVisible = Settings.GlobalSettings.RunMouseInASeparateThread = _runMouseInSeparateThread.IsChecked;
-
-//            _currentProfile.AuraOnMouse = _auraMouse.IsChecked;
-//            _currentProfile.AnimatedWaterEffect = _animatedWaterEffect.IsChecked;
-//            _currentProfile.PartyAura = _partyAura.IsChecked;
-//            _currentProfile.PartyAuraHue = _partyAuraColorPickerBox.Hue;
-//            _currentProfile.HideChatGradient = _hideChatGradient.IsChecked;
-//            _currentProfile.IgnoreGuildMessages = _ignoreGuildMessages.IsChecked;
-//            _currentProfile.IgnoreAllianceMessages = _ignoreAllianceMessages.IsChecked;
-//            _currentProfile.UseAlternateJournal = _useAlternateJournal.IsChecked;
+                case 7: // speech
+                        //                    _scaleSpeechDelay.IsChecked = true;
+                        //                    _sliderSpeechDelay.Value = 100;
+                        //                    _speechColorPickerBox.Hue = 0x02B2;
+                        //                    _emoteColorPickerBox.Hue = 0x0021;
+                        //                    _yellColorPickerBox.Hue = 0x0021;
+                        //                    _whisperColorPickerBox.Hue = 0x0033;
+                        //                    _partyMessageColorPickerBox.Hue = 0x0044;
+                        //                    _guildMessageColorPickerBox.Hue = 0x0044;
+                        //                    _allyMessageColorPickerBox.Hue = 0x0057;
+                        //                    _chatMessageColorPickerBox.Hue = 0x0256;
+                        //                    _chatAfterEnter.IsChecked = false;
+                        //                    UIManager.SystemChat.IsActive = !_chatAfterEnter.IsChecked;
+                        //                    _chatAdditionalButtonsCheckbox.IsChecked = true;
+                        //                    _chatShiftEnterCheckbox.IsChecked = true;
+                        //                    _saveJournalCheckBox.IsChecked = false;
+                        //                    _hideChatGradient.IsChecked = false;
+                        //                    _ignoreGuildMessages.IsChecked = false;
+                        //                    _ignoreAllianceMessages.IsChecked = false;
+                        //                    _useAlternateJournal.IsChecked = false;
+                        // MobileUO: added option to use alternate journal text border for better readability
+    //                    _useAlternateJournalTextBorder.IsChecked = false;
+    //                    // MobileUO: added option to allow large chat box to be easier to click on
+    //                    _useLargeSystemChatTextBox.IsChecked = false;
+
+    //                    break;
+
+    //                case 8: // combat
+    //                    _showDPSCheckbox.IsChecked = false;
+    //                    _innocentColorPickerBox.Hue = 0x005A;
+    //                    _friendColorPickerBox.Hue = 0x0044;
+    //                    _crimialColorPickerBox.Hue = 0x03b2;
+    //                    _canAttackColorPickerBox.Hue = 0x03b2;
+    //                    _murdererColorPickerBox.Hue = 0x0023;
+    //                    _enemyColorPickerBox.Hue = 0x0031;
+    //                    _queryBeforAttackCheckbox.IsChecked = true;
+    //                    _queryBeforeBeneficialCheckbox.IsChecked = false;
+    //                    _uiButtonsSingleClick.IsChecked = false;
+    //                    _buffBarTime.IsChecked = false;
+    //                    _enableFastSpellsAssign.IsChecked = false;
+    //                    _beneficColorPickerBox.Hue = 0x0059;
+    //                    _harmfulColorPickerBox.Hue = 0x0020;
+    //                    _neutralColorPickerBox.Hue = 0x03b2;
+    //                    _spellFormatBox.SetText(ResGumps.SpellFormat_Default);
+    //                    _spellColoringCheckbox.IsChecked = false;
+    //                    _spellFormatCheckbox.IsChecked = false;
+
+    //                    break;
+
+    //                case 9: // counters
+    //                    _enableCounters.IsChecked = false;
+    //                    _highlightOnUse.IsChecked = false;
+    //                    _enableAbbreviatedAmount.IsChecked = false;
+    //                    _columns.SetText("1");
+    //                    _rows.SetText("1");
+    //                    _cellSize.Value = 40;
+    //                    _highlightOnAmount.IsChecked = false;
+    //                    _highlightAmount.SetText("5");
+    //                    _abbreviatedAmount.SetText("1000");
+
+    //                    break;
+
+    //                case 10: // info bar
+
+
+    //                    break;
+
+    //                case 11: // containers
+    //                    _containersScale.Value = 100;
+    //                    _containerScaleItems.IsChecked = false;
+    //                    _useLargeContianersGumps.IsChecked = false;
+    //                    _containerDoubleClickToLoot.IsChecked = false;
+    //                    _relativeDragAnDropItems.IsChecked = false;
+    //                    _highlightContainersWhenMouseIsOver.IsChecked = false;
+    //                    _overrideContainerLocation.IsChecked = false;
+    //                    _overrideContainerLocationSetting.SelectedIndex = 0;
+    //                    _backpackStyle.SelectedIndex = 0;
+    //                    _hueContainerGumps.IsChecked = true;
+
+    //                    break;
+
+    //                case 12: // experimental
+
+    //                    _disableDefaultHotkeys.IsChecked = false;
+    //                    _disableArrowBtn.IsChecked = false;
+    //                    _disableTabBtn.IsChecked = false;
+    //                    _disableCtrlQWBtn.IsChecked = false;
+    //                    _disableAutoMove.IsChecked = false;
+
+    //                    break;
+    //            }
+    //        }
+
+    //        private void Apply()
+    //        {
+    //            WorldViewportGump vp = UIManager.GetGump<WorldViewportGump>();
+
+    //            // general
+    //            if (Settings.GlobalSettings.FPS != _sliderFPS.Value)
+    //            {
+    //                Client.Game.SetRefreshRate(_sliderFPS.Value);
+    //            }
+
+    //            _currentProfile.HighlightGameObjects = _highlightObjects.IsChecked;
+    //            _currentProfile.ReduceFPSWhenInactive = _reduceFPSWhenInactive.IsChecked;
+    //            _currentProfile.EnablePathfind = _enablePathfind.IsChecked;
+    //            _currentProfile.UseShiftToPathfind = _useShiftPathfind.IsChecked;
+    //            _currentProfile.AlwaysRun = _alwaysRun.IsChecked;
+    //            _currentProfile.AlwaysRunUnlessHidden = _alwaysRunUnlessHidden.IsChecked;
+    //            _currentProfile.ShowMobilesHP = _showHpMobile.IsChecked;
+    //            _currentProfile.HighlightMobilesByPoisoned = _highlightByPoisoned.IsChecked;
+    //            _currentProfile.HighlightMobilesByParalize = _highlightByParalyzed.IsChecked;
+    //            _currentProfile.HighlightMobilesByInvul = _highlightByInvul.IsChecked;
+    //            _currentProfile.PoisonHue = _poisonColorPickerBox.Hue;
+    //            _currentProfile.ParalyzedHue = _paralyzedColorPickerBox.Hue;
+    //            _currentProfile.InvulnerableHue = _invulnerableColorPickerBox.Hue;
+    //            _currentProfile.MobileHPType = _hpComboBox.SelectedIndex;
+    //            _currentProfile.MobileHPShowWhen = _hpComboBoxShowWhen.SelectedIndex;
+    //            _currentProfile.UseNewTargetSystem = _newTargetSystem.IsChecked;
+    //            _currentProfile.HoldDownKeyTab = _holdDownKeyTab.IsChecked;
+    //            _currentProfile.HoldDownKeyAltToCloseAnchored = _holdDownKeyAlt.IsChecked;
+
+    //            _currentProfile.CloseAllAnchoredGumpsInGroupWithRightClick = _closeAllAnchoredGumpsWithRClick.IsChecked;
+
+    //            _currentProfile.DoubleClickForGridLoot = _doubleClickForGridLoot.IsChecked;
+    //            _currentProfile.HoldShiftForContext = _holdShiftForContext.IsChecked;
+    //            _currentProfile.HoldAltToMoveGumps = _holdAltToMoveGumps.IsChecked;
+    //            _currentProfile.HoldShiftToSplitStack = _holdShiftToSplitStack.IsChecked;
+    //            _currentProfile.CloseHealthBarType = _healtbarType.SelectedIndex;
+    //            _currentProfile.HideScreenshotStoredInMessage = _hideScreenshotStoredInMessage.IsChecked;
+
+    //            if (_currentProfile.DrawRoofs == _drawRoofs.IsChecked)
+    //            {
+    //                _currentProfile.DrawRoofs = !_drawRoofs.IsChecked;
+
+    //                Client.Game.GetScene<GameScene>()?.UpdateMaxDrawZ(true);
+    //            }
+
+    //            if (_currentProfile.TopbarGumpIsDisabled != _enableTopbar.IsChecked)
+    //            {
+    //                if (_enableTopbar.IsChecked)
+    //                {
+    //                    UIManager.GetGump<TopBarGump>()?.Dispose();
+    //                }
+    //                else
+    //                {
+    //                    TopBarGump.Create(World);
+    //                }
+
+    //                _currentProfile.TopbarGumpIsDisabled = _enableTopbar.IsChecked;
+    //            }
+
+    //            if (_currentProfile.EnableCaveBorder != _enableCaveBorder.IsChecked)
+    //            {
+    //                StaticFilters.CleanCaveTextures();
+    //                _currentProfile.EnableCaveBorder = _enableCaveBorder.IsChecked;
+    //            }
+
+    //            if (_currentProfile.TreeToStumps != _treeToStumps.IsChecked)
+    //            {
+    //                StaticFilters.CleanTreeTextures();
+    //                _currentProfile.TreeToStumps = _treeToStumps.IsChecked;
+    //            }
+
+    //            _currentProfile.FieldsType = _fieldsType.SelectedIndex;
+    //            _currentProfile.HideVegetation = _hideVegetation.IsChecked;
+    //            _currentProfile.NoColorObjectsOutOfRange = _noColorOutOfRangeObjects.IsChecked;
+    //            _currentProfile.UseCircleOfTransparency = _useCircleOfTransparency.IsChecked;
+    //            _currentProfile.CircleOfTransparencyRadius = _circleOfTranspRadius.Value;
+    //            _currentProfile.CircleOfTransparencyType = _cotType.SelectedIndex;
+    //            _currentProfile.StandardSkillsGump = _useStandardSkillsGump.IsChecked;
+
+    //            if (_useStandardSkillsGump.IsChecked)
+    //            {
+    //                SkillGumpAdvanced newGump = UIManager.GetGump<SkillGumpAdvanced>();
+
+    //                if (newGump != null)
+    //                {
+    //                    UIManager.Add(new StandardSkillsGump(World) { X = newGump.X, Y = newGump.Y });
+
+    //                    newGump.Dispose();
+    //                }
+    //            }
+    //            else
+    //            {
+    //                StandardSkillsGump standardGump = UIManager.GetGump<StandardSkillsGump>();
+
+    //                if (standardGump != null)
+    //                {
+    //                    UIManager.Add(new SkillGumpAdvanced(World) { X = standardGump.X, Y = standardGump.Y });
+
+    //                    standardGump.Dispose();
+    //                }
+    //            }
+
+    //            _currentProfile.ShowNewMobileNameIncoming = _showMobileNameIncoming.IsChecked;
+    //            _currentProfile.ShowNewCorpseNameIncoming = _showCorpseNameIncoming.IsChecked;
+    //            _currentProfile.GridLootType = _gridLoot.SelectedIndex;
+    //            _currentProfile.SallosEasyGrab = _sallosEasyGrab.IsChecked;
+    //            _currentProfile.PartyInviteGump = _partyInviteGump.IsChecked;
+    //            _currentProfile.UseObjectsFading = _objectsFading.IsChecked;
+    //            _currentProfile.TextFading = _textFading.IsChecked;
+    //            _currentProfile.UseSmoothBoatMovement = _use_smooth_boat_movement.IsChecked;
+
+    //            if (_currentProfile.ShowHouseContent != _showHouseContent.IsChecked)
+    //            {
+    //                _currentProfile.ShowHouseContent = _showHouseContent.IsChecked;
+    //                NetClient.Socket.Send_ShowPublicHouseContent(_currentProfile.ShowHouseContent);
+    //            }
+
+
+    //            // sounds
+    //            _currentProfile.EnableSound = _enableSounds.IsChecked;
+    //            _currentProfile.EnableMusic = _enableMusic.IsChecked;
+    //            _currentProfile.EnableFootstepsSound = _footStepsSound.IsChecked;
+    //            _currentProfile.EnableCombatMusic = _combatMusic.IsChecked;
+    //            _currentProfile.ReproduceSoundsInBackground = _musicInBackground.IsChecked;
+    //            _currentProfile.SoundVolume = _soundsVolume.Value;
+    //            _currentProfile.MusicVolume = _musicVolume.Value;
+    //            Settings.GlobalSettings.LoginMusicVolume = _loginMusicVolume.Value;
+    //            Settings.GlobalSettings.LoginMusic = _loginMusic.IsChecked;
+
+    //            Client.Game.Audio.UpdateCurrentMusicVolume();
+    //            Client.Game.Audio.UpdateCurrentSoundsVolume();
+
+    //            if (!_currentProfile.EnableMusic)
+    //            {
+    //                Client.Game.Audio.StopMusic();
+    //            }
+
+    //            if (!_currentProfile.EnableSound)
+    //            {
+    //                Client.Game.Audio.StopSounds();
+    //            }
+
+    //            // speech
+    //            _currentProfile.ScaleSpeechDelay = _scaleSpeechDelay.IsChecked;
+    //            _currentProfile.SpeechDelay = _sliderSpeechDelay.Value;
+    //            _currentProfile.SpeechHue = _speechColorPickerBox.Hue;
+    //            _currentProfile.EmoteHue = _emoteColorPickerBox.Hue;
+    //            _currentProfile.YellHue = _yellColorPickerBox.Hue;
+    //            _currentProfile.WhisperHue = _whisperColorPickerBox.Hue;
+    //            _currentProfile.PartyMessageHue = _partyMessageColorPickerBox.Hue;
+    //            _currentProfile.GuildMessageHue = _guildMessageColorPickerBox.Hue;
+    //            _currentProfile.AllyMessageHue = _allyMessageColorPickerBox.Hue;
+    //            _currentProfile.ChatMessageHue = _chatMessageColorPickerBox.Hue;
+
+    //            if (_currentProfile.ActivateChatAfterEnter != _chatAfterEnter.IsChecked)
+    //            {
+    //                UIManager.SystemChat.IsActive = !_chatAfterEnter.IsChecked;
+    //                _currentProfile.ActivateChatAfterEnter = _chatAfterEnter.IsChecked;
+    //            }
+
+    //            _currentProfile.ActivateChatAdditionalButtons = _chatAdditionalButtonsCheckbox.IsChecked;
+    //            _currentProfile.ActivateChatShiftEnterSupport = _chatShiftEnterCheckbox.IsChecked;
+    //            _currentProfile.SaveJournalToFile = _saveJournalCheckBox.IsChecked;
+
+    //            // video
+    //            _currentProfile.EnableDeathScreen = _enableDeathScreen.IsChecked;
+    //            _currentProfile.EnableBlackWhiteEffect = _enableBlackWhiteEffect.IsChecked;
+
+    //            var camera = Client.Game.Scene.Camera;
+    //            _currentProfile.DefaultScale = camera.Zoom = (_sliderZoom.Value * camera.ZoomStep) + camera.ZoomMin;
+
+    //            _currentProfile.EnableMousewheelScaleZoom = _zoomCheckbox.IsChecked;
+    //            _currentProfile.RestoreScaleAfterUnpressCtrl = _restorezoomCheckbox.IsChecked;
+
+    //            if (_use_old_status_gump.IsChecked != _currentProfile.UseOldStatusGump)
+    //            {
+    //                StatusGumpBase status = StatusGumpBase.GetStatusGump();
+
+    //                _currentProfile.UseOldStatusGump = _use_old_status_gump.IsChecked;
+
+    //                if (status != null)
+    //                {
+    //                    if (_currentProfile.StatusGumpBarMutuallyExclusive)
+    //                        status.Dispose();
+    //                    UIManager.Add(StatusGumpBase.AddStatusGump(World, status.ScreenCoordinateX, status.ScreenCoordinateY));
+    //                }
+    //            }
+
+    //            if (_statusGumpBarMutuallyExclusive.IsChecked != _currentProfile.StatusGumpBarMutuallyExclusive)
+    //            {
+    //                var active = _currentProfile.StatusGumpBarMutuallyExclusive = _statusGumpBarMutuallyExclusive.IsChecked;
+
+    //                if (active && StatusGumpBase.GetStatusGump() != null && UIManager.GetGump<BaseHealthBarGump>(World.Player) is {} bar)
+    //                    bar.Dispose();
+    //            }
+
+
+    //            int.TryParse(_gameWindowWidth.Text, out int gameWindowSizeWidth);
+    //            int.TryParse(_gameWindowHeight.Text, out int gameWindowSizeHeight);
+
+    //            if (gameWindowSizeWidth != Client.Game.Scene.Camera.Bounds.Width || gameWindowSizeHeight != Client.Game.Scene.Camera.Bounds.Height)
+    //            {
+    //                if (vp != null)
+    //                {
+    //                    Point n = vp.ResizeGameWindow(new Point(gameWindowSizeWidth, gameWindowSizeHeight));
+
+    //                    _gameWindowWidth.SetText(n.X.ToString());
+    //                    _gameWindowHeight.SetText(n.Y.ToString());
+    //                }
+    //            }
+
+    //            int.TryParse(_gameWindowPositionX.Text, out int gameWindowPositionX);
+    //            int.TryParse(_gameWindowPositionY.Text, out int gameWindowPositionY);
+
+    //            if (gameWindowPositionX != camera.Bounds.X || gameWindowPositionY != camera.Bounds.Y)
+    //            {
+    //                if (vp != null)
+    //                {
+    //                    vp.SetGameWindowPosition(new Point(gameWindowPositionX, gameWindowPositionY));
+    //                    _currentProfile.GameWindowPosition = vp.Location;
+    //                }
+    //            }
+
+    //            if (_currentProfile.GameWindowLock != _gameWindowLock.IsChecked)
+    //            {
+    //                if (vp != null)
+    //                {
+    //                    vp.CanMove = !_gameWindowLock.IsChecked;
+    //                }
+
+    //                _currentProfile.GameWindowLock = _gameWindowLock.IsChecked;
+    //            }
+
+    //            if (_currentProfile.GameWindowFullSize != _gameWindowFullsize.IsChecked)
+    //            {
+    //                Point n = Point.Zero, loc = Point.Zero;
+
+    //                if (_gameWindowFullsize.IsChecked)
+    //                {
+    //                    if (vp != null)
+    //                    {
+    //                        n = vp.ResizeGameWindow(new Point(Client.Game.Window.ClientBounds.Width, Client.Game.Window.ClientBounds.Height));
+    //                        vp.SetGameWindowPosition(new Point(-5, -5));
+    //                        _currentProfile.GameWindowPosition = vp.Location;
+    //                    }
+    //                }
+    //                else
+    //                {
+    //                    if (vp != null)
+    //                    {
+    //                        n = vp.ResizeGameWindow(new Point(600, 480));
+    //                        vp.SetGameWindowPosition(new Point(20, 20));
+    //                        _currentProfile.GameWindowPosition = vp.Location;
+    //                    }
+    //                }
+
+    //                _gameWindowPositionX.SetText(loc.X.ToString());
+    //                _gameWindowPositionY.SetText(loc.Y.ToString());
+    //                _gameWindowWidth.SetText(n.X.ToString());
+    //                _gameWindowHeight.SetText(n.Y.ToString());
+
+    //                _currentProfile.GameWindowFullSize = _gameWindowFullsize.IsChecked;
+    //            }
+
+    //            if (_currentProfile.WindowBorderless != _windowBorderless.IsChecked)
+    //            {
+    //                _currentProfile.WindowBorderless = _windowBorderless.IsChecked;
+    //                Client.Game.SetWindowBorderless(_windowBorderless.IsChecked);
+    //            }
+
+    //            _currentProfile.UseAlternativeLights = _altLights.IsChecked;
+    //            _currentProfile.UseCustomLightLevel = _enableLight.IsChecked;
+    //            _currentProfile.LightLevel = (byte) (_lightBar.MaxValue - _lightBar.Value);
+    //            _currentProfile.LightLevelType = _lightLevelType.SelectedIndex;
+
+    //            if (_enableLight.IsChecked)
+    //            {
+    //                World.Light.Overall = _currentProfile.LightLevelType == 1 ? Math.Min(World.Light.RealOverall, _currentProfile.LightLevel) : _currentProfile.LightLevel;
+    //                World.Light.Personal = 0;
+    //            }
+    //            else
+    //            {
+    //                World.Light.Overall = World.Light.RealOverall;
+    //                World.Light.Personal = World.Light.RealPersonal;
+    //            }
+
+    //            _currentProfile.UseColoredLights = _useColoredLights.IsChecked;
+    //            _currentProfile.UseDarkNights = _darkNights.IsChecked;
+    //            _currentProfile.ShadowsEnabled = _enableShadows.IsChecked;
+    //            _currentProfile.ShadowsStatics = _enableShadowsStatics.IsChecked;
+    //            _currentProfile.TerrainShadowsLevel = _terrainShadowLevel.Value;
+    //            _currentProfile.AuraUnderFeetType = _auraType.SelectedIndex;
+
+    //            Client.Game.IsMouseVisible = Settings.GlobalSettings.RunMouseInASeparateThread = _runMouseInSeparateThread.IsChecked;
+
+    _currentProfile.AuraOnMouse = _auraMouse.IsChecked;
+    //            _currentProfile.AnimatedWaterEffect = _animatedWaterEffect.IsChecked;
+    //            _currentProfile.PartyAura = _partyAura.IsChecked;
+    //            _currentProfile.PartyAuraHue = _partyAuraColorPickerBox.Hue;
+    //            _currentProfile.HideChatGradient = _hideChatGradient.IsChecked;
+    //            _currentProfile.IgnoreGuildMessages = _ignoreGuildMessages.IsChecked;
+    //            _currentProfile.IgnoreAllianceMessages = _ignoreAllianceMessages.IsChecked;
+    //            _currentProfile.UseAlternateJournal = _useAlternateJournal.IsChecked;
+//                // MobileUO: added option to use alternate journal text border for better readability
+//                _currentProfile.UseAlternateJournalTextBorder = _useAlternateJournalTextBorder.IsChecked;
 //            // MobileUO: added option to allow large chat box to be easier to click on
 //            _currentProfile.UseLargeSystemChatTextBox = _useLargeSystemChatTextBox.IsChecked;
 
