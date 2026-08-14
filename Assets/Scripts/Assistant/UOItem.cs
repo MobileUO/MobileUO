@@ -466,7 +466,7 @@ namespace Assistant
                     if (m_AutoStack)
                         AutoStackResource();
                     //do we really need pouch check for CUO?
-                    if (IsContainer && !exempt)// && (!IsPouch || !Config.GetBool("NoSearchPouches")) && UOSObjects.Gump.AutoSearchContainers)
+                    if (IsContainer && !exempt && UOSObjects.Gump.AutoSearchContainers)// && (!IsPouch || !Config.GetBool("NoSearchPouches")) && UOSObjects.Gump.AutoSearchContainers)
                     {
                         PacketHandlers.IgnoreGumps.Add(this);
                         PlayerData.DoubleClick(Serial);
