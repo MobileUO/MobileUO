@@ -1,11 +1,13 @@
 using ClassicUO.Assets;
 using Microsoft.Xna.Framework.Graphics;
+using System;
 
 namespace ClassicUO.Renderer.Texmaps
 {
     public sealed class Texmap
     {
-        private readonly TextureAtlas _atlas;
+        // MobileUO: TODO: #19: temporarily made public
+        public readonly TextureAtlas _atlas;
         private readonly SpriteInfo[] _spriteInfos;
         private readonly PixelPicker _picker = new PixelPicker();
         private readonly TexmapsLoader _texmapsLoader;
@@ -13,7 +15,8 @@ namespace ClassicUO.Renderer.Texmaps
         public Texmap(TexmapsLoader texmapsLoader, GraphicsDevice device)
         {
             _texmapsLoader = texmapsLoader;
-            _atlas = new TextureAtlas(device, 2048, 2048, SurfaceFormat.Color);
+            // MobileUO: use atlas size from settings - cap at 2048 (CUO is 2048)
+            _atlas = new TextureAtlas(device, Math.Min(UserPreferences.SpriteSheetSize.CurrentValue, 2048), Math.Min(UserPreferences.SpriteSheetSize.CurrentValue, 2048), SurfaceFormat.Color);
             _spriteInfos = new SpriteInfo[texmapsLoader.File.Entries.Length];
         }
 
@@ -41,6 +44,12 @@ namespace ClassicUO.Renderer.Texmaps
             }
 
             return ref spriteInfo;
+        }
+
+        // MobileUO: added way to clear sprite arrays when toggling using sprite sheets or not
+        public void ClearSpriteInfo()
+        {
+            Array.Clear(_spriteInfos, 0, _spriteInfos.Length);
         }
     }
 }

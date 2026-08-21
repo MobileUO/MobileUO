@@ -7,9 +7,9 @@ using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-#if ENABLE_INTERNAL_ASSISTANT
+//#if ENABLE_INTERNAL_ASSISTANT
 using Assistant;
-#endif
+//#endif
 
 namespace ClassicUO.Game.UI.Gumps
 {
@@ -38,6 +38,9 @@ namespace ClassicUO.Game.UI.Gumps
             GroupMatrixWidth = 44;
             GroupMatrixHeight = 44;
             AnchorType = ANCHOR_TYPE.SPELL;
+
+            // Initialize default texture to prevent null reference
+            backgroundTexture = SolidColorTextureCache.GetTexture(new Color(30, 30, 30));
         }
 
         public override GumpType GumpType => GumpType.AssistantMacroButton;
@@ -96,9 +99,9 @@ namespace ClassicUO.Game.UI.Gumps
 
         private void RunMacro()
         {
-#if ENABLE_INTERNAL_ASSISTANT
+//#if ENABLE_INTERNAL_ASSISTANT
             ScriptManager.PlayScript(_macroName);
-#endif
+//#endif
         }
 
         public override bool Draw(UltimaBatcher2D batcher, int x, int y)

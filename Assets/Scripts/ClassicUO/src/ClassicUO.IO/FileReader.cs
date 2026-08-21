@@ -29,6 +29,20 @@ namespace ClassicUO.IO
         }
 
         public void Seek(long index, SeekOrigin origin) => _position = Reader.BaseStream.Seek(index, origin);
+
+        // MobileUO: added methods
+        public virtual T ReadAt<T>(long offset) where T : unmanaged
+        {
+            Seek(offset, SeekOrigin.Begin);
+            return Read<T>();
+        }
+
+        public virtual void ReadAt(long offset, Span<byte> buffer)
+        {
+            Seek(offset, SeekOrigin.Begin);
+            Read(buffer);
+        }
+
         // MobileUO: added method
         public byte[] ReadBytes(int length) { _position += length; return Reader.ReadBytes(length); }
         public sbyte ReadInt8() { _position += sizeof(sbyte); return Reader.ReadSByte(); }
@@ -60,6 +74,13 @@ namespace ClassicUO.IO
             }
 
             return mapBlock;
+        }
+
+        // MobileUO: added method
+        public virtual MapBlock ReadMapBlockAt(long offset)
+        {
+            Seek(offset, SeekOrigin.Begin);
+            return ReadMapBlock();
         }
 
         public HuesGroup ReadHuesGroup()

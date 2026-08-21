@@ -1,24 +1,18 @@
 ﻿#region license
-// Copyright (C) 2020 ClassicUO Development Community on Github
+// Copyright (C) 2022-2025 Sascha Puligheddu
 // 
-// This project is an alternative client for the game Ultima Online.
-// The goal of this is to develop a lightweight client considering
-// new technologies.
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
 // 
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
 // 
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-// 
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org> for details.
 #endregion
-
 using System;
 using System.Collections.Generic;
 
@@ -27,36 +21,38 @@ using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework;
 
 namespace ClassicUO.Game.UI.Controls
 {
     internal class AssistCheckbox : Control
     {
-        private const int INACTIVE = 0;
-        private const int ACTIVE = 1;
         private readonly RenderedText _text;
-        private readonly Texture2D[] _textures = new Texture2D[2];
         private bool _isChecked;
+        private ushort _inactive,
+            _active;
 
         public AssistCheckbox(ushort inactive, ushort active, string text = "", byte font = 0, ushort color = 0, bool isunicode = true, int maxWidth = 0)
         {
-            _textures[INACTIVE] = Client.Game.UO.Gumps.GetGump(inactive).Texture;
-            _textures[ACTIVE] =  Client.Game.UO.Gumps.GetGump(active).Texture;
+            _inactive = inactive;
+            _active = active;
 
-            if (_textures[0] == null || _textures[1] == null)
+            ref readonly var gumpInfoInactive = ref Client.Game.UO.Gumps.GetGump(inactive);
+            ref readonly var gumpInfoActive = ref Client.Game.UO.Gumps.GetGump(active);
+
+            if (gumpInfoInactive.Texture == null || gumpInfoActive.Texture == null)
             {
                 Dispose();
 
                 return;
             }
-
-            Texture2D t = _textures[INACTIVE];
-            Width = t.Width;
+            Width = gumpInfoInactive.UV.Width;
 
             _text = RenderedText.Create(text, color, font, isunicode, maxWidth: maxWidth);
+
             Width += _text.Width;
 
-            Height = Math.Max(t.Width, _text.Height);
+            Height = Math.Max(gumpInfoInactive.UV.Width, _text.Height);
             CanMove = false;
             AcceptMouseInput = true;
         }
@@ -119,15 +115,24 @@ namespace ClassicUO.Game.UI.Controls
         public override bool Draw(UltimaBatcher2D batcher, int x, int y)
         {
             if (IsDisposed)
+            {
                 return false;
+            }
 
-            // MobileUO: CUO 0.1.11.0 drops ResetHueVector()
-            var hueVector = ShaderHueTranslator.GetHueVector(0);
-            //ResetHueVector();
+            var ok = base.Draw(batcher, x, y);
 
-            bool ok = base.Draw(batcher, x, y);
-            batcher.Draw2D(IsChecked ? _textures[ACTIVE] : _textures[INACTIVE], x, y, ref hueVector);
-            _text.Draw(batcher, x + _textures[ACTIVE].Width + 2, y);
+            ref readonly var gumpInfo = ref Client.Game.UO.Gumps.GetGump(
+                IsChecked ? _active : _inactive
+            );
+
+            batcher.Draw(
+                gumpInfo.Texture,
+                new Vector2(x, y),
+                gumpInfo.UV,
+                ShaderHueTranslator.GetHueVector(0)
+            );
+
+            _text.Draw(batcher, x + gumpInfo.UV.Width + 2, y);
 
             return ok;
         }

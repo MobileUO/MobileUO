@@ -12,3 +12,7 @@
 *.DS_Store
 /ClassicUO.Resources/.vs/ClassicUO.Resources
 /ClassicUO.Resources/obj/Debug
+/ClassicUO.Resources/obj/Release
+/ClassicUO.Resources/obj/
+/Atlas
+/ClassicUO.Resources/.vs/ProjectEvaluation

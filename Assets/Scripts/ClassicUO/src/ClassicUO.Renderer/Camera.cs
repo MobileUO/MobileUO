@@ -138,7 +138,8 @@ namespace ClassicUO.Renderer
 
             // MobileUO: use old version of logic here to fix mouse
             // MobileUO: TODO: use new version
-			mouse.X = (int) ((Mouse.Position.X - (ProfileManager.CurrentProfile.GameWindowPosition.X + 5)) * Zoom);
+            //UnityEngine.Debug.Log($"Mouse: ({Mouse.Position.X}, {Mouse.Position.Y}); GameWindowPosition ({ProfileManager.CurrentProfile.GameWindowPosition.X}, {ProfileManager.CurrentProfile.GameWindowPosition.Y})");
+            mouse.X = (int) ((Mouse.Position.X - (ProfileManager.CurrentProfile.GameWindowPosition.X + 5)) * Zoom);
 			mouse.Y = (int) ((Mouse.Position.Y - (ProfileManager.CurrentProfile.GameWindowPosition.Y + 5)) * Zoom);
 			return mouse;
 

@@ -1,4 +1,8 @@
-﻿using System;
+﻿// Original logic from original Razor Assistant
+// Heavily modified, rewritten and maintained by Sascha Puligheddu (2023-2025)
+// 
+// This specific derivative work is licensed under GNU AGPLv3.
+using System;
 using System.Text;
 using System.Collections.Generic;
 using System.Linq;

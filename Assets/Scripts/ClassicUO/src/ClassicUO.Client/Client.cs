@@ -237,6 +237,9 @@ namespace ClassicUO
 
             Log.Trace("Running game...");
 
+            Profiler.Enabled = UserPreferences.UseProfiler.CurrentValue == (int)PreferenceEnums.UseProfiler.On;
+            Log.Trace($"Profiler {(Profiler.Enabled ? "enabled" : "disabled")}!");
+
             using (Game = new GameController(pluginHost))
             {
                 // https://github.com/FNA-XNA/FNA/wiki/7:-FNA-Environment-Variables#fna_graphics_enable_highdpi

@@ -1,24 +1,18 @@
 ﻿#region license
-//  Copyright (C) 2019 ClassicUO Development Community on Github
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
 //
-//	This project is an alternative client for the game Ultima Online.
-//	The goal of this is to develop a lightweight client considering 
-//	new technologies.  
-//      
-//  This program is free software: you can redistribute it and/or modify
-//  it under the terms of the GNU General Public License as published by
-//  the Free Software Foundation, either version 3 of the License, or
-//  (at your option) any later version.
-//
-//  This program is distributed in the hope that it will be useful,
-//  but WITHOUT ANY WARRANTY; without even the implied warranty of
-//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//  GNU General Public License for more details.
-//
-//  You should have received a copy of the GNU General Public License
-//  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org> for details.
 #endregion
-
 using Assistant;
 using Assistant.Scripts;
 using ClassicUO.Configuration;
@@ -42,6 +36,8 @@ namespace ClassicUO.Game.UI.Gumps
 {
     internal class AssistantGump : Gump
     {
+        public bool AssistantEnabled;
+
         internal class MessageBoxGump : Gump
         {
             internal MessageBoxGump(World world, string title, string body) : base(world, 0, 0)
@@ -65,7 +61,7 @@ namespace ClassicUO.Game.UI.Gumps
                 h = Math.Max(80, h + 60);
                 Width = w;
                 Height = h;
-                Add(new AlphaBlendControl(0.0f) { X = 1, Y = 1, Width = w - 2, Height = h - 2 });
+                Add(new AlphaBlendControl(1.0f) { X = 1, Y = 1, Width = w - 2, Height = h - 2 });
                 Line.CreateRectangleArea(this, 10, 10, w - 20, h - 20, 0, Color.Gray.PackedValue, 2, $"{title}");
                 Add(new Label($"{body}", true, ScriptTextBox.GRAY_HUE, w - 40, FONT, FontStyle.None, TEXT_ALIGN_TYPE.TS_CENTER) { X = 20, Y = 20, Height = h - 40 });
                 Add(new NiceButton((w >> 1) - 29, h - 32, 60, 20, ButtonAction.Activate, "OKAY") { ButtonParameter = 222, IsSelectable = false });
@@ -117,7 +113,7 @@ namespace ClassicUO.Game.UI.Gumps
                 int h = inspected is UOMobile ? 400 : 300;
                 Width = w;
                 Height = h;
-                Add(new AlphaBlendControl(0.0f) { X = 1, Y = 1, Width = w - 2, Height = h - 2 });
+                Add(new AlphaBlendControl(1.0f) { X = 1, Y = 1, Width = w - 2, Height = h - 2 });
                 Line.CreateRectangleArea(this, 10, 10, w - 20, h - 20, 0, Color.Gray.PackedValue, 2, "Object Inspector");
                 int x = 20, y = 20, mw = 110, mh;
                 Label l;
@@ -228,7 +224,7 @@ namespace ClassicUO.Game.UI.Gumps
                     Y = gump.Y + (gump.Height >> 2);
                     Width = 320;
                     Height = 120;
-                    Add(new AlphaBlendControl(0.0f) { X = 1, Y = 1, Width = 318, Height = 118 });
+                    Add(new AlphaBlendControl(1.0f) { X = 1, Y = 1, Width = 318, Height = 118 });
                     Line.CreateRectangleArea(this, 10, 10, 300, 100, 0, Color.Gray.PackedValue, 2, "Warning!");
                     Add(new Label($"Changing to {(control.IsChecked ? "UOAssist" : "Razor")}!", true, ScriptTextBox.GRAY_HUE, 280, FONT, FontStyle.None, TEXT_ALIGN_TYPE.TS_CENTER) { X = 20, Y = 30 });
                     Add(new Label("Click on OKAY to close ClassicUO!", true, ScriptTextBox.GRAY_HUE, 280, FONT, FontStyle.None, TEXT_ALIGN_TYPE.TS_CENTER) { X = 20, Y = 50 });
@@ -285,7 +281,7 @@ namespace ClassicUO.Game.UI.Gumps
                 Y = UOSObjects.Gump.Y + (UOSObjects.Gump.Height >> 2);
                 Width = 300;
                 Height = 100;
-                Add(_alpha = new AlphaBlendControl(0.0f) { X = 1, Y = 1, Width = 298, Height = 98});
+                Add(_alpha = new AlphaBlendControl(1.0f) { X = 1, Y = 1, Width = 298, Height = 98});
                 _lines = Line.CreateRectangleArea(this, 10, 10, 280, 80, 0, Color.Gray.PackedValue, 2, "Enter the New Profile Name");
                 //Add(new Label("Enter the New Profile Name", true, ScriptTextBox.GRAY_HUE, font: FONT) { X = 60, Y = 10 });
                 Add(new GumpPicTiled(15, 30, 270, 23, 0x52));
@@ -498,7 +494,7 @@ namespace ClassicUO.Game.UI.Gumps
                     Y = UOSObjects.Gump.Y + (UOSObjects.Gump.Height >> 2);
                     Width = 320;
                     Height = 120;
-                    Add(new AlphaBlendControl(0.0f) { X = 1, Y = 1, Width = 318, Height = 118 });
+                    Add(new AlphaBlendControl(1.0f) { X = 1, Y = 1, Width = 318, Height = 118 });
                     Line.CreateRectangleArea(this, 10, 10, 300, 100, 0, Color.Gray.PackedValue, 2, "Warning!");
                     Add(new Label($"Existant HotKey ({split[split.Length - 1]})!", true, ScriptTextBox.GRAY_HUE, 280, FONT, FontStyle.None, TEXT_ALIGN_TYPE.TS_CENTER){ X = 20, Y = 30 });
                     Add(new Label("Click on OKAY to overwrite it!", true, ScriptTextBox.GRAY_HUE, 280, FONT, FontStyle.None, TEXT_ALIGN_TYPE.TS_CENTER) { X = 20, Y = 50 });
@@ -925,6 +921,8 @@ namespace ClassicUO.Game.UI.Gumps
         private static bool _updated = false;
         public override void Update()
         {
+            AssistantEnabled = UserPreferences.EnableAssistant.CurrentValue == (int)PreferenceEnums.EnableAssistant.On;
+
             base.Update();
             if(!_updated)
             {
@@ -3694,16 +3692,21 @@ namespace ClassicUO.Game.UI.Gumps
         private Texture2D _edge;
         public override bool Draw(UltimaBatcher2D batcher, int x, int y)
         {
-            if (_edge == null)
+            // MobileUO: TODO: this only hides the assistant if disabled - it should probably actually unload it but this is sufficient for now ~mandlar
+            if (AssistantEnabled)
             {
-                _edge = new Texture2D(batcher.GraphicsDevice, 1, 1, false, SurfaceFormat.Color);
-                _edge.SetData(new Color[] { Color.Gray });
+                if (_edge == null)
+                {
+                    _edge = new Texture2D(batcher.GraphicsDevice, 1, 1, false, SurfaceFormat.Color);
+                    _edge.SetData(new Color[] { Color.Gray });
+                }
+                Vector3 vec = ShaderHueTranslator.GetHueVector(0, false, 1);
+                //Vector3 vec = Vector3.Zero;
+                batcher.DrawRectangle(_edge, x, y, Width, Height, vec);
+                return base.Draw(batcher, x, y);
             }
-            // MobileUO: TODO: should this be... 1?
-            Vector3 vec = ShaderHueTranslator.GetHueVector(0, false, 1);
-            //Vector3 vec = Vector3.Zero;
-            batcher.DrawRectangle(_edge, x, y, Width, Height, vec);
-            return base.Draw(batcher, x, y);
+
+            return false;
         }
 
         public override void Dispose()
