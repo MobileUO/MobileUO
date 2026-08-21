@@ -1084,7 +1084,7 @@ namespace Assistant.Scripts
                 }
                 args[0] = null;
             }
-            if (ScriptManager.LastWalk < DateTime.UtcNow)
+            if (ScriptManager.LastWalk > DateTime.UtcNow)
             {
                 return false;
             }
@@ -1139,7 +1139,7 @@ namespace Assistant.Scripts
                 }
                 args[0] = null;
             }
-            if (ScriptManager.LastWalk < DateTime.UtcNow)
+            if (ScriptManager.LastWalk > DateTime.UtcNow)
             {
                 return false;
             }
