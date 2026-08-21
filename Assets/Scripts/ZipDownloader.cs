@@ -15,6 +15,7 @@ public class ZipDownloader : DownloaderBase
     private Coroutine downloadCoroutine;
     private UnityWebRequest webRequest;
     private int downloadAttempts;
+    private UserDataPreserver userDataPreserver;
     private const int MAX_DOWNLOAD_ATTEMPTS = 3;
     
     public override void Initialize(DownloadState downloadState, ServerConfiguration serverConfiguration, DownloadPresenter downloadPresenter)
@@ -50,6 +51,7 @@ public class ZipDownloader : DownloaderBase
         var filePath = Path.Combine(pathToSaveFiles, fileName);
         try
         {
+            userDataPreserver = UserDataPreserver.Create(pathToSaveFiles);
             ZipFile.ExtractToDirectory(filePath, pathToSaveFiles, true);
         }
         catch (Exception e)
@@ -60,6 +62,16 @@ public class ZipDownloader : DownloaderBase
         }
         finally
         {
+            try
+            {
+                userDataPreserver?.Restore();
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"Could not restore preserved user data after extracting {fileName}: {e}");
+            }
+            userDataPreserver?.Dispose();
+            userDataPreserver = null;
             downloadCoroutine = null;
             File.Delete(filePath);
         }
@@ -148,6 +160,8 @@ public class ZipDownloader : DownloaderBase
         }
         webRequest?.Abort();
         webRequest?.Dispose();
+        userDataPreserver?.Dispose();
+        userDataPreserver = null;
         base.Dispose();
     }
 }
