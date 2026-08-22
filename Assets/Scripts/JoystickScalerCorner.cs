@@ -21,8 +21,13 @@ public class JoystickScalerCorner : MonoBehaviour, IDragHandler, IBeginDragHandl
         {
             return;
         }
-        pointerId = eventData.pointerId;
-        RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, eventData.position, null, out dragBeginPosition);
+        
+        // Only start a new drag if not already dragging
+        if (pointerId == -1)
+        {
+            pointerId = eventData.pointerId;
+            RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, eventData.position, null, out dragBeginPosition);
+        }
     }
     
     public void OnDrag(PointerEventData eventData)
@@ -44,7 +49,11 @@ public class JoystickScalerCorner : MonoBehaviour, IDragHandler, IBeginDragHandl
             return;
         }
 
-        pointerId = -1;
-        joystickScaler.CornerDragEnded();
+        // Only reset if this is the pointer that was dragging
+        if (pointerId == eventData.pointerId)
+        {
+            pointerId = -1;
+            joystickScaler.CornerDragEnded();
+        }
     }
 }
