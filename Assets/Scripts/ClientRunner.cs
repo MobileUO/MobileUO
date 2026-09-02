@@ -288,6 +288,9 @@ public class ClientRunner : MonoBehaviour
 
 	    GL.LoadPixelMatrix( 0, Screen.width, Screen.height, 0 );
 	    
+        Texture2D.FlushPendingApply();
+        Texture2D.FlushAtlasComputeUploads();
+
         // MobileUO: turning off graphics draw texture flag - this fixes some rendering issues where tiles are flipped
 		Client.Game.Batcher.UseGraphicsDrawTexture = false;//useGraphicsDrawTexture;
         Client.Game.DrawUnity(UnityEngine.Time.deltaTime);

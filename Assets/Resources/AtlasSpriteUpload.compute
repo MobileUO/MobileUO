@@ -1,0 +1,31 @@
+#pragma kernel UploadSprites
+
+struct SpriteDesc { int PixelOffset; int DstX; int DstY; int Width; int Height; };
+
+StructuredBuffer<uint> _Pixels;
+StructuredBuffer<SpriteDesc> _Descs;
+RWTexture2D<float4> _Atlas;
+
+[numthreads(8, 8, 1)]
+void UploadSprites(uint3 id : SV_DispatchThreadID, uint3 groupId : SV_GroupID)
+{
+    SpriteDesc d = _Descs[(int)groupId.z];
+
+    int lx = (int)id.x;
+    int ly = (int)id.y;
+
+    if (lx >= d.Width || ly >= d.Height)
+        return;
+
+    uint p = _Pixels[d.PixelOffset + ly * d.Width + lx];
+
+    float4 col;
+    col.r = (float)( p        & 0xFFu) * (1.0 / 255.0);
+    col.g = (float)((p >>  8) & 0xFFu) * (1.0 / 255.0);
+    col.b = (float)((p >> 16) & 0xFFu) * (1.0 / 255.0);
+    col.a = (float)((p >> 24) & 0xFFu) * (1.0 / 255.0);
+
+    int atlasY = d.DstY + (d.Height - 1 - ly);
+
+    _Atlas[int2(d.DstX + lx, atlasY)] = col;
+}
