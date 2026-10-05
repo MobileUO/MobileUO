@@ -61,12 +61,18 @@ namespace Microsoft.Xna.Framework.Graphics
 
         public void Clear(ClearOptions options, Vector4 color, int depth, int stencil)
         {
-            GL.Clear(depth != 0, color != Vector4.Zero, UnityEngine.Color.black);
+            var unityColor = new UnityEngine.Color(color.X, color.Y, color.Z, color.W);
+
+            GL.Clear((options & ClearOptions.DepthBuffer) != 0,
+                (options & ClearOptions.Target) != 0, unityColor, depth);
         }
 
         public void Clear(ClearOptions options, Color color, int depth, int stencil)
         {
-            GL.Clear(depth != 0 || (options & ClearOptions.DepthBuffer) != 0, color != Color.Transparent, UnityEngine.Color.black);
+            var unityColor = new UnityEngine.Color(color.R / 255f, color.G / 255f, color.B / 255f, color.A / 255f);
+
+            GL.Clear((options & ClearOptions.DepthBuffer) != 0,
+                (options & ClearOptions.Target) != 0, unityColor, depth);
         }
 
         public void SetVertexBuffer(VertexBuffer dynamicVertexBuffer)
