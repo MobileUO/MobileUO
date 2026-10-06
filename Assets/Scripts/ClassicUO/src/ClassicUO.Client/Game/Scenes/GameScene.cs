@@ -966,16 +966,14 @@ namespace ClassicUO.Game.Scenes
 
             DrawWorld(batcher, ref matrix, _use_render_target);
 
-            // MobileUO: Return to original scaling
-            // MobileUO: TODO: probably need to move this lower after we bring back lights
-            batcher.scale = originalBatcherScale;
-
             if (_use_render_target)
             {
-                // MobileUO: TODO: commented out - get this working
-                //can_draw_lights = PrepareLightsRendering(batcher, ref matrix);
+                can_draw_lights = PrepareLightsRendering(batcher, ref matrix);
                 batcher.GraphicsDevice.Viewport = camera_viewport;
             }
+
+            // MobileUO: Return to original scaling
+            batcher.scale = originalBatcherScale;
 
             // draw world rt
             Vector3 hue = Vector3.Zero;
