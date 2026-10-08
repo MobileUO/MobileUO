@@ -595,7 +595,10 @@ namespace Assistant
 
                 UOSObjects.Player.Direction = (dir & Direction.Up);
                 if (ScriptManager.Recording)
-                    ScriptManager.AddToScript($"walk '{dir}'");
+                {
+                    string movementType = (dir & Direction.Running) != 0 ? "run" : "walk";
+                    ScriptManager.AddToScript($"{movementType} '{UOSObjects.Player.Direction}'");
+                }
             }
         }
 
