@@ -139,6 +139,11 @@ public class ClientRunner : MonoBehaviour
 					Plugin.OnConnected();
 				}
 			}
+			else if (Client.Game.Scene is GameScene)
+			{
+				// bring Assistant gump to top of UI when the Assistant is re-enabled
+				UIManager.GetGump<AssistantGump>()?.BringOnTop();
+			}
 		}
 //#endif
 	}
