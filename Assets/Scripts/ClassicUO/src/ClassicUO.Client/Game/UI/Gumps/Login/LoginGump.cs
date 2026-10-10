@@ -193,6 +193,7 @@ namespace ClassicUO.Game.UI.Gumps.Login
                 _buttonNormal = 0x5CD;
                 _buttonOver = 0x5CB;
 
+                // This is the "chest" of login gump
                 Add(new GumpPic(0, 0, 0x014E, 0));
 
                 //// Quit Button

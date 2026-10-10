@@ -11,7 +11,7 @@ public class DownloadState : IState
     public string ResourcePathForFilesToDownload;
     
     public static readonly List<string> NeededUoFileExtensions = new() {".def", ".mul", ".idx", ".uop", ".enu", ".rle", ".txt"};
-    public const string DefaultFileDownloadPort = "8080";
+    public const string DefaultFileDownloadPort = "80";
     
     private readonly DownloadPresenter downloadPresenter;
     
@@ -71,6 +71,11 @@ public class DownloadState : IState
                 downloader.Initialize(this, serverConfiguration, downloadPresenter);
             }
             else if (serverConfiguration.FileDownloadServerUrl.ToLowerInvariant().Contains("uorenaissance.com"))
+            {
+                downloader = new OldRenaissanceDownloader();
+                downloader.Initialize(this, serverConfiguration, downloadPresenter);
+            }
+            else if (serverConfiguration.FileDownloadServerUrl.ToLowerInvariant().Contains("uorenn.com"))
             {
                 downloader = new RenaissanceDownloader();
                 downloader.Initialize(this, serverConfiguration, downloadPresenter);

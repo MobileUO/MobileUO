@@ -10,7 +10,8 @@ namespace ClassicUO.Renderer.Arts
     public sealed class Art
     {
         private readonly SpriteInfo[] _spriteInfos;
-        private readonly TextureAtlas _atlas;
+        // MobileUO: TODO: #19: temporarily made public
+        public readonly TextureAtlas _atlas;
         private readonly PixelPicker _picker = new PixelPicker();
         private readonly Rectangle[] _realArtBounds;
         private readonly ArtLoader _artLoader;
@@ -20,7 +21,8 @@ namespace ClassicUO.Renderer.Arts
         {
             _artLoader = artLoader;
             _huesLoader = huesLoader;
-            _atlas = new TextureAtlas(device, 4096, 4096, SurfaceFormat.Color);
+            // MobileUO: use atlas size from settings 
+            _atlas = new TextureAtlas(device, UserPreferences.SpriteSheetSize.CurrentValue, UserPreferences.SpriteSheetSize.CurrentValue, SurfaceFormat.Color);
             _spriteInfos = new SpriteInfo[_artLoader.File.Entries.Length];
             _realArtBounds = new Rectangle[_spriteInfos.Length];
         }
@@ -75,7 +77,11 @@ namespace ClassicUO.Renderer.Arts
                             }
                         }
 
-                        _realArtBounds[idx] = new Rectangle(minX, minY, maxX - minX, maxY - minY);
+                        // MobileUO: flip Y if using sprite sheet
+                        if(spriteInfo.Texture.IsFromTextureAtlas)
+                            _realArtBounds[idx] = new Rectangle(minX, artInfo.Height - maxY, maxX - minX, maxY - minY);
+                        else
+                            _realArtBounds[idx] = new Rectangle(minX, minY, maxX - minX, maxY - minY);
                     }
                 }
             }
@@ -184,5 +190,12 @@ namespace ClassicUO.Renderer.Arts
 
         // MobileUO: added pixelCheck
         public bool PixelCheck(uint idx, int x, int y, bool pixelCheck = true) => _picker.Get(idx, x, y, 0, pixelCheck);
+
+        // MobileUO: added way to clear sprite arrays when toggling using sprite sheets or not
+        public void ClearSpriteInfo()
+        {
+            Array.Clear(_spriteInfos, 0, _spriteInfos.Length);
+            Array.Clear(_realArtBounds, 0, _spriteInfos.Length);
+        }
     }
 }

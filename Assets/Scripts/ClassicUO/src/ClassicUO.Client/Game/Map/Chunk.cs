@@ -65,9 +65,10 @@ namespace ClassicUO.Game.Map
                 return;
             }
 
-            im.MapFile.Seek((long)im.MapAddress, System.IO.SeekOrigin.Begin);
             // MobileUO: TODO: InlineArray feature is not available in Unity's C#
-            var block = im.MapFile.ReadMapBlock();//Read<MapBlock>();
+            // MapBlock block = im.MapFile.ReadAt<MapBlock>((long)im.MapAddress);
+            // MobileUO: IO performance
+            MapBlock block = im.MapFile.ReadMapBlockAt((long)im.MapAddress);
 
             var cells = block.Cells;
             int bx = X << 3;
@@ -102,8 +103,8 @@ namespace ClassicUO.Game.Map
             {
                 var staticsBlockBuffer = ArrayPool<StaticsBlock>.Shared.Rent((int)im.StaticCount);
                 var staticsSpan = staticsBlockBuffer.AsSpan(0, (int)im.StaticCount);
-                im.StaticFile.Seek((long)im.StaticAddress, System.IO.SeekOrigin.Begin);
-                im.StaticFile.Read(MemoryMarshal.AsBytes(staticsSpan));
+                // MobileUO: IO performance
+                im.StaticFile.ReadAt((long)im.StaticAddress, MemoryMarshal.AsBytes(staticsSpan));
 
                 foreach (ref var sb in staticsSpan)
                 {

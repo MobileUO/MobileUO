@@ -8,6 +8,8 @@ namespace Microsoft.Xna.Framework
     public class Game : IDisposable
 	{
 		GraphicsDevice graphicsDevice;
+        // MobileUO: re-use game instance to avoid unnecessary allocations
+        private readonly GameTime _gameTime = new GameTime();
         long totalTicks = 0;
         private TimeSpan INTERNAL_targetElapsedTime;
         private bool INTERNAL_isMouseVisible;
@@ -126,9 +128,10 @@ namespace Microsoft.Xna.Framework
         internal void Begin()
         {
             LoadContent();
-			// XNA's first update call has a zero elapsed time, so do one now.
-			GameTime gameTime = new GameTime(new TimeSpan(0), new TimeSpan(0), new TimeSpan(0, 0, 0, 0, 0), new TimeSpan(0, 0, 0, 0, 0));
-			Update(gameTime);
+            // XNA's first update call has a zero elapsed time, so do one now.
+            // MobileUO: re-use game instance to avoid unnecessary allocations
+            _gameTime.Reset();
+            Update(_gameTime);
         }
 
         internal void Tick(float deltaTime)
@@ -136,17 +139,20 @@ namespace Microsoft.Xna.Framework
             long microseconds = (int)(deltaTime * 1000000);
 			long ticks = microseconds * 10;
             totalTicks += ticks;
-            GameTime gameTime = new GameTime(new TimeSpan(0), new TimeSpan(0), new TimeSpan(totalTicks), new TimeSpan(ticks));
-            Update(gameTime);
+
+            // MobileUO: re-use game instance to avoid unnecessary allocations
+            _gameTime.Set(totalRealTime: TimeSpan.Zero, elapsedRealTime: TimeSpan.Zero, totalGameTime: new TimeSpan(totalTicks), elapsedGameTime: new TimeSpan(ticks), isRunningSlowly: false);
+            Update(_gameTime);
         }
 
         public void DrawUnity(float delta)
         {
             long microseconds = (int)( delta * 1000000 );
             long ticks = microseconds * 10;
-            GameTime gameTime = new GameTime( new TimeSpan( 0 ), new TimeSpan( 0 ), new TimeSpan( totalTicks ), new TimeSpan( ticks ) );
-            Draw( gameTime );
 
+            // MobileUO: re-use game instance to avoid unnecessary allocations
+            _gameTime.Set(totalRealTime: TimeSpan.Zero, elapsedRealTime: TimeSpan.Zero, totalGameTime: new TimeSpan(totalTicks), elapsedGameTime: new TimeSpan(ticks), isRunningSlowly: false);
+            Draw(_gameTime);
         }
 
         protected virtual void OnActivated(object sender, EventArgs args)

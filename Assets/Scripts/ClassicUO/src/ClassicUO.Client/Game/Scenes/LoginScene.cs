@@ -293,6 +293,13 @@ namespace ClassicUO.Game.Scenes
 
         public void Connect(string account, string password)
         {
+            // MobileUO: TODO: #19: testing saving images of TextureAtalases
+            //Client.Game.UO.Animations._atlas.SaveImages("Animations");
+            //Client.Game.UO.Arts._atlas.SaveImages("Arts");
+            //Client.Game.UO.Gumps._atlas.SaveImages("Gumps");
+            //Client.Game.UO.Lights._atlas.SaveImages("Lights");
+            //Client.Game.UO.Texmaps._atlas.SaveImages("Texmaps");
+
             if (CurrentLoginStep == LoginSteps.Connecting)
             {
                 return;

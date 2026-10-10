@@ -172,7 +172,8 @@ namespace ClassicUO.Game.Managers
             }
         }
 
-        public static void OnMouseButtonUp(MouseButtonType button)
+        // MobileUO: added param to close gump from double finger tap
+        public static void OnMouseButtonUp(MouseButtonType button, bool closeGump = false)
         {
             EndDragControl(Mouse.Position);
             HandleMouseInput();
@@ -202,7 +203,8 @@ namespace ClassicUO.Game.Managers
             {
                 var mouseDownControl = _mouseDownControls[index];
                 // only attempt to close the gump if the mouse is still on the gump when right click mouse up occurs
-                if(mouseDownControl != null && MouseOverControl == mouseDownControl)
+                // MobileUO: or if closeGump is true (from double finger tap)
+                if (mouseDownControl != null && (MouseOverControl == mouseDownControl || closeGump))
                 {
                     mouseDownControl.InvokeMouseCloseGumpWithRClick();
                 }

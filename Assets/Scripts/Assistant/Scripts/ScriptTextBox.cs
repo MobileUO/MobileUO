@@ -1,4 +1,19 @@
-﻿using ClassicUO.Input;
+﻿#region license
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org> for details.
+#endregion
+using ClassicUO.Input;
 using ClassicUO.Assets;
 using ClassicUO.Renderer;
 using Microsoft.Xna.Framework;
@@ -29,24 +44,22 @@ namespace ClassicUO.Game.UI.Controls
         {
             Rectangle scissor = ScissorStack.CalculateScissors(Matrix.Identity, x, y, Width, Height);
 
-            if (ScissorStack.PushScissors(batcher.GraphicsDevice, scissor))
+            if (batcher.ClipBegin(x, y, Width, Height))
             {
-                batcher.EnableScissorTest(true);
 
                 DrawSelection(batcher, x, y);
 
                 _rendererText.Draw(batcher, x, y);
                 foreach (KeyValuePair<ushort, List<Rectangle2D>> kvp in HuedText)
                 {
-                    foreach(Rectangle2D r in kvp.Value)
+                    foreach (Rectangle2D r in kvp.Value)
                     {
                         _rendererText.Draw(batcher, x + r.X, y + r.Y, r.X, r.Y, r.Width, r.Height, kvp.Key);
                     }
                 }
                 DrawCaret(batcher, x, y);
 
-                batcher.EnableScissorTest(false);
-                ScissorStack.PopScissors(batcher.GraphicsDevice);
+                batcher.ClipEnd();
             }
 
             return true;

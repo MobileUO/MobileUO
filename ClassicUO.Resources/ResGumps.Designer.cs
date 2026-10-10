@@ -1195,6 +1195,15 @@ namespace ClassicUO.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Double click to loot for Grid Loot.
+        /// </summary>
+        public static string DoubleClickForGridLoot {
+            get {
+                return ResourceManager.GetString("DoubleClickForGridLoot", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Double click to loot items inside containers.
         /// </summary>
         public static string DoubleClickLootContainers {

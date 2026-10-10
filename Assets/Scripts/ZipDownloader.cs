@@ -69,7 +69,7 @@ public class ZipDownloader : DownloaderBase
         
         StateManager.GoToState<GameState>();
     }
-    
+
     private void DownloadFile()
     {
         var uri = DownloadState.GetUri(url, port);
@@ -80,9 +80,12 @@ public class ZipDownloader : DownloaderBase
         }
 
         if (uriString.Contains("dropbox", StringComparison.InvariantCultureIgnoreCase) &&
-            uriString.EndsWith("dl=0", StringComparison.InvariantCultureIgnoreCase))
+            uriString.Contains("dl=0", StringComparison.InvariantCultureIgnoreCase))
         {
-            uriString = uriString.Replace("dl=0", "dl=1", StringComparison.InvariantCultureIgnoreCase);
+            // .Replace() with StringComparison is not implemented in Unity... it will throw a NotImplementedException
+            //uriString = uriString.Replace("dl=0", "dl=1", StringComparison.InvariantCultureIgnoreCase);
+            uriString = uriString.ToLower().Replace("dl=0", "dl=1");
+            Debug.Log("Dropbox link detected, changed dl=0 to dl=1 for direct download");
         }
         
         webRequest = UnityWebRequest.Get(uriString);

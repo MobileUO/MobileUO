@@ -1,11 +1,13 @@
 using ClassicUO.Assets;
 using Microsoft.Xna.Framework.Graphics;
+using System;
 
 namespace ClassicUO.Renderer.Gumps
 {
     public sealed class Gump
     {
-        private readonly TextureAtlas _atlas;
+        // MobileUO: TODO: #19: temporarily made public
+        public readonly TextureAtlas _atlas;
         private readonly SpriteInfo[] _spriteInfos;
         private readonly PixelPicker _picker = new PixelPicker();
         private readonly GumpsLoader _gumpsLoader;
@@ -13,7 +15,8 @@ namespace ClassicUO.Renderer.Gumps
         public Gump(GumpsLoader gumpsLoader, GraphicsDevice device)
         {
             _gumpsLoader = gumpsLoader;
-            _atlas = new TextureAtlas(device, 4096, 4096, SurfaceFormat.Color);
+            // MobileUO: use atlas size from settings 
+            _atlas = new TextureAtlas(device, UserPreferences.SpriteSheetSize.CurrentValue, UserPreferences.SpriteSheetSize.CurrentValue, SurfaceFormat.Color);
             _spriteInfos = new SpriteInfo[gumpsLoader.File.Entries.Length];
         }
 
@@ -44,5 +47,11 @@ namespace ClassicUO.Renderer.Gumps
         }
 
         public bool PixelCheck(uint idx, int x, int y) => _picker.Get(idx, x, y);
+
+        // MobileUO: added way to clear sprite arrays when toggling using sprite sheets or not
+        public void ClearSpriteInfo()
+        {
+            Array.Clear(_spriteInfos, 0, _spriteInfos.Length);
+        }
     }
 }

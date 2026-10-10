@@ -92,19 +92,42 @@ namespace ClassicUO.Game.UI.Gumps
             ref readonly var artInfoLeft = ref Client.Game.UO.Gumps.GetGump(graphicLeft);
             ref readonly var artInfoRight = ref Client.Game.UO.Gumps.GetGump(graphicRight);
 
+            // MobileUO: updated offset logic depending on if we are using sprite sheets
+            int totalH = artInfoLeft.UV.Height;
+
             Rectangle offset = new Rectangle(0, 0, artInfoLeft.UV.Width, LEFT_TOP_HEIGHT);
+            if (artInfoLeft.Texture.IsFromTextureAtlas)
+                offset.Y = totalH - LEFT_TOP_HEIGHT;
+
             GumpPicTexture leftTop = new GumpPicTexture(graphicLeft, 0, 0, offset, false);
             Add(leftTop);
 
-            offset.Y += LEFT_TOP_HEIGHT;
-            offset.Height = artInfoLeft.UV.Height - (LEFT_BOTTOM_HEIGHT + LEFT_TOP_HEIGHT);
+            if(artInfoLeft.Texture.IsFromTextureAtlas)
+            {
+                offset.Y = LEFT_BOTTOM_HEIGHT;
+                offset.Height = totalH - (LEFT_BOTTOM_HEIGHT + LEFT_TOP_HEIGHT);
+            }
+            else
+            {
+                offset.Y += LEFT_TOP_HEIGHT;
+                offset.Height = artInfoLeft.UV.Height - (LEFT_BOTTOM_HEIGHT + LEFT_TOP_HEIGHT);
+            }
+           
             _leftMiddle = new GumpPicTexture(graphicLeft, 0, LEFT_TOP_HEIGHT, offset, true);
             int diff = height - _leftMiddle.Height;
             _leftMiddle.Height = height;
             Add(_leftMiddle);
 
-            offset.Y += offset.Height;
-            offset.Height = LEFT_BOTTOM_HEIGHT;
+            if (artInfoLeft.Texture.IsFromTextureAtlas)
+            {
+                offset.Y = 0;
+                offset.Height = LEFT_BOTTOM_HEIGHT;
+            }
+            else
+            {
+                offset.Y += offset.Height;
+                offset.Height = LEFT_BOTTOM_HEIGHT;
+            }
             _leftBottom = new GumpPicTexture(
                 graphicLeft,
                 0,
@@ -114,9 +137,15 @@ namespace ClassicUO.Game.UI.Gumps
             );
             Add(_leftBottom);
 
+            int totalHRight = artInfoRight.UV.Height;
+
             int rightX = artInfoLeft.UV.Width - RIGHT_OFFSET;
             int rightY = artInfoLeft.UV.Height / 2 - RIGHT_OFFSET;
             offset = new Rectangle(0, 0, artInfoRight.UV.Width, LEFT_TOP_HEIGHT);
+
+            if (artInfoRight.Texture.IsFromTextureAtlas)
+                offset.Y = totalHRight - LEFT_TOP_HEIGHT;
+
             GumpPicTexture rightTop = new GumpPicTexture(
                 graphicRight,
                 rightX,
@@ -126,8 +155,17 @@ namespace ClassicUO.Game.UI.Gumps
             );
             Add(rightTop);
 
-            offset.Y += LEFT_TOP_HEIGHT;
-            offset.Height = artInfoRight.UV.Height - (RIGHT_BOTTOM_HEIGHT + LEFT_TOP_HEIGHT);
+            if (artInfoRight.Texture.IsFromTextureAtlas)
+            {
+                offset.Y = RIGHT_BOTTOM_HEIGHT;
+                offset.Height = totalHRight - (RIGHT_BOTTOM_HEIGHT + LEFT_TOP_HEIGHT);
+            }
+            else
+            {
+                offset.Y += LEFT_TOP_HEIGHT;
+                offset.Height = artInfoRight.UV.Height - (RIGHT_BOTTOM_HEIGHT + LEFT_TOP_HEIGHT);
+            }
+
             _rightMiddle = new GumpPicTexture(
                 graphicRight,
                 rightX,
@@ -138,8 +176,17 @@ namespace ClassicUO.Game.UI.Gumps
             _rightMiddle.Height += diff;
             Add(_rightMiddle);
 
-            offset.Y += offset.Height;
-            offset.Height = RIGHT_BOTTOM_HEIGHT;
+            if (artInfoRight.Texture.IsFromTextureAtlas)
+            {
+                offset.Y = 0;
+                offset.Height = RIGHT_BOTTOM_HEIGHT;
+            }
+            else
+            {
+                offset.Y += offset.Height;
+                offset.Height = RIGHT_BOTTOM_HEIGHT;
+            }
+
             _rightBottom = new GumpPicTexture(
                 graphicRight,
                 rightX,
