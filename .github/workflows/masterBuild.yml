@@ -1,4 +1,4 @@
-name: Build & Release
+name: Build & Release 
 
 on:
   push:
@@ -14,6 +14,7 @@ permissions:
 
 env:
   BLEEDING_EDGE_TAG: "MobileUO-BleedingEdge"
+  BUILD_NUMBER_OFFSET: 198
 
 jobs:
   getVersionNumber:
@@ -22,6 +23,7 @@ jobs:
     outputs: 
       baseVersionNumber: ${{ steps.version.outputs.baseVersionNumber }}
       fullVersionNumber: ${{ steps.version.outputs.fullVersionNumber }}
+      buildNumber: ${{ steps.version.outputs.buildNumber }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,8 +34,10 @@ jobs:
         id: version
         run: |
           version=$(cat Assets/Scripts/VersionNumber.txt | tr -d '\n')
+          buildNumber=$(( ${{ github.run_number }} + ${{ env.BUILD_NUMBER_OFFSET }} ))
           echo "baseVersionNumber=$version" >> $GITHUB_OUTPUT
-          echo "fullVersionNumber=${version}+${{ github.run_number }}" >> $GITHUB_OUTPUT
+          echo "buildNumber=$buildNumber" >> $GITHUB_OUTPUT
+          echo "fullVersionNumber=${version}+${buildNumber}" >> $GITHUB_OUTPUT
   buildForAllSupportedPlatforms:
     name: Build for ${{ matrix.targetPlatform }}
     needs: getVersionNumber
@@ -94,7 +98,7 @@ jobs:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
           BUILD_ENV: Staging
-          GITHUB_BUILD_NUMBER: ${{ github.run_number }}
+          GITHUB_BUILD_NUMBER: ${{ needs.getVersionNumber.outputs.buildNumber }}
         with:
           dockerWorkspacePath: /github/workspace
           targetPlatform: ${{ matrix.targetPlatform }}
