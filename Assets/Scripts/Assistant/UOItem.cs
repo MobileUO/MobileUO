@@ -19,8 +19,9 @@ using System.Collections.Generic;
 //TODO: Agents
 //using Assistant.Agents;
 
-using ClassicUO.IO.Resources;
+using ClassicUO.Assets;
 using ClassicUO.Game;
+using ClassicUO;
 
 namespace Assistant
 {
@@ -164,7 +165,7 @@ namespace Assistant
             }
         }
 
-        internal StaticTiles TileDataInfo => m_ItemID < TileDataLoader.Instance.StaticData.Length ? TileDataLoader.Instance.StaticData[m_ItemID] : TileDataLoader.Instance.StaticData[0];
+        internal StaticTiles TileDataInfo => m_ItemID < Client.Game.UO.FileManager.TileData.StaticData.Length ? Client.Game.UO.FileManager.TileData.StaticData[m_ItemID] : Client.Game.UO.FileManager.TileData.StaticData[0];
 
         internal Layer Layer
         {
@@ -455,7 +456,7 @@ namespace Assistant
             else if (m_Parent is UOMobile)
                 ((UOMobile)m_Parent).AddItem(this);
 
-            if (World.Player != null && (IsChildOf(UOSObjects.Player.Backpack) || IsChildOf(UOSObjects.Player.Quiver)))
+            if (Client.Game.UO.World.Player != null && (IsChildOf(UOSObjects.Player.Backpack) || IsChildOf(UOSObjects.Player.Quiver)))
             {
                 //TODO: SearchExemptions
                 bool exempt = false;// = SearchExemptionAgent.IsExempt(this);
@@ -465,7 +466,7 @@ namespace Assistant
                     if (m_AutoStack)
                         AutoStackResource();
                     //do we really need pouch check for CUO?
-                    if (IsContainer && !exempt)// && (!IsPouch || !Config.GetBool("NoSearchPouches")) && UOSObjects.Gump.AutoSearchContainers)
+                    if (IsContainer && !exempt && UOSObjects.Gump.AutoSearchContainers)// && (!IsPouch || !Config.GetBool("NoSearchPouches")) && UOSObjects.Gump.AutoSearchContainers)
                     {
                         PacketHandlers.IgnoreGumps.Add(this);
                         PlayerData.DoubleClick(Serial);

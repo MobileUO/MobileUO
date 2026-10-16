@@ -27,7 +27,7 @@ using ClassicUO.Utility.Logging;
 using ClassicUO.Game;
 using ClassicUO.Game.Data;
 using ClassicUO.Game.Scenes;
-using ClassicUO.IO.Resources;
+using ClassicUO.Assets;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.UI.Assistant;
 
@@ -243,7 +243,7 @@ namespace Assistant
                     }
 
                     FileInfo profileinfo = new FileInfo(Path.Combine(Profile.ProfilePath, profile));
-                    if (profileinfo.Exists && SerialHelper.IsMobile(serial) && World.Player.Serial == serial && ProfileManager.Current.Username == account)
+                    if (profileinfo.Exists && SerialHelper.IsMobile(serial) && Client.Game.UO.World.Player.Serial == serial && ProfileManager.CurrentProfile.Username == account)
                     {
                         gump.LastProfile = profileinfo.Name;
                         break;
@@ -265,7 +265,7 @@ namespace Assistant
                     ushort type = GetAttributeUShort(item, "type");
                     ushort limit = Math.Min((ushort)60000, GetAttributeUShort(item, "limit"));
                     string name = GetAttribute(item, "name");
-                    if (type > 0 && type < TileDataLoader.Instance.StaticData.Length && !string.IsNullOrEmpty(name))
+                    if (type > 0 && type < Client.Game.UO.FileManager.TileData.StaticData.Length && !string.IsNullOrEmpty(name))
                         gump.ItemsToLoot[type] = (limit, name);
                 }
             }
@@ -425,6 +425,14 @@ namespace Assistant
         internal static void LoadSkillDef(FileInfo info, AssistantGump gump)
         {
             List<SkillEntry> skillEntries = new List<SkillEntry>();
+
+            // MobileUO: Use skills already loaded from skills.mul instead of XML file to preserve custom skill names
+            // This fixes the issue where the assistant loading this .xml file was breaking shards like Memento
+            // where they have custom skill names
+            skillEntries.AddRange(Client.Game.UO.FileManager.Skills.SortedSkills);
+
+            // Old XML loading code commented out
+            /*
             XmlDocument doc = new XmlDocument();
             if(!info.Exists)
             {
@@ -471,14 +479,15 @@ namespace Assistant
             }
             else
             {
-                skillEntries.AddRange(SkillsLoader.Instance.Skills);
+                skillEntries.AddRange(Client.Game.UO.FileManager.Skills.Skills);
             }
+            */
 
             Dictionary<int, string> skn = new Dictionary<int, string>
             {
                 [-1] = "Last"
             };
-            for (i = 0; i < skillEntries.Count; i++)
+            for (int i = 0; i < skillEntries.Count; i++)
             {
                 SkillEntry sk = skillEntries[i];
                 if (sk.HasAction)
@@ -648,11 +657,11 @@ namespace Assistant
 
         private static void SetAllSkills(List<SkillEntry> entries)
         {
-            SkillsLoader.Instance.Skills.Clear();
-            SkillsLoader.Instance.Skills.AddRange(entries);
-            SkillsLoader.Instance.SortedSkills.Clear();
-            SkillsLoader.Instance.SortedSkills.AddRange(entries);
-            SkillsLoader.Instance.SortedSkills.Sort((a, b) => a.Name.CompareTo(b.Name));
+            Client.Game.UO.FileManager.Skills.Skills.Clear();
+            Client.Game.UO.FileManager.Skills.Skills.AddRange(entries);
+            Client.Game.UO.FileManager.Skills.SortedSkills.Clear();
+            Client.Game.UO.FileManager.Skills.SortedSkills.AddRange(entries);
+            Client.Game.UO.FileManager.Skills.SortedSkills.Sort((a, b) => a.Name.CompareTo(b.Name));
         }
 
 
@@ -1899,7 +1908,7 @@ namespace Assistant
                                         uint serial = GetUInt(item);
                                         if (SerialHelper.IsItem(serial))//Max Item Value - MaxItemValue
                                         {
-                                            if (type >= TileDataLoader.Instance.StaticData.Length)
+                                            if (type >= Client.Game.UO.FileManager.TileData.StaticData.Length)
                                             {
                                                 //we have an invalid loaded type? reset to zero, so we allow the subsystem to recalculate it on next dress action
                                                 type = 0;

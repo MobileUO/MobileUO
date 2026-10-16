@@ -72,6 +72,11 @@ public class DownloadState : IState
             }
             else if (serverConfiguration.FileDownloadServerUrl.ToLowerInvariant().Contains("uorenaissance.com"))
             {
+                downloader = new OldRenaissanceDownloader();
+                downloader.Initialize(this, serverConfiguration, downloadPresenter);
+            }
+            else if (serverConfiguration.FileDownloadServerUrl.ToLowerInvariant().Contains("uorenn.com"))
+            {
                 downloader = new RenaissanceDownloader();
                 downloader.Initialize(this, serverConfiguration, downloadPresenter);
             }
