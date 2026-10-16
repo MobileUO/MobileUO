@@ -296,4 +296,14 @@ namespace Microsoft.Xna.Framework.Graphics
         Depth = 12,
         Sample = 13,
     }
+
+    public enum PresentInterval
+    {
+        Immediate = -2147483648,
+        Default = 0,
+        One = 1,
+        Two = 2,
+        Three = 4,
+        Four = 8,
+    }
 }

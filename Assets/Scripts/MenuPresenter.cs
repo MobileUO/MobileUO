@@ -15,6 +15,7 @@ public class MenuPresenter : MonoBehaviour
     [SerializeField] private Text headerTemplate;
     [SerializeField] private GameObject customizeJoystickButtonGameObject;
     [SerializeField] private GameObject loginButtonGameObject;
+    [SerializeField] private GameObject quitButtonGameObject;
     [SerializeField] private GameObject showConsoleButtonGameObject;
     [SerializeField] private ClientRunner clientRunner;
 
@@ -26,14 +27,18 @@ public class MenuPresenter : MonoBehaviour
     {
         menuButton.onClick.AddListener(OnMenuButtonClicked);
         
-        //Only show login button when UO client is running and we're in the login scene
+        //Only show login/quit buttons when UO client is running and we're in the login scene
+        quitButtonGameObject.transform.SetAsFirstSibling();
+        quitButtonGameObject.SetActive(false);
         loginButtonGameObject.transform.SetAsFirstSibling();
         loginButtonGameObject.SetActive(false);
 
         AddHeader("MobileUO Menu");
         GetOptionEnumViewInstance().Initialize(typeof(ShowCloseButtons), UserPreferences.ShowCloseButtons, "Close Buttons", false, false);
         GetOptionEnumViewInstance().Initialize(typeof(ShowModifierKeyButtons), UserPreferences.ShowModifierKeyButtons, "Show Modifier Key Buttons", false, false);
+//#if ENABLE_INTERNAL_ASSISTANT
         GetOptionEnumViewInstance().Initialize(typeof(EnableAssistant), UserPreferences.EnableAssistant, "Enable Assistant", false, false);
+//#endif
 
         AddHeader("Graphics");
         GetOptionEnumViewInstance().Initialize(typeof(ScaleSizes), UserPreferences.ScaleSize, "View Scale", true, true);
@@ -59,11 +64,11 @@ public class MenuPresenter : MonoBehaviour
         customizeJoystickButtonGameObject.SetActive(false);
 
         AddHeader("Developer");
-        GetOptionEnumViewInstance().Initialize(typeof(ShowErrorDetails), UserPreferences.ShowErrorDetails, "Show Error Details", false, false);        
-        // MobileUO: TODO: only for master branch, comment these out as they aren't used yet (requires newer CUO changes from dev branch)
-        //GetOptionEnumViewInstance().Initialize(typeof(UseDrawTexture), UserPreferences.UseDrawTexture, "Use DrawTexture", false, false);
-        //GetOptionEnumViewInstance().Initialize(typeof(UseSpriteSheet), UserPreferences.UseSpriteSheet, "Use Sprite Sheets", false, false);
-        //GetOptionEnumViewInstance().Initialize(typeof(SpriteSheetSize), UserPreferences.SpriteSheetSize, "Sprite Sheet Size", false, false);
+        GetOptionEnumViewInstance().Initialize(typeof(ShowErrorDetails), UserPreferences.ShowErrorDetails, "Show Error Details", false, false);
+        GetOptionEnumViewInstance().Initialize(typeof(UseDrawTexture), UserPreferences.UseDrawTexture, "Use DrawTexture", false, false);
+        GetOptionEnumViewInstance().Initialize(typeof(UseSpriteSheet), UserPreferences.UseSpriteSheet, "Use Sprite Sheets", false, false);
+        GetOptionEnumViewInstance().Initialize(typeof(SpriteSheetSize), UserPreferences.SpriteSheetSize, "Sprite Sheet Size", false, false);
+        GetOptionEnumViewInstance().Initialize(typeof(UseProfiler), UserPreferences.UseProfiler, "Use Profiler", false, false);
 
         showConsoleButtonGameObject.transform.SetAsLastSibling();
 
@@ -78,6 +83,7 @@ public class MenuPresenter : MonoBehaviour
     {
         customizeJoystickButtonGameObject.SetActive(isGameScene);
         loginButtonGameObject.SetActive(isGameScene == false);
+        quitButtonGameObject.SetActive(isGameScene == false);
     }
 
     private OptionEnumView GetOptionEnumViewInstance()

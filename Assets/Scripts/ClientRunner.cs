@@ -1,11 +1,5 @@
-using System;
-using System.IO;
-using System.Linq;
-using UnityEngine;
 using ClassicUO;
-using ClassicUO.Utility.Logging;
 using ClassicUO.Configuration;
-using ClassicUO.Data;
 using ClassicUO.Game;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.Managers;
@@ -13,11 +7,16 @@ using ClassicUO.Game.Scenes;
 using ClassicUO.Game.UI.Controls;
 using ClassicUO.Game.UI.Gumps;
 using ClassicUO.Game.UI.Gumps.Login;
-using Newtonsoft.Json;
 using ClassicUO.Network;
+using ClassicUO.Utility.Logging;
 using Microsoft.Xna.Framework;
+using Newtonsoft.Json;
 using PreferenceEnums;
 using SDL2;
+using System;
+using System.IO;
+using System.Linq;
+using UnityEngine;
 using GameObject = UnityEngine.GameObject;
 using Texture2D = Microsoft.Xna.Framework.Graphics.Texture2D;
 
@@ -62,7 +61,7 @@ public class ClientRunner : MonoBehaviour
 		UserPreferences.ShowCloseButtons.ValueChanged += OnShowCloseButtonsChanged;
 		UserPreferences.UseMouseOnMobile.ValueChanged += OnUseMouseOnMobileChanged;
 		UserPreferences.TargetFrameRate.ValueChanged += OnTargetFrameRateChanged;
-		UserPreferences.TextureFiltering.ValueChanged += UpdateTextureFiltering;
+        UserPreferences.TextureFiltering.ValueChanged += UpdateTextureFiltering;
 		UserPreferences.JoystickDeadZone.ValueChanged += OnJoystickDeadZoneChanged;
 		UserPreferences.JoystickRunThreshold.ValueChanged += OnJoystickRunThresholdChanged;
 		UserPreferences.ContainerItemSelection.ValueChanged += OnContainerItemSelectionChanged;
@@ -128,6 +127,7 @@ public class ClientRunner : MonoBehaviour
 
 	private void OnEnableAssistantChanged(int enableAssistantCurrentValue)
 	{
+//#if ENABLE_INTERNAL_ASSISTANT
 		if (UserPreferences.EnableAssistant.CurrentValue == (int) PreferenceEnums.EnableAssistant.On && Client.Game != null)
 		{
 			if (Plugin.LoadInternalAssistant())
@@ -139,7 +139,13 @@ public class ClientRunner : MonoBehaviour
 					Plugin.OnConnected();
 				}
 			}
+			else if (Client.Game.Scene is GameScene)
+			{
+				// bring Assistant gump to top of UI when the Assistant is re-enabled
+				UIManager.GetGump<AssistantGump>()?.BringOnTop();
+			}
 		}
+//#endif
 	}
 
 	private void OnShowModifierKeyButtonsChanged(int currentValue)
@@ -152,9 +158,9 @@ public class ClientRunner : MonoBehaviour
 
 	private void OnForceUseXbrChanged(int currentValue)
 	{
-		if (ProfileManager.Current != null)
+		if (ProfileManager.CurrentProfile != null)
 		{
-			ProfileManager.Current.UseXBR = currentValue == (int) PreferenceEnums.ForceUseXbr.On;
+			ProfileManager.CurrentProfile.UseXBR = currentValue == (int) PreferenceEnums.ForceUseXbr.On;
 		}
 	}
 
@@ -179,15 +185,15 @@ public class ClientRunner : MonoBehaviour
 	private static void OnTargetFrameRateChanged(int frameRate)
 	{
         if (frameRate == (int)TargetFrameRates.InGameFPS)
-            frameRate = Settings.GlobalSettings.FPS;
+			frameRate = Settings.GlobalSettings.FPS;
 
         Application.targetFrameRate = frameRate;
-    }
+	}
     
 	private void UpdateTextureFiltering(int textureFiltering)
 	{
 		var filterMode = (FilterMode) textureFiltering;
-		Texture2D.defaultFilterMode = filterMode;
+        Texture2D.defaultFilterMode = filterMode;
 		if (Client.Game != null)
 		{
 			var textures = FindObjectsOfType<Texture>();
@@ -197,6 +203,7 @@ public class ClientRunner : MonoBehaviour
 			}
 			Client.Game.GraphicsDevice.Textures[1].UnityTexture.filterMode = FilterMode.Point;
 			Client.Game.GraphicsDevice.Textures[2].UnityTexture.filterMode = FilterMode.Point;
+			//Client.Game.GraphicsDevice.Textures[3].UnityTexture.filterMode = FilterMode.Point;
 		}
 	}
 	
@@ -239,14 +246,14 @@ public class ClientRunner : MonoBehaviour
 		if (forceEnterWorld && Client.Game.Scene is LoginScene)
 		{
 			ProfileManager.Load("fakeserver", "fakeaccount", "fakecharacter");
-			World.Mobiles.Add(World.Player = new PlayerMobile(0));
-			World.MapIndex = 0;
-			World.Player.X = 1443;
-			World.Player.Y = 1677;
-			World.Player.Z = 0;
-			World.Player.UpdateScreenPosition();
-			World.Player.AddToTile();
-			Client.Game.SetScene(new GameScene());
+			Client.Game.UO.World.Mobiles.Add(Client.Game.UO.World.Player = new PlayerMobile(Client.Game.UO.World, 0));
+			Client.Game.UO.World.MapIndex = 0;
+			Client.Game.UO.World.Player.X = 1443;
+			Client.Game.UO.World.Player.Y = 1677;
+			Client.Game.UO.World.Player.Z = 0;
+			Client.Game.UO.World.Player.UpdateScreenPosition();
+			Client.Game.UO.World.Player.AddToTile();
+			Client.Game.SetScene(new GameScene(Client.Game.UO.World));
 		}
 
 		float deltaTime = UnityEngine.Time.deltaTime;
@@ -286,7 +293,8 @@ public class ClientRunner : MonoBehaviour
 
 	    GL.LoadPixelMatrix( 0, Screen.width, Screen.height, 0 );
 	    
-        Client.Game.Batcher.UseGraphicsDrawTexture = useGraphicsDrawTexture;
+        // MobileUO: turning off graphics draw texture flag - this fixes some rendering issues where tiles are flipped
+		Client.Game.Batcher.UseGraphicsDrawTexture = false;//useGraphicsDrawTexture;
         Client.Game.DrawUnity(UnityEngine.Time.deltaTime);
 
         forceEnterWorld = false;
@@ -298,7 +306,7 @@ public class ClientRunner : MonoBehaviour
 
 	    //Load and adjust settings
 	    var settingsFilePath = Settings.GetSettingsFilepath();
-	    if (File.Exists(settingsFilePath))
+        if (File.Exists(settingsFilePath))
 	    {
 		    Settings.GlobalSettings = JsonConvert.DeserializeObject<Settings>(File.ReadAllText(settingsFilePath));
 	    }
@@ -311,26 +319,28 @@ public class ClientRunner : MonoBehaviour
 	    Settings.GlobalSettings.Port = ushort.Parse(config.UoServerPort);
 	    
 	    //Reset static encryption type variable
-	    EncryptionHelper.Type = ENCRYPTION_TYPE.NONE;
+		// MobileUO: TODO: does this need to be re-added?
+	    //NetClient.Socket.Encryption.Type = EncryptionType.NONE;
 	    Settings.GlobalSettings.Encryption = (byte) (config.UseEncryption ? 1 : 0);
 
 	    //Empty the plugins array because no plugins are working at the moment
 	    Settings.GlobalSettings.Plugins = new string[0];
 	    
+		// MobileUO: this was removed in CUO 1.1.0.x
 	    //If connecting to UO Outlands, set shard type to 2 for outlands
-	    Settings.GlobalSettings.ShardType = config.UoServerUrl.ToLower().Contains("uooutlands") ? 2 : 0;
+	    //Settings.GlobalSettings.ShardType = config.UoServerUrl.ToLower().Contains("uooutlands") ? 2 : 0;
 
 	    //Try to detect old client version to set ShardType to 1, for using StatusGumpOld. Otherwise, it's possible
 	    //to get null-refs in StatusGumpModern.
-	    if (ClientVersionHelper.IsClientVersionValid(config.ClientVersion, out var clientVersion))
-	    {
-		    if (clientVersion < ClientVersion.CV_308Z)
-		    {
-			    Settings.GlobalSettings.ShardType = 1;
-		    }
-	    }
+	    //if (ClientVersionHelper.IsClientVersionValid(config.ClientVersion, out var clientVersion))
+	    //{
+		   // if (clientVersion < ClientVersion.CV_308Z)
+		   // {
+			  //  Settings.GlobalSettings.ShardType = 1;
+		   // }
+	    //}
 	    
-	    CUOEnviroment.IsOutlands = Settings.GlobalSettings.ShardType == 2;
+	    //CUOEnviroment.IsOutlands = Settings.GlobalSettings.ShardType == 2;
 
 	    Settings.GlobalSettings.ClientVersion = config.ClientVersion;
 	    
@@ -356,11 +366,14 @@ public class ClientRunner : MonoBehaviour
 	    try
 	    {
 		    Client.SceneChanged += OnSceneChanged;
-		    Client.Run();
+			// MobileUO: TODO: will passing null be a problem?
+		    Client.Run(null);
+//#if ENABLE_INTERNAL_ASSISTANT
 		    if (UserPreferences.EnableAssistant.CurrentValue == (int) PreferenceEnums.EnableAssistant.On)
 		    {
 			    Plugin.LoadInternalAssistant();
 		    }
+//#endif
 		    Client.Game.Exiting += OnGameExiting;
 		    ApplyScalingFactor();
 
@@ -386,14 +399,25 @@ public class ClientRunner : MonoBehaviour
 	    loginGump?.OnButtonClick((int) LoginGump.Buttons.NextArrow);
     }
 
+    // MobileUO: add a way to quit from Login when a shard doesn't have a Quit button in the login gump
+    public static void Quit()
+    {
+        if (Client.Game == null || !(Client.Game.Scene is LoginScene loginScene) || loginScene.CurrentLoginStep != LoginSteps.Main)
+        {
+            return;
+        }
+
+        Client.Game.Exit();
+    }
+
     private void OnProfileLoaded()
     {
 	    //Disable auto move on mobile platform
-	    ProfileManager.Current.DisableAutoMove = Application.isMobilePlatform;
+	    ProfileManager.CurrentProfile.DisableAutoMove = Application.isMobilePlatform;
 	    //Prevent stack split gump from appearing on mobile
 	    //ProfileManager.Current.HoldShiftToSplitStack = Application.isMobilePlatform;
 	    //Scale items inside containers by default on mobile (won't have any effect if container scale isn't changed)
-	    ProfileManager.Current.ScaleItemsInsideContainers = Application.isMobilePlatform;
+	    ProfileManager.CurrentProfile.ScaleItemsInsideContainers = Application.isMobilePlatform;
 	    OnForceUseXbrChanged(UserPreferences.ForceUseXbr.CurrentValue);
     }
 

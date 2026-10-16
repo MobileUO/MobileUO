@@ -41,4 +41,12 @@ namespace Microsoft.Xna.Framework
         Contains,
         Intersects
     }
+
+    public enum DisplayOrientation 
+    {
+        Default,
+        LandscapeLeft,
+        LandscapeRight,
+        Portrait
+    }
 }
