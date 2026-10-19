@@ -18,6 +18,7 @@ namespace PreferenceEnums
         InGameFPS = -1
     }
 
+
     public enum JoystickSizes
     {
         Small = 0,
