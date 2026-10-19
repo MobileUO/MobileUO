@@ -14,6 +14,7 @@ permissions:
 
 env:
   BLEEDING_EDGE_TAG: "MandoUO-BleedingEdge"
+  NOTES_MAX_LENGTH: 1500
 
 jobs:
   getVersionNumber:
@@ -158,6 +159,10 @@ jobs:
             echo "Generating release notes from commit $BLEED_BASE to HEAD."
             notes=$(git log $BLEED_BASE..HEAD --pretty=format:%B)
           fi
+          max_length=${{ env.NOTES_MAX_LENGTH }}
+          if [ ${#notes} -gt "$max_length" ]; then
+            notes="${notes:0:$max_length}"$'\n'"... (truncated)"
+          fi
           printf "BLEED_NOTES<<EOF\n%s\nEOF\n" "$notes" >> $GITHUB_OUTPUT
       - name: Remove old MandoUO BleedingEdge Release
         uses: dev-drprasad/delete-tag-and-release@v0.2.1
@@ -227,6 +232,10 @@ jobs:
           else
             echo "Generating release notes from commit $VER_BASE to HEAD."
             notes=$(git log $VER_BASE..HEAD --pretty=format:%B)
+          fi
+          max_length=${{ env.NOTES_MAX_LENGTH }}
+          if [ ${#notes} -gt "$max_length" ]; then
+            notes="${notes:0:$max_length}"$'\n'"... (truncated)"
           fi
           printf "VER_NOTES<<EOF\n%s\nEOF\n" "$notes" >> $GITHUB_OUTPUT
       - name: Tag and push new version if needed
