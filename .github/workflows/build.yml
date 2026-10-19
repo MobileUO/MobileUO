@@ -197,7 +197,7 @@ jobs:
       - name: Check if version already released
         id: version_check
         run: |
-          version="v${{ needs.getVersionNumber.outputs.baseVersionNumber }}"
+          version="v${{ needs.getVersionNumber.outputs.baseVersionNumber }}-dev"
           if git rev-parse "$version" >/dev/null 2>&1; then
             echo "Version $version already tagged"
             echo "new_release=false" >> $GITHUB_OUTPUT
@@ -211,7 +211,7 @@ jobs:
         run: |
           # Note: CUO based MobileUO builds are only 1.x.x
           # TazUO based MobileUO builds are only 2.x.x
-          prev=$(git tag --list "v1*\.[0-9]*\.[0-9]*" --sort=-v:refname | grep -v "^v${{ needs.getVersionNumber.outputs.baseVersionNumber }}$" | head -n 1)
+          prev=$(git tag --list "v1*\.[0-9]*\.[0-9]*-dev" --sort=-v:refname | grep -v "^v${{ needs.getVersionNumber.outputs.baseVersionNumber }}-dev$" | head -n 1)
           if [ -n "$prev" ]; then
             echo "VER_BASE=$(git rev-parse $prev)" >> $GITHUB_ENV
           else
@@ -234,17 +234,17 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git tag v${{ needs.getVersionNumber.outputs.baseVersionNumber }}
-          git push origin v${{ needs.getVersionNumber.outputs.baseVersionNumber }}
+          git tag v${{ needs.getVersionNumber.outputs.baseVersionNumber }}-dev
+          git push origin v${{ needs.getVersionNumber.outputs.baseVersionNumber }}-dev
       - name: Create versioned GitHub Release
         if: steps.version_check.outputs.new_release == 'true'
         uses: ncipollo/release-action@v1.16.0
         with:
-          tag: v${{ needs.getVersionNumber.outputs.baseVersionNumber }}
-          name: "MandoUO v${{ needs.getVersionNumber.outputs.baseVersionNumber }}"
+          tag: v${{ needs.getVersionNumber.outputs.baseVersionNumber }}-dev
+          name: "MandoUO v${{ needs.getVersionNumber.outputs.baseVersionNumber }}-dev"
           body: |
             This is an official dev versioned release of MandoUO.
-            Version: `${{ needs.getVersionNumber.outputs.baseVersionNumber }}`
+            Version: `${{ needs.getVersionNumber.outputs.baseVersionNumber }}-dev`
 
             # Release notes
             ${{ steps.ver_notes.outputs.VER_NOTES }}
@@ -269,9 +269,9 @@ jobs:
         with:
           webhook-url: ${{ secrets.DISCORD_WEBHOOK }}
           content: |
-            # v${{ needs.getVersionNumber.outputs.baseVersionNumber }} (MandoUO - Versioned Development build) is available.
+            # v${{ needs.getVersionNumber.outputs.baseVersionNumber }}-dev (MandoUO - Versioned Development build) is available.
 
-            [Download here](<https://github.com/MobileUO/MobileUO/releases/tag/v${{ needs.getVersionNumber.outputs.baseVersionNumber }}>)  
+            [Download here](<https://github.com/MobileUO/MobileUO/releases/tag/v${{ needs.getVersionNumber.outputs.baseVersionNumber }}-dev>)  
           
             # Release notes 
             `These are automatically generated`
