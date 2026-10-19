@@ -98,7 +98,7 @@ jobs:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-          BUILD_ENV: Staging
+          BUILD_ENV: Production
           GITHUB_BUILD_NUMBER: ${{ needs.getVersionNumber.outputs.buildNumber }}
         with:
           dockerWorkspacePath: /github/workspace
@@ -190,11 +190,8 @@ jobs:
           body: |
             This is a bleeding-edge production build for all platform builds.
             These are built automatically on the master branch. 
-            #These may include features that are still being worked on/not complete.
 
             Version: `${{ needs.getVersionNumber.outputs.fullVersionNumber }}`
-
-            #These builds may include incomplete or experimental features.
 
             # Release notes
             ${{ steps.bleed_notes.outputs.BLEED_NOTES }}
