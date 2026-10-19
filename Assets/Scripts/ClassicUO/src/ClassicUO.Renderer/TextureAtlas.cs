@@ -1,0 +1,183 @@
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using StbRectPackSharp;
+using System;
+using System.Collections.Generic;
+using System.IO;
+
+namespace ClassicUO.Renderer
+{
+    public class TextureAtlas : IDisposable
+    {
+        // MobileUO: removed readonly
+        private int _width,
+            _height;
+        private readonly SurfaceFormat _format;
+        private readonly GraphicsDevice _device;
+        private readonly List<Texture2D> _textureList;
+        private Packer _packer;
+        // MobileUO: added variable
+        private bool _useSpriteSheet;
+        // MobileUO: track which texture atlas the packer is managing
+        private int _currentAtlasIndex = -1;
+
+        public TextureAtlas(GraphicsDevice device, int width, int height, SurfaceFormat format)
+        {
+            _device = device;
+            _width = width;
+            _height = height;
+            _format = format;
+            // MobileUO: added variable
+            _useSpriteSheet = UserPreferences.UseSpriteSheet.CurrentValue == (int)PreferenceEnums.UseSpriteSheet.On;
+
+            _textureList = new List<Texture2D>();
+        }
+
+        public int TexturesCount => _textureList.Count;
+
+        public unsafe Texture2D AddSprite(
+            ReadOnlySpan<uint> pixels,
+            int width,
+            int height,
+            out Rectangle pr
+        )
+        {
+            // MobileUO: reset texture list because we are swapping whether or not we are using sprite sheets or their size
+            if (_useSpriteSheet != (UserPreferences.UseSpriteSheet.CurrentValue == (int)PreferenceEnums.UseSpriteSheet.On)
+                || _width != UserPreferences.SpriteSheetSize.CurrentValue)
+            {
+                _useSpriteSheet = UserPreferences.UseSpriteSheet.CurrentValue == (int)PreferenceEnums.UseSpriteSheet.On;
+                _width = _height = UserPreferences.SpriteSheetSize.CurrentValue;
+
+                _packer?.Dispose();
+                _packer = new Packer(_width, _height);
+                _currentAtlasIndex = -1;
+
+                foreach (var tex in _textureList)
+                {
+                    if (!tex.IsDisposed)
+                    {
+                        tex.Dispose();
+                    }
+                }
+                _textureList.Clear();
+            }
+
+            // MobileUO: handle 0x0 textures - this shouldn't happen unless the client data is missing newer textures
+            if (width <= 0 || height <= 0)
+            {
+                Utility.Logging.Log.Trace($"Texture width and height must be greater than zero. Width: {width} Height: {height} Index: {_currentAtlasIndex}");
+                pr = new Rectangle(0, 0, width, height);
+                return null;
+            }
+
+            if (_currentAtlasIndex < 0)
+            {
+                CreateNewTexture2D(width, height);
+            }
+
+            //ref Rectangle pr = ref _spriteBounds[hash];
+            //pr = new Rectangle(0, 0, width, height);
+            // MobileUO: added sprite sheet logic
+            bool isOversizedSprite = false;
+            int index;
+            if (_useSpriteSheet)
+            {
+                // MobileUO: check if sprite is larger than atlas dimensions
+                if (width > _width || height > _height)
+                {
+                    Utility.Logging.Log.Trace($"Sprite size ({width}x{height}) exceeds atlas size ({_width}x{_height}). Creating dedicated texture.");
+                    pr = new Rectangle(0, 0, width, height);
+
+                    Texture2D oversizedTexture = new Texture2D(_device, width, height, false, _format);
+                    _textureList.Add(oversizedTexture);
+                    index = _textureList.Count - 1;
+
+                    isOversizedSprite = true;
+                }
+                else
+                {
+                    while (!_packer.PackRect(width, height, out pr))
+                    {
+                        CreateNewTexture2D(width, height);
+                    }
+                    // Use the current atlas index that the packer is managing
+                    index = _currentAtlasIndex;
+                }
+            }
+            else
+            {
+                pr = new Rectangle(0, 0, width, height);
+
+                CreateNewTexture2D(width, height);
+                index = _currentAtlasIndex;
+            }
+
+            Texture2D texture = _textureList[index];
+            // MobileUO: added flagging if texture is from sprite sheet (but not if it's an oversized dedicated texture)
+            if (_useSpriteSheet && !isOversizedSprite)
+                texture.IsFromTextureAtlas = true;
+
+            fixed (uint* src = pixels)
+            {
+                texture.SetDataPointerEXT(0, pr, (IntPtr)src, sizeof(uint) * width * height);
+            }
+
+            return texture;
+        }
+
+        private void CreateNewTexture2D(int width, int height)
+        {
+            // MobileUO: TODO: #19: added logging output; added toggle for sprite sheet
+            var textureWidth = width;
+            var textureHeight = height;
+            if (_useSpriteSheet)
+            {
+                textureWidth = _width;
+                textureHeight = _height;
+            }
+
+            //Utility.Logging.Log.Trace($"creating texture: {width}x{height} for Atlas {textureWidth}x{textureHeight} {_format}");
+            Texture2D texture = new Texture2D(_device, textureWidth, textureHeight, false, _format);
+            _textureList.Add(texture);
+            _currentAtlasIndex = _textureList.Count - 1;
+
+            _packer?.Dispose();
+            _packer = new Packer(_width, _height);
+        }
+
+        public void SaveImages(string name)
+        {
+            // MobileUO: TODO: #19: added logging output
+            Utility.Logging.Log.Trace($"Saving images");
+            for (int i = 0, count = TexturesCount; i < count; ++i)
+            {
+                Utility.Logging.Log.Trace($"Texture {i}");
+                var texture = _textureList[i];
+
+                using (var stream = System.IO.File.Create($"atlas/{name}_atlas_{i}.png"))
+                {
+                    texture.SaveAsPng(stream, texture.Width, texture.Height);
+
+                    string relativePath = $"atlas/{name}_atlas_{i}.png";
+                    string fullPath = Path.GetFullPath(relativePath);
+                    Utility.Logging.Log.Trace($"File created at: {fullPath}");
+                }
+            }
+        }
+
+        public void Dispose()
+        {
+            foreach (Texture2D texture in _textureList)
+            {
+                if (!texture.IsDisposed)
+                {
+                    texture.Dispose();
+                }
+            }
+
+            _packer.Dispose();
+            _textureList.Clear();
+        }
+    }
+}

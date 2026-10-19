@@ -24,7 +24,7 @@ using ClassicUO.Game.UI.Gumps;
 using ClassicUO.Game;
 using ClassicUO.Game.Managers;
 using ClassicUO.Game.Data;
-using ClassicUO.IO.Resources;
+using ClassicUO.Assets;
 using UOScript;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
@@ -293,7 +293,7 @@ namespace Assistant.Scripts
             }
             int soundid = Utility.ToInt32(args[0].AsString(), -1);
             if(soundid >= 0)
-                Client.Game.Scene.Audio.PlaySound(soundid);
+                Client.Game.Audio.PlaySound(soundid);
             else
                 ScriptManager.Error(quiet, "Invalid sound id, only numbers are supported at the moment, and the number must be greater or equal than zero");
             return true;
@@ -1084,16 +1084,16 @@ namespace Assistant.Scripts
                 }
                 args[0] = null;
             }
-            if (ScriptManager.LastWalk < DateTime.UtcNow)
+            if (ScriptManager.LastWalk > DateTime.UtcNow)
             {
                 return false;
             }
 
             ScriptManager.LastWalk = DateTime.UtcNow + TimeSpan.FromMilliseconds(MovementSpeed.TimeToCompleteMovement(false,
-                                                                             World.Player.IsMounted ||
-                                                                             World.Player.SpeedMode == CharacterSpeedType.FastUnmount ||
-                                                                             World.Player.SpeedMode == CharacterSpeedType.FastUnmountAndCantRun ||
-                                                                             World.Player.IsFlying
+                                                                             Client.Game.UO.World.Player.IsMounted ||
+                                                                             Client.Game.UO.World.Player.SpeedMode == CharacterSpeedType.FastUnmount ||
+                                                                             Client.Game.UO.World.Player.SpeedMode == CharacterSpeedType.FastUnmountAndCantRun ||
+                                                                             Client.Game.UO.World.Player.IsFlying
                                                                              ));
 
             Direction dir = _MoveDirection.Dequeue();
@@ -1139,16 +1139,16 @@ namespace Assistant.Scripts
                 }
                 args[0] = null;
             }
-            if (ScriptManager.LastWalk < DateTime.UtcNow)
+            if (ScriptManager.LastWalk > DateTime.UtcNow)
             {
                 return false;
             }
 
             ScriptManager.LastWalk = DateTime.UtcNow + TimeSpan.FromMilliseconds(MovementSpeed.TimeToCompleteMovement(true,
-                                                                             World.Player.IsMounted ||
-                                                                             World.Player.SpeedMode == CharacterSpeedType.FastUnmount ||
-                                                                             World.Player.SpeedMode == CharacterSpeedType.FastUnmountAndCantRun ||
-                                                                             World.Player.IsFlying
+                                                                             Client.Game.UO.World.Player.IsMounted ||
+                                                                             Client.Game.UO.World.Player.SpeedMode == CharacterSpeedType.FastUnmount ||
+                                                                             Client.Game.UO.World.Player.SpeedMode == CharacterSpeedType.FastUnmountAndCantRun ||
+                                                                             Client.Game.UO.World.Player.IsFlying
                                                                              ));
 
             Direction dir = _MoveDirection.Dequeue();
@@ -1173,9 +1173,9 @@ namespace Assistant.Scripts
             else
             {
                 Skill sk = ScriptManager.GetSkill(args[0].AsString());
-                if (sk != null && sk.Index < SkillsLoader.Instance.Skills.Count)
+                if (sk != null && sk.Index < Client.Game.UO.FileManager.Skills.Skills.Count)
                 {
-                    if(SkillsLoader.Instance.Skills[sk.Index].HasAction)
+                    if(Client.Game.UO.FileManager.Skills.Skills[sk.Index].HasAction)
                         Engine.Instance.SendToServer(new UseSkill(sk.Index));
                     else
                         new RunTimeError(null, $"Non usable skill: {args[0].AsString()}");
@@ -1687,10 +1687,10 @@ namespace Assistant.Scripts
 
         private static bool ShowNames(string command, Argument[] args, bool quiet, bool force)
         {
-            if (World.Player == null)
+            if (Client.Game.UO.World.Player == null)
                 return true;
             byte type = 1;//mobile as default
-            int range = World.ClientViewRange;
+            int range = Client.Game.UO.World.ClientViewRange;
             if (args.Length > 0)
             {
                 switch (args[0].AsString())
@@ -1943,7 +1943,7 @@ namespace Assistant.Scripts
                     string title = args[0].AsString(), body = args[1].AsString();
                     MessageEnded = false;
                     HasMessageGump = true;
-                    UIManager.Add(new AssistantGump.MessageBoxGump(title, body));
+                    UIManager.Add(new AssistantGump.MessageBoxGump(Client.Game.UO.World, title, body));
                 }
                 else
                     MessageEnded = true;
@@ -1968,26 +1968,34 @@ namespace Assistant.Scripts
                 {
                     if (args.Length > 3 && args[3].AsString() == "right")
                     {
-                        UIManager.OnRightMouseDoubleClick();
-                        UIManager.OnRightMouseButtonUp();
+                        //UIManager.OnRightMouseDoubleClick();
+                        //UIManager.OnRightMouseButtonUp();
+                        UIManager.OnMouseDoubleClick(MouseButtonType.Right);
+                        UIManager.OnMouseButtonUp(MouseButtonType.Right);
                     }
                     else
                     {
-                        UIManager.OnLeftMouseDoubleClick();
-                        UIManager.OnLeftMouseButtonUp();
+                        //UIManager.OnLeftMouseDoubleClick();
+                        //UIManager.OnLeftMouseButtonUp();
+                        UIManager.OnMouseDoubleClick(MouseButtonType.Left);
+                        UIManager.OnMouseButtonUp(MouseButtonType.Left);
                     }
                 }
                 else
                 {
                     if (args.Length > 3 && args[3].AsString() == "right")
                     {
-                        UIManager.OnRightMouseButtonDown();
-                        UIManager.OnRightMouseButtonUp();
+                        //UIManager.OnRightMouseButtonDown();
+                        //UIManager.OnRightMouseButtonUp();
+                        UIManager.OnMouseButtonDown(MouseButtonType.Right);
+                        UIManager.OnMouseButtonUp(MouseButtonType.Right);
                     }
                     else
                     {
-                        UIManager.OnLeftMouseButtonDown();
-                        UIManager.OnLeftMouseButtonUp();
+                        //UIManager.OnLeftMouseButtonDown();
+                        //UIManager.OnLeftMouseButtonUp();
+                        UIManager.OnMouseButtonDown(MouseButtonType.Left);
+                        UIManager.OnMouseButtonUp(MouseButtonType.Left);
                     }
                 }
             }
@@ -2055,13 +2063,13 @@ namespace Assistant.Scripts
 
         private static bool GuildButton(string command, Argument[] args, bool quiet, bool force)
         {
-            GameActions.OpenGuildGump();
+            GameActions.OpenGuildGump(Client.Game.UO.World);
             return true;
         }
 
         private static bool QuestsButton(string command, Argument[] args, bool quiet, bool force)
         {
-            GameActions.RequestQuestMenu();
+            GameActions.RequestQuestMenu(Client.Game.UO.World);
             return true;
         }
 
@@ -2340,7 +2348,7 @@ namespace Assistant.Scripts
                 return true;
             }
             int color = args.Length >= 2 ? args[1].AsUShort() : -1;
-            int range = args.Length >= 3 ? args[2].AsInt() : World.ClientViewRange;
+            int range = args.Length >= 3 ? args[2].AsInt() : Client.Game.UO.World.ClientViewRange;
             Point3D p = Point3D.MinusOne;
             foreach (UOEntity ie in UOSObjects.EntitiesInRange(range))
             {

@@ -15,8 +15,8 @@
 #endregion
 using System;
 using System.Linq;
-
-using ClassicUO.IO.Resources;
+using ClassicUO;
+using ClassicUO.Assets;
 
 namespace Assistant
 {
@@ -43,12 +43,12 @@ namespace Assistant
         {
             if (Running)
             {
-                if (m_ClilocsStop.Any(t => ClilocLoader.Instance.GetString(t) == msg))
+                if (m_ClilocsStop.Any(t => Client.Game.UO.FileManager.Clilocs.GetString(t) == msg))
                 {
                     Stop();
                 }
 
-                if (m_ClilocsRestart.Any(t => ClilocLoader.Instance.GetString(t) == msg))
+                if (m_ClilocsRestart.Any(t => Client.Game.UO.FileManager.Clilocs.GetString(t) == msg))
                 {
                     Start();
                 }

@@ -396,6 +396,8 @@ namespace SDL2
                            (bits << 8)) | bytes;
         }
 
+        private const uint SDL_PREALLOC = 0x00000001;  // Surface uses preallocated memory
+
         public static IntPtr SDL_CreateRGBSurfaceWithFormatFrom(
             IntPtr pixels,
             int width,
@@ -404,10 +406,81 @@ namespace SDL2
             int pitch,
             uint format)
         {
-            return IntPtr.Zero;
+            // Parameter validation
+            if (pixels == IntPtr.Zero)
+            {
+                return IntPtr.Zero;
+            }
+
+            if (width < 0)
+            {
+                return IntPtr.Zero;
+            }
+
+            if (height < 0)
+            {
+                return IntPtr.Zero;
+            }
+
+            // Create a new SDL_Surface structure
+            SDL_Surface surface = new SDL_Surface
+            {
+                flags = (uint)SDL_PREALLOC, // Mark as using external pixel data
+                pixels = pixels,
+                w = width,
+                h = height,
+                pitch = pitch,
+                locked = 0,
+                refcount = 1
+            };
+
+            // Create format structure
+            SDL_PixelFormat pixelFormat = new SDL_PixelFormat
+            {
+                format = format
+            };
+
+            // Allocate memory for the surface structure and copy the data
+            IntPtr surfacePtr = Marshal.AllocHGlobal(Marshal.SizeOf<SDL_Surface>());
+            IntPtr formatPtr = Marshal.AllocHGlobal(Marshal.SizeOf<SDL_PixelFormat>());
+
+            // Copy the format structure to unmanaged memory
+            Marshal.StructureToPtr(pixelFormat, formatPtr, false);
+    
+            // Set the format pointer in the surface
+            surface.format = formatPtr;
+
+            // Set default clip rectangle
+            surface.clip_rect = new SDL_Rect
+            {
+                x = 0,
+                y = 0,
+                w = width,
+                h = height
+            };
+
+            // Copy the surface structure to unmanaged memory
+            Marshal.StructureToPtr(surface, surfacePtr, false);
+
+            return surfacePtr;
         }
 
-        public static void SDL_FreeSurface(IntPtr surface){}
+        public static void SDL_FreeSurface(IntPtr surface){
+            if (surface == IntPtr.Zero)
+                return;
+
+            // Get the surface structure
+            SDL_Surface surfaceStruct = Marshal.PtrToStructure<SDL_Surface>(surface);
+
+            // Free the pixel format if it exists
+            if (surfaceStruct.format != IntPtr.Zero)
+            {
+                Marshal.FreeHGlobal(surfaceStruct.format);
+            }
+
+            // Free the surface structure itself
+            Marshal.FreeHGlobal(surface);
+        }
 
         public static SDL_bool SDL_HasClipboardText()
         {
@@ -780,6 +853,9 @@ namespace SDL2
         public static void SDL_AddEventWatch(SDL.SDL_EventFilter filter, IntPtr userdata)
         {}
 
+        public static void SDL_SetEventFilter(SDL.SDL_EventFilter filter, IntPtr userdata)
+        {}
+
         public struct SDL_Keysym
         {
             public SDL_Keycode sym;
@@ -912,9 +988,28 @@ namespace SDL2
         {
         }
 
+        public static void SDL_SetWindowMinimumSize(IntPtr windowHandle, int width, int height)
+        {
+            
+        }
+
         public static void SDL_GetCurrentDisplayMode(int i, out SDL_DisplayMode sdlDisplayMode)
         {
             sdlDisplayMode = new SDL_DisplayMode();
+        }
+
+        public static int SDL_GetWindowDisplayIndex(IntPtr windowHandle)
+        {
+            return 0;
+        }
+
+        public static int SDL_GetDisplayUsableBounds(int displayIndex, out SDL_Rect rect)
+        {
+            rect = new SDL_Rect();
+            rect.x = 0;
+            rect.y = 0;
+
+            return 0;
         }
 
         public struct SDL_DisplayMode
