@@ -413,12 +413,12 @@ namespace ClassicUO.Network
             }
             */
 
-            #if ENABLE_INTERNAL_ASSISTANT
+            //#if ENABLE_INTERNAL_ASSISTANT
             if (PluginPath == hardcodedInternalAssistantPath)
             {
                 try
                 {
-                    // MobileUO: TODO: PacktsTable no longer static:
+                    // MobileUO: TODO: PacketsTable no longer static:
                     var PacketsTable = new PacketsTable(Client.Game.UO.FileManager.Version);
 
                     Assistant.Engine.Install(null);
@@ -455,7 +455,7 @@ namespace ClassicUO.Network
                     return;
                 }
             }
-#endif
+//#endif
 
             IsValid = true;
 

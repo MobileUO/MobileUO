@@ -1,4 +1,19 @@
-﻿using System;
+﻿#region license
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org> for details.
+#endregion
+using System;
 using System.IO;
 using System.Reflection;
 using System.Globalization;
@@ -410,6 +425,14 @@ namespace Assistant
         internal static void LoadSkillDef(FileInfo info, AssistantGump gump)
         {
             List<SkillEntry> skillEntries = new List<SkillEntry>();
+
+            // MobileUO: Use skills already loaded from skills.mul instead of XML file to preserve custom skill names
+            // This fixes the issue where the assistant loading this .xml file was breaking shards like Memento
+            // where they have custom skill names
+            skillEntries.AddRange(Client.Game.UO.FileManager.Skills.SortedSkills);
+
+            // Old XML loading code commented out
+            /*
             XmlDocument doc = new XmlDocument();
             if(!info.Exists)
             {
@@ -458,12 +481,13 @@ namespace Assistant
             {
                 skillEntries.AddRange(Client.Game.UO.FileManager.Skills.Skills);
             }
+            */
 
             Dictionary<int, string> skn = new Dictionary<int, string>
             {
                 [-1] = "Last"
             };
-            for (i = 0; i < skillEntries.Count; i++)
+            for (int i = 0; i < skillEntries.Count; i++)
             {
                 SkillEntry sk = skillEntries[i];
                 if (sk.HasAction)
@@ -1943,7 +1967,7 @@ namespace Assistant
                                         name = GetAttribute(item, "name");
                                         if (string.IsNullOrEmpty(name))
                                             name = UOSObjects.GetDefaultItemName(graphic);
-                                        ItemDisplay oi = new ItemDisplay(graphic, name, hue);
+                                        ItemDisplay oi = new ItemDisplay(graphic, name, hue, true, amt);
                                         if (!org.Items.Contains(oi))
                                             org.Items.Add(oi);
                                     }

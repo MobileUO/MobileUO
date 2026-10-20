@@ -13,7 +13,9 @@ using ClassicUO.Renderer;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System.Buffers;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace ClassicUO.Game.UI.Gumps
 {
@@ -283,30 +285,38 @@ namespace ClassicUO.Game.UI.Gumps
                     }
 
                     staticsZ.Fill(d);
-                    indexMap.StaticFile.Seek((long)indexMap.StaticAddress, System.IO.SeekOrigin.Begin);
-                    indexMap.MapFile.Seek((long)indexMap.MapAddress, System.IO.SeekOrigin.Begin);
                     // MobileUO: TODO: InlineArray feature is not available in Unity's C#
-                    var cells = indexMap.MapFile.ReadMapBlock()/*.Read<MapBlock>()*/.Cells;
-                    
+                    //MapCellsArray cells = indexMap.MapFile.ReadAt<MapBlock>((long)indexMap.MapAddress).Cells;
+                    // MobileUO: IO performance
+                    MapCells[] cells = indexMap.MapFile.ReadMapBlockAt((long)indexMap.MapAddress).Cells;
+
+                    // MobileUO: IO performance
+                    if (indexMap.StaticCount > 0)
+                    {
+                        StaticsBlock[] staticsBuffer = ArrayPool<StaticsBlock>.Shared.Rent((int)indexMap.StaticCount);
+                        Span<StaticsBlock> staticsSpan = staticsBuffer.AsSpan(0, (int)indexMap.StaticCount);
+                        indexMap.StaticFile.ReadAt((long)indexMap.StaticAddress, MemoryMarshal.AsBytes(staticsSpan));
+
+                        foreach (ref StaticsBlock stblock in staticsSpan)
+                        {
+                            if (stblock.Color > 0 && stblock.Color != 0xFFFF && GameObject.CanBeDrawn(World, stblock.Color))
+                            {
+                                ref ColorInfo st = ref staticsZ[stblock.Y * 8 + stblock.X];
+                                if (st.Z < stblock.Z)
+                                {
+                                    st.Color = stblock.Hue > 0 ? (ushort)(stblock.Hue + 0x4000) : stblock.Color;
+                                    st.Z = stblock.Z;
+                                    st.IsLand = stblock.Hue > 0;
+                                }
+                            }
+                        }
+
+                        ArrayPool<StaticsBlock>.Shared.Return(staticsBuffer);
+                    }
+
                     Chunk block = World.Map.GetChunk(blockIndex);
                     int realBlockX = i << 3;
                     int realBlockY = j << 3;
-
-
-                    for (int c = 0; c < indexMap.StaticCount; ++c)
-                    {
-                        var stblock = indexMap.StaticFile.Read<StaticsBlock>();
-                        if (stblock.Color > 0 && stblock.Color != 0xFFFF && GameObject.CanBeDrawn(World, stblock.Color))
-                        {
-                            ref var st = ref staticsZ[stblock.Y * 8 + stblock.X];
-                            if (st.Z < stblock.Z)
-                            {
-                                st.Color = stblock.Hue > 0 ? (ushort)(stblock.Hue + 0x4000) : stblock.Color;
-                                st.Z = stblock.Z;
-                                st.IsLand = stblock.Hue > 0;
-                            }
-                        }
-                    }
 
                     for (int x = 0; x < 8; x++)
                     {

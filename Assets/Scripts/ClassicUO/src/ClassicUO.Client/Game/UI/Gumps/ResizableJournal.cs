@@ -365,10 +365,14 @@ namespace ClassicUO.Game.UI.Gumps
                     lastWidth = Width;
                     lastHeight = Height;
 
-                    foreach (JournalData _ in journalDatas)
+                    // MobileUO: backported linewrap fix
+                    foreach (JournalData jdata in journalDatas)
                     {
-                        _.EntryText.Width = Width - BORDER_WIDTH - _.TimeStamp.Width;
-                        _.EntryText.Update();
+                        // MobileUO: added option to use alternate journal text border for better readability
+                        var fontStyle = GetJournalFontStyle();
+
+                        jdata.EntryText = new Label(jdata.EntryText.Text, jdata.EntryText.Unicode, jdata.EntryText.Hue, Width - BORDER_WIDTH - jdata.TimeStamp.Width, font: jdata.EntryText.Font, style: fontStyle);
+                        jdata.EntryText.Update();
                     }
 
                     CalculateScrollBarMaxValue();
@@ -414,11 +418,15 @@ namespace ClassicUO.Game.UI.Gumps
                 while (journalDatas.Count > Constants.MAX_JOURNAL_HISTORY_COUNT)
                     journalDatas.RemoveFromFront().Destroy();
 
-                Label timeS = new Label($"{e.Time:t}", e.IsUnicode, e.Hue, font: e.Font);
+                // MobileUO: added option to use alternate journal text border for better readability
+                var fontStyle = GetJournalFontStyle();
+
+                Label timeS = new Label($"{e.Time:t}", e.IsUnicode, e.Hue, font: e.Font, style: fontStyle);
 
                 journalDatas.AddToBack(
                     new JournalData(
-                        new Label($"{e.Name}: {e.Text}", e.IsUnicode, e.Hue, font: e.Font),
+                        // MobileUO: backported linewrap fix
+                        new Label($"{e.Name}: {e.Text}", e.IsUnicode, e.Hue, Width - BORDER_WIDTH - timeS.Width, font: e.Font, style: fontStyle),
                         timeS,
                         e.TextType,
                         e.MessageType
@@ -462,6 +470,13 @@ namespace ClassicUO.Game.UI.Gumps
                 journalDatas.Clear();
             }
 
+            private FontStyle GetJournalFontStyle()
+            {
+                return ProfileManager.CurrentProfile.UseAlternateJournalTextBorder
+                    ? FontStyle.LightBlackBorder
+                    : FontStyle.None;
+            }
+
             public override void Dispose()
             {
                 Reset();
@@ -485,7 +500,8 @@ namespace ClassicUO.Game.UI.Gumps
                     TimeStamp?.Dispose();
                 }
 
-                public Label EntryText { get; }
+                // MobileUO: backported linewrap fix
+                public Label EntryText { get; set; }
                 public Label TimeStamp { get; }
                 public TextType TextType { get; }
                 public MessageType MessageType { get; }

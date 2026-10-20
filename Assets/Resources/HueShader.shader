@@ -204,7 +204,7 @@
 	            }
 	            else if (mode == LIGHTS)
 	            {
-			        color.rgb = get_colored_light(IN.Hue.x - 1, color.r);
+                    color.rgb = get_colored_light(hue - 1, color.r);
 	            }
 	            else if (mode == EFFECT_HUED)
 	            {

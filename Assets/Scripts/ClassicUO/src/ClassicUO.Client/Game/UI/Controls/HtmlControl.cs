@@ -32,6 +32,10 @@ namespace ClassicUO.Game.UI.Controls
             _gameText.MaxWidth = Width - (HasScrollbar ? 16 : 0) - (HasBackground ? 8 : 0);
             IsFromServer = true;
 
+            // MobileUO: Add optional border support (ported from TazUO)
+            if (parts.Count > 8 && parts[8] == "1")
+                _gameText.FontStyle = FontStyle.BlackBorder;
+
             if (textIndex >= 0 && textIndex < lines.Length)
             {
                 InternalBuild(lines[textIndex], 0);

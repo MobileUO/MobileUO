@@ -1,7 +1,5 @@
 ﻿// SPDX-License-Identifier: BSD-2-Clause
 
-using System;
-using System.Xml;
 using ClassicUO.Configuration;
 using ClassicUO.Game.GameObjects;
 using ClassicUO.Game.Scenes;
@@ -10,6 +8,8 @@ using ClassicUO.Input;
 using ClassicUO.Renderer;
 using ClassicUO.Utility;
 using Microsoft.Xna.Framework;
+using System;
+using System.Xml;
 
 namespace ClassicUO.Game.UI.Gumps
 {
@@ -27,6 +27,9 @@ namespace ClassicUO.Game.UI.Gumps
         private uint _timeToUpdate;
         private readonly AlphaBlendControl _alphaBlendControl;
         private string _cacheText = string.Empty;
+
+        // MobileUO: added Flushes/Switches/Draws
+        private int TextureSwitchesPerSecond, FlushesPerSecond, DrawTexturesPerSecond, DrawMeshesPerSecond;
 
         public DebugGump(World world, int x, int y) : base(world, 0, 0)
         {
@@ -60,6 +63,13 @@ namespace ClassicUO.Game.UI.Gumps
 
         protected override bool OnMouseDoubleClick(int x, int y, MouseButtonType button)
         {
+            // MobileUO: TODO: #19: testing saving images of TextureAtalases
+            //Client.Game.UO.Animations._atlas.SaveImages("Animations");
+            //Client.Game.UO.Arts._atlas.SaveImages("Arts");
+            //Client.Game.UO.Gumps._atlas.SaveImages("Gumps");
+            //Client.Game.UO.Lights._atlas.SaveImages("Lights");
+            //Client.Game.UO.Texmaps._atlas.SaveImages("Texmaps");
+
             if (button == MouseButtonType.Left)
             {
                 IsMinimized = !IsMinimized;
@@ -107,6 +117,10 @@ namespace ClassicUO.Game.UI.Gumps
 
                     sb.Append(string.Format(DEBUG_STRING_3, ReadObject(SelectedObject.Object)));
 
+                    // MobileUO: added Flushes/Switches/Draws output 
+                    sb.Append($"\n- Flushes/sec: {FlushesPerSecond}\n- Switches/sec: {TextureSwitchesPerSecond}");
+                    sb.Append($"\n- DrawTextures/sec: {DrawTexturesPerSecond}\n- DrawMeshes/sec: {DrawMeshesPerSecond}");
+
                     if (Profiler.Enabled)
                     {
                         double timeDraw = Profiler.GetContext("RenderFrame").TimeInContext;
@@ -153,7 +167,6 @@ namespace ClassicUO.Game.UI.Gumps
                     }
                 }
 
-
                 _cacheText = sb.ToString();
 
                 sb.Dispose();
@@ -169,6 +182,12 @@ namespace ClassicUO.Game.UI.Gumps
 
         public override bool Draw(UltimaBatcher2D batcher, int x, int y)
         {
+            // MobileUO: added Flushes/Switches
+            TextureSwitchesPerSecond = batcher.TextureSwitchesPerSecond;
+            FlushesPerSecond = batcher.FlushesPerSecond;
+            DrawTexturesPerSecond = batcher.DrawTexturesPerSecond;
+            DrawMeshesPerSecond = batcher.DrawMeshesPerSecond;
+
             if (!base.Draw(batcher, x, y))
             {
                 return false;

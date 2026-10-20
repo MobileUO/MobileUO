@@ -1,19 +1,22 @@
 using ClassicUO.Assets;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
 
 namespace ClassicUO.Renderer.Lights
 {
     public sealed class Light
     {
-        private readonly TextureAtlas _atlas;
+        // MobileUO: TODO: #19: temporarily made public
+        public readonly TextureAtlas _atlas;
         private readonly SpriteInfo[] _spriteInfos;
         private readonly LightsLoader _lightsLoader;
 
         public Light(LightsLoader lightsLoader, GraphicsDevice device)
         {
             _lightsLoader = lightsLoader;
-            _atlas = new TextureAtlas(device, 2048, 2048, SurfaceFormat.Color);
+            // MobileUO: use atlas size from settings - cap at 2048 (CUO is 2048)
+            _atlas = new TextureAtlas(device, Math.Min(UserPreferences.SpriteSheetSize.CurrentValue, 2048), Math.Min(UserPreferences.SpriteSheetSize.CurrentValue, 2048), SurfaceFormat.Color);
             _spriteInfos = new SpriteInfo[lightsLoader.File.Entries.Length];
         }
 
@@ -39,6 +42,12 @@ namespace ClassicUO.Renderer.Lights
             }
 
             return ref spriteInfo;
+        }
+
+        // MobileUO: added way to clear sprite arrays when toggling using sprite sheets or not
+        public void ClearSpriteInfo()
+        {
+            Array.Clear(_spriteInfos, 0, _spriteInfos.Length);
         }
     }
 }
