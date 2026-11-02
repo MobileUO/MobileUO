@@ -40,19 +40,25 @@ jobs:
           echo "buildNumber=$buildNumber" >> $GITHUB_OUTPUT
           echo "fullVersionNumber=${version}+${buildNumber}" >> $GITHUB_OUTPUT
   buildForAllSupportedPlatforms:
-    name: Build for ${{ matrix.targetPlatform }}
+    name: Build for ${{ matrix.targetPlatform }} (${{ matrix.androidExportType }})
     needs: getVersionNumber
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        targetPlatform:
+        include:
+          - targetPlatform: Android
+            androidExportType: androidPackage
+            extension: apk
+          - targetPlatform: Android
+            androidExportType: androidAppBundle
+            extension: aab
           #- StandaloneOSX # Build a macOS standalone (Intel 64-bit).
           #- StandaloneWindows # Build a Windows standalone.
           #- StandaloneWindows64 # Build a Windows 64-bit standalone.
           #- StandaloneLinux64 # Build a Linux 64-bit standalone.
           #- iOS # Build an iOS player.
-          - Android # Build an Android .apk standalone app.
+          #- Android # Build an Android .apk standalone app.
           #- WebGL # WebGL.
     steps:
       - uses: actions/checkout@v4
@@ -103,6 +109,8 @@ jobs:
         with:
           dockerWorkspacePath: /github/workspace
           targetPlatform: ${{ matrix.targetPlatform }}
+          androidExportType: ${{ matrix.androidExportType }}
+          androidVersionCode: ${{ needs.getVersionNumber.outputs.buildNumber }}
           customParameters: >
             -BUILD_ENV ${{ env.BUILD_ENV }}
             -GITHUB_BUILD_NUMBER ${{ env.GITHUB_BUILD_NUMBER }}
@@ -111,16 +119,16 @@ jobs:
           androidKeystorePass:  ${{ secrets.ANDROID_STAGING_KEYSTORE_PASS }}
           androidKeyaliasName:  ${{ secrets.ANDROID_STAGING_KEYALIAS_NAME }}
           androidKeyaliasPass:  ${{ secrets.ANDROID_STAGING_KEYALIAS_PASS }}
-      - name: Rename output APK
+      - name: Rename Android output
         if: matrix.targetPlatform == 'Android'
         run: |
           mkdir -p final/${{ matrix.targetPlatform }} # have to copy renamed APK due to permission issues - can't just rename'
-          cp build/${{ matrix.targetPlatform }}/Android.apk final/${{ matrix.targetPlatform }}/MobileUO-${{ needs.getVersionNumber.outputs.fullVersionNumber }}.apk
+          cp build/${{ matrix.targetPlatform }}/Android.${{ matrix.extension }} final/${{ matrix.targetPlatform }}/MobileUO-${{ needs.getVersionNumber.outputs.fullVersionNumber }}.${{ matrix.extension }}
       - name: Upload Android artifact
         if: matrix.targetPlatform == 'Android'
         uses: actions/upload-artifact@v4
         with:
-          name: Build-${{ matrix.targetPlatform }}-MobileUO-${{ needs.getVersionNumber.outputs.fullVersionNumber }}
+          name: Build-${{ matrix.targetPlatform }}-${{ matrix.extension }}-MobileUO-${{ needs.getVersionNumber.outputs.fullVersionNumber }}
           path: final/${{ matrix.targetPlatform }}
       - name: Upload non-Android artifact
         if: matrix.targetPlatform != 'Android'
