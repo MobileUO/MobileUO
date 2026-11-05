@@ -3687,7 +3687,7 @@
 
 //                    break;
 
-                case 7: // speech
+//                case 7: // speech
                         //                    _scaleSpeechDelay.IsChecked = true;
                         //                    _sliderSpeechDelay.Value = 100;
                         //                    _speechColorPickerBox.Hue = 0x02B2;
@@ -4075,7 +4075,7 @@
 
     //            Client.Game.IsMouseVisible = Settings.GlobalSettings.RunMouseInASeparateThread = _runMouseInSeparateThread.IsChecked;
 
-    _currentProfile.AuraOnMouse = _auraMouse.IsChecked;
+//    _currentProfile.AuraOnMouse = _auraMouse.IsChecked;
     //            _currentProfile.AnimatedWaterEffect = _animatedWaterEffect.IsChecked;
     //            _currentProfile.PartyAura = _partyAura.IsChecked;
     //            _currentProfile.PartyAuraHue = _partyAuraColorPickerBox.Hue;
