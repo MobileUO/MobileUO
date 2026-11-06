@@ -139,6 +139,11 @@ public class ClientRunner : MonoBehaviour
 					Plugin.OnConnected();
 				}
 			}
+			else if (Client.Game.Scene is GameScene)
+			{
+				// bring Assistant gump to top of UI when the Assistant is re-enabled
+				UIManager.GetGump<AssistantGump>()?.BringOnTop();
+			}
 		}
 //#endif
 	}
@@ -392,6 +397,17 @@ public class ClientRunner : MonoBehaviour
 	    }
 	    var loginGump = UIManager.Gumps.FirstOrDefault(g => g is LoginGump) as LoginGump;
 	    loginGump?.OnButtonClick((int) LoginGump.Buttons.NextArrow);
+    }
+
+    // MobileUO: add a way to quit from Login when a shard doesn't have a Quit button in the login gump
+    public static void Quit()
+    {
+        if (Client.Game == null || !(Client.Game.Scene is LoginScene loginScene) || loginScene.CurrentLoginStep != LoginSteps.Main)
+        {
+            return;
+        }
+
+        Client.Game.Exit();
     }
 
     private void OnProfileLoaded()

@@ -15,6 +15,7 @@ public class MenuPresenter : MonoBehaviour
     [SerializeField] private Text headerTemplate;
     [SerializeField] private GameObject customizeJoystickButtonGameObject;
     [SerializeField] private GameObject loginButtonGameObject;
+    [SerializeField] private GameObject quitButtonGameObject;
     [SerializeField] private GameObject showConsoleButtonGameObject;
     [SerializeField] private ClientRunner clientRunner;
 
@@ -26,7 +27,9 @@ public class MenuPresenter : MonoBehaviour
     {
         menuButton.onClick.AddListener(OnMenuButtonClicked);
         
-        //Only show login button when UO client is running and we're in the login scene
+        //Only show login/quit buttons when UO client is running and we're in the login scene
+        quitButtonGameObject.transform.SetAsFirstSibling();
+        quitButtonGameObject.SetActive(false);
         loginButtonGameObject.transform.SetAsFirstSibling();
         loginButtonGameObject.SetActive(false);
 
@@ -61,6 +64,7 @@ public class MenuPresenter : MonoBehaviour
         customizeJoystickButtonGameObject.SetActive(false);
 
         AddHeader("Developer");
+        GetOptionEnumViewInstance().Initialize(typeof(ShowErrorDetails), UserPreferences.ShowErrorDetails, "Show Error Details", false, false);
         GetOptionEnumViewInstance().Initialize(typeof(UseDrawTexture), UserPreferences.UseDrawTexture, "Use DrawTexture", false, false);
         GetOptionEnumViewInstance().Initialize(typeof(UseSpriteSheet), UserPreferences.UseSpriteSheet, "Use Sprite Sheets", false, false);
         GetOptionEnumViewInstance().Initialize(typeof(SpriteSheetSize), UserPreferences.SpriteSheetSize, "Sprite Sheet Size", false, false);
@@ -79,6 +83,7 @@ public class MenuPresenter : MonoBehaviour
     {
         customizeJoystickButtonGameObject.SetActive(isGameScene);
         loginButtonGameObject.SetActive(isGameScene == false);
+        quitButtonGameObject.SetActive(isGameScene == false);
     }
 
     private OptionEnumView GetOptionEnumViewInstance()

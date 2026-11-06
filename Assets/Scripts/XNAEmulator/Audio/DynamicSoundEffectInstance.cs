@@ -8,7 +8,7 @@ namespace Microsoft.Xna.Framework.Audio
     {
         private readonly int sampleRate;
         private readonly int channels;
-        
+
         public DynamicSoundEffectInstance(int sampleRate, AudioChannels channels)
         {
             this.sampleRate = sampleRate;
@@ -18,7 +18,7 @@ namespace Microsoft.Xna.Framework.Audio
         public AudioSource source;
         private AudioClip Clip { get; set; }
         public bool IsDisposed { get; private set; }
-        
+
         public SoundState State { get; private set; }
 
         private float volume = 1;
@@ -52,7 +52,7 @@ namespace Microsoft.Xna.Framework.Audio
             {
                 return audioSourcePool.Pop();
             }
-            
+
             if (cameraGameObject == null)
             {
                 cameraGameObject = Camera.main.gameObject;
@@ -60,7 +60,7 @@ namespace Microsoft.Xna.Framework.Audio
 
             return cameraGameObject.AddComponent<AudioSource>();
         }
-            
+
         public void Play(string name)
         {
             Clip.name = name;
@@ -106,13 +106,18 @@ namespace Microsoft.Xna.Framework.Audio
             UnityMainThreadDispatcher.Dispatch(RecycleSourceAndDestroyClip);
 
             IsDisposed = true;
-            
+
             buffer = null;
             conversionBuffer = null;
         }
 
         public void SubmitBuffer(byte[] newBuffer, bool stream = false, int count = 0)
         {
+            if (count <= 0)
+            {
+                count = newBuffer.Length;
+            }
+
             if (buffer == null)
             {
                 if (stream)
@@ -125,12 +130,22 @@ namespace Microsoft.Xna.Framework.Audio
                     Array.Copy(conversionBuffer, 0, buffer, 0, floatDataLength);
                     bufferEndPosition = floatDataLength;
                     loop = true;
-                    Clip = AudioClip.Create("clip", newBuffer.Length, 2, sampleRate, true, PcmRead, PcmSet);
+
+                    int framesPerChannel = count / (2 * channels); // 16-bit samples = 2 bytes per sample, divided by channels
+                    Clip = AudioClip.Create("clip", framesPerChannel, channels, sampleRate, true, PcmRead, PcmSet);
                 }
                 else
                 {
-                    Clip = AudioClip.Create("clip", newBuffer.Length, 1, sampleRate, false);
-                    Clip.SetData(ConvertByteToFloat16(newBuffer), 0);
+                    int sampleCount = count / 2; // Total 16-bit samples for float array
+                    int framesPerChannel = count / (2 * channels); // Frames per channel for AudioClip.Create
+                    Clip = AudioClip.Create("clip", framesPerChannel, channels, sampleRate, false);
+
+                    float[] floatData = new float[sampleCount];
+                    for (int i = 0; i < sampleCount; i++)
+                    {
+                        floatData[i] = BitConverter.ToInt16(newBuffer, i * 2) / 32768.0f;
+                    }
+                    Clip.SetData(floatData, 0);
                 }
             }
             else
@@ -139,8 +154,8 @@ namespace Microsoft.Xna.Framework.Audio
                 var bufferDataLength = bufferEndPosition - bufferPosition;
                 Array.Copy(buffer, bufferPosition, buffer, 0, bufferDataLength);
                 bufferPosition = 0;
-                ConvertByteToFloat16(newBuffer, conversionBuffer);
-                var floatDataLength = buffer.Length / 2;
+                ConvertByteToFloat16(newBuffer, conversionBuffer, count);
+                var floatDataLength = count / 2;
                 Array.Copy(conversionBuffer, 0, buffer, bufferDataLength, floatDataLength);
                 bufferEndPosition = bufferDataLength + floatDataLength;
             }
@@ -162,16 +177,18 @@ namespace Microsoft.Xna.Framework.Audio
             }
         }
 
-        private static float[] ConvertByteToFloat16(byte[] array)
-        {
-            var floatArr = new float[array.Length / 2];
-            ConvertByteToFloat16(array, floatArr);
-            return floatArr;
-        }
-
         private static void ConvertByteToFloat16(byte[] array, float[] destination)
         {
             int length = array.Length / 2;
+            for (int i = 0; i < length; i++)
+            {
+                destination[i] = BitConverter.ToInt16(array, i * 2) / 32768.0f;
+            }
+        }
+
+        private static void ConvertByteToFloat16(byte[] array, float[] destination, int byteCount)
+        {
+            int length = byteCount / 2;
             for (int i = 0; i < length; i++)
             {
                 destination[i] = BitConverter.ToInt16(array, i * 2) / 32768.0f;
@@ -182,7 +199,7 @@ namespace Microsoft.Xna.Framework.Audio
         public TimeSpan GetSampleDuration(int sizeInBytes)
         {
             sizeInBytes /= 2;
-            return new TimeSpan(0,0,0,0, (int) ((double) sizeInBytes / (int) channels / ((double) sampleRate / 1000.0)));
+            return new TimeSpan(0, 0, 0, 0, (int)((double)sizeInBytes / (int)channels / ((double)sampleRate / 1000.0)));
         }
 
         public static void DisposePool()

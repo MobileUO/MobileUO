@@ -27,6 +27,7 @@ namespace ClassicUO.Assets
         private const int UOFONT_EXTRAHEIGHT = 0x0100;
         private const int UOFONT_CROPTEXTURE = 0x0200;
         private const int UOFONT_FIXEDHEIGHT = 0x0400;
+        private const int UOFONT_LIGHT_BLACK_BORDER = 0x0800;
         private const int UNICODE_SPACE_WIDTH = 8;
         private const int MAX_HTML_TEXT_HEIGHT = 18;
         private const byte NOPRINT_CHARS = 32;
@@ -1746,8 +1747,11 @@ namespace ClassicUO.Assets
                 bool isItalic = (flags & UOFONT_ITALIC) != 0;
                 bool isSolid = (flags & UOFONT_SOLID) != 0;
                 bool isBlackBorder = (flags & UOFONT_BLACK_BORDER) != 0;
+                bool isLightBlackBorder = (flags & UOFONT_LIGHT_BLACK_BORDER) != 0;
                 bool isUnderline = (flags & UOFONT_UNDERLINE) != 0;
                 uint blackColor = 0xFF010101;
+                uint lightBlackColor = 0xFF181818; // 0xFFFEFEFE - white;  0xFF2B2B2B - light gray; 0xFF141414 -- darker gray
+                uint borderColor = isLightBlackBorder ? lightBlackColor : blackColor;
                 bool isLink = false;
                 int linkStartX = 0;
                 int linkStartY = 0;
@@ -2068,7 +2072,7 @@ namespace ClassicUO.Assets
                                 }
                             }
 
-                            if (isBlackBorder && !isBlackPixel)
+                            if ((isBlackBorder || isLightBlackBorder) && !isBlackPixel)
                             {
                                 int minXOk = w + offsX > 0 ? -1 : 0;
                                 int minYOk = offsY + lineOffsY > 0 ? -1 : 0;
@@ -2109,7 +2113,7 @@ namespace ClassicUO.Assets
 
                                         int block = testY * width + testX;
 
-                                        if (pData[block] == 0 && pData[block] != blackColor)
+                                        if (pData[block] == 0 && pData[block] != borderColor)
                                         {
                                             int startX = cx > 0 ? -1 : 0;
                                             int startY = cy > 0 ? -1 : 0;
@@ -2139,10 +2143,10 @@ namespace ClassicUO.Assets
                                                     if (
                                                         testBlock < pData.Length
                                                         && pData[testBlock] != 0
-                                                        && pData[testBlock] != blackColor
+                                                        && pData[testBlock] != borderColor
                                                     )
                                                     {
-                                                        pData[block] = blackColor;
+                                                        pData[block] = borderColor;
                                                         passed = true;
 
                                                         break;

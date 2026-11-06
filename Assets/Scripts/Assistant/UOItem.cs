@@ -1,4 +1,19 @@
-﻿using System;
+﻿#region license
+// Copyright (C) 2022-2025 Sascha Puligheddu
+// 
+// This project is a complete reproduction of AssistUO for MobileUO and ClassicUO.
+// Developed as a lightweight, native assistant.
+// 
+// Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+// 
+// SPECIAL PERMISSION: Integration with projects under BSD 2-Clause (like ClassicUO)
+// is permitted, provided that the integrated result remains publicly accessible 
+// and the AGPL-3.0 terms are respected for this specific module.
+//
+// This program is distributed WITHOUT ANY WARRANTY. 
+// See <https://www.gnu.org> for details.
+#endregion
+using System;
 using System.IO;
 using System.Collections.Generic;
 //TODO: Agents
@@ -451,7 +466,7 @@ namespace Assistant
                     if (m_AutoStack)
                         AutoStackResource();
                     //do we really need pouch check for CUO?
-                    if (IsContainer && !exempt)// && (!IsPouch || !Config.GetBool("NoSearchPouches")) && UOSObjects.Gump.AutoSearchContainers)
+                    if (IsContainer && !exempt && UOSObjects.Gump.AutoSearchContainers)// && (!IsPouch || !Config.GetBool("NoSearchPouches")) && UOSObjects.Gump.AutoSearchContainers)
                     {
                         PacketHandlers.IgnoreGumps.Add(this);
                         PlayerData.DoubleClick(Serial);

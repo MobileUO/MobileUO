@@ -18,6 +18,8 @@ namespace ClassicUO.Renderer
         private Packer _packer;
         // MobileUO: added variable
         private bool _useSpriteSheet;
+        // MobileUO: track which texture atlas the packer is managing
+        private int _currentAtlasIndex = -1;
 
         public TextureAtlas(GraphicsDevice device, int width, int height, SurfaceFormat format)
         {
@@ -49,6 +51,7 @@ namespace ClassicUO.Renderer
 
                 _packer?.Dispose();
                 _packer = new Packer(_width, _height);
+                _currentAtlasIndex = -1;
 
                 foreach (var tex in _textureList)
                 {
@@ -60,32 +63,46 @@ namespace ClassicUO.Renderer
                 _textureList.Clear();
             }
 
-            var index = _textureList.Count - 1;
-            //pr = new Rectangle(0, 0, width, height);
-
             // MobileUO: handle 0x0 textures - this shouldn't happen unless the client data is missing newer textures
             if (width <= 0 || height <= 0)
             {
-                Utility.Logging.Log.Trace($"Texture width and height must be greater than zero. Width: {width} Height: {height} Index: {index}");
+                Utility.Logging.Log.Trace($"Texture width and height must be greater than zero. Width: {width} Height: {height} Index: {_currentAtlasIndex}");
                 pr = new Rectangle(0, 0, width, height);
                 return null;
             }
 
-            if (index < 0)
+            if (_currentAtlasIndex < 0)
             {
-                index = 0;
                 CreateNewTexture2D(width, height);
             }
 
             //ref Rectangle pr = ref _spriteBounds[hash];
             //pr = new Rectangle(0, 0, width, height);
             // MobileUO: added sprite sheet logic
+            bool isOversizedSprite = false;
+            int index;
             if (_useSpriteSheet)
             {
-                while (!_packer.PackRect(width, height, out pr))
+                // MobileUO: check if sprite is larger than atlas dimensions
+                if (width > _width || height > _height)
                 {
-                        CreateNewTexture2D(width, height);
+                    Utility.Logging.Log.Trace($"Sprite size ({width}x{height}) exceeds atlas size ({_width}x{_height}). Creating dedicated texture.");
+                    pr = new Rectangle(0, 0, width, height);
+
+                    Texture2D oversizedTexture = new Texture2D(_device, width, height, false, _format);
+                    _textureList.Add(oversizedTexture);
                     index = _textureList.Count - 1;
+
+                    isOversizedSprite = true;
+                }
+                else
+                {
+                    while (!_packer.PackRect(width, height, out pr))
+                    {
+                        CreateNewTexture2D(width, height);
+                    }
+                    // Use the current atlas index that the packer is managing
+                    index = _currentAtlasIndex;
                 }
             }
             else
@@ -93,12 +110,12 @@ namespace ClassicUO.Renderer
                 pr = new Rectangle(0, 0, width, height);
 
                 CreateNewTexture2D(width, height);
-                index = _textureList.Count - 1;
+                index = _currentAtlasIndex;
             }
 
             Texture2D texture = _textureList[index];
-            // MobileUO: added flagging if texture is from sprite sheet
-            if (_useSpriteSheet)
+            // MobileUO: added flagging if texture is from sprite sheet (but not if it's an oversized dedicated texture)
+            if (_useSpriteSheet && !isOversizedSprite)
                 texture.IsFromTextureAtlas = true;
 
             fixed (uint* src = pixels)
@@ -109,7 +126,6 @@ namespace ClassicUO.Renderer
             return texture;
         }
 
-        // MobileUO: TODO: figure out how to get packer working correctly
         private void CreateNewTexture2D(int width, int height)
         {
             // MobileUO: TODO: #19: added logging output; added toggle for sprite sheet
@@ -124,6 +140,7 @@ namespace ClassicUO.Renderer
             //Utility.Logging.Log.Trace($"creating texture: {width}x{height} for Atlas {textureWidth}x{textureHeight} {_format}");
             Texture2D texture = new Texture2D(_device, textureWidth, textureHeight, false, _format);
             _textureList.Add(texture);
+            _currentAtlasIndex = _textureList.Count - 1;
 
             _packer?.Dispose();
             _packer = new Packer(_width, _height);

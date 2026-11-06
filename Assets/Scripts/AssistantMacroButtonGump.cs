@@ -38,6 +38,9 @@ namespace ClassicUO.Game.UI.Gumps
             GroupMatrixWidth = 44;
             GroupMatrixHeight = 44;
             AnchorType = ANCHOR_TYPE.SPELL;
+
+            // Initialize default texture to prevent null reference
+            backgroundTexture = SolidColorTextureCache.GetTexture(new Color(30, 30, 30));
         }
 
         public override GumpType GumpType => GumpType.AssistantMacroButton;
