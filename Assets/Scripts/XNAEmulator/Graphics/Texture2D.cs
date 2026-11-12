@@ -1,7 +1,12 @@
 ﻿using System;
 using System.IO;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Microsoft.Xna.Framework.Graphics
 {
@@ -11,7 +16,22 @@ namespace Microsoft.Xna.Framework.Graphics
         //which will be different as old textures are discarded and new ones are created
         public Texture UnityTexture { get; protected set; }
 
-        public bool IsFromTextureAtlas { get; set; }
+        private bool _isFromTextureAtlas;
+        public bool IsFromTextureAtlas
+        {
+            get => _isFromTextureAtlas;
+            set
+            {
+                if (_isFromTextureAtlas == value) return;
+                _isFromTextureAtlas = value;
+                if (value && UseComputeAtlasUpload)
+                {
+                    if (UnityTexture is UnityEngine.Texture2D oldTex)
+                        UnityEngine.Object.Destroy(oldTex);
+                    InitAtlasRT();
+                }
+            }
+        }
 
         public static FilterMode defaultFilterMode = FilterMode.Point;
 
@@ -31,9 +51,26 @@ namespace Microsoft.Xna.Framework.Graphics
 
         private void InitTexture()
         {
-            UnityTexture = new UnityEngine.Texture2D(Width, Height, TextureFormat.RGBA32, false, false);
-            UnityTexture.filterMode = defaultFilterMode;
-            UnityTexture.wrapMode = TextureWrapMode.Clamp;
+            var tex = new UnityEngine.Texture2D(Width, Height, TextureFormat.RGBA32, false, false);
+            tex.filterMode = defaultFilterMode;
+            tex.wrapMode = TextureWrapMode.Clamp;
+            UnityTexture = tex;
+        }
+
+        private void InitAtlasRT()
+        {
+            var desc = new RenderTextureDescriptor(Width, Height)
+            {
+                depthBufferBits = 0,
+                graphicsFormat = UnityEngine.Experimental.Rendering.GraphicsFormat.R8G8B8A8_UNorm,
+                msaaSamples = 1,
+                enableRandomWrite = true
+            };
+            var rt = new RenderTexture(desc);
+            rt.filterMode = defaultFilterMode;
+            rt.wrapMode = TextureWrapMode.Clamp;
+            rt.Create();
+            UnityTexture = rt;
         }
 
         public Texture2D(GraphicsDevice graphicsDevice, int width, int height, bool v, SurfaceFormat surfaceFormat) :
@@ -250,107 +287,6 @@ namespace Microsoft.Xna.Framework.Graphics
             }
         }
 
-        // https://github.com/FNA-XNA/FNA/blob/85a8457420278087dc7a81f16661ff68e67b75af/src/Graphics/Texture2D.cs#L213
-        public void SetDataPointerEXT(int level, Rectangle? rect, IntPtr data, int dataLength, bool invertY = false)
-        {
-            if (!UnityMainThreadDispatcher.IsMainThread())
-            {
-                Debug.LogError("SetDataPointerEXT must be called from the main thread.");
-                throw new InvalidOperationException("SetDataPointerEXT must be called from the main thread.");
-            }
-
-            tempInvertY = invertY;
-            SetDataPointerEXTInt(level, rect, data, dataLength);
-        }
-
-        private void SetDataPointerEXTInt(int level, Rectangle? rect, IntPtr data, int dataLength)
-        {
-            if (data == IntPtr.Zero)
-            {
-                throw new ArgumentNullException(nameof(data));
-            }
-
-            var destTex = UnityTexture as UnityEngine.Texture2D;
-            if (destTex == null)
-            {
-                throw new InvalidOperationException("UnityTexture is not a Texture2D");
-            }
-
-            try
-            {
-                // Create a temporary buffer to hold the data
-                byte[] buffer = new byte[dataLength];
-                Marshal.Copy(data, buffer, 0, dataLength);
-
-                int x, y, w, h;
-                if (rect.HasValue)
-                {
-                    x = rect.Value.X;
-                    y = rect.Value.Y;
-                    w = rect.Value.Width;
-                    h = rect.Value.Height;
-                }
-                else
-                {
-                    x = 0;
-                    y = 0;
-                    w = Math.Max(Width >> level, 1);
-                    h = Math.Max(Height >> level, 1);
-                }
-
-                // MobileUO: TODO: #19: added logging output
-                //Debug.Log($"Texture width: {destTex.width}, height: {destTex.height}, rect: {x},{y},{w},{h}");
-
-                // Check if dimensions are valid
-                if (x < 0 || y < 0 || x + w > destTex.width || y + h > destTex.height)
-                {
-                    Debug.LogError($"Texture width: {destTex.width}, height: {destTex.height}, rect: {x},{y},{w},{h}");
-                    throw new ArgumentException("The specified block is outside the texture bounds.");
-                }
-
-                var colors = new Color32[w * h];
-
-                // Copy data from the buffer to the colors array, flipping vertically
-                for (int row = 0; row < h; row++)
-                {
-                    for (int col = 0; col < w; col++)
-                    {
-                        int bufferIndex = (row * w + col) * 4;
-                        int colorIndex = ((h - 1 - row) * w) + col;
-
-                        if (tempInvertY)
-                        {
-                            colorIndex = row * w + col;
-                        }
-
-                    // Ensure the buffer index is within bounds
-                        if (bufferIndex + 3 < buffer.Length)
-                        {
-                        // Create the Color32 object, assuming the buffer is in RGBA format
-                            colors[colorIndex] = new Color32(
-                            buffer[bufferIndex + 0], // R
-                            buffer[bufferIndex + 1], // G
-                            buffer[bufferIndex + 2], // B
-                            buffer[bufferIndex + 3]  // A
-                            );
-                        }
-                        else
-                        {
-                            Debug.LogError($"Buffer index out of bounds: {bufferIndex}");
-                        }
-                    }
-                }
-
-                destTex.SetPixels32(x, y, w, h, colors, level);
-                destTex.Apply();
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"Error in SetDataPointerEXT: {ex.Message}");
-                throw;
-            }
-        }
-
         // https://github.com/FNA-XNA/FNA/blob/85a8457420278087dc7a81f16661ff68e67b75af/src/Graphics/Texture2D.cs#L268
         public void GetData<T>(T[] data, int startIndex, int elementCount) where T : struct
         {
@@ -505,6 +441,265 @@ namespace Microsoft.Xna.Framework.Graphics
             catch (Exception ex)
             {
                 Debug.LogError($"Error in SaveAsPng: {ex.Message}");
+                throw;
+            }
+        }
+
+        public void SetDataPointerEXT(int level, Rectangle? rect, IntPtr data, int dataLength, bool invertY = false)
+        {
+            if (!UnityMainThreadDispatcher.IsMainThread())
+            {
+                Debug.LogError("SetDataPointerEXT must be called from the main thread.");
+                throw new InvalidOperationException("SetDataPointerEXT must be called from the main thread.");
+            }
+
+            tempInvertY = invertY;
+            SetDataPointerEXTInt(level, rect, data, dataLength);
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct GpuSpriteDesc
+        {
+            public int PixelOffset;
+            public int DstX, DstY;
+            public int Width, Height;
+        }
+
+        private struct SpriteDescExtended
+        {
+            public Texture AtlasTex;
+            public int PixelOffset;
+            public int DstX, DstY;
+            public int Width, Height;
+        }
+
+        private const int COMPUTE_PIXEL_CAP = 1 << 20;  // 1 M pixels = 4 MB
+        private const int COMPUTE_DESC_CAP = 512;
+
+        private static bool? _useComputeAtlas;
+        private static ComputeShader _atlasCS;
+        private static int _atlasKernel;
+        private static CommandBuffer _computeCb;
+        private static GraphicsBuffer _gpuPixelBuf;
+        private static GraphicsBuffer _gpuDescBuf;
+        private static NativeArray<uint> _cpuPixelArr;
+        private static int _cpuPixelCount;
+        private static SpriteDescExtended[] _pendingDescs;
+        private static int _pendingDescCount;
+        private static GpuSpriteDesc[] _gpuDescTemp;
+        private static readonly Texture[] _pageBuffer = new Texture[8];
+
+        internal static bool UseComputeAtlasUpload
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => _useComputeAtlas ??= InitComputePath();
+        }
+
+        private static bool InitComputePath()
+        {
+            if (!UnityEngine.SystemInfo.supportsComputeShaders) return false;
+            _atlasCS = Resources.Load<ComputeShader>("AtlasSpriteUpload");
+            if (_atlasCS == null) return false;
+            _atlasKernel = _atlasCS.FindKernel("UploadSprites");
+            _computeCb = new CommandBuffer { name = "AtlasSpriteUpload" };
+            _gpuPixelBuf = new GraphicsBuffer(GraphicsBuffer.Target.Structured, COMPUTE_PIXEL_CAP, 4);
+            _gpuDescBuf = new GraphicsBuffer(GraphicsBuffer.Target.Structured, COMPUTE_DESC_CAP, 20);
+            _cpuPixelArr = new NativeArray<uint>(COMPUTE_PIXEL_CAP, Allocator.Persistent);
+            _pendingDescs = new SpriteDescExtended[COMPUTE_DESC_CAP];
+            _gpuDescTemp = new GpuSpriteDesc[COMPUTE_DESC_CAP];
+            return true;
+        }
+
+        private static void GrowComputeBuffers(int minPixels, int minDescs)
+        {
+            if (minPixels > _gpuPixelBuf.count)
+            {
+                int newCap = Math.Max(minPixels, _gpuPixelBuf.count * 2);
+                _gpuPixelBuf.Dispose();
+                _gpuPixelBuf = new GraphicsBuffer(GraphicsBuffer.Target.Structured, newCap, 4);
+                var newArr = new NativeArray<uint>(newCap, Allocator.Persistent);
+                if (_cpuPixelCount > 0)
+                    NativeArray<uint>.Copy(_cpuPixelArr, newArr, _cpuPixelCount);
+                _cpuPixelArr.Dispose();
+                _cpuPixelArr = newArr;
+            }
+            if (minDescs > _gpuDescBuf.count)
+            {
+                int newCap = Math.Max(minDescs, _gpuDescBuf.count * 2);
+                _gpuDescBuf.Dispose();
+                _gpuDescBuf = new GraphicsBuffer(GraphicsBuffer.Target.Structured, newCap, 20);
+                var newDescs = new SpriteDescExtended[newCap];
+                Array.Copy(_pendingDescs, newDescs, _pendingDescCount);
+                _pendingDescs = newDescs;
+                _gpuDescTemp = new GpuSpriteDesc[newCap];
+            }
+        }
+
+        private static readonly int _id_Pixels = Shader.PropertyToID("_Pixels");
+        private static readonly int _id_Descs = Shader.PropertyToID("_Descs");
+        private static readonly int _id_Atlas = Shader.PropertyToID("_Atlas");
+
+        public static void FlushAtlasComputeUploads()
+        {
+            if (_pendingDescCount == 0 || _useComputeAtlas != true) return;
+
+            _gpuPixelBuf.SetData(_cpuPixelArr, 0, 0, _cpuPixelCount);
+
+            int pageCount = 0;
+            for (int i = 0; i < _pendingDescCount; i++)
+            {
+                var tex = _pendingDescs[i].AtlasTex;
+                bool found = false;
+                for (int p = 0; p < pageCount; p++)
+                    if (_pageBuffer[p] == tex) { found = true; break; }
+                if (!found && pageCount < _pageBuffer.Length)
+                    _pageBuffer[pageCount++] = tex;
+            }
+
+            for (int p = 0; p < pageCount; p++)
+            {
+                var page = _pageBuffer[p];
+                int gpuDescCount = 0;
+                int maxW = 0, maxH = 0;
+
+                for (int i = 0; i < _pendingDescCount; i++)
+                {
+                    ref var d = ref _pendingDescs[i];
+                    if (d.AtlasTex != page) continue;
+                    _gpuDescTemp[gpuDescCount++] = new GpuSpriteDesc
+                    {
+                        PixelOffset = d.PixelOffset,
+                        DstX = d.DstX,
+                        DstY = d.DstY,
+                        Width = d.Width,
+                        Height = d.Height
+                    };
+                    if (d.Width > maxW) maxW = d.Width;
+                    if (d.Height > maxH) maxH = d.Height;
+                }
+
+                if (gpuDescCount == 0) continue;
+
+                _gpuDescBuf.SetData(_gpuDescTemp, 0, 0, gpuDescCount);
+
+                _computeCb.Clear();
+                _computeCb.SetComputeBufferParam(_atlasCS, _atlasKernel, _id_Pixels, _gpuPixelBuf);
+                _computeCb.SetComputeBufferParam(_atlasCS, _atlasKernel, _id_Descs, _gpuDescBuf);
+                _computeCb.SetComputeTextureParam(_atlasCS, _atlasKernel, _id_Atlas, page);
+                _computeCb.DispatchCompute(
+                    _atlasCS, _atlasKernel,
+                    (maxW + 7) / 8,
+                    (maxH + 7) / 8,
+                    gpuDescCount
+                );
+                UnityEngine.Graphics.ExecuteCommandBuffer(_computeCb);
+            }
+
+            for (int p = 0; p < pageCount; p++) _pageBuffer[p] = null;
+
+            _cpuPixelCount = 0;
+            _pendingDescCount = 0;
+        }
+
+        private static readonly HashSet<UnityEngine.Texture2D> _pendingApplySet = new HashSet<UnityEngine.Texture2D>();
+        private static readonly Queue<UnityEngine.Texture2D> _pendingApplyQueue = new Queue<UnityEngine.Texture2D>();
+        private static void MarkPendingApply(UnityEngine.Texture2D tex)
+        {
+            if (_pendingApplySet.Add(tex))
+                _pendingApplyQueue.Enqueue(tex);
+        }
+
+        public static void FlushPendingApply()
+        {
+            while (_pendingApplyQueue.Count > 0)
+            {
+                var tex = _pendingApplyQueue.Dequeue();
+                _pendingApplySet.Remove(tex);
+                if (tex != null)
+                    tex.Apply(false, false);
+            }
+        }
+
+        private unsafe void SetDataPointerEXTInt(int level, Rectangle? rect, IntPtr data, int dataLength)
+        {
+            if (data == IntPtr.Zero)
+                throw new ArgumentNullException(nameof(data));
+
+            var unityTex = UnityTexture;
+            if (unityTex == null)
+                throw new InvalidOperationException("UnityTexture is not initialized");
+
+            try
+            {
+                int x, y, w, h;
+                if (rect.HasValue)
+                {
+                    x = rect.Value.X;
+                    y = rect.Value.Y;
+                    w = rect.Value.Width;
+                    h = rect.Value.Height;
+                }
+                else
+                {
+                    x = 0;
+                    y = 0;
+                    w = Math.Max(Width >> level, 1);
+                    h = Math.Max(Height >> level, 1);
+                }
+
+                if (x < 0 || y < 0 || x + w > unityTex.width || y + h > unityTex.height)
+                {
+                    Debug.LogError($"Texture width: {unityTex.width}, height: {unityTex.height}, rect: {x},{y},{w},{h}");
+                    throw new ArgumentException("The specified block is outside the texture bounds.");
+                }
+
+                byte* src = (byte*)data.ToPointer();
+                int rectRowBytes = w * 4;
+
+                if (rect.HasValue && UseComputeAtlasUpload && unityTex is RenderTexture)
+                {
+                    int spritePixels = w * h;
+                    if (_cpuPixelCount + spritePixels > _cpuPixelArr.Length ||
+                        _pendingDescCount >= _pendingDescs.Length)
+                        GrowComputeBuffers(_cpuPixelCount + spritePixels, _pendingDescCount + 1);
+
+                    uint* dst = (uint*)NativeArrayUnsafeUtility.GetUnsafePtr(_cpuPixelArr) + _cpuPixelCount;
+                    Buffer.MemoryCopy(src, dst, (long)spritePixels * 4, (long)spritePixels * 4);
+
+                    _pendingDescs[_pendingDescCount++] = new SpriteDescExtended
+                    {
+                        AtlasTex = unityTex,
+                        PixelOffset = _cpuPixelCount,
+                        DstX = x,
+                        DstY = y,
+                        Width = w,
+                        Height = h
+                    };
+                    _cpuPixelCount += spritePixels;
+                    // Atlas textures (IsFromTextureAtlas=true) never call GetData() so no pixel cache needed.
+                }
+                else
+                {
+                    var destTex = unityTex as UnityEngine.Texture2D;
+                    if (destTex == null)
+                        throw new InvalidOperationException("UnityTexture is not a Texture2D");
+
+                    var rawDst = destTex.GetRawTextureData<byte>();
+                    byte* dst = (byte*)NativeArrayUnsafeUtility.GetUnsafePtr(rawDst);
+                    int texRowBytes = destTex.width * 4;
+
+                    for (int row = 0; row < h; row++)
+                    {
+                        byte* srcRow = src + (tempInvertY ? row : (h - 1 - row)) * rectRowBytes;
+                        byte* dstRow = dst + (y + row) * texRowBytes + x * 4;
+                        Buffer.MemoryCopy(srcRow, dstRow, texRowBytes - x * 4, rectRowBytes);
+                    }
+                    MarkPendingApply(destTex);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"Error in SetDataPointerEXT: {ex.Message}");
                 throw;
             }
         }
