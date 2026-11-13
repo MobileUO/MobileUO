@@ -1,4 +1,4 @@
-name: Build & Release 
+name: Build & Release (master)
 
 on:
   push:
@@ -50,9 +50,17 @@ jobs:
           - targetPlatform: Android
             androidExportType: androidPackage
             extension: apk
+            keystoreBase64Secret: ANDROID_RELEASE_KEYSTORE_BASE64
+            keystorePassSecret: ANDROID_RELEASE_KEYSTORE_PASS
+            keyaliasNameSecret: ANDROID_RELEASE_KEYALIAS_NAME
+            keyaliasPassSecret: ANDROID_RELEASE_KEYALIAS_PASS
           - targetPlatform: Android
             androidExportType: androidAppBundle
             extension: aab
+            keystoreBase64Secret: ANDROID_UPLOAD_KEYSTORE_BASE64
+            keystorePassSecret: ANDROID_UPLOAD_KEYSTORE_PASS
+            keyaliasNameSecret: ANDROID_UPLOAD_KEYALIAS_NAME
+            keyaliasPassSecret: ANDROID_UPLOAD_KEYALIAS_PASS
           #- StandaloneOSX # Build a macOS standalone (Intel 64-bit).
           #- StandaloneWindows # Build a Windows standalone.
           #- StandaloneWindows64 # Build a Windows 64-bit standalone.
@@ -115,10 +123,10 @@ jobs:
             -BUILD_ENV ${{ env.BUILD_ENV }}
             -GITHUB_BUILD_NUMBER ${{ env.GITHUB_BUILD_NUMBER }}
           androidKeystoreName: user.keystore # This file won't exist, but this property needs to exist
-          androidKeystoreBase64: ${{ secrets.ANDROID_STAGING_KEYSTORE_BASE64 }}
-          androidKeystorePass:  ${{ secrets.ANDROID_STAGING_KEYSTORE_PASS }}
-          androidKeyaliasName:  ${{ secrets.ANDROID_STAGING_KEYALIAS_NAME }}
-          androidKeyaliasPass:  ${{ secrets.ANDROID_STAGING_KEYALIAS_PASS }}
+          androidKeystoreBase64: ${{ secrets[matrix.keystoreBase64Secret] }}
+          androidKeystorePass: ${{ secrets[matrix.keystorePassSecret] }}
+          androidKeyaliasName: ${{ secrets[matrix.keyaliasNameSecret] }}
+          androidKeyaliasPass: ${{ secrets[matrix.keyaliasPassSecret] }}
       - name: Rename Android output
         if: matrix.targetPlatform == 'Android'
         run: |
@@ -225,7 +233,7 @@ jobs:
         run: |
           # Note: CUO based MobileUO builds are only 1.x.x
           # TazUO based MobileUO builds are only 2.x.x
-          prev=$(git tag --list "v1*\.[0-9]*\.[0-9]*" --sort=-v:refname | grep -v "^v${{ needs.getVersionNumber.outputs.baseVersionNumber }}$" | head -n 1)
+          prev=$(git tag --list "v1*\.[0-9]*\.[0-9]*" --sort=-v:refname | grep -E '^v1\.[0-9]+\.[0-9]+$' | grep -v "^v${{ needs.getVersionNumber.outputs.baseVersionNumber }}$" | head -n 1)
           if [ -n "$prev" ]; then
             echo "VER_BASE=$(git rev-parse $prev)" >> $GITHUB_ENV
           else
