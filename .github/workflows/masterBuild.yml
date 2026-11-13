@@ -225,7 +225,7 @@ jobs:
         run: |
           # Note: CUO based MobileUO builds are only 1.x.x
           # TazUO based MobileUO builds are only 2.x.x
-          prev=$(git tag --list "v1*\.[0-9]*\.[0-9]*" --sort=-v:refname | grep -v "^v${{ needs.getVersionNumber.outputs.baseVersionNumber }}$" | head -n 1)
+          prev=$(git tag --list "v1*\.[0-9]*\.[0-9]*" --sort=-v:refname | grep -E '^v1\.[0-9]+\.[0-9]+$' | grep -v "^v${{ needs.getVersionNumber.outputs.baseVersionNumber }}$" | head -n 1)
           if [ -n "$prev" ]; then
             echo "VER_BASE=$(git rev-parse $prev)" >> $GITHUB_ENV
           else
