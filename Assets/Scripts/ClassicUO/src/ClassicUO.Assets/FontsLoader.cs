@@ -2265,6 +2265,29 @@ namespace ClassicUO.Assets
             }
         }
 
+        // MobileUO: reusable pinned buffer for GetInfoHTML
+        private HTMLChar[] _htmlBuffer;
+        private System.Runtime.InteropServices.GCHandle _htmlBufferHandle;
+
+        private unsafe HTMLChar* GetPinnedHtmlBuffer(int len)
+        {
+            if (_htmlBuffer == null || _htmlBuffer.Length < len)
+            {
+                if (_htmlBuffer != null)
+                {
+                    _htmlBufferHandle.Free();
+                }
+
+                _htmlBuffer = new HTMLChar[len];
+                _htmlBufferHandle = System.Runtime.InteropServices.GCHandle.Alloc(
+                    _htmlBuffer,
+                    System.Runtime.InteropServices.GCHandleType.Pinned
+                );
+            }
+
+            return (HTMLChar*)_htmlBufferHandle.AddrOfPinnedObject();
+        }
+
         private unsafe MultilinesFontInfo GetInfoHTML(
             byte font,
             string str,
@@ -2279,7 +2302,10 @@ namespace ClassicUO.Assets
                 return null;
             }
 
-            HTMLChar* htmlData = stackalloc HTMLChar[len];
+            // MobileUO: stackalloc overflowed the stack on large HTML gumps, use a pinned heap buffer
+            // This was caused by UOAlive's "Blind" font in the global chat gump cause > 1mb stackallocation
+            //HTMLChar* htmlData = stackalloc HTMLChar[len];
+            HTMLChar* htmlData = GetPinnedHtmlBuffer(len);
 
             GetHTMLData(htmlData, font, str.AsSpan(), ref len, align, flags);
 
