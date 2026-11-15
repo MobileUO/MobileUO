@@ -69,7 +69,13 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
     
     [SerializeField]
     private Text deleteServerConfigurationButtonText;
-    
+
+    [SerializeField]
+    private Button importServerFilesButton;
+
+    [SerializeField]
+    private Text importServerFilesButtonText;
+
     [SerializeField]
     private Button deleteServerFilesButton;
 
@@ -125,6 +131,13 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
     private const string deleteButtonConfirmText = "Click again to Delete!";
     private const float deleteButtonRevertDuration = 2f;
 
+    private const string importServerFilesButtonSuccessText = "Successfully imported!";
+    private const float importServerFilesButtonSuccessTextDuration = 5f;
+    private int importServerFilesButtonClickCount;
+    private float importServerFilesButtonClickTime;
+    private string importServerFilesButtonOriginalText;
+    private Color importServerFilesButtonOriginalColor;
+
     private const string importCharacterProfilesFilesButtonSuccessText = "Successfully imported!";
     private const float importCharacterProfilesFilesButtonSuccessTextDuration = 5f;
     private int importCharacterProfilesFilesButtonClickCount;
@@ -146,6 +159,7 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
             deleteServerConfigurationButton.gameObject.SetActive(false);
             deleteServerFilesButton.gameObject.SetActive(false);
             markFilesAsDownloadedButton.gameObject.SetActive(false);
+            importServerFilesButton.gameObject.SetActive(false);
         }
         else
         {
@@ -154,6 +168,7 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
             deleteServerConfigurationButton.gameObject.SetActive(true);
             deleteServerFilesButton.gameObject.SetActive(true);
             markFilesAsDownloadedButton.gameObject.SetActive(true);
+            importServerFilesButton.gameObject.SetActive(true);
         }
 
         serverNameInputField.text = serverConfigurationToEdit?.Name ?? "";
@@ -181,10 +196,13 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
         deleteServerFilesButtonOriginalText = deleteServerFilesButtonText.text;
         importCharacterProfilesFilesButtonOriginalText = importCharacterProfilesFilesButtonText.text;
         importCharacterProfilesFilesButtonOriginalColor = importCharacterProfilesFilesButton.GetComponent<Image>().color;
+        importServerFilesButtonOriginalText = importServerFilesButtonText.text;
+        importServerFilesButtonOriginalColor = importServerFilesButton.GetComponent<Image>().color;
 
         ResetDeleteServerConfigurationButton();
         ResetDeleteServerFilesButton();
         ResetImportCharacterProfilesFilesButton();
+        ResetImportServerFilesButton();
     }
 
     private void OnEnable()
@@ -197,6 +215,7 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
         discoverButton.onClick.AddListener(SearchForDevices);
         exportCharacterProfilesFilesButton.onClick.AddListener(OnExportCharacterProfilesButtonClicked);
         importCharacterProfilesFilesButton.onClick.AddListener(OnImportCharacterProfilesButtonClicked);
+        importServerFilesButton.onClick.AddListener(OnImportServerFilesButtonClicked);
 
         saveButtonOriginalLocalPosition = saveButtonTransform.localPosition;
     }
@@ -260,10 +279,12 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
         markFilesAsDownloadedButton.onClick.RemoveAllListeners();
         exportCharacterProfilesFilesButton.onClick.RemoveAllListeners();
         importCharacterProfilesFilesButton.onClick.RemoveAllListeners();
+        importServerFilesButton.onClick.RemoveAllListeners();
         
         ResetDeleteServerConfigurationButton();
         ResetDeleteServerFilesButton();
         ResetImportCharacterProfilesFilesButton();
+        ResetImportServerFilesButton();
     }
     
     private void OnSaveButtonClicked()
@@ -483,16 +504,111 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
                 return;
             }
 
-            importCharacterProfilesFilesButtonText.text = importCharacterProfilesFilesButtonSuccessText;
-            importCharacterProfilesFilesButton.GetComponent<Image>().color = successColor;
-            importCharacterProfilesFilesButtonClickCount++;
-            importCharacterProfilesFilesButtonClickTime = Time.time;
-
             Debug.Log($"path: {path}");
-            ZipFile.ExtractToDirectory(path, dataFolderPath, true);
+            StartCoroutine(RunImport(importCharacterProfilesFilesButton, importCharacterProfilesFilesButtonText, ResetImportCharacterProfilesFilesButton, () =>
+            {
+                ZipFile.ExtractToDirectory(path, dataFolderPath, true);
+
+                importCharacterProfilesFilesButtonText.text = importCharacterProfilesFilesButtonSuccessText;
+                importCharacterProfilesFilesButton.GetComponent<Image>().color = successColor;
+                importCharacterProfilesFilesButtonClickCount++;
+                importCharacterProfilesFilesButtonClickTime = Time.time;
+            }));
         }, new string[] { "application/zip", "public.zip-archive" });
     }
-    
+
+    private const string importingText = "Importing... Please wait...";
+
+    // Waits one frame so the "importing" text is rendered before the blocking import work runs
+    private IEnumerator RunImport(Button button, Text buttonText, System.Action restoreButton, System.Action importWork)
+    {
+        button.interactable = false;
+        buttonText.text = importingText;
+        yield return null;
+
+        try
+        {
+            importWork();
+        }
+        catch
+        {
+            restoreButton();
+            throw;
+        }
+        finally
+        {
+            button.interactable = true;
+        }
+    }
+
+    private void OnImportServerFilesButtonClicked()
+    {
+        var config = serverConfigurationToEdit;
+        var serverFilesFolderPath = config.GetPathToSaveFiles();
+        var tempPath = $"{serverFilesFolderPath.TrimEnd('/', '\\')}_import_temp";
+        NativeFilePicker.PickFile((path) =>
+        {
+            if (path == null)
+            {
+                Debug.Log("Import server files canceled");
+                return;
+            }
+            Debug.Log($"path: {path}");
+            StartCoroutine(RunImport(importServerFilesButton, importServerFilesButtonText, ResetImportServerFilesButton, () => ImportServerFiles(path, config, serverFilesFolderPath, tempPath)));
+        }, new string[] { "application/zip", "public.zip-archive" });
+    }
+
+    private void ImportServerFiles(string path, ServerConfiguration config, string serverFilesFolderPath, string tempPath)
+    {
+            try
+            {
+                if (Directory.Exists(tempPath))
+                {
+                    Directory.Delete(tempPath, true);
+                }
+
+                ZipFile.ExtractToDirectory(path, tempPath, true);
+
+                ServerConfigurationModel.DeleteConfigurationFiles(config);
+
+                Directory.CreateDirectory(serverFilesFolderPath);
+                var tempDirectory = new DirectoryInfo(tempPath);
+                var existingDataFolderPresent = new DirectoryInfo(serverFilesFolderPath)
+                    .GetDirectories()
+                    .Any(d => string.Equals(d.Name, "Data", System.StringComparison.OrdinalIgnoreCase));
+                foreach (var dir in tempDirectory.GetDirectories())
+                {
+                    if (existingDataFolderPresent &&
+                        string.Equals(dir.Name, "Data", System.StringComparison.OrdinalIgnoreCase))
+                    {
+                        Debug.Log("Skipping Data folder from zip, existing local Data folder is protected");
+                        continue;
+                    }
+                    Directory.Move(dir.FullName, Path.Combine(serverFilesFolderPath, dir.Name));
+                }
+                foreach (var file in tempDirectory.GetFiles())
+                {
+                    File.Move(file.FullName, Path.Combine(serverFilesFolderPath, file.Name));
+                }
+
+                config.AllFilesDownloaded = true;
+                ServerConfigurationModel.SaveServerConfigurations();
+                ResetDeleteServerFilesButton();
+
+                importServerFilesButtonText.text = importServerFilesButtonSuccessText;
+                importServerFilesButton.GetComponent<Image>().color = successColor;
+                importServerFilesButtonClickCount++;
+                importServerFilesButtonClickTime = Time.time;
+            }
+            finally
+            {
+                if (Directory.Exists(tempPath))
+                {
+                    Directory.Delete(tempPath, true);
+                }
+            }
+    }
+
     private void OnMarkFilesAsDownloadedButtonClicked()
     {
         serverConfigurationToEdit.AllFilesDownloaded = true;
@@ -515,6 +631,11 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
         {
             ResetImportCharacterProfilesFilesButton();
         }
+
+        if (importServerFilesButtonClickCount > 0 && Time.time > importServerFilesButtonClickTime + importServerFilesButtonSuccessTextDuration)
+        {
+            ResetImportServerFilesButton();
+        }
     }
 
     private void ResetDeleteServerConfigurationButton()
@@ -529,7 +650,14 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
         importCharacterProfilesFilesButton.GetComponent<Image>().color = importCharacterProfilesFilesButtonOriginalColor;
         importCharacterProfilesFilesButtonClickCount = 0;
     }
-    
+
+    private void ResetImportServerFilesButton()
+    {
+        importServerFilesButtonText.text = importServerFilesButtonOriginalText;
+        importServerFilesButton.GetComponent<Image>().color = importServerFilesButtonOriginalColor;
+        importServerFilesButtonClickCount = 0;
+    }
+
     private void ResetDeleteServerFilesButton()
     {
         deleteServerFilesButtonText.text = deleteServerFilesButtonOriginalText;
