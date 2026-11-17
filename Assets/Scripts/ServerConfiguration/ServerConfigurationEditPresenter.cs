@@ -3,6 +3,7 @@ using System.Collections;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Threading.Tasks;
 using ClassicUO.Utility;
 using DG.Tweening;
 using Rssdp;
@@ -505,47 +506,75 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
             }
 
             Debug.Log($"path: {path}");
-            StartCoroutine(RunImport(importCharacterProfilesFilesButton, importCharacterProfilesFilesButtonText, ResetImportCharacterProfilesFilesButton, () =>
+            RunImportAsync(importCharacterProfilesFilesButtonText, ResetImportCharacterProfilesFilesButton, async (progress) =>
             {
-                ZipFile.ExtractToDirectory(path, dataFolderPath, true);
+                await Task.Run(() =>
+                {
+                    ZipExtractor.ExtractToDirectory(path, dataFolderPath, progress);
+                });
 
                 importCharacterProfilesFilesButtonText.text = importCharacterProfilesFilesButtonSuccessText;
                 importCharacterProfilesFilesButton.GetComponent<Image>().color = successColor;
                 importCharacterProfilesFilesButtonClickCount++;
                 importCharacterProfilesFilesButtonClickTime = Time.time;
-            }));
+            });
         }, new string[] { "application/zip", "public.zip-archive" });
     }
 
     private const string importingText = "Importing... Please wait...";
+    private bool isImporting;
 
-    // Waits one frame so the "importing" text is rendered before the blocking import work runs
-    private IEnumerator RunImport(Button button, Text buttonText, System.Action restoreButton, System.Action importWork)
+    private async void RunImportAsync(Text buttonText, System.Action restoreButton, System.Func<System.IProgress<int>, Task> importWork)
     {
-        button.interactable = false;
+        if (isImporting)
+        {
+            return;
+        }
+
+        isImporting = true;
+        var lockedButtons = new[]
+        {
+            saveButton, cancelButton, deleteServerConfigurationButton, deleteServerFilesButton,
+            markFilesAsDownloadedButton, importServerFilesButton, importCharacterProfilesFilesButton,
+            exportCharacterProfilesFilesButton, discoverButton
+        };
+        var previousStates = lockedButtons.Select(b => b.interactable).ToArray();
+        foreach (var button in lockedButtons)
+        {
+            button.interactable = false;
+        }
+
         buttonText.text = importingText;
-        yield return null;
+
+        // Created on the main thread, so its callback also runs on the main thread
+        var progress = new Progress<int>((percent) =>
+        {
+            buttonText.text = $"Importing... {percent}%";
+        });
 
         try
         {
-            importWork();
+            await importWork(progress);
         }
-        catch
+        catch (System.Exception e)
         {
+            Debug.LogException(e);
             restoreButton();
-            throw;
+            ShowError(e.Message);
         }
         finally
         {
-            button.interactable = true;
+            for (var i = 0; i < lockedButtons.Length; i++)
+            {
+                lockedButtons[i].interactable = previousStates[i];
+            }
+            isImporting = false;
         }
     }
 
     private void OnImportServerFilesButtonClicked()
     {
         var config = serverConfigurationToEdit;
-        var serverFilesFolderPath = config.GetPathToSaveFiles();
-        var tempPath = $"{serverFilesFolderPath.TrimEnd('/', '\\')}_import_temp";
         NativeFilePicker.PickFile((path) =>
         {
             if (path == null)
@@ -554,59 +583,91 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
                 return;
             }
             Debug.Log($"path: {path}");
-            StartCoroutine(RunImport(importServerFilesButton, importServerFilesButtonText, ResetImportServerFilesButton, () => ImportServerFiles(path, config, serverFilesFolderPath, tempPath)));
+            RunImportAsync(importServerFilesButtonText, ResetImportServerFilesButton, (progress) =>
+            {
+                return ImportServerFilesAsync(path, config, progress);
+            });
         }, new string[] { "application/zip", "public.zip-archive" });
     }
 
-    private void ImportServerFiles(string path, ServerConfiguration config, string serverFilesFolderPath, string tempPath)
+    private async Task ImportServerFilesAsync(string zipPath, ServerConfiguration config, System.IProgress<int> progress)
     {
-            try
+        // Unity API calls must happen on the main thread, so read these before starting background work
+        var serverFilesFolderPath = config.GetPathToSaveFiles();
+        var tempPath = $"{serverFilesFolderPath.TrimEnd('/', '\\')}_import_temp";
+
+        try
+        {
+            // a bad zip fails here and the existing files are untouched
+            await Task.Run(() =>
             {
                 if (Directory.Exists(tempPath))
                 {
                     Directory.Delete(tempPath, true);
                 }
 
-                ZipFile.ExtractToDirectory(path, tempPath, true);
+                ZipExtractor.ExtractToDirectory(zipPath, tempPath, progress);
+            });
+            importServerFilesButtonText.text = "Finishing...";
 
-                ServerConfigurationModel.DeleteConfigurationFiles(config);
+            config.AllFilesDownloaded = false;
+            ServerConfigurationModel.SaveServerConfigurations();
 
-                Directory.CreateDirectory(serverFilesFolderPath);
-                var tempDirectory = new DirectoryInfo(tempPath);
+            // replace the existing files with the extracted ones
+            await Task.Run(() =>
+            {
+                SwapInExtractedFiles(serverFilesFolderPath, tempPath);
+            });
+
+            config.AllFilesDownloaded = true;
+            ServerConfigurationModel.SaveServerConfigurations();
+            ResetDeleteServerFilesButton();
+
+            importServerFilesButtonText.text = importServerFilesButtonSuccessText;
+            importServerFilesButton.GetComponent<Image>().color = successColor;
+            importServerFilesButtonClickCount++;
+            importServerFilesButtonClickTime = Time.time;
+        }
+        catch
+        {
+            ResetDeleteServerFilesButton();
+            throw;
+        }
+        finally
+        {
+            await Task.Run(() =>
+            {
+                if (Directory.Exists(tempPath))
+                {
+                    Directory.Delete(tempPath, true);
+                }
+            });
+        }
+    }
+
+    private static void SwapInExtractedFiles(string serverFilesFolderPath, string tempPath)
+    {
+        ServerConfigurationModel.DeleteFilesOnDisk(serverFilesFolderPath);
+
+        Directory.CreateDirectory(serverFilesFolderPath);
+        var tempDirectory = new DirectoryInfo(tempPath);
                 var existingDataFolderPresent = new DirectoryInfo(serverFilesFolderPath)
                     .GetDirectories()
                     .Any(d => string.Equals(d.Name, "Data", System.StringComparison.OrdinalIgnoreCase));
                 foreach (var dir in tempDirectory.GetDirectories())
-                {
-                    if (existingDataFolderPresent &&
-                        string.Equals(dir.Name, "Data", System.StringComparison.OrdinalIgnoreCase))
-                    {
-                        Debug.Log("Skipping Data folder from zip, existing local Data folder is protected");
-                        continue;
-                    }
-                    Directory.Move(dir.FullName, Path.Combine(serverFilesFolderPath, dir.Name));
-                }
-                foreach (var file in tempDirectory.GetFiles())
-                {
-                    File.Move(file.FullName, Path.Combine(serverFilesFolderPath, file.Name));
-                }
-
-                config.AllFilesDownloaded = true;
-                ServerConfigurationModel.SaveServerConfigurations();
-                ResetDeleteServerFilesButton();
-
-                importServerFilesButtonText.text = importServerFilesButtonSuccessText;
-                importServerFilesButton.GetComponent<Image>().color = successColor;
-                importServerFilesButtonClickCount++;
-                importServerFilesButtonClickTime = Time.time;
-            }
-            finally
+        {
+            if (existingDataFolderPresent &&
+                string.Equals(dir.Name, "Data", System.StringComparison.OrdinalIgnoreCase))
             {
-                if (Directory.Exists(tempPath))
-                {
-                    Directory.Delete(tempPath, true);
-                }
+                Debug.Log("Skipping Data folder from zip, existing local Data folder is protected");
+                continue;
             }
+            Directory.Move(dir.FullName, Path.Combine(serverFilesFolderPath, dir.Name));
+        }
+        foreach (var file in tempDirectory.GetFiles())
+        {
+            File.Move(file.FullName, Path.Combine(serverFilesFolderPath, file.Name));
+        }
     }
 
     private void OnMarkFilesAsDownloadedButtonClicked()
