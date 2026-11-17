@@ -106,7 +106,16 @@ public static class ServerConfigurationModel
 
     public static void DeleteConfigurationFiles(ServerConfiguration config)
     {
-        var directoryInfo = new DirectoryInfo(config.GetPathToSaveFiles());
+        DeleteFilesOnDisk(config.GetPathToSaveFiles());
+
+        config.AllFilesDownloaded = false;
+        SaveServerConfigurations();
+    }
+
+    // Thread-safe: no Unity API calls
+    public static void DeleteFilesOnDisk(string path)
+    {
+        var directoryInfo = new DirectoryInfo(path);
 
         if (directoryInfo.Exists)
         {
@@ -124,8 +133,5 @@ public static class ServerConfigurationModel
                 file.Delete();
             }
         }
-
-        config.AllFilesDownloaded = false;
-        SaveServerConfigurations();
     }
 }
