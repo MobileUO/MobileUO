@@ -506,11 +506,11 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
             }
 
             Debug.Log($"path: {path}");
-            RunImportAsync(importCharacterProfilesFilesButtonText, ResetImportCharacterProfilesFilesButton, async () =>
+            RunImportAsync(importCharacterProfilesFilesButtonText, ResetImportCharacterProfilesFilesButton, async (progress) =>
             {
                 await Task.Run(() =>
                 {
-                    ZipFile.ExtractToDirectory(path, dataFolderPath, true);
+                    ZipExtractor.ExtractToDirectory(path, dataFolderPath, progress);
                 });
 
                 importCharacterProfilesFilesButtonText.text = importCharacterProfilesFilesButtonSuccessText;
@@ -524,7 +524,7 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
     private const string importingText = "Importing... Please wait...";
     private bool isImporting;
 
-    private async void RunImportAsync(Text buttonText, System.Action restoreButton, System.Func<Task> importWork)
+    private async void RunImportAsync(Text buttonText, System.Action restoreButton, System.Func<System.IProgress<int>, Task> importWork)
     {
         if (isImporting)
         {
@@ -541,13 +541,20 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
         var previousStates = lockedButtons.Select(b => b.interactable).ToArray();
         foreach (var button in lockedButtons)
         {
-        button.interactable = false;
+            button.interactable = false;
         }
 
         buttonText.text = importingText;
+
+        // Created on the main thread, so its callback also runs on the main thread
+        var progress = new Progress<int>((percent) =>
+        {
+            buttonText.text = $"Importing... {percent}%";
+        });
+
         try
         {
-            await importWork();
+            await importWork(progress);
         }
         catch (System.Exception e)
         {
@@ -576,14 +583,14 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
                 return;
             }
             Debug.Log($"path: {path}");
-            RunImportAsync(importServerFilesButtonText, ResetImportServerFilesButton, () =>
+            RunImportAsync(importServerFilesButtonText, ResetImportServerFilesButton, (progress) =>
             {
-                return ImportServerFilesAsync(path, config);
+                return ImportServerFilesAsync(path, config, progress);
             });
         }, new string[] { "application/zip", "public.zip-archive" });
     }
 
-    private async Task ImportServerFilesAsync(string zipPath, ServerConfiguration config)
+    private async Task ImportServerFilesAsync(string zipPath, ServerConfiguration config, System.IProgress<int> progress)
     {
         // Unity API calls must happen on the main thread, so read these before starting background work
         var serverFilesFolderPath = config.GetPathToSaveFiles();
@@ -599,8 +606,9 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
                     Directory.Delete(tempPath, true);
                 }
 
-                ZipFile.ExtractToDirectory(zipPath, tempPath, true);
+                ZipExtractor.ExtractToDirectory(zipPath, tempPath, progress);
             });
+            importServerFilesButtonText.text = "Finishing...";
 
             config.AllFilesDownloaded = false;
             ServerConfigurationModel.SaveServerConfigurations();
@@ -646,7 +654,7 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
                 var existingDataFolderPresent = new DirectoryInfo(serverFilesFolderPath)
                     .GetDirectories()
                     .Any(d => string.Equals(d.Name, "Data", System.StringComparison.OrdinalIgnoreCase));
-        foreach (var dir in tempDirectory.GetDirectories())
+                foreach (var dir in tempDirectory.GetDirectories())
         {
             if (existingDataFolderPresent &&
                 string.Equals(dir.Name, "Data", System.StringComparison.OrdinalIgnoreCase))
