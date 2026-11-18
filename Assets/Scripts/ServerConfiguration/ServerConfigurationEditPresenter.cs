@@ -495,6 +495,11 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
 
     private void OnImportCharacterProfilesButtonClicked()
     {
+        if (isImporting)
+        {
+            return;
+        }
+
         var dataFolderPath = $"{serverConfigurationToEdit.GetPathToSaveFiles()}/Data";
 
         NativeFilePicker.PickFile((path) =>
@@ -506,7 +511,7 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
             }
 
             Debug.Log($"path: {path}");
-            RunImportAsync(importCharacterProfilesFilesButtonText, ResetImportCharacterProfilesFilesButton, async (progress) =>
+            RunImportAsync(importCharacterProfilesFilesButton, importCharacterProfilesFilesButtonText, ResetImportCharacterProfilesFilesButton, async (progress) =>
             {
                 await Task.Run(() =>
                 {
@@ -524,7 +529,7 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
     private const string importingText = "Importing... Please wait...";
     private bool isImporting;
 
-    private async void RunImportAsync(Text buttonText, System.Action restoreButton, System.Func<System.IProgress<int>, Task> importWork)
+    private async void RunImportAsync(Button clickedButton, Text buttonText, System.Action restoreButton, System.Func<System.IProgress<int>, Task> importWork)
     {
         if (isImporting)
         {
@@ -532,12 +537,13 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
         }
 
         isImporting = true;
-        var lockedButtons = new[]
+        var allButtons = new[]
         {
             saveButton, cancelButton, deleteServerConfigurationButton, deleteServerFilesButton,
             markFilesAsDownloadedButton, importServerFilesButton, importCharacterProfilesFilesButton,
             exportCharacterProfilesFilesButton, discoverButton
         };
+        var lockedButtons = allButtons.Where(b => b != clickedButton).ToArray();
         var previousStates = lockedButtons.Select(b => b.interactable).ToArray();
         foreach (var button in lockedButtons)
         {
@@ -574,6 +580,11 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
 
     private void OnImportServerFilesButtonClicked()
     {
+        if (isImporting)
+        {
+            return;
+        }
+
         var config = serverConfigurationToEdit;
         NativeFilePicker.PickFile((path) =>
         {
@@ -583,7 +594,7 @@ public class ServerConfigurationEditPresenter : MonoBehaviour
                 return;
             }
             Debug.Log($"path: {path}");
-            RunImportAsync(importServerFilesButtonText, ResetImportServerFilesButton, (progress) =>
+            RunImportAsync(importServerFilesButton, importServerFilesButtonText, ResetImportServerFilesButton, (progress) =>
             {
                 return ImportServerFilesAsync(path, config, progress);
             });
